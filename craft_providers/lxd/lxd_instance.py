@@ -1,3 +1,17 @@
+# Copyright (C) 2020 Canonical Ltd
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 3 as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 """LXD Instance."""
 import logging
 import os
@@ -99,12 +113,16 @@ class LXDInstance(Executor):
     def execute_run(
         self, command: List[str], check=True, **kwargs
     ) -> subprocess.CompletedProcess:
-        """Execute process in instance using subprocess.run().
+        """Execute command using subprocess.run().
 
         :param command: Command to execute.
-        :param kwargs: Additional keyword arguments for subprocess.run().
+        :param check: Raise exception on failure.
+        :param kwargs: Keyword args to pass to subprocess.run().
 
-        :returns: CompletedProcess instance returned from subprocess.run().
+        :returns: Completed process.
+
+        :raises subprocess.CalledProcessError: if command fails and check is
+            True.
         """
         return self.lxc.exec(
             instance=self.name,
@@ -127,7 +145,7 @@ class LXDInstance(Executor):
         """Get state configuration for instance.
 
         :returns: State information parsed from lxc if instance exists, else
-                  None.
+            None.
         """
         instances = self.lxc.list(
             instance=self.name, project=self.project, remote=self.remote
@@ -149,7 +167,6 @@ class LXDInstance(Executor):
 
         :returns: True if source is mounted at destination.
         """
-
         devices = self.lxc.config_device_show(
             instance=self.name, project=self.project, remote=self.remote
         )
@@ -252,10 +269,19 @@ class LXDInstance(Executor):
         return self.remote == "local"
 
     def sync_from(self, *, source: pathlib.Path, destination: pathlib.Path) -> None:
-        """Sync contents from instance to host.
+        """Copy source file/directory from environment to host destination.
 
-        :param source: Path to copy from instance.
-        :param destination: Path on host to copy to.
+        Standard "cp -r" rules apply:
+
+            - if source is directory, copy happens recursively.
+
+            - if destination exists, source will be copied into destination.
+
+        Providing this as an abstract method allows the provider to implement
+        the most performant option available.
+
+        :param source: Target directory to copy from.
+        :param destination: Host destination directory to copy to.
         """
         logger.info("Syncing env:%s -> host:%s...", source, destination)
         # TODO: check if mount makes source == destination, skip if so.
@@ -284,10 +310,17 @@ class LXDInstance(Executor):
             raise FileNotFoundError(f"Source {source} not found.")
 
     def sync_to(self, *, source: pathlib.Path, destination: pathlib.Path) -> None:
-        """Sync contents from host to instance.
+        """Copy host source file/directory into environment at destination.
 
-        :param source: Path on host to copy from.
-        :param destination: Path in instance to copy to.
+        Standard "cp -r" rules apply:
+        - if source is directory, copy happens recursively.
+        - if destination exists, source will be copied into destination.
+
+        Providing this as an abstract method allows the provider to implement
+        the most performant option available.
+
+        :param source: Host directory to copy.
+        :param destination: Target destination directory to copy to.
         """
         # TODO: check if mounted, skip sync if source == destination
         logger.info("Syncing host:%s -> env:%s...", source, destination)

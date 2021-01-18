@@ -7,6 +7,8 @@ flake8
 isort
 mypy
 pip
+pydocstyle
+pylint
 pytest
 pytest-runner
 pyyaml
