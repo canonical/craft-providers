@@ -93,7 +93,7 @@ install: clean
 	python setup.py install
 
 .PHONY: lint
-lint: test-black test-flake8 test-isort test-mypy test-pydocstyle test-pylint test-pyright
+lint: test-black test-codespell test-flake8 test-isort test-mypy test-pydocstyle test-pylint test-pyright
 
 .PHONY: release
 release: dist

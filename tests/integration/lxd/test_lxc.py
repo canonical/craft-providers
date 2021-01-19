@@ -1,4 +1,4 @@
-# Copyright (C) 2020 Canonical Ltd
+# Copyright (C) 2021 Canonical Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 3 as
@@ -29,7 +29,7 @@ def test_project_default_cfg(lxc, project):
 
 def test_exec(instance, lxc, project):
     proc = lxc.exec(
-        instance=instance,
+        instance_name=instance.name,
         command=["echo", "this is a test"],
         project=project,
         capture_output=True,
@@ -40,17 +40,17 @@ def test_exec(instance, lxc, project):
 
 def test_delete(instance, lxc, project):
     with pytest.raises(subprocess.CalledProcessError):
-        lxc.delete(instance=instance, force=False, project=project)
+        lxc.delete(instance_name=instance.name, force=False, project=project)
 
-    lxc.stop(instance=instance, project=project)
-    lxc.delete(instance=instance, force=False, project=project)
+    lxc.stop(instance_name=instance.name, project=project)
+    lxc.delete(instance_name=instance.name, force=False, project=project)
 
     instances = lxc.list(project=project)
     assert instances == []
 
 
 def test_delete_force(instance, lxc, project):
-    lxc.delete(instance=instance, force=True, project=project)
+    lxc.delete(instance_name=instance.name, force=True, project=project)
 
     instances = lxc.list(project=project)
     assert instances == []
@@ -87,7 +87,7 @@ def test_file_push(instance, lxc, project, tmp_path):
     test_file.write_text("this is a test")
 
     lxc.file_push(
-        instance=instance,
+        instance_name=instance.name,
         project=project,
         source=test_file,
         destination=pathlib.Path("/tmp/foo"),
@@ -95,7 +95,7 @@ def test_file_push(instance, lxc, project, tmp_path):
 
     proc = lxc.exec(
         command=["cat", "/tmp/foo"],
-        instance=instance,
+        instance_name=instance.name,
         project=project,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -111,14 +111,14 @@ def test_file_pull(instance, lxc, project, tmp_path):
     test_file.write_text("this is a test")
 
     lxc.file_push(
-        instance=instance,
+        instance_name=instance.name,
         project=project,
         source=test_file,
         destination=pathlib.Path("/tmp/foo"),
     )
 
     lxc.file_pull(
-        instance=instance,
+        instance_name=instance.name,
         project=project,
         source=pathlib.Path("/tmp/foo"),
         destination=out_path,

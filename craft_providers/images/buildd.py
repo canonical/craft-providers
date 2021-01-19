@@ -1,4 +1,4 @@
-# Copyright (C) 2020 Canonical Ltd
+# Copyright (C) 2021 Canonical Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 3 as
@@ -21,9 +21,7 @@ from textwrap import dedent
 from time import sleep
 from typing import Any, Dict, Final, Optional
 
-import yaml
-
-from craft_providers import Executor, Image
+from craft_providers import Executor, Image, actions
 from craft_providers.images import errors
 from craft_providers.util.os_release import parse_os_release
 
@@ -33,9 +31,9 @@ logger = logging.getLogger(__name__)
 class BuilddImageAlias(enum.Enum):
     """Mappings for supported buildd images."""
 
-    XENIAL = 16.04
-    BIONIC = 18.04
-    FOCAL = 20.04
+    XENIAL = "16.04"
+    BIONIC = "18.04"
+    FOCAL = "20.04"
 
 
 class BuilddImage(Image):
@@ -56,32 +54,11 @@ class BuilddImage(Image):
         compatibility_tag: str = "craft-buildd-image-v0",
         hostname: str = "craft-buildd-instance",
     ):
-        super().__init__(compatibility_tag=compatibility_tag, name=str(alias.value))
+        super().__init__(compatibility_tag=compatibility_tag, name=alias.value)
 
         self.alias: Final[BuilddImageAlias] = alias
         self.hostname: Final[str] = hostname
-
-    def _read_craft_image_config(
-        self, *, executor: Executor
-    ) -> Optional[Dict[str, Any]]:
-        try:
-            proc = executor.execute_run(
-                command=["cat", "/etc/craft-image.conf"],
-                check=True,
-                stdout=subprocess.PIPE,
-            )
-        except subprocess.CalledProcessError:
-            return None
-
-        return yaml.load(proc.stdout, Loader=yaml.SafeLoader)
-
-    def _write_craft_image_config(self, *, executor: Executor) -> None:
-        conf = {"compatibility_tag": self.compatibility_tag}
-        executor.create_file(
-            destination=pathlib.Path("/etc/craft-image.conf"),
-            content=yaml.dump(conf).encode(),
-            file_mode="0644",
-        )
+        self._craft_config_path = pathlib.Path("/etc/craft-image.conf")
 
     def _read_os_release(self, *, executor: Executor) -> Optional[Dict[str, Any]]:
         try:
@@ -104,13 +81,15 @@ class BuilddImage(Image):
         self._ensure_os_compatible(executor=executor)
 
     def _ensure_image_version_compatible(self, *, executor: Executor) -> None:
-        craft_config = self._read_craft_image_config(executor=executor)
+        config = actions.craft_config.load(
+            executor=executor, config_path=self._craft_config_path
+        )
 
         # If no config has been written, assume it is compatible (likely an unfinished setup).
-        if craft_config is None:
+        if config is None:
             return
 
-        tag = craft_config.get("compatibility_tag")
+        tag = config.get("compatibility_tag")
         if tag != self.compatibility_tag:
             raise errors.CompatibilityError(
                 reason=(
@@ -131,7 +110,7 @@ class BuilddImage(Image):
                 reason=f"Exepcted OS 'Ubuntu', found {os_id!r}"
             )
 
-        compat_version_id = str(self.alias.value)
+        compat_version_id = self.alias.value
         version_id = os_release.get("VERSION_ID")
         if version_id != compat_version_id:
             raise errors.CompatibilityError(
@@ -151,6 +130,7 @@ class BuilddImage(Image):
         """
         self.ensure_compatible(executor=executor)
         self._setup_wait_for_system_ready(executor=executor)
+        self._setup_craft_image_config(executor=executor)
         self._setup_hostname(executor=executor)
         self._setup_resolved(executor=executor)
         self._setup_networkd(executor=executor)
@@ -164,6 +144,18 @@ class BuilddImage(Image):
         :param executor: Executor for target container.
         """
         executor.execute_run(command=["apt-get", "update"], check=True)
+        executor.execute_run(
+            command=["apt-get", "install", "-y", "apt-utils"], check=True
+        )
+
+    def _setup_craft_image_config(self, *, executor: Executor) -> None:
+        config = dict(compatibility_tag=self.compatibility_tag)
+
+        actions.craft_config.save(
+            executor=executor,
+            config=config,
+            config_path=self._craft_config_path,
+        )
 
     def _setup_hostname(self, *, executor: Executor) -> None:
         """Configure hostname, installing /etc/hostname.
@@ -289,7 +281,7 @@ class BuilddImage(Image):
             logger.warning("Failed to setup networking.")
 
     def _setup_wait_for_system_ready(
-        self, *, executor: Executor, timeout_secs: int = 60
+        self, *, executor: Executor, retry_count=120, retry_interval: float = 0.5
     ) -> None:
         """Wait until system is ready.
 
@@ -297,16 +289,26 @@ class BuilddImage(Image):
         :param timeout_secs: Timeout in seconds.
         """
         logger.info("Waiting for container to be ready...")
-        for _ in range(timeout_secs * 2):
+        for _ in range(retry_count):
             proc = executor.execute_run(
-                command=["systemctl", "is-system-running"], stdout=subprocess.PIPE
+                command=["systemctl", "is-system-running"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
             )
 
             running_state = proc.stdout.decode().strip()
             if running_state in ["running", "degraded"]:
                 break
 
-            logger.debug("systemctl is-system-running: %s", running_state)
-            sleep(0.5)
+            logger.debug("systemctl is-system-running status: %s", running_state)
+            sleep(retry_interval)
         else:
-            logger.warning("Systemd failed to reach target before timeout.")
+            logger.warning("System exceeded timeout to get ready.")
+
+    def wait_until_ready(self, *, executor: Executor) -> None:
+        """Wait until system is ready.
+
+        Ensure minimum-required boot services are running.
+        """
+        self._setup_wait_for_system_ready(executor=executor)

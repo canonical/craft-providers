@@ -1,4 +1,4 @@
-# Copyright (C) 2020 Canonical Ltd
+# Copyright (C) 2021 Canonical Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 3 as
@@ -18,4 +18,3 @@ __version__ = "0.0.3"  # noqa: F401
 
 from .executor import Executor  # noqa: F401
 from .image import Image  # noqa: F401
-from .provider import Provider  # noqa: F401

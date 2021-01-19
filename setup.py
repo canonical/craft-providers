@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (C) 2020 Canonical Ltd
+# Copyright (C) 2021 Canonical Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 3 as
@@ -21,9 +21,6 @@ from setuptools import find_packages, setup  # type: ignore
 
 with open("README.md") as readme_file:
     readme = readme_file.read()
-
-with open("HISTORY.md") as history_file:
-    history = history_file.read()
 
 requirements = [
     "pyyaml",
@@ -56,7 +53,7 @@ setup(
     },
     install_requires=requirements,
     license="GNU General Public License v3",
-    long_description=readme + "\n\n" + history,
+    long_description=readme,
     include_package_data=True,
     keywords="craft_providers",
     name="craft-providers",

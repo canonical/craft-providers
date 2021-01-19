@@ -18,35 +18,35 @@ import sys
 
 import pytest
 
-from craft_providers.lxd import lxd_installer
+from craft_providers.multipass import multipass_installer
 
 
 @pytest.fixture(autouse=True)
-def lxd_path():
+def multipass_path():
     """Override shared fixture."""
     yield None
 
 
 @pytest.fixture(autouse=True)
-def uninstalled_lxd():
-    """Uninstall Lxd prior to test, if environment allows it.
+def uninstalled_multipass():
+    """Uninstall Multipass prior to test, if environment allows it.
 
-    CRAFT_PROVIDER_TESTS_ENABLE_LXD_UNINSTALL=1
+    CRAFT_PROVIDER_TESTS_ENABLE_MULTIPASS_UNINSTALL=1
     """
-    if not lxd_installer.is_installed():
+    if not multipass_installer.is_installed():
         return
 
     if (
-        os.environ.get("CRAFT_PROVIDER_TESTS_ENABLE_LXD_UNINSTALL") == "1"
+        os.environ.get("CRAFT_PROVIDER_TESTS_ENABLE_MULTIPASS_UNINSTALL") == "1"
         and sys.platform == "linux"
     ):
-        subprocess.run(["sudo", "snap", "remove", "lxd", "--purge"], check=True)
+        subprocess.run(["sudo", "snap", "remove", "multipass", "--purge"], check=True)
     else:
-        pytest.skip("not allowed to uninstall lxd, skipped")
+        pytest.skip("not allowed to uninstall multipass, skipped")
 
 
 def test_install():
-    path = lxd_installer.install()
+    path = multipass_installer.install()
 
     assert path.exists() is True
-    assert lxd_installer.is_installed() is True
+    assert multipass_installer.is_installed() is True

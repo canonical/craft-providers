@@ -1,4 +1,4 @@
-# Copyright (C) 2020 Canonical Ltd
+# Copyright (C) 2021 Canonical Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 3 as
@@ -33,7 +33,7 @@ class LXC:  # pylint: disable=too-many-public-methods
     def __init__(
         self,
         *,
-        lxc_path: pathlib.Path = pathlib.Path("/snap/bin/lxc"),
+        lxc_path: Optional[pathlib.Path] = None,
     ):
         if lxc_path is None:
             self.lxc_path: pathlib.Path = pathlib.Path("lxc")
@@ -50,7 +50,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     ) -> subprocess.CompletedProcess:
-        """Execute command in instance, allowing output to console."""
+        """Execute command in instance_name, allowing output to console."""
         command = [str(self.lxc_path), "--project", project, *command]
         quoted = " ".join([shlex.quote(c) for c in command])
 
@@ -74,7 +74,7 @@ class LXC:  # pylint: disable=too-many-public-methods
     def config_device_add_disk(
         self,
         *,
-        instance: str,
+        instance_name: str,
         source: pathlib.Path,
         destination: pathlib.Path,
         device_name: Optional[str] = None,
@@ -90,7 +90,7 @@ class LXC:  # pylint: disable=too-many-public-methods
                 "config",
                 "device",
                 "add",
-                f"{remote}:{instance}",
+                f"{remote}:{instance_name}",
                 device_name,
                 "disk",
                 f"source={source.as_posix()}",
@@ -100,11 +100,11 @@ class LXC:  # pylint: disable=too-many-public-methods
         )
 
     def config_device_show(
-        self, *, instance: str, project: str = "default", remote: str = "local"
+        self, *, instance_name: str, project: str = "default", remote: str = "local"
     ) -> Dict[str, Any]:
         """Show device config."""
         proc = self._run(
-            command=["config", "device", "show", f"{remote}:{instance}"],
+            command=["config", "device", "show", f"{remote}:{instance_name}"],
             project=project,
         )
 
@@ -113,28 +113,28 @@ class LXC:  # pylint: disable=too-many-public-methods
     def config_set(
         self,
         *,
-        instance: str,
+        instance_name: str,
         key: str,
         value: str,
         project: str = "default",
         remote: str = "local",
     ) -> None:
-        """Set instance configuration key."""
+        """Set instance_name configuration key."""
         self._run(
-            command=["config", "set", f"{remote}:{instance}", key, value],
+            command=["config", "set", f"{remote}:{instance_name}", key, value],
             project=project,
         )
 
     def delete(
         self,
         *,
-        instance: str,
+        instance_name: str,
         project: str = "default",
         remote: str = "local",
         force=False,
     ) -> None:
-        """Delete instance."""
-        command = ["delete", f"{remote}:{instance}"]
+        """Delete instance_name."""
+        command = ["delete", f"{remote}:{instance_name}"]
 
         if force:
             command.append("--force")
@@ -145,7 +145,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         self,
         *,
         command: List[str],
-        instance: str,
+        instance_name: str,
         cwd: str = "/root",
         mode: str = "auto",
         project: str = "default",
@@ -157,7 +157,7 @@ class LXC:  # pylint: disable=too-many-public-methods
             "--project",
             project,
             "exec",
-            f"{remote}:{instance}",
+            f"{remote}:{instance_name}",
         ]
 
         if cwd != "/root":
@@ -174,7 +174,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         self,
         *,
         command: List[str],
-        instance: str,
+        instance_name: str,
         cwd: str = "/root",
         mode: str = "auto",
         project: str = "default",
@@ -182,10 +182,10 @@ class LXC:  # pylint: disable=too-many-public-methods
         runner=subprocess.run,
         **kwargs,
     ):
-        """Execute command in instance with specified runner."""
+        """Execute command in instance_name with specified runner."""
         command = self._formulate_command(
             command=command,
-            instance=instance,
+            instance_name=instance_name,
             cwd=cwd,
             mode=mode,
             project=project,
@@ -200,7 +200,7 @@ class LXC:  # pylint: disable=too-many-public-methods
     def file_pull(
         self,
         *,
-        instance: str,
+        instance_name: str,
         source: pathlib.Path,
         destination: pathlib.Path,
         create_dirs: bool = True,
@@ -208,11 +208,11 @@ class LXC:  # pylint: disable=too-many-public-methods
         project: str = "default",
         remote: str = "local",
     ) -> None:
-        """Retrieve file from instance."""
+        """Retrieve file from instance_name."""
         command = [
             "file",
             "pull",
-            f"{remote}:{instance}{source.as_posix()}",
+            f"{remote}:{instance_name}{source.as_posix()}",
             destination.as_posix(),
         ]
 
@@ -230,13 +230,13 @@ class LXC:  # pylint: disable=too-many-public-methods
     def file_push(
         self,
         *,
-        instance: str,
+        instance_name: str,
         source: pathlib.Path,
         destination: pathlib.Path,
         create_dirs: bool = False,
         recursive: bool = False,
-        gid: str = "-1",
-        uid: str = "-1",
+        gid: int = -1,
+        uid: int = -1,
         mode: Optional[str] = None,
         project: str = "default",
         remote: str = "local",
@@ -246,7 +246,7 @@ class LXC:  # pylint: disable=too-many-public-methods
             "file",
             "push",
             source.as_posix(),
-            f"{remote}:{instance}{destination.as_posix()}",
+            f"{remote}:{instance_name}{destination.as_posix()}",
         ]
 
         if create_dirs:
@@ -258,10 +258,10 @@ class LXC:  # pylint: disable=too-many-public-methods
         if mode:
             command.append(f"--mode={mode}")
 
-        if gid != "-1":
+        if gid != -1:
             command.append(f"--gid={gid}")
 
-        if uid != "-1":
+        if uid != -1:
             command.append(f"--uid={gid}")
 
         self._run(
@@ -272,7 +272,7 @@ class LXC:  # pylint: disable=too-many-public-methods
     def info(
         self, *, project: str = "default", remote: str = "local"
     ) -> Dict[str, Any]:
-        """Get server config that instance is running on."""
+        """Get server config that instance_name is running on."""
         proc = self._run(
             command=["info", remote + ":"],
             project=project,
@@ -285,16 +285,16 @@ class LXC:  # pylint: disable=too-many-public-methods
         config_keys: Dict[str, str],
         image: str,
         image_remote: str,
-        instance: str,
+        instance_name: str,
         ephemeral: bool = False,
         project: str = "default",
         remote: str = "local",
     ) -> None:
-        """Launch instance."""
+        """Launch instance_name."""
         command = [
             "launch",
             f"{image_remote}:{image}",
-            f"{remote}:{instance}",
+            f"{remote}:{instance_name}",
         ]
 
         if ephemeral:
@@ -342,7 +342,7 @@ class LXC:  # pylint: disable=too-many-public-methods
     def image_list(
         self, *, project: str = "default", remote: str = "local"
     ) -> List[Dict[str, Any]]:
-        """List instances."""
+        """List instance_names."""
         proc = self._run(
             command=["image", "list", f"{remote}:", "--format=yaml"],
             project=project,
@@ -353,16 +353,16 @@ class LXC:  # pylint: disable=too-many-public-methods
     def list(
         self,
         *,
-        instance: Optional[str] = None,
+        instance_name: Optional[str] = None,
         project: str = "default",
         remote: str = "local",
     ) -> List[Dict[str, Any]]:
-        """List instances."""
+        """List instance_names."""
         command = ["list", "--format=yaml"]
-        if instance is None:
-            instance = ""
+        if instance_name is None:
+            instance_name = ""
 
-        command.append(f"{remote}:{instance}")
+        command.append(f"{remote}:{instance_name}")
 
         proc = self._run(
             command=command,
@@ -419,13 +419,13 @@ class LXC:  # pylint: disable=too-many-public-methods
         self,
         *,
         alias: str,
-        instance: str,
+        instance_name: str,
         project: str,
         force: bool = True,
         remote: str = "local",
     ) -> None:
         """Create project."""
-        command = ["publish", "--alias", alias, f"{remote}:{instance}"]
+        command = ["publish", "--alias", alias, f"{remote}:{instance_name}"]
         if force:
             command.append("--force")
 
@@ -461,22 +461,22 @@ class LXC:  # pylint: disable=too-many-public-methods
             raise RuntimeError("lxc not found in PATH.")
 
     def start(
-        self, *, instance: str, project: str = "default", remote: str = "local"
+        self, *, instance_name: str, project: str = "default", remote: str = "local"
     ) -> None:
         """Start container."""
-        self._run(command=["start", f"{remote}:{instance}"], project=project)
+        self._run(command=["start", f"{remote}:{instance_name}"], project=project)
 
     def stop(
         self,
         *,
-        instance: str,
+        instance_name: str,
         project: str = "default",
         remote: str = "local",
         force=True,
         timeout: int = -1,
     ) -> None:
         """Stop container."""
-        command = ["stop", f"{remote}:{instance}"]
+        command = ["stop", f"{remote}:{instance_name}"]
 
         if force:
             command.append("--force")
@@ -495,11 +495,14 @@ def purge_project(*, lxc: LXC, project: str = "default", remote: str = "local") 
         logger.warning("Attempted to purge non-existent project '%s'.", project)
         return
 
-    # Cleanup any outstanding instances.
-    for instance in lxc.list(project=project):
-        logger.warning("Deleting instance '%s'.", instance)
+    # Cleanup any outstanding instance_names.
+    for instance_name in lxc.list(project=project):
+        logger.warning("Deleting instance_name '%s'.", instance_name)
         lxc.delete(
-            instance=instance["name"], project=project, remote=remote, force=True
+            instance_name=instance_name["name"],
+            project=project,
+            remote=remote,
+            force=True,
         )
 
     # Cleanup any outstanding images.

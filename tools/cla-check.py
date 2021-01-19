@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 Canonical Ltd
+# Copyright (C) 2021 Canonical Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 3 as
@@ -27,7 +27,7 @@ from subprocess import check_call, check_output
 
 # pyright: reportMissingImports=false
 try:
-    from launchpadlib.launchpad import Launchpad
+    from launchpadlib.launchpad import Launchpad  # type: ignore
 except ImportError:
     sys.exit(
         "Install launchpadlib: sudo apt install python-launchpadlib python3-launchpadlib"

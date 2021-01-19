@@ -2,16 +2,16 @@
 Providers
 ***************************
 
-Abstract Base Provider
-======================
-
-.. autoclass:: craft_providers.Provider
-   :show-inheritance:
-   :members:
-
-Provider Implementations
+LXD
 ========================
 
 .. autoclass:: craft_providers.lxd.LXDProvider
+   :show-inheritance:
+   :members:
+
+Multipass
+========================
+
+.. autoclass:: craft_providers.multipass.MultipassProvider
    :show-inheritance:
    :members:

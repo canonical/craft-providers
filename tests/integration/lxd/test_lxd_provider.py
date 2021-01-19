@@ -1,4 +1,4 @@
-# Copyright (C) 2020 Canonical Ltd
+# Copyright (C) 2021 Canonical Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 3 as
@@ -25,26 +25,23 @@ from craft_providers.images import BuilddImage, BuilddImageAlias
 @pytest.mark.parametrize(
     "alias", [BuilddImageAlias.XENIAL, BuilddImageAlias.BIONIC, BuilddImageAlias.FOCAL]
 )
-@pytest.mark.parametrize("use_ephemeral_instances", [False, True])
-@pytest.mark.parametrize("use_intermediate_image", [False, True])
-def test_lxd_provider(
-    lxc, project, alias, use_ephemeral_instances, use_intermediate_image
-):
+@pytest.mark.parametrize("ephemeral", [False, True])
+@pytest.mark.parametrize("use_snapshots", [False, True])
+def test_lxd_provider(lxc, project, alias, ephemeral, instance_name, use_snapshots):
     image = BuilddImage(alias=alias)
-    provider = lxd.LXDProvider(
-        instance_name="test1",
-        image=image,
-        image_remote_addr="https://cloud-images.ubuntu.com/buildd/releases",
-        image_remote_name="ubuntu",
-        image_remote_protocol="simplestreams",
-        lxc=lxc,
-        use_ephemeral_instances=use_ephemeral_instances,
-        use_intermediate_image=use_intermediate_image,
+    provider = lxd.LXDProvider()
+
+    instance = provider.create_instance(
+        auto_clean=False,
+        name=instance_name,
+        image_configuration=image,
+        image_name=str(alias.value),
+        image_remote="ubuntu",
         project=project,
         remote="local",
+        ephemeral=ephemeral,
+        use_snapshots=use_snapshots,
     )
-
-    instance = provider.setup()
 
     assert isinstance(instance, lxd.LXDInstance)
     assert instance.exists() is True
@@ -54,26 +51,18 @@ def test_lxd_provider(
 
     assert proc.stdout == b"hi\n"
 
-    provider.teardown(clean=False)
-
-    assert instance.exists() is not use_ephemeral_instances
-    assert instance.is_running() is False
-
-    provider.teardown(clean=True)
-
-    assert instance.exists() is False
-    assert instance.is_running() is False
-
 
 def test_incompatible_instance_compatibility_tag(
     lxc, project, instance_name, instance_launcher, tmp_path
 ):
     alias = BuilddImageAlias.XENIAL
+    provider = lxd.LXDProvider()
+
     instance_launcher(
         config_keys=dict(),
         instance_name=instance_name,
         image_remote="ubuntu",
-        image=str(alias.value),
+        image=alias.value,
         project=project,
         ephemeral=False,
     )
@@ -82,7 +71,7 @@ def test_incompatible_instance_compatibility_tag(
     test_file = tmp_path / "image.conf"
     test_file.write_text("compatibility_tag: craft-buildd-image-vX")
     lxc.file_push(
-        instance=instance_name,
+        instance_name=instance_name,
         project=project,
         source=test_file,
         destination=pathlib.Path("/etc/craft-image.conf"),
@@ -91,38 +80,19 @@ def test_incompatible_instance_compatibility_tag(
     image = BuilddImage(alias=alias)
 
     with pytest.raises(images.CompatibilityError) as exc_info:
-        provider = lxd.LXDProvider(
-            instance_name=instance_name,
-            image=image,
-            image_remote_addr="https://cloud-images.ubuntu.com/buildd/releases",
-            image_remote_name="ubuntu",
-            image_remote_protocol="simplestreams",
-            lxc=lxc,
-            use_ephemeral_instances=False,
-            use_intermediate_image=False,
+        instance = provider.create_instance(
+            auto_clean=False,
+            name=instance_name,
+            image_configuration=image,
+            image_name=alias.value,
+            image_remote="ubuntu",
             project=project,
             remote="local",
-            auto_clean=False,
         )
-        provider.setup()
 
     assert (
         exc_info.value.reason
         == "Expected image compatibility tag 'craft-buildd-image-v0', found 'craft-buildd-image-vX'"
-    )
-
-    lxd.LXDProvider(
-        instance_name=instance_name,
-        image=image,
-        image_remote_addr="https://cloud-images.ubuntu.com/buildd/releases",
-        image_remote_name="ubuntu",
-        image_remote_protocol="simplestreams",
-        lxc=lxc,
-        use_ephemeral_instances=False,
-        use_intermediate_image=False,
-        project=project,
-        remote="local",
-        auto_clean=True,
     )
 
 
@@ -130,11 +100,13 @@ def test_incompatible_instance_os(
     lxc, project, instance_name, instance_launcher, tmp_path
 ):
     alias = BuilddImageAlias.XENIAL
+    provider = lxd.LXDProvider()
+
     instance_launcher(
         config_keys=dict(),
         instance_name=instance_name,
         image_remote="ubuntu",
-        image=str(alias.value),
+        image=alias.value,
         project=project,
         ephemeral=False,
     )
@@ -160,7 +132,7 @@ def test_incompatible_instance_os(
         )
     )
     lxc.file_push(
-        instance=instance_name,
+        instance_name=instance_name,
         project=project,
         source=test_file,
         destination=pathlib.Path("/etc/os-release"),
@@ -169,35 +141,16 @@ def test_incompatible_instance_os(
     image = BuilddImage(alias=alias)
 
     with pytest.raises(images.CompatibilityError) as exc_info:
-        provider = lxd.LXDProvider(
-            instance_name=instance_name,
-            image=image,
-            image_remote_addr="https://cloud-images.ubuntu.com/buildd/releases",
-            image_remote_name="ubuntu",
-            image_remote_protocol="simplestreams",
-            lxc=lxc,
-            use_ephemeral_instances=False,
-            use_intermediate_image=False,
+        instance = provider.create_instance(
+            auto_clean=False,
+            name=instance_name,
+            image_configuration=image,
+            image_name=alias.value,
+            image_remote="ubuntu",
             project=project,
             remote="local",
-            auto_clean=False,
         )
-        provider.setup()
 
     assert (
         exc_info.value.reason == f"Expected OS version '{alias.value!s}', found '20.10'"
-    )
-
-    lxd.LXDProvider(
-        instance_name=instance_name,
-        image=image,
-        image_remote_addr="https://cloud-images.ubuntu.com/buildd/releases",
-        image_remote_name="ubuntu",
-        image_remote_protocol="simplestreams",
-        lxc=lxc,
-        use_ephemeral_instances=False,
-        use_intermediate_image=False,
-        project=project,
-        remote="local",
-        auto_clean=True,
     )

@@ -1,4 +1,4 @@
-# Copyright (C) 2020 Canonical Ltd
+# Copyright (C) 2021 Canonical Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 3 as
@@ -18,11 +18,11 @@ import random
 import string
 import subprocess
 import time
+from contextlib import contextmanager
 
 import pytest
 
-from craft_providers.lxd import LXC
-from craft_providers.lxd.lxc import purge_project
+from craft_providers.lxd import LXC, LXDInstance, purge_project
 
 
 def run(cmd, **kwargs):
@@ -70,29 +70,76 @@ def project(lxc):
     purge_project(lxc=lxc, project=project_name)
 
 
-@pytest.fixture()
-def instance_name():
+def _instance_name():
     return "itest-" + "".join(random.choices(string.ascii_uppercase, k=8))
 
 
 @pytest.fixture()
-def instance(instance_launcher, instance_name, project):
-    instance_launcher(
-        config_keys=dict(),
+def instance_name():
+    yield _instance_name()
+
+
+@contextmanager
+def _instance(
+    *,
+    instance_name: str,
+    lxc: LXC,
+    project: str,
+    config_keys=None,
+    image_remote="ubuntu",
+    image="16.04",
+    remote="local",
+    ephemeral=False,
+):
+    if config_keys is None:
+        config_keys = dict()
+
+    lxc.launch(
+        config_keys=config_keys,
         instance_name=instance_name,
-        image_remote="ubuntu",
-        image="16.04",
+        image_remote=image_remote,
+        image=image,
         project=project,
-        ephemeral=False,
+        ephemeral=ephemeral,
     )
 
-    return instance_name
+    # Make sure container is ready
+    for _ in range(0, 60):
+        proc = lxc.exec(
+            instance_name=instance_name,
+            command=["systemctl", "is-system-running"],
+            project=project,
+            stdout=subprocess.PIPE,
+        )
+
+        running_state = proc.stdout.decode().strip()
+        if running_state in ["running", "degraded"]:
+            break
+        time.sleep(0.5)
+
+    instance = LXDInstance(name=instance_name, project=project, remote=remote)
+
+    yield instance
+
+    if instance.exists():
+        instance.delete(force=True)
+
+
+@pytest.fixture()
+def instance(instance_launcher, instance_name, lxc, project):
+    with _instance(
+        lxc=lxc,
+        instance_name=instance_name,
+        project=project,
+    ) as x_instance:
+        yield x_instance
 
 
 @pytest.fixture()
 def instance_launcher(lxc, project, instance_name):
     def launch(
         *,
+        lxc=lxc,
         config_keys=None,
         instance_name=instance_name,
         image_remote="ubuntu",
@@ -102,7 +149,7 @@ def instance_launcher(lxc, project, instance_name):
     ) -> str:
         lxc.launch(
             config_keys=config_keys,
-            instance=instance_name,
+            instance_name=instance_name,
             image_remote=image_remote,
             image=image,
             project=project,
@@ -112,9 +159,9 @@ def instance_launcher(lxc, project, instance_name):
         # Make sure container is ready
         for _ in range(0, 60):
             proc = lxc.exec(
-                project=project,
-                instance=instance_name,
+                instance_name=instance_name,
                 command=["systemctl", "is-system-running"],
+                project=project,
                 stdout=subprocess.PIPE,
             )
 
@@ -129,11 +176,10 @@ def instance_launcher(lxc, project, instance_name):
 
 
 @pytest.fixture()
-def ephemeral_instance(lxc, project):
-    instance = "itest-" + "".join(random.choices(string.ascii_uppercase, k=8))
+def ephemeral_instance(instance_name, lxc, project):
     lxc.launch(
         config_keys=dict(),
-        instance=instance,
+        instance_name=instance_name,
         image_remote="ubuntu",
         image="16.04",
         project=project,
