@@ -27,7 +27,7 @@ from craft_providers.images import BuilddImage, BuilddImageAlias
 )
 @pytest.mark.parametrize("ephemeral", [False, True])
 @pytest.mark.parametrize("use_snapshots", [False, True])
-def test_lxd_provider(lxc, project, alias, ephemeral, instance_name, use_snapshots):
+def test_lxd_provider(project, instance_name, alias, ephemeral, use_snapshots):
     image = BuilddImage(alias=alias)
     provider = lxd.LXDProvider()
 
@@ -80,7 +80,7 @@ def test_incompatible_instance_compatibility_tag(
     image = BuilddImage(alias=alias)
 
     with pytest.raises(images.CompatibilityError) as exc_info:
-        instance = provider.create_instance(
+        provider.create_instance(
             auto_clean=False,
             name=instance_name,
             image_configuration=image,
@@ -141,7 +141,7 @@ def test_incompatible_instance_os(
     image = BuilddImage(alias=alias)
 
     with pytest.raises(images.CompatibilityError) as exc_info:
-        instance = provider.create_instance(
+        provider.create_instance(
             auto_clean=False,
             name=instance_name,
             image_configuration=image,

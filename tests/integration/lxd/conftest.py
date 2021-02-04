@@ -19,6 +19,7 @@ import string
 import subprocess
 import time
 from contextlib import contextmanager
+from typing import Any, Dict, Optional
 
 import pytest
 
@@ -85,11 +86,11 @@ def _instance(
     instance_name: str,
     lxc: LXC,
     project: str,
-    config_keys=None,
-    image_remote="ubuntu",
-    image="16.04",
-    remote="local",
-    ephemeral=False,
+    config_keys: Optional[Dict[str, Any]] = None,
+    image_remote: str = "ubuntu",
+    image: str = "16.04",
+    remote: str = "local",
+    ephemeral: bool = False,
 ):
     if config_keys is None:
         config_keys = dict()
@@ -112,7 +113,7 @@ def _instance(
             stdout=subprocess.PIPE,
         )
 
-        running_state = proc.stdout.decode().strip()
+        running_state = proc.stdout.strip()
         if running_state in ["running", "degraded"]:
             break
         time.sleep(0.5)
@@ -126,10 +127,10 @@ def _instance(
 
 
 @pytest.fixture()
-def instance(instance_launcher, instance_name, lxc, project):
+def instance(instance_name, lxc, project):
     with _instance(
-        lxc=lxc,
         instance_name=instance_name,
+        lxc=lxc,
         project=project,
     ) as x_instance:
         yield x_instance
