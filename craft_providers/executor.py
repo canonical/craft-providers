@@ -75,10 +75,8 @@ class Executor(ABC):
         """Copy source file/directory from environment to host destination.
 
         Standard "cp -r" rules apply:
-
-            - if source is directory, copy happens recursively.
-
-            - if destination exists, source will be copied into destination.
+        - if source is directory, copy happens recursively.
+        - if destination exists, source will be copied into destination.
 
         Providing this as an abstract method allows the provider to implement
         the most performant option available.
