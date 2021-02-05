@@ -63,6 +63,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/cjp256/craft_providers",
-    version="0.0.3",
+    version="0.0.0",
     zip_safe=False,
 )
