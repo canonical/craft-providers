@@ -78,11 +78,11 @@ test-integrations: ## Run integration tests.
 
 .PHONY: test-isort
 test-isort:
-	isort --check .
+	isort --check craft_providers tests
 
 .PHONY: test-mypy
 test-mypy:
-	mypy .
+	mypy craft_providers tests
 
 .PHONY: test-pycodestyle
 test-pycodestyle:
