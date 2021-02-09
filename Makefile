@@ -1,48 +1,42 @@
+.PHONY: help
+help: ## Show this help.
+	@printf "%-40s %s\n" "Target" "Description"
+	@printf "%-40s %s\n" "------" "-----------"
+	@fgrep " ## " $(MAKEFILE_LIST) | fgrep -v grep | awk -F ': .*## ' '{$$1 = sprintf("%-40s", $$1)} 1'
+
 .PHONY: autoformat
-autoformat:
+autoformat: ## Run automatic code formatters.
 	isort .
 	autoflake --remove-all-unused-imports --ignore-init-module-imports -ri .
 	black .
 
 .PHONY: clean
-clean: clean-build clean-docs clean-pyc clean-test
-
-.PHONY: clean-build
-clean-build:
+clean: ## Clean artifacts from building, testing, etc.
 	rm -rf build/
 	rm -rf dist/
 	rm -rf .eggs/
 	find . -name '*.egg-info' -exec rm -rf {} +
 	find . -name '*.egg' -exec rm -f {} +
-
-.PHONY: clean-docs
-clean-docs:
 	rm -rf docs/_build/
 	rm -f docs/craft_providers.*
 	rm -f docs/modules.rst
-
-.PHONY: clean-pyc
-clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +
 	find . -name '*.pyo' -exec rm -f {} +
 	find . -name '*~' -exec rm -f {} +
 	find . -name '__pycache__' -exec rm -rf {} +
-
-.PHONY: clean-tests
-clean-test:
 	rm -rf .tox/
 	rm -f .coverage
 	rm -rf htmlcov/
 	rm -rf .pytest_cache
 
 .PHONY: coverage
-coverage:
+coverage: ## Run pytest with coverage report.
 	coverage run --source craft_providers -m pytest
 	coverage report -m
 	coverage html
 
 .PHONY: docs
-docs:
+docs: ## Generate documentation.
 	rm -f docs/craft_providers.rst
 	rm -f docs/modules.rst
 	sphinx-apidoc -o docs/ craft_providers --no-toc --ext-githubpages
@@ -50,20 +44,20 @@ docs:
 	$(MAKE) -C docs html
 
 .PHONY: dist
-dist: clean
+dist: clean ## Build python package.
 	python setup.py sdist
 	python setup.py bdist_wheel
 	ls -l dist
 
 .PHONY: install
-install: clean
+install: clean ## Install python package.
 	python setup.py install
 
 .PHONY: lint
-lint: test-black test-codespell test-flake8 test-isort test-mypy test-pycodestyle test-pydocstyle test-pylint test-pyright
+lint: test-black test-codespell test-flake8 test-isort test-mypy test-pycodestyle test-pydocstyle test-pylint test-pyright ## Run all linting tests.
 
 .PHONY: release
-release: dist
+release: dist ## Release with twine.
 	twine upload dist/*
 
 .PHONY: test-black
@@ -79,7 +73,7 @@ test-flake8:
 	flake8 .
 
 .PHONY: test-integrations
-test-integrations:
+test-integrations: ## Run integration tests.
 	pytest tests/integration
 
 .PHONY: test-isort
@@ -108,8 +102,8 @@ test-pyright:
 	pyright .
 
 .PHONY: test-units
-test-units:
+test-units: ## Run unit tests.
 	pytest tests/unit
 
 .PHONY: tests
-tests: lint test-integrations test-units
+tests: lint test-integrations test-units ## Run all tests.
