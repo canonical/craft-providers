@@ -138,13 +138,7 @@ disable=print-statement,
         xreadlines-attribute,
         deprecated-sys-function,
         exception-escape,
-        comprehension-escape,
-# Custom added (after generating config file).
-        fixme,
-        line-too-long,
-        no-self-use,
-        too-few-public-methods,
-
+        comprehension-escape
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -370,7 +364,7 @@ ignore-docstrings=yes
 ignore-imports=no
 
 # Minimum lines number of a similarity.
-min-similarity-lines=12
+min-similarity-lines=4
 
 
 [BASIC]
