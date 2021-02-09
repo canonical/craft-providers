@@ -54,7 +54,7 @@ install: clean ## Install python package.
 	python setup.py install
 
 .PHONY: lint
-lint: test-black test-codespell test-flake8 test-isort test-mypy test-pycodestyle test-pydocstyle test-pylint test-pyright ## Run all linting tests.
+lint: test-black test-codespell test-flake8 test-isort test-mypy test-pydocstyle test-pylint test-pyright ## Run all linting tests.
 
 .PHONY: release
 release: dist ## Release with twine.
@@ -83,10 +83,6 @@ test-isort:
 .PHONY: test-mypy
 test-mypy:
 	mypy craft_providers tests
-
-.PHONY: test-pycodestyle
-test-pycodestyle:
-	pycodestyle craft_providers
 
 .PHONY: test-pydocstyle
 test-pydocstyle:
