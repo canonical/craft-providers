@@ -5,6 +5,7 @@
     "**/.pytest_cache",
     ".direnv",
     "build",
-    "docs"
+    "docs",
+    "venv"
   ]
 }
