@@ -44,10 +44,6 @@ jobs:
         run: |
           source ${HOME}/.venv/bin/activate
           make test-mypy
-      - name: Run pycodestyle
-        run: |
-          source ${HOME}/.venv/bin/activate
-          make test-pycodestyle
       - name: Run pydocstyle
         run: |
           source ${HOME}/.venv/bin/activate
