@@ -29,9 +29,7 @@ from subprocess import check_call, check_output
 try:
     from launchpadlib.launchpad import Launchpad  # type: ignore
 except ImportError:
-    sys.exit(
-        "Install launchpadlib: sudo apt install python-launchpadlib python3-launchpadlib"
-    )
+    sys.exit("Install launchpadlib: sudo apt install python3-launchpadlib")
 
 shortlog_email_rx = re.compile(r"^\s*\d+\s+.*<(\S+)>$", re.M)
 
@@ -80,7 +78,7 @@ def static_email_check(email, master_emails, width):
         return True
     if email.endswith("@mozilla.com"):
         print(
-            "{}✓{} {:<{}} @mozilla.com account (mozilla corp has signed the corp CLA)".format(
+            "{}✓{} {:<{}} @mozilla.com account (mozilla corp has signed the corp CLA)".format(  # noqa: E501
                 green, reset, email, width
             )
         )
