@@ -6,6 +6,7 @@ Here you will find all of the provider documentation...
 .. toctree::
    :caption: Public APIs:
 
+   executors
 
 .. toctree::
    :caption: Internal APIs:
