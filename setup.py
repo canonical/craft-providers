@@ -62,7 +62,7 @@ setup(
     setup_requires=setup_requirements,
     test_suite="tests",
     tests_require=test_requirements,
-    url="https://github.com/canonical/craft_providers",
+    url="https://github.com/canonical/craft-providers",
     version="0.0.0",
     zip_safe=False,
 )
