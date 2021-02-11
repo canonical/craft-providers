@@ -40,6 +40,10 @@ jobs:
         run: |
           source ${HOME}/.venv/bin/activate
           make test-flake8
+      - name: Run isort
+        run: |
+          source ${HOME}/.venv/bin/activate
+          make test-isort
       - name: Run mypy
         run: |
           source ${HOME}/.venv/bin/activate
