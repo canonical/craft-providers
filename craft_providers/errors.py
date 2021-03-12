@@ -40,19 +40,15 @@ def details_from_command_error(
     cmd_string = shlex.join(cmd)
 
     details = [
-        f"* Command that failed: {cmd_string}",
+        f"* Command that failed: {cmd_string!r}",
         f"* Command exit code: {returncode}",
     ]
 
     if stdout:
-        if isinstance(stdout, bytes):
-            stdout = stdout.decode(errors="replace")
-        details.append(f"* Command output: {stdout}")
+        details.append(f"* Command output: {stdout!r}")
 
     if stderr:
-        if isinstance(stderr, bytes):
-            stderr = stderr.decode(errors="replace")
-        details.append(f"* Command standard error output: {stderr}")
+        details.append(f"* Command standard error output: {stderr!r}")
 
     return "\n".join(details)
 

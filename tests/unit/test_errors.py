@@ -60,10 +60,10 @@ def test_details_from_called_process_error():
 
     assert details == textwrap.dedent(
         """\
-            * Command that failed: test-command flags 'quote$me'
+            * Command that failed: "test-command flags 'quote$me'"
             * Command exit code: -1
-            * Command output: test stdout
-            * Command standard error output: test stderr"""
+            * Command output: 'test stdout'
+            * Command standard error output: 'test stderr'"""
     )
 
 
@@ -75,7 +75,7 @@ def test_details_from_command_error():
 
     assert details == textwrap.dedent(
         """\
-            * Command that failed: test-command flags 'quote$me'
+            * Command that failed: "test-command flags 'quote$me'"
             * Command exit code: -1"""
     )
 
@@ -90,42 +90,25 @@ def test_details_from_command_error_with_output_strings():
 
     assert details == textwrap.dedent(
         """\
-            * Command that failed: test-command flags 'quote$me'
+            * Command that failed: "test-command flags 'quote$me'"
             * Command exit code: -1
-            * Command output: test stdout
-            * Command standard error output: test stderr"""
+            * Command output: 'test stdout'
+            * Command standard error output: 'test stderr'"""
     )
 
 
-def test_details_from_command_error_with_decodable_output_bytes():
+def test_details_from_command_error_with_output_bytes():
     details = errors.details_from_command_error(
         returncode=-1,
         cmd=["test-command", "flags", "quote$me"],
-        stdout=b"test stdout",
-        stderr=b"test stderr",
+        stdout=bytes.fromhex("00 FF"),
+        stderr=bytes.fromhex("01 FE"),
     )
 
     assert details == textwrap.dedent(
         """\
-            * Command that failed: test-command flags 'quote$me'
+            * Command that failed: "test-command flags 'quote$me'"
             * Command exit code: -1
-            * Command output: test stdout
-            * Command standard error output: test stderr"""
-    )
-
-
-def test_details_from_command_error_with_undecodable_output_bytes():
-    details = errors.details_from_command_error(
-        returncode=-1,
-        cmd=["test-command", "flags", "quote$me"],
-        stdout=b"\xfftest stdout",
-        stderr=b"\xfftest stderr",
-    )
-
-    assert details == textwrap.dedent(
-        """\
-            * Command that failed: test-command flags 'quote$me'
-            * Command exit code: -1
-            * Command output: �test stdout
-            * Command standard error output: �test stderr"""
+            * Command output: b'\\x00\\xff'
+            * Command standard error output: b'\\x01\\xfe'"""
     )
