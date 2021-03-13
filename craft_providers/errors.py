@@ -93,21 +93,3 @@ class ProviderError(Exception):
             parts.append(self.resolution)
 
         return "\n".join(parts)
-
-    @classmethod
-    def from_called_process_error(
-        cls,
-        *,
-        brief: str,
-        error: subprocess.CalledProcessError,
-        resolution: Optional[str] = None,
-    ) -> "ProviderError":
-        """Create a consistent ProviderError from command errors.
-
-        :param brief: Brief description of error.
-        :param error: CalledProcessError from called process.
-        :param resolution: Recommendation, if any.
-        """
-        details = details_from_called_process_error(error)
-
-        return cls(brief=brief, details=details, resolution=resolution)
