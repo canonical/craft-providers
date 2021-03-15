@@ -26,12 +26,13 @@ def details_from_command_error(
     stdout: Optional[Union[bytes, str]] = None,
     stderr: Optional[Union[bytes, str]] = None,
 ) -> str:
-    """Create a consistent ProviderError from Popen command errors.
+    """Create a consistent ProviderError from command errors.
 
-    If stdout or stderr have undecodable bytes, they will be updated using
-    decode(errors="replace").
+    stdout and stderr, if provided, will be stringified using its object
+    representation.  This method does not decode byte strings.
 
     :param cmd: Command executed.
+    :param returncode: Command exit code.
     :param stdout: Optional stdout to include.
     :param stderr: Optional stderr to include.
 
