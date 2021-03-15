@@ -13,6 +13,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import shutil
 import subprocess
 
 import pytest
@@ -20,6 +21,10 @@ import pytest
 from craft_providers.multipass import Multipass
 
 from . import conftest
+
+pytestmark = pytest.mark.skipif(
+    shutil.which("multipass") is None, reason="multipass not installed"
+)
 
 
 @pytest.fixture()
