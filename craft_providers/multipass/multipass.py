@@ -133,7 +133,7 @@ class Multipass:
     ) -> None:
         """Launch multipass VM.
 
-        :param instance_name: The name the launched instance_name will have.
+        :param instance_name: The name the launched instance will have.
         :param image: Name of image to create the instance with.
         :param cpus: Amount of virtual CPUs to assign to the launched instance_name.
         :param mem: Amount of RAM to assign to the launched instance_name.
