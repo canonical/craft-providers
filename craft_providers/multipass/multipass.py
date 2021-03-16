@@ -137,7 +137,7 @@ class Multipass:
         :param image: Name of image to create the instance with.
         :param cpus: Amount of virtual CPUs to assign to the launched instance.
         :param mem: Amount of RAM to assign to the launched instance.
-        :param disk: Amount of disk space the instance_name will see.
+        :param disk: Amount of disk space the launched instance will have.
 
         :raises MultipassError: on error.
         """
