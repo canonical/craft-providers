@@ -46,9 +46,9 @@ def instance_name():
 def tmp_instance(
     *,
     instance_name=instance_name,
-    image_name="snapcraft:core20",
+    image_name="20.04",
     cpus="2",
-    disk="128G",
+    disk="64G",
     mem="1G",
 ):
     subprocess.run(
