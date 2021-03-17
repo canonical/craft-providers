@@ -71,6 +71,7 @@ jobs:
         run: |
           sudo groupadd --force --system lxd
           sudo usermod --append --groups lxd $USER
+          sudo snap refresh lxd
           sudo snap start lxd
           sudo lxd waitready --timeout=30
           sudo lxd init --auto
