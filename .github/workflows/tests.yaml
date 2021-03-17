@@ -105,6 +105,7 @@ jobs:
         run: |
           brew install multipass
           multipass version
+          sleep 20
       - name: Run integration tests on MacOS
         run: |
           source ${HOME}/.venv/bin/activate
