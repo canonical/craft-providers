@@ -44,7 +44,7 @@ class Multipass:
     ) -> None:
         self.multipass_path = multipass_path
 
-    def _run(  # pylint: disable=redefined-builtin
+    def _run(
         self,
         command: List[str],
         *,
