@@ -243,12 +243,10 @@ class Multipass:
 
         :raises MultipassError: on error.
         """
-        command = ["stop"]
+        command = ["stop", instance_name]
 
         if delay_mins != 0:
             command.extend(["--time", str(delay_mins)])
-
-        command.append(instance_name)
 
         try:
             self._run(command, capture_output=True, check=True)

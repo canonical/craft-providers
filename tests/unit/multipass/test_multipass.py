@@ -369,7 +369,7 @@ def test_stop(fake_process):
 
 def test_stop_all_opts(fake_process):
     fake_process.register_subprocess(
-        ["multipass", "stop", "--time", "5", "test-instance"]
+        ["multipass", "stop", "test-instance", "--time", "5"]
     )
 
     Multipass().stop(instance_name="test-instance", delay_mins=5)
