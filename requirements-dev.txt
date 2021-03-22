@@ -46,7 +46,7 @@ pylint==2.7.2
 pyparsing==2.4.7
 pytest==6.2.2
 pytest-runner==5.3.0
-pytest-subprocess==1.0.0
+pytest-subprocess==1.0.1
 pytz==2021.1
 PyYAML==5.4.1
 readme-renderer==29.0
