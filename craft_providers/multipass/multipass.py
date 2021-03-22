@@ -90,6 +90,10 @@ class Multipass:
 
         :param command: Command to execute in the instance.
         :param instance_name: Name of instance to execute in.
+        :param runner: Execution function to invoke, e.g. subprocess.run or
+            Popen.  First argument is finalized command with the attached
+            kwargs.
+        :param kwargs: Additional kwargs for runner.
 
         :returns: Runner's instance.
         """
