@@ -63,10 +63,6 @@ jobs:
           sudo npm install -g pyright
           source ${HOME}/.venv/bin/activate
           make test-pyright
-      - name: Run unit tests on Linux
-        run: |
-          source ${HOME}/.venv/bin/activate
-          make test-units
       - name: Install LXD
         run: |
           sudo groupadd --force --system lxd
@@ -84,7 +80,7 @@ jobs:
         uses: codecov/codecov-action@v1
 
   macos-integration-tests:
-    name: MacOS 10.15 Tests
+    name: MacOS 10.15 Integration Tests
     runs-on: macos-10.15
     steps:
       - name: Checkout code
@@ -98,10 +94,6 @@ jobs:
           pip3 install -U pip wheel setuptools
           pip3 install -U -r requirements.txt -r requirements-dev.txt
           pip3 install -e .
-      - name: Run unit tests on MacOS
-        run: |
-          source ${HOME}/.venv/bin/activate
-          make test-units
       - name: Install Multipass
         run: |
           brew install multipass
@@ -111,3 +103,28 @@ jobs:
         run: |
           source ${HOME}/.venv/bin/activate
           make test-integrations
+
+  unit-tests:
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, macos-10.15, windows-2019]
+        python-version: [3.8, 3.9]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Python ${{ matrix.python-version }} on ${{ matrix.os }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install craft-providers
+        run: |
+          pip install -U pip wheel setuptools
+          pip install -U -r requirements.txt -r requirements-dev.txt
+          pip install -e .
+      - name: Run unit tests
+        run: |
+          pytest tests/unit
