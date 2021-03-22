@@ -283,12 +283,13 @@ def test_list_error(fake_process, mock_details_from_process_error):
 
 
 def test_mount(fake_process):
+    project_path = pathlib.Path.home() / "my-project"
     fake_process.register_subprocess(
-        ["multipass", "mount", "/home/user/my-project", "test-instance:/mnt"]
+        ["multipass", "mount", str(project_path), "test-instance:/mnt"]
     )
 
     Multipass().mount(
-        source=pathlib.Path("/home/user/my-project"),
+        source=project_path,
         target="test-instance:/mnt",
         uid_map=None,
         gid_map=None,
@@ -298,11 +299,12 @@ def test_mount(fake_process):
 
 
 def test_mount_all_opts(fake_process):
+    project_path = pathlib.Path.home() / "my-project"
     fake_process.register_subprocess(
         [
             "multipass",
             "mount",
-            "/home/user/my-project",
+            str(project_path),
             "test-instance:/mnt",
             "--uid-map",
             "1:2",
@@ -316,7 +318,7 @@ def test_mount_all_opts(fake_process):
     )
 
     Multipass().mount(
-        source=pathlib.Path("/home/user/my-project"),
+        source=project_path,
         target="test-instance:/mnt",
         uid_map={"1": "2", "3": "4"},
         gid_map={"5": "6", "7": "8"},
@@ -326,20 +328,21 @@ def test_mount_all_opts(fake_process):
 
 
 def test_mount_error(fake_process, mock_details_from_process_error):
+    project_path = pathlib.Path.home() / "my-project"
     fake_process.register_subprocess(
-        ["multipass", "mount", "/home/user/my-project", "test-instance:/mnt"],
+        ["multipass", "mount", str(project_path), "test-instance:/mnt"],
         returncode=1,
     )
 
     with pytest.raises(MultipassError) as exc_info:
         Multipass().mount(
-            source=pathlib.Path("/home/user/my-project"),
+            source=project_path,
             target="test-instance:/mnt",
         )
 
     assert len(fake_process.calls) == 1
     assert exc_info.value == MultipassError(
-        brief="Failed to mount '/home/user/my-project' to 'test-instance:/mnt'.",
+        brief=f"Failed to mount {str(project_path)!r} to 'test-instance:/mnt'.",
         details=mock_details_from_process_error.return_value,
     )
 
