@@ -116,9 +116,6 @@ class Multipass:
         try:
             proc = self._run(command, capture_output=True, check=True, text=True)
         except subprocess.CalledProcessError as error:
-            if "does not exist" in error.stderr:
-                return None
-
             raise MultipassError(
                 brief=f"Failed to query info for VM {instance_name!r}.",
                 details=errors.details_from_called_process_error(error),

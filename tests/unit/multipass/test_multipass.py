@@ -175,22 +175,11 @@ def test_info(fake_process):
     assert data == json.loads(EXAMPLE_INFO)
 
 
-def test_info_no_vm(fake_process):
+def test_info_error(fake_process, mock_details_from_process_error):
     fake_process.register_subprocess(
         ["multipass", "info", "test-instance", "--format", "json"],
         stderr='info failed: The following errors occurred:\ninstance "foo" does not exist',
         returncode=1,
-    )
-
-    data = Multipass().info(instance_name="test-instance")
-
-    assert len(fake_process.calls) == 1
-    assert data is None
-
-
-def test_info_error(fake_process, mock_details_from_process_error):
-    fake_process.register_subprocess(
-        ["multipass", "info", "test-instance", "--format", "json"], returncode=1
     )
 
     with pytest.raises(MultipassError) as exc_info:
