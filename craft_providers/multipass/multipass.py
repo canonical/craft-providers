@@ -175,7 +175,7 @@ class Multipass:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-        data_list = json.loads(proc.stdout).get("list", dict())
+        data_list = json.loads(proc.stdout).get("list", list())
         return [instance["name"] for instance in data_list]
 
     def mount(
