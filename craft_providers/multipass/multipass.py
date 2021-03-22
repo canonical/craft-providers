@@ -194,11 +194,11 @@ class Multipass:
             If omitted, the mount point will be the same as the source's
             absolute path.
         :param uid_map: A mapping of user IDs for use in the mount of the form
-            <host-id> -> <instance-name-id>.  File and folder ownership will be
-            mapped from <host> to <instance-name> inside the instance_name.
+            <host-id> -> <instance-id>.  File and folder ownership will be
+            mapped from <host-id> to <instance-id> inside the instance.
         :param gid_map: A mapping of group IDs for use in the mount of the form
-            <host-id> -> <instance-name-id>.  File and folder ownership will be
-            mapped from <host> to <instance-name> inside the instance_name.
+            <host-id> -> <instance-id>.  File and folder ownership will be
+            mapped from <host-id> to <instance-id> inside the instance.
         """
         command = ["mount", str(source), target]
 
@@ -288,6 +288,8 @@ class Multipass:
         :param source: The source path, prefixed with <name:> for a path inside
             the instance.
         :param destination: An IO stream to write to.
+        :param chunk_size: Number of bytes to transfer at a time.  Defaults to
+            4096.
 
         :raises MultipassError: On error.
         """
@@ -332,6 +334,8 @@ class Multipass:
         :param source: An IO stream to read from.
         :param destination: The destination path, prefixed with <name:> for a
             path inside the instance.
+        :param chunk_size: Number of bytes to transfer at a time.  Defaults to
+            4096.
 
         :raises MultipassError: On error.
         """
@@ -368,7 +372,7 @@ class Multipass:
 
         :param mount: Mount point in <name>[:<path>] format, where <name> are
             instance names, and optional <path> are mount points.  If omitted,
-            all mounts will be removed from the name instance.
+            all mounts will be removed from the named instance.
 
         :raises MultipassError: On error.
         """
