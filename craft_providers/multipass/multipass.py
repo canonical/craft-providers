@@ -24,7 +24,7 @@ import logging
 import pathlib
 import shlex
 import subprocess
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from craft_providers import errors
 
@@ -104,7 +104,7 @@ class Multipass:
 
         return runner(final_cmd, **kwargs)  # pylint: disable=subprocess-run-check
 
-    def info(self, *, instance_name: str) -> Optional[Dict[str, Any]]:
+    def info(self, *, instance_name: str) -> Dict[str, Any]:
         """Get information/state for instance.
 
         :returns: Parsed json data from info command.
