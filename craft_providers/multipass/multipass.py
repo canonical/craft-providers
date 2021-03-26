@@ -296,10 +296,12 @@ class Multipass:
             command,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
 
-        # Should never happen, but pyright makes noise.
+        # Should never happen, but mypy/pyright makes noise.
         assert proc.stdout is not None
+        assert proc.stderr is not None
 
         while True:
             data = proc.stdout.read(chunk_size)
@@ -338,10 +340,11 @@ class Multipass:
         :raises MultipassError: On error.
         """
         command = [str(self.multipass_path), "transfer", "-", destination]
-        proc = subprocess.Popen(command, stdin=subprocess.PIPE)
+        proc = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        # Should never happen, but pyright makes noise.
+        # Should never happen, but mypy/pyright makes noise.
         assert proc.stdin is not None
+        assert proc.stderr is not None
 
         while True:
             data = source.read(chunk_size)

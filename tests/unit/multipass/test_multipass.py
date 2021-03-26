@@ -472,7 +472,10 @@ def test_transfer_destination_io_error(mock_popen, mock_details_from_command_err
     )
     assert mock_popen.mock_calls == [
         mock.call(
-            ["multipass", "transfer", "test-instance:/test1", "-"], stdin=-3, stdout=-1
+            ["multipass", "transfer", "test-instance:/test1", "-"],
+            stdin=-3,
+            stdout=-1,
+            stderr=-1,
         ),
         mock.call().stdout.read(4096),
         mock.call().communicate(timeout=30),
@@ -498,6 +501,7 @@ def test_transfer_source_io(mock_popen):
         mock.call(
             ["multipass", "transfer", "-", "test-instance:/tmp/foo"],
             stdin=-1,
+            stderr=-1,
         ),
         mock.call().stdin.write(b"Hello World!\n"),
         mock.call().communicate(timeout=30),
@@ -521,6 +525,7 @@ def test_transfer_source_io_chunk_size(mock_popen):
         mock.call(
             ["multipass", "transfer", "-", "test-instance:/tmp/foo"],
             stdin=-1,
+            stderr=-1,
         ),
         mock.call().stdin.write(b"Hell"),
         mock.call().stdin.write(b"o Wo"),
@@ -553,6 +558,7 @@ def test_transfer_source_io_error(mock_popen, mock_details_from_command_error):
         mock.call(
             ["multipass", "transfer", "-", "test-instance:/tmp/foo"],
             stdin=-1,
+            stderr=-1,
         ),
         mock.call().stdin.write(b"Hello World!\n"),
         mock.call().communicate(timeout=30),
