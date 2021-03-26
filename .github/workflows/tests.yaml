@@ -11,6 +11,7 @@ on:
 
 jobs:
   tests:
+    name: Ubuntu 20.04 Tests
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout code
@@ -20,7 +21,7 @@ jobs:
       - name: Add local bin to PATH
         run: |
           echo "${HOME}/.local/bin" >> $GITHUB_PATH
-      - name: Install python package and dependencies
+      - name: Install craft-providers
         run: |
           sudo apt install -y python3-pip python3-venv
           python3 -m venv ${HOME}/.venv
@@ -62,21 +63,68 @@ jobs:
           sudo npm install -g pyright
           source ${HOME}/.venv/bin/activate
           make test-pyright
-      - name: Run unit tests
-        run: |
-          source ${HOME}/.venv/bin/activate
-          make test-units
       - name: Install LXD
         run: |
           sudo groupadd --force --system lxd
           sudo usermod --append --groups lxd $USER
+          sudo snap refresh lxd
           sudo snap start lxd
           sudo lxd waitready --timeout=30
           sudo lxd init --auto
-      - name: Run integration tests
+      - name: Run integration tests on Linux
         run: |
           source ${HOME}/.venv/bin/activate
           sg lxd -c "lxc version"
           sg lxd -c "make test-integrations"
       - name: Upload code coverage
         uses: codecov/codecov-action@v1
+
+  macos-integration-tests:
+    name: MacOS 10.15 Integration Tests
+    runs-on: macos-10.15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Install craft-providers
+        run: |
+          python3 -m venv ${HOME}/.venv
+          source ${HOME}/.venv/bin/activate
+          pip3 install -U pip wheel setuptools
+          pip3 install -U -r requirements.txt -r requirements-dev.txt
+          pip3 install -e .
+      - name: Install Multipass
+        run: |
+          brew install multipass
+          multipass version
+          sleep 20
+      - name: Run integration tests on MacOS
+        run: |
+          source ${HOME}/.venv/bin/activate
+          make test-integrations
+
+  unit-tests:
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, macos-10.15, windows-2019]
+        python-version: [3.8, 3.9]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Python ${{ matrix.python-version }} on ${{ matrix.os }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install craft-providers
+        run: |
+          pip install -U pip wheel setuptools
+          pip install -U -r requirements.txt -r requirements-dev.txt
+          pip install -e .
+      - name: Run unit tests
+        run: |
+          pytest tests/unit
