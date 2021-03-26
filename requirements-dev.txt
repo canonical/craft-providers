@@ -11,6 +11,7 @@ pydocstyle
 pylint
 pytest
 pytest-runner
+pytest-subprocess
 pyyaml
 sphinx
 sphinx-autodoc-typehints
