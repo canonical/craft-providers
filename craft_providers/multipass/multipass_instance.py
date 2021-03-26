@@ -42,20 +42,21 @@ def _get_host_uid():
     return os.getuid()  # pylint: disable=no-member
 
 
-def _finalize_command(
+def _rootify_multipass_command(
     command: List[str],
     *,
     env: Optional[Dict[str, str]] = None,
 ) -> List[str]:
-    """Finalize command to run.
+    """Wrap a command to run as root with specified environment.
 
-    Account for environment (if any) and Multipass requirements to run as
-    root.
+    - Use sudo to run as root (Multipass defaults to ubuntu user).
+    - Configure sudo to set home directory.
+    - Account for environment flags in env, if any.
 
     :param command: Command to execute.
-    :param env: Environment flags to set.
+    :param env: Additional environment flags to set.
 
-    :returns: List of command strings.
+    :returns: List of command strings for multipass exec.
     """
     final_cmd = ["sudo", "-H", "--"]
 
@@ -151,7 +152,7 @@ class MultipassInstance(Executor):
         """
         return self._multipass.exec(
             instance_name=self.name,
-            command=_finalize_command(command, env=kwargs.pop("env", None)),
+            command=_rootify_multipass_command(command, env=kwargs.pop("env", None)),
             runner=subprocess.Popen,
             **kwargs,
         )
@@ -170,7 +171,7 @@ class MultipassInstance(Executor):
         """
         return self._multipass.exec(
             instance_name=self.name,
-            command=_finalize_command(command, env=kwargs.pop("env", None)),
+            command=_rootify_multipass_command(command, env=kwargs.pop("env", None)),
             runner=subprocess.run,
             **kwargs,
         )
