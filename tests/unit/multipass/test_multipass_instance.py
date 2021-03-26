@@ -82,7 +82,7 @@ def mock_multipass(project_path):
         platform_info = copy.deepcopy(EXAMPLE_INFO)
         platform_info["info"]["test-instance"]["mounts"]["/root/project"][
             "source_path"
-        ] = str(project_path)
+        ] = project_path.as_posix()
 
         multipass_mock.info.return_value = platform_info
 

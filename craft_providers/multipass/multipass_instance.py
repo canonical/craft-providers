@@ -219,9 +219,12 @@ class MultipassInstance(Executor):
         mounts = info.get("mounts", dict())
 
         for mount_point, mount_config in mounts.items():
-            if mount_point == target.as_posix() and mount_config.get(
-                "source_path"
-            ) == str(host_source):
+            # Even on Windows, Multipass writes source_path as posix, e.g.:
+            # 'C:/Users/chris/tmpbat91bwz.tmp-pytest'
+            if (
+                mount_point == target.as_posix()
+                and mount_config.get("source_path") == host_source.as_posix()
+            ):
                 return True
 
         return False
