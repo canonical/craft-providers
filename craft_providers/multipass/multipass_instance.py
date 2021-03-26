@@ -28,20 +28,6 @@ from .multipass import Multipass
 logger = logging.getLogger(__name__)
 
 
-def _get_host_gid():
-    if sys.platform == "win32" or not hasattr(os, "getgid"):
-        return 0
-
-    return os.getgid()  # pylint: disable=no-member
-
-
-def _get_host_uid():
-    if sys.platform == "win32" or not hasattr(os, "getuid"):
-        return 0
-
-    return os.getuid()  # pylint: disable=no-member
-
-
 def _rootify_multipass_command(
     command: List[str],
     *,
@@ -272,30 +258,44 @@ class MultipassInstance(Executor):
         *,
         host_source: pathlib.Path,
         target: pathlib.Path,
-        host_uid: Optional[int] = None,
-        host_gid: Optional[int] = None,
+        host_uid: Optional[str] = None,
+        host_gid: Optional[str] = None,
     ) -> None:
         """Mount host host_source directory to target mount point.
 
         Checks first to see if already mounted.
 
+        When mounting, if no host_uid or host_gid is given, default to mapping
+        the user on the host to the root user in the guest to keep IDs aligned.
+        Multipass does not support mappings in Windows yet, so raise an error if
+        host_uid or host_gid are used on win32.
+
         :param host_source: Host path to mount.
         :param target: Instance path to mount to.
+        :param host_uid: Host user ID to map to root in guest, if any.
+        :param host_gid: Host group ID to map to root in guest, if any.
 
         :raises MultipassError: On unexpected failure.
         """
         if self.is_mounted(host_source=host_source, target=target):
             return
 
-        if host_uid is None:
-            host_uid = _get_host_uid()
+        if sys.platform == "win32":
+            if host_uid is not None or host_gid is not None:
+                raise MultipassError(
+                    brief="Mounting with user/group ID mappings is not supported on Windows",
+                )
 
-        uid_map = {str(host_uid): "0"}
+            uid_map = None
+            gid_map = None
+        else:
+            if host_uid is None:
+                host_uid = str(os.getuid())  # pylint: disable=no-member
+            if host_gid is None:
+                host_gid = str(os.getgid())  # pylint: disable=no-member
 
-        if host_gid is None:
-            host_gid = _get_host_gid()
-
-        gid_map = {str(host_gid): "0"}
+            uid_map = {host_uid: "0"}
+            gid_map = {host_gid: "0"}
 
         self._multipass.mount(
             source=host_source,

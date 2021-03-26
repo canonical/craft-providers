@@ -20,6 +20,7 @@ from unittest import mock
 import pytest
 
 from craft_providers.multipass import Multipass, MultipassInstance
+from craft_providers.multipass.errors import MultipassError
 
 if sys.platform == "win32":
     EXAMPLE_MOUNTS = {
@@ -297,8 +298,8 @@ def test_mount(mock_multipass, project_path, mock_os_getgid, mock_os_getuid):
     )
 
     if sys.platform == "win32":
-        gid_map = {"0": "0"}
-        uid_map = {"0": "0"}
+        gid_map = None
+        uid_map = None
     else:
         gid_map = {str(mock_os_getgid.return_value): "0"}
         uid_map = {str(mock_os_getuid.return_value): "0"}
@@ -322,22 +323,35 @@ def test_mount(mock_multipass, project_path, mock_os_getgid, mock_os_getuid):
 
 
 def test_mount_all_opts(mock_multipass, project_path):
-    MultipassInstance(name="flowing-hawfinch", multipass=mock_multipass).mount(
-        host_source=project_path,
-        target=pathlib.Path("/root/project"),
-        host_uid=1,
-        host_gid=2,
-    )
+    if sys.platform == "win32":
+        with pytest.raises(MultipassError) as exc_info:
+            MultipassInstance(name="flowing-hawfinch", multipass=mock_multipass).mount(
+                host_source=project_path,
+                target=pathlib.Path("/root/project"),
+                host_uid="1",
+                host_gid="2",
+            )
 
-    assert mock_multipass.mock_calls == [
-        mock.call.info(instance_name="flowing-hawfinch"),
-        mock.call.mount(
-            source=project_path,
-            target="flowing-hawfinch:/root/project",
-            uid_map={"1": "0"},
-            gid_map={"2": "0"},
-        ),
-    ]
+        assert exc_info.value == MultipassError(
+            brief="Mounting with user/group ID mappings is not supported on Windows"
+        )
+    else:
+        MultipassInstance(name="flowing-hawfinch", multipass=mock_multipass).mount(
+            host_source=project_path,
+            target=pathlib.Path("/root/project"),
+            host_uid="1",
+            host_gid="2",
+        )
+
+        assert mock_multipass.mock_calls == [
+            mock.call.info(instance_name="flowing-hawfinch"),
+            mock.call.mount(
+                source=project_path,
+                target="flowing-hawfinch:/root/project",
+                uid_map={"1": "0"},
+                gid_map={"2": "0"},
+            ),
+        ]
 
 
 def test_mount_already_mounted(mock_multipass, instance, project_path):
