@@ -29,17 +29,17 @@ logger = logging.getLogger(__name__)
 
 
 def _get_host_gid():
-    if sys.platform == "win32":
+    if sys.platform == "win32" or not hasattr(os, "getgid"):
         return 0
 
-    return os.getgid()
+    return os.getgid()  # pylint: disable=no-member
 
 
 def _get_host_uid():
-    if sys.platform == "win32":
+    if sys.platform == "win32" or not hasattr(os, "getuid"):
         return 0
 
-    return os.getuid()
+    return os.getuid()  # pylint: disable=no-member
 
 
 def _finalize_command(
@@ -311,15 +311,15 @@ class MultipassInstance(Executor):
             directory does not exist.
         :raises MultipassError: On unexpected error copying file.
         """
-        proc = self.execute_run(["test", "-f", str(source)], check=False)
+        proc = self.execute_run(["test", "-f", source.as_posix()], check=False)
         if proc.returncode != 0:
-            raise FileNotFoundError(f"File not found: {str(source)!r}")
+            raise FileNotFoundError(f"File not found: {source.as_posix()!r}")
 
         if not destination.parent.is_dir():
             raise FileNotFoundError(f"Directory not found: {str(destination.parent)!r}")
 
         self._multipass.transfer(
-            source=f"{self.name}:{source!s}", destination=str(destination)
+            source=f"{self.name}:{source.as_posix()}", destination=str(destination)
         )
 
     def push_file(self, *, source: pathlib.Path, destination: pathlib.Path) -> None:
@@ -336,13 +336,17 @@ class MultipassInstance(Executor):
         if not source.is_file():
             raise FileNotFoundError(f"File not found: {str(source)!r}")
 
-        proc = self.execute_run(["test", "-d", str(destination.parent)], check=False)
+        proc = self.execute_run(
+            ["test", "-d", destination.parent.as_posix()], check=False
+        )
         if proc.returncode != 0:
-            raise FileNotFoundError(f"Directory not found: {str(destination.parent)!r}")
+            raise FileNotFoundError(
+                f"Directory not found: {str(destination.parent.as_posix())!r}"
+            )
 
         self._multipass.transfer(
             source=str(source),
-            destination=f"{self.name}:{destination!s}",
+            destination=f"{self.name}:{destination.as_posix()}",
         )
 
     def start(self) -> None:
@@ -375,7 +379,7 @@ class MultipassInstance(Executor):
 
         :raises MultipassError: On failure to unmount target.
         """
-        mount = f"{self.name}:{str(target)}"
+        mount = f"{self.name}:{target.as_posix()}"
 
         self._multipass.umount(mount=mount)
 

@@ -11,13 +11,32 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import copy
 import pathlib
 import subprocess
+import sys
 from unittest import mock
 
 import pytest
 
-from craft_providers.multipass import Multipass, MultipassInstance, multipass_instance
+from craft_providers.multipass import Multipass, MultipassInstance
+
+if sys.platform == "win32":
+    EXAMPLE_MOUNTS = {
+        "/root/project": {
+            "gid_mappings": ["-2:default"],
+            "source_path": "<insert>",
+            "uid_mappings": ["-2:default"],
+        }
+    }
+else:
+    EXAMPLE_MOUNTS = {
+        "/root/project": {
+            "gid_mappings": ["1000:0"],
+            "source_path": "<insert>",
+            "uid_mappings": ["1000:0"],
+        }
+    }
 
 EXAMPLE_INFO = {
     "errors": [],
@@ -40,13 +59,7 @@ EXAMPLE_INFO = {
             "ipv4": ["10.114.154.133"],
             "load": [1.53, 0.84, 0.33],
             "memory": {"total": 2089697280, "used": 153190400},
-            "mounts": {
-                "/root/project": {
-                    "gid_mappings": ["1000:0"],
-                    "source_path": "/home/user/git/project",
-                    "uid_mappings": ["1000:0"],
-                }
-            },
+            "mounts": EXAMPLE_MOUNTS,
             "release": "Ubuntu 18.04.5 LTS",
             "state": "Running",
         },
@@ -54,12 +67,25 @@ EXAMPLE_INFO = {
 }
 
 
+@pytest.fixture
+def project_path(tmp_path):
+    project_path = tmp_path / "git" / "project"
+    project_path.mkdir(parents=True)
+    yield project_path
+
+
 @pytest.fixture(autouse=True)
-def mock_multipass():
+def mock_multipass(project_path):
     with mock.patch(
         "craft_providers.multipass.multipass_instance.Multipass", spec=Multipass
     ) as multipass_mock:
-        multipass_mock.info.return_value = EXAMPLE_INFO
+        platform_info = copy.deepcopy(EXAMPLE_INFO)
+        platform_info["info"]["test-instance"]["mounts"]["/root/project"][
+            "source_path"
+        ] = str(project_path)
+
+        multipass_mock.info.return_value = platform_info
+
         multipass_mock.list.return_value = ["flowing-hawfinch", "test-instance"]
         yield multipass_mock
 
@@ -69,15 +95,25 @@ def instance(mock_multipass):
     yield MultipassInstance(name="test-instance", multipass=mock_multipass)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def mock_os_getgid():
-    with mock.patch("os.getgid", return_value=1234) as getgid_mock:
+    """Mock os_getgid(), creating (non-existent) attribute on Windows."""
+    create = False
+    if sys.platform == "win32":
+        create = True
+
+    with mock.patch("os.getgid", create=create, return_value=1234) as getgid_mock:
         yield getgid_mock
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def mock_os_getuid():
-    with mock.patch("os.getuid", return_value=4567) as getuid_mock:
+    """Mock os_getuid(), creating (non-existent) attribute on Windows."""
+    create = False
+    if sys.platform == "win32":
+        create = True
+
+    with mock.patch("os.getuid", create=create, return_value=4567) as getuid_mock:
         yield getuid_mock
 
 
@@ -182,9 +218,11 @@ def test_exists_false(mock_multipass):
 
 
 def test_is_mounted_false(mock_multipass, instance):
+    project_path = pathlib.Path.home() / "not-mounted"
+
     assert (
         instance.is_mounted(
-            host_source=pathlib.Path("/home/user/not-mounted"),
+            host_source=pathlib.Path(project_path),
             target=pathlib.Path("/root/project"),
         )
         is False
@@ -193,10 +231,10 @@ def test_is_mounted_false(mock_multipass, instance):
     assert mock_multipass.mock_calls == [mock.call.info(instance_name="test-instance")]
 
 
-def test_is_mounted_true(mock_multipass, instance):
+def test_is_mounted_true(mock_multipass, instance, project_path):
     assert (
         instance.is_mounted(
-            host_source=pathlib.Path("/home/user/git/project"),
+            host_source=project_path,
             target=pathlib.Path("/root/project"),
         )
         is True
@@ -252,29 +290,40 @@ def test_launch_all_opts(mock_multipass, instance):
     ]
 
 
-@pytest.mark.parametrize("platform", ["linux", "osx"])
-def test_mount(mock_multipass, monkeypatch, platform):
-    monkeypatch.setattr(multipass_instance.sys, "platform", platform)
-
+def test_mount(mock_multipass, project_path, mock_os_getgid, mock_os_getuid):
     MultipassInstance(name="flowing-hawfinch", multipass=mock_multipass).mount(
-        host_source=pathlib.Path("/home/user/git/project"),
+        host_source=project_path,
         target=pathlib.Path("/root/project"),
     )
+
+    if sys.platform == "win32":
+        gid_map = {"0": "0"}
+        uid_map = {"0": "0"}
+    else:
+        gid_map = {str(mock_os_getgid.return_value): "0"}
+        uid_map = {str(mock_os_getuid.return_value): "0"}
 
     assert mock_multipass.mock_calls == [
         mock.call.info(instance_name="flowing-hawfinch"),
         mock.call.mount(
-            source=pathlib.Path("/home/user/git/project"),
+            source=project_path,
             target="flowing-hawfinch:/root/project",
-            uid_map={"4567": "0"},
-            gid_map={"1234": "0"},
+            uid_map=uid_map,
+            gid_map=gid_map,
         ),
     ]
 
+    if sys.platform == "win32":
+        assert mock_os_getgid.mock_calls == []
+        assert mock_os_getuid.mock_calls == []
+    else:
+        assert mock_os_getgid.mock_calls == [mock.call()]
+        assert mock_os_getuid.mock_calls == [mock.call()]
 
-def test_mount_all_opts(mock_multipass):
+
+def test_mount_all_opts(mock_multipass, project_path):
     MultipassInstance(name="flowing-hawfinch", multipass=mock_multipass).mount(
-        host_source=pathlib.Path("/home/user/git/project"),
+        host_source=project_path,
         target=pathlib.Path("/root/project"),
         host_uid=1,
         host_gid=2,
@@ -283,7 +332,7 @@ def test_mount_all_opts(mock_multipass):
     assert mock_multipass.mock_calls == [
         mock.call.info(instance_name="flowing-hawfinch"),
         mock.call.mount(
-            source=pathlib.Path("/home/user/git/project"),
+            source=project_path,
             target="flowing-hawfinch:/root/project",
             uid_map={"1": "0"},
             gid_map={"2": "0"},
@@ -291,28 +340,9 @@ def test_mount_all_opts(mock_multipass):
     ]
 
 
-def test_mount_win32(mock_multipass, monkeypatch):
-    monkeypatch.setattr(multipass_instance.sys, "platform", "win32")
-
-    MultipassInstance(name="flowing-hawfinch", multipass=mock_multipass).mount(
-        host_source=pathlib.Path("/home/user/git/project"),
-        target=pathlib.Path("/root/project"),
-    )
-
-    assert mock_multipass.mock_calls == [
-        mock.call.info(instance_name="flowing-hawfinch"),
-        mock.call.mount(
-            source=pathlib.Path("/home/user/git/project"),
-            target="flowing-hawfinch:/root/project",
-            uid_map={"0": "0"},
-            gid_map={"0": "0"},
-        ),
-    ]
-
-
-def test_mount_already_mounted(mock_multipass, instance):
+def test_mount_already_mounted(mock_multipass, instance, project_path):
     instance.mount(
-        host_source=pathlib.Path("/home/user/git/project"),
+        host_source=project_path,
         target=pathlib.Path("/root/project"),
     )
 
