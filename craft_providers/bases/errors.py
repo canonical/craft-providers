@@ -12,10 +12,25 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Craft Providers base package."""
+"""Image errors."""
 
-__version__ = "0.0.0"  # noqa: F401
+from craft_providers.errors import ProviderError
 
-from .base import Base  # noqa: F401
-from .errors import ProviderError  # noqa: F401
-from .executor import Executor  # noqa: F401
+
+class BaseConfigurationError(ProviderError):
+    """Error configuring the base."""
+
+
+class BaseCompatibilityError(ProviderError):
+    """Base configuration compatibility error.
+
+    :param reason: Reason for incompatibility.
+    """
+
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+
+        brief = f"Incompatible base detected: {reason}"
+        resolution = "Clean incompatible image/instance and try again."
+
+        super().__init__(brief=brief, resolution=resolution)
