@@ -13,11 +13,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Executor module."""
+import io
 import logging
 import pathlib
 import subprocess
 from abc import ABC, abstractmethod
-from typing import List
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class Executor(ABC):
         self,
         *,
         destination: pathlib.Path,
-        content: bytes,
+        content: io.BytesIO,
         file_mode: str,
         group: str = "root",
         user: str = "root",
@@ -45,20 +46,40 @@ class Executor(ABC):
         """
 
     @abstractmethod
-    def execute_popen(self, command: List[str], **kwargs) -> subprocess.Popen:
+    def execute_popen(
+        self,
+        command: List[str],
+        env: Optional[Dict[str, Optional[str]]] = None,
+        **kwargs,
+    ) -> subprocess.Popen:
         """Execute a command in instance, using subprocess.Popen().
 
+        The process' environment will inherit the execution environment's
+        default environment (PATH, etc.), but can be additionally configured via
+        env parameter.
+
         :param command: Command to execute.
+        :param env: Additional environment to set for process.
         :param kwargs: Additional keyword arguments to pass.
 
         :returns: Popen instance.
         """
 
     @abstractmethod
-    def execute_run(self, command: List[str], **kwargs) -> subprocess.CompletedProcess:
+    def execute_run(
+        self,
+        command: List[str],
+        env: Optional[Dict[str, Optional[str]]] = None,
+        **kwargs,
+    ) -> subprocess.CompletedProcess:
         """Execute a command using subprocess.run().
 
+        The process' environment will inherit the execution environment's
+        default environment (PATH, etc.), but can be additionally configured via
+        env parameter.
+
         :param command: Command to execute.
+        :param env: Additional environment to set for process.
         :param kwargs: Keyword args to pass to subprocess.run().
 
         :returns: Completed process.
