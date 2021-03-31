@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 def _rootify_multipass_command(
     command: List[str],
     *,
-    env: Optional[Dict[str, str]] = None,
+    env: Optional[Dict[str, Optional[str]]] = None,
 ) -> List[str]:
     """Wrap a command to run as root with specified environment.
 
@@ -47,11 +47,15 @@ def _rootify_multipass_command(
     final_cmd = ["sudo", "-H", "--"]
 
     if env is not None:
-        env_args = [f"{k}={v}" for k, v in env.items()]
-        final_cmd += ["env", *env_args]
+        final_cmd.append("env")
+
+        for key, value in env.items():
+            if value is None:
+                final_cmd += ["-u", key]
+            else:
+                final_cmd.append(f"{key}={value}")
 
     final_cmd += command
-
     return final_cmd
 
 
@@ -128,26 +132,45 @@ class MultipassInstance(Executor):
             purge=True,
         )
 
-    def execute_popen(self, command: List[str], **kwargs) -> subprocess.Popen:
+    def execute_popen(
+        self,
+        command: List[str],
+        env: Optional[Dict[str, Optional[str]]] = None,
+        **kwargs,
+    ) -> subprocess.Popen:
         """Execute process in instance using subprocess.Popen().
 
+        The process' environment will inherit the execution environment's
+        default environment (PATH, etc.), but can be additionally configured via
+        env parameter.
+
         :param command: Command to execute.
+        :param env: Additional environment to set for process.
         :param kwargs: Additional keyword arguments for subprocess.Popen().
 
         :returns: Popen instance.
         """
         return self._multipass.exec(
             instance_name=self.name,
-            command=_rootify_multipass_command(command, env=kwargs.pop("env", None)),
+            command=_rootify_multipass_command(command, env=env),
             runner=subprocess.Popen,
             **kwargs,
         )
 
-    def execute_run(self, command: List[str], **kwargs) -> subprocess.CompletedProcess:
+    def execute_run(
+        self,
+        command: List[str],
+        env: Optional[Dict[str, Optional[str]]] = None,
+        **kwargs,
+    ) -> subprocess.CompletedProcess:
         """Execute command using subprocess.run().
 
+        The process' environment will inherit the execution environment's
+        default environment (PATH, etc.), but can be additionally configured via
+        env parameter.
+
         :param command: Command to execute.
-        :param check: Raise exception on failure.
+        :param env: Additional environment to set for process.
         :param kwargs: Keyword args to pass to subprocess.run().
 
         :returns: Completed process.
@@ -157,7 +180,7 @@ class MultipassInstance(Executor):
         """
         return self._multipass.exec(
             instance_name=self.name,
-            command=_rootify_multipass_command(command, env=kwargs.pop("env", None)),
+            command=_rootify_multipass_command(command, env=env),
             runner=subprocess.run,
             **kwargs,
         )

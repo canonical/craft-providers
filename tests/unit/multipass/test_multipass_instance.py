@@ -205,6 +205,30 @@ def test_execute_run_with_env(mock_multipass, instance):
     ]
 
 
+def test_execute_run_with_env_unset(mock_multipass, instance):
+    instance.execute_run(
+        command=["test-command", "flags"], env=dict(foo="bar", TERM=None)
+    )
+
+    assert mock_multipass.mock_calls == [
+        mock.call.exec(
+            instance_name="test-instance",
+            command=[
+                "sudo",
+                "-H",
+                "--",
+                "env",
+                "foo=bar",
+                "-u",
+                "TERM",
+                "test-command",
+                "flags",
+            ],
+            runner=subprocess.run,
+        )
+    ]
+
+
 def test_exists(mock_multipass, instance):
     assert instance.exists() is True
     assert mock_multipass.mock_calls == [mock.call.list()]
