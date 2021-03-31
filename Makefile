@@ -49,6 +49,10 @@ dist: clean ## Build python package.
 	python setup.py bdist_wheel
 	ls -l dist
 
+.PHONY: freeze-requirements  ## Re-freeze requirements.
+freeze-requirements:
+	tools/freeze-requirements.sh
+
 .PHONY: install
 install: clean ## Install python package.
 	python setup.py install
