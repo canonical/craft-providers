@@ -171,7 +171,3 @@ def test_start_stop_is_running(reusable_instance):
     reusable_instance.start()
 
     assert reusable_instance.is_running() is True
-
-
-def test_supports_mount(reusable_instance):
-    assert reusable_instance.supports_mount() is True

@@ -408,13 +408,6 @@ class MultipassInstance(Executor):
         """
         self._multipass.stop(instance_name=self.name, delay_mins=delay_mins)
 
-    def supports_mount(self) -> bool:  # pylint: disable=no-self-use
-        """Check if instance supports mounting from host.
-
-        :returns: True if mount is supported.
-        """
-        return True
-
     def unmount(self, target: pathlib.Path) -> None:
         """Unmount mount target shared with host.
 

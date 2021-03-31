@@ -600,10 +600,6 @@ def test_stop_all_opts(mock_multipass, instance):
     ]
 
 
-def test_supports_mount(instance):
-    assert instance.supports_mount() is True
-
-
 def test_unmount(mock_multipass, instance):
     instance.unmount(target=pathlib.Path("/mnt"))
 
