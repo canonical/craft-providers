@@ -98,28 +98,6 @@ def instance(mock_multipass):
     yield MultipassInstance(name="test-instance", multipass=mock_multipass)
 
 
-@pytest.fixture
-def mock_os_getgid():
-    """Mock os_getgid(), creating (non-existent) attribute on Windows."""
-    create = False
-    if sys.platform == "win32":
-        create = True
-
-    with mock.patch("os.getgid", create=create, return_value=1234) as getgid_mock:
-        yield getgid_mock
-
-
-@pytest.fixture
-def mock_os_getuid():
-    """Mock os_getuid(), creating (non-existent) attribute on Windows."""
-    create = False
-    if sys.platform == "win32":
-        create = True
-
-    with mock.patch("os.getuid", create=create, return_value=4567) as getuid_mock:
-        yield getuid_mock
-
-
 def test_create_file(mock_multipass, instance):
     mock_multipass.exec.side_effect = [
         mock.Mock(stdout="/tmp/mktemp-result\n"),
@@ -373,67 +351,19 @@ def test_launch_all_opts(mock_multipass, instance):
     ]
 
 
-def test_mount(mock_multipass, project_path, mock_os_getgid, mock_os_getuid):
+def test_mount(mock_multipass, project_path):
     MultipassInstance(name="flowing-hawfinch", multipass=mock_multipass).mount(
         host_source=project_path,
         target=pathlib.Path("/root/project"),
     )
-
-    if sys.platform == "win32":
-        gid_map = None
-        uid_map = None
-    else:
-        gid_map = {str(mock_os_getgid.return_value): "0"}
-        uid_map = {str(mock_os_getuid.return_value): "0"}
 
     assert mock_multipass.mock_calls == [
         mock.call.info(instance_name="flowing-hawfinch"),
         mock.call.mount(
             source=project_path,
             target="flowing-hawfinch:/root/project",
-            uid_map=uid_map,
-            gid_map=gid_map,
         ),
     ]
-
-    if sys.platform == "win32":
-        assert mock_os_getgid.mock_calls == []
-        assert mock_os_getuid.mock_calls == []
-    else:
-        assert mock_os_getgid.mock_calls == [mock.call()]
-        assert mock_os_getuid.mock_calls == [mock.call()]
-
-
-def test_mount_all_opts(mock_multipass, project_path):
-    if sys.platform == "win32":
-        with pytest.raises(MultipassError) as exc_info:
-            MultipassInstance(name="flowing-hawfinch", multipass=mock_multipass).mount(
-                host_source=project_path,
-                target=pathlib.Path("/root/project"),
-                host_uid="1",
-                host_gid="2",
-            )
-
-        assert exc_info.value == MultipassError(
-            brief="Mounting with user/group ID mappings is not supported on Windows"
-        )
-    else:
-        MultipassInstance(name="flowing-hawfinch", multipass=mock_multipass).mount(
-            host_source=project_path,
-            target=pathlib.Path("/root/project"),
-            host_uid="1",
-            host_gid="2",
-        )
-
-        assert mock_multipass.mock_calls == [
-            mock.call.info(instance_name="flowing-hawfinch"),
-            mock.call.mount(
-                source=project_path,
-                target="flowing-hawfinch:/root/project",
-                uid_map={"1": "0"},
-                gid_map={"2": "0"},
-            ),
-        ]
 
 
 def test_mount_already_mounted(mock_multipass, instance, project_path):
