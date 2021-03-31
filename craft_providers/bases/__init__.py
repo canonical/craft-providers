@@ -12,10 +12,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Craft Providers base package."""
+"""Collection of bases used to configure build environments."""
 
-__version__ = "0.0.0"  # noqa: F401
-
-from .base import Base  # noqa: F401
-from .errors import ProviderError  # noqa: F401
-from .executor import Executor  # noqa: F401
+from .buildd import BuilddBase  # noqa: F401
+from .buildd import BuilddBaseAlias  # noqa: F401
+from .errors import BaseCompatibilityError  # noqa: F401
