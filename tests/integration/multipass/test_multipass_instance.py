@@ -12,6 +12,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import io
 import pathlib
 import shutil
 
@@ -49,7 +50,7 @@ def reusable_instance():
 def test_create_file(reusable_instance, content, mode, user, group):
     reusable_instance.create_file(
         destination=pathlib.Path("/tmp/create-file-test.txt"),
-        content=content,
+        content=io.BytesIO(content),
         file_mode=mode,
         user=user,
         group=group,

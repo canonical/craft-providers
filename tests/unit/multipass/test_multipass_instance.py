@@ -12,6 +12,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import copy
+import io
 import pathlib
 import subprocess
 import sys
@@ -19,6 +20,7 @@ from unittest import mock
 
 import pytest
 
+from craft_providers import errors
 from craft_providers.multipass import Multipass, MultipassInstance
 from craft_providers.multipass.errors import MultipassError
 
@@ -118,33 +120,89 @@ def mock_os_getuid():
         yield getuid_mock
 
 
-def test_create_file(mock_multipass, instance, tmp_path):
-    instance.create_file(destination=tmp_path, content=b"foo", file_mode="0644")
-    path = "/".join(["/tmp", tmp_path.as_posix().replace("/", "_")])
+def test_create_file(mock_multipass, instance):
+    mock_multipass.exec.side_effect = [
+        mock.Mock(stdout="/tmp/mktemp-result\n"),
+        None,
+        None,
+        None,
+        None,
+    ]
+
+    instance.create_file(
+        destination=pathlib.Path("/etc/test.conf"),
+        content=io.BytesIO(b"foo"),
+        file_mode="0644",
+    )
 
     assert mock_multipass.mock_calls == [
+        mock.call.exec(
+            instance_name="test-instance",
+            command=["mktemp"],
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            text=True,
+        ),
         mock.call.transfer_source_io(
-            source=mock.ANY, destination=f"test-instance:{path}"
+            source=mock.ANY, destination="test-instance:/tmp/mktemp-result"
         ),
         mock.call.exec(
             instance_name="test-instance",
-            command=["sudo", "-H", "--", "sudo", "chown", "root:root", path],
+            command=[
+                "sudo",
+                "-H",
+                "--",
+                "sudo",
+                "chown",
+                "root:root",
+                "/tmp/mktemp-result",
+            ],
             runner=subprocess.run,
+            capture_output=True,
             check=True,
         ),
         mock.call.exec(
             instance_name="test-instance",
-            command=["sudo", "-H", "--", "sudo", "chmod", "0644", path],
+            command=["sudo", "-H", "--", "sudo", "chmod", "0644", "/tmp/mktemp-result"],
             runner=subprocess.run,
+            capture_output=True,
             check=True,
         ),
         mock.call.exec(
             instance_name="test-instance",
-            command=["sudo", "-H", "--", "sudo", "mv", path, tmp_path.as_posix()],
+            command=[
+                "sudo",
+                "-H",
+                "--",
+                "sudo",
+                "mv",
+                "/tmp/mktemp-result",
+                "/etc/test.conf",
+            ],
             runner=subprocess.run,
+            capture_output=True,
             check=True,
         ),
     ]
+
+
+def test_create_file_error(mock_multipass, instance):
+    error = subprocess.CalledProcessError(-1, ["mktemp"], "test stdout", "test stderr")
+
+    mock_multipass.exec.side_effect = error
+
+    with pytest.raises(MultipassError) as exc_info:
+        instance.create_file(
+            destination=pathlib.Path("/etc/test.conf"),
+            content=io.BytesIO(b"foo"),
+            file_mode="0644",
+        )
+
+    assert exc_info.value == MultipassError(
+        brief="Failed to create file '/etc/test.conf' in 'test-instance' VM.",
+        details=errors.details_from_called_process_error(error),
+    )
 
 
 def test_delete(mock_multipass, instance):

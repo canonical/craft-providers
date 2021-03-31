@@ -13,6 +13,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Executor module."""
+import io
 import logging
 import pathlib
 import subprocess
@@ -30,7 +31,7 @@ class Executor(ABC):
         self,
         *,
         destination: pathlib.Path,
-        content: bytes,
+        content: io.BytesIO,
         file_mode: str,
         group: str = "root",
         user: str = "root",

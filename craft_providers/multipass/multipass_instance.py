@@ -21,6 +21,8 @@ import subprocess
 import sys
 from typing import Any, Dict, List, Optional
 
+from craft_providers import errors
+
 from .. import Executor
 from .errors import MultipassError
 from .multipass import Multipass
@@ -84,7 +86,7 @@ class MultipassInstance(Executor):
         self,
         *,
         destination: pathlib.Path,
-        content: bytes,
+        content: io.BytesIO,
         file_mode: str,
         group: str = "root",
         user: str = "root",
@@ -101,29 +103,43 @@ class MultipassInstance(Executor):
         :param group: File group owner/id.
         :param user: File user owner/id.
         """
-        stream = io.BytesIO(content)
+        try:
+            tmp_file_path = self._multipass.exec(
+                instance_name=self.name,
+                command=["mktemp"],
+                runner=subprocess.run,
+                capture_output=True,
+                check=True,
+                text=True,
+            ).stdout.strip()
 
-        tmp_file_path = "/".join(["/tmp", destination.as_posix().replace("/", "_")])
+            self._multipass.transfer_source_io(
+                source=content,
+                destination=f"{self.name}:{tmp_file_path}",
+            )
 
-        self._multipass.transfer_source_io(
-            source=stream,
-            destination=f"{self.name}:{tmp_file_path}",
-        )
+            self.execute_run(
+                ["sudo", "chown", f"{user}:{group}", tmp_file_path],
+                capture_output=True,
+                check=True,
+            )
 
-        self.execute_run(
-            ["sudo", "chown", f"{user}:{group}", tmp_file_path],
-            check=True,
-        )
+            self.execute_run(
+                ["sudo", "chmod", file_mode, tmp_file_path],
+                capture_output=True,
+                check=True,
+            )
 
-        self.execute_run(
-            ["sudo", "chmod", file_mode, tmp_file_path],
-            check=True,
-        )
-
-        self.execute_run(
-            ["sudo", "mv", tmp_file_path, destination.as_posix()],
-            check=True,
-        )
+            self.execute_run(
+                ["sudo", "mv", tmp_file_path, destination.as_posix()],
+                capture_output=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as error:
+            raise MultipassError(
+                brief=f"Failed to create file {destination.as_posix()!r} in {self.name!r} VM.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
 
     def delete(self) -> None:
         """Delete instance and purge."""
