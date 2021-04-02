@@ -33,23 +33,23 @@ def home_tmp_path():
         yield pathlib.Path(temp_dir)
 
 
-def _instance_name():
+def generate_instance_name():
     return "itest-" + "".join(random.choices(string.ascii_uppercase, k=8))
 
 
 @pytest.fixture()
 def instance_name():
-    yield _instance_name()
+    yield generate_instance_name()
 
 
 @contextmanager
 def tmp_instance(
     *,
-    instance_name=instance_name,
-    image_name="20.04",
-    cpus="2",
-    disk="64G",
-    mem="1G",
+    instance_name: str,
+    image_name: str = "20.04",
+    cpus: str = "2",
+    disk: str = "64G",
+    mem: str = "1G",
 ):
     subprocess.run(
         [
