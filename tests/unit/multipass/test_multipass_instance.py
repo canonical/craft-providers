@@ -131,7 +131,7 @@ def test_create_file(mock_multipass, instance):
                 "sudo",
                 "-H",
                 "--",
-                "sudo",
+                "env",
                 "chown",
                 "root:root",
                 "/tmp/mktemp-result",
@@ -142,7 +142,7 @@ def test_create_file(mock_multipass, instance):
         ),
         mock.call.exec(
             instance_name="test-instance",
-            command=["sudo", "-H", "--", "sudo", "chmod", "0644", "/tmp/mktemp-result"],
+            command=["sudo", "-H", "--", "env", "chmod", "0644", "/tmp/mktemp-result"],
             runner=subprocess.run,
             capture_output=True,
             check=True,
@@ -153,7 +153,7 @@ def test_create_file(mock_multipass, instance):
                 "sudo",
                 "-H",
                 "--",
-                "sudo",
+                "env",
                 "mv",
                 "/tmp/mktemp-result",
                 "/etc/test.conf",
@@ -197,7 +197,7 @@ def test_execute_popen(mock_multipass, instance):
     assert mock_multipass.mock_calls == [
         mock.call.exec(
             instance_name="test-instance",
-            command=["sudo", "-H", "--", "test-command", "flags"],
+            command=["sudo", "-H", "--", "env", "test-command", "flags"],
             runner=subprocess.Popen,
             input="foo",
         )
@@ -222,7 +222,7 @@ def test_execute_run(mock_multipass, instance):
     assert mock_multipass.mock_calls == [
         mock.call.exec(
             instance_name="test-instance",
-            command=["sudo", "-H", "--", "test-command", "flags"],
+            command=["sudo", "-H", "--", "env", "test-command", "flags"],
             runner=subprocess.run,
             input="foo",
         )
@@ -389,7 +389,7 @@ def test_pull_file(mock_multipass, instance, tmp_path):
     assert mock_multipass.mock_calls == [
         mock.call.exec(
             instance_name="test-instance",
-            command=["sudo", "-H", "--", "test", "-f", "/tmp/src.txt"],
+            command=["sudo", "-H", "--", "env", "test", "-f", "/tmp/src.txt"],
             runner=subprocess.run,
             check=False,
         ),
@@ -414,7 +414,7 @@ def test_pull_file_no_source(mock_multipass, instance, tmp_path):
     assert mock_multipass.mock_calls == [
         mock.call.exec(
             instance_name="test-instance",
-            command=["sudo", "-H", "--", "test", "-f", "/tmp/src.txt"],
+            command=["sudo", "-H", "--", "env", "test", "-f", "/tmp/src.txt"],
             runner=subprocess.run,
             check=False,
         ),
@@ -437,7 +437,7 @@ def test_pull_file_no_parent_directory(mock_multipass, instance, tmp_path):
     assert mock_multipass.mock_calls == [
         mock.call.exec(
             instance_name="test-instance",
-            command=["sudo", "-H", "--", "test", "-f", "/tmp/src.txt"],
+            command=["sudo", "-H", "--", "env", "test", "-f", "/tmp/src.txt"],
             runner=subprocess.run,
             check=False,
         ),
@@ -460,7 +460,7 @@ def test_push_file(mock_multipass, instance, tmp_path):
     assert mock_multipass.mock_calls == [
         mock.call.exec(
             instance_name="test-instance",
-            command=["sudo", "-H", "--", "test", "-d", "/tmp"],
+            command=["sudo", "-H", "--", "env", "test", "-d", "/tmp"],
             runner=subprocess.run,
             check=False,
         ),
@@ -500,7 +500,7 @@ def test_push_file_no_parent_directory(mock_multipass, instance, tmp_path):
     assert mock_multipass.mock_calls == [
         mock.call.exec(
             instance_name="test-instance",
-            command=["sudo", "-H", "--", "test", "-d", "/tmp"],
+            command=["sudo", "-H", "--", "env", "test", "-d", "/tmp"],
             runner=subprocess.run,
             check=False,
         ),
