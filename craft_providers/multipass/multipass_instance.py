@@ -20,6 +20,7 @@ import subprocess
 from typing import Any, Dict, List, Optional
 
 from craft_providers import errors
+from craft_providers.util import env_cmd
 
 from .. import Executor
 from .errors import MultipassError
@@ -44,19 +45,7 @@ def _rootify_multipass_command(
 
     :returns: List of command strings for multipass exec.
     """
-    final_cmd = ["sudo", "-H", "--"]
-
-    if env is not None:
-        final_cmd.append("env")
-
-        for key, value in env.items():
-            if value is None:
-                final_cmd += ["-u", key]
-            else:
-                final_cmd.append(f"{key}={value}")
-
-    final_cmd += command
-    return final_cmd
+    return ["sudo", "-H", "--"] + env_cmd.formulate_command(env) + command
 
 
 class MultipassInstance(Executor):
@@ -117,19 +106,19 @@ class MultipassInstance(Executor):
             )
 
             self.execute_run(
-                ["sudo", "chown", f"{user}:{group}", tmp_file_path],
+                ["chown", f"{user}:{group}", tmp_file_path],
                 capture_output=True,
                 check=True,
             )
 
             self.execute_run(
-                ["sudo", "chmod", file_mode, tmp_file_path],
+                ["chmod", file_mode, tmp_file_path],
                 capture_output=True,
                 check=True,
             )
 
             self.execute_run(
-                ["sudo", "mv", tmp_file_path, destination.as_posix()],
+                ["mv", tmp_file_path, destination.as_posix()],
                 capture_output=True,
                 check=True,
             )
