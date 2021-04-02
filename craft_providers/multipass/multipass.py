@@ -24,7 +24,8 @@ import logging
 import pathlib
 import shlex
 import subprocess
-from typing import Any, Dict, List
+import time
+from typing import Any, Dict, List, Optional
 
 from craft_providers import errors
 
@@ -386,3 +387,65 @@ class Multipass:
                 brief=f"Failed to unmount {mount!r}.",
                 details=errors.details_from_called_process_error(error),
             ) from error
+
+    def wait_until_ready(
+        self, *, retry_wait: float = 0.25, timeout: Optional[float] = None
+    ):
+        """Wait until Multipass is ready (upon install/startup).
+
+        :param retry_wait: Time to sleep between retries.
+        :param timeout: Optional time.time() stamp to timeout after.
+        """
+        while timeout is None or time.time() < timeout:
+            multipass_version, multipassd_version = self.version()
+
+            if multipassd_version is not None:
+                return (multipass_version, multipassd_version)
+
+            time.sleep(retry_wait)
+
+        raise MultipassError(
+            brief="Timed out waiting for Multipass to become ready.",
+        )
+
+    def version(self):
+        """Get multipass and multipassd versions.
+
+        Split multipass version output should look like:
+
+            - ['multipass', '1.5.0']
+
+            - ['multipass', '1.5.0', 'multipassd', '1.5.0']
+
+            - ['multipass', '1.5.0+mac', 'multipassd', '1.5.0+mac']
+
+            - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win']
+
+        In some cases, Multipass may spew additional data, so protect against
+        it.  See: https://github.com/canonical/multipass/issues/2020
+
+        :returns: Tuple of parsed versions (multipass, multipassd).  multipassd
+                  may be None if Multipass is not yet ready.
+        """
+        try:
+            proc = self._run(["version"], capture_output=True, check=True, text=True)
+        except subprocess.CalledProcessError as error:
+            raise MultipassError(
+                brief="Failed to check version.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
+        output_split = proc.stdout.split()
+        if len(output_split) < 2 or output_split[0] != "multipass":
+            raise MultipassError(
+                brief=f"Unable to parse version output: {proc.stdout!r}",
+            )
+
+        multipass_version = output_split[1].split("+")[0]
+
+        if len(output_split) >= 4 and output_split[2] == "multipassd":
+            multipassd_version = output_split[3].split("+")[0]
+        else:
+            multipassd_version = None
+
+        return (multipass_version, multipassd_version)

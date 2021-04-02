@@ -15,6 +15,7 @@ import io
 import json
 import pathlib
 import subprocess
+import time
 from unittest import mock
 
 import pytest
@@ -586,5 +587,92 @@ def test_umount_error(fake_process, mock_details_from_process_error):
     assert len(fake_process.calls) == 1
     assert exc_info.value == MultipassError(
         brief="Failed to unmount 'test-instance:/mnt'.",
+        details=mock_details_from_process_error.return_value,
+    )
+
+
+def test_wait_until_ready(fake_process):
+    fake_process.register_subprocess(
+        ["multipass", "version"],
+        returncode=0,
+        stdout="multipass  1.6.2\nmultipassd 1.6.3\n",
+    )
+
+    multipass_version, multipassd_version = Multipass().wait_until_ready(
+        retry_wait=0.00001
+    )
+
+    assert len(fake_process.calls) == 1
+
+    assert multipass_version == "1.6.2"
+    assert multipassd_version == "1.6.3"
+
+
+@pytest.mark.parametrize("wait_count", [0, 1, 2, 3, 4, 5])
+def test_wait_until_ready_with_retries(fake_process, wait_count):
+    for _ in range(0, wait_count):
+        fake_process.register_subprocess(
+            ["multipass", "version"], returncode=0, stdout="multipass  1.6.2\n"
+        )
+
+    fake_process.register_subprocess(
+        ["multipass", "version"],
+        returncode=0,
+        stdout="multipass  1.6.2\nmultipassd 1.6.3\n",
+    )
+
+    multipass_version, multipassd_version = Multipass().wait_until_ready(
+        retry_wait=0.00001
+    )
+
+    assert len(fake_process.calls) == wait_count + 1
+
+    assert multipass_version == "1.6.2"
+    assert multipassd_version == "1.6.3"
+
+
+def test_wait_until_ready_timeout_error(fake_process):
+    fake_process.register_subprocess(
+        ["multipass", "version"], returncode=0, stdout="multipass  1.6.2\n"
+    )
+
+    with pytest.raises(MultipassError) as exc_info:
+        Multipass().wait_until_ready(retry_wait=0.01, timeout=time.time())
+
+    assert exc_info.value == MultipassError(
+        "Timed out waiting for Multipass to become ready."
+    )
+
+
+@pytest.mark.parametrize(
+    "output,expected",
+    [
+        ("multipass  1.6.2\n", ("1.6.2", None)),
+        ("multipass  1.6.2+mac\n", ("1.6.2", None)),
+        ("multipass  1.6.2+win\r\n", ("1.6.2", None)),
+        ("multipass  1.6.2\nmultipassd 1.6.3\n", ("1.6.2", "1.6.3")),
+        ("multipass  1.6.2+mac\nmultipassd 1.6.3+mac\n", ("1.6.2", "1.6.3")),
+        ("multipass  1.6.2+win\r\nmultipassd 1.6.3+win\r\n", ("1.6.2", "1.6.3")),
+        (
+            "multipass  1.6.2+win\r\nmultipassd 1.6.3+win\r\nsome\r\nother\r\nnotice\r\n",
+            ("1.6.2", "1.6.3"),
+        ),
+    ],
+)
+def test_version(fake_process, output, expected):
+    fake_process.register_subprocess(["multipass", "version"], stdout=output)
+
+    assert Multipass().version() == expected
+
+
+def test_version_error(fake_process, mock_details_from_process_error):
+    fake_process.register_subprocess(["multipass", "version"], returncode=1)
+
+    with pytest.raises(MultipassError) as exc_info:
+        Multipass().version()
+
+    assert len(fake_process.calls) == 1
+    assert exc_info.value == MultipassError(
+        brief="Failed to check version.",
         details=mock_details_from_process_error.return_value,
     )

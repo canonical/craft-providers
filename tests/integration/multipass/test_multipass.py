@@ -242,3 +242,17 @@ def test_transfer_source_io_large(instance, multipass, home_tmp_path):
     )
 
     assert proc.stdout == b"4294967300\t/tmp/foo\n"
+
+
+def test_wait_until_ready(multipass):
+    multipass_version, multipassd_version = multipass.wait_until_ready()
+
+    assert multipass_version is not None
+    assert multipassd_version is not None
+
+
+def test_version(multipass):
+    multipass_version, multipassd_version = multipass.version()
+
+    assert multipass_version is not None
+    assert multipassd_version is not None
