@@ -19,6 +19,10 @@ from typing import Dict
 def parse_os_release(content: str) -> Dict[str, str]:
     """Parser for /etc/os-release.
 
+    Format documentation at:
+
+    https://www.freedesktop.org/software/systemd/man/os-release.html
+
     Example os-release contents::
 
         NAME="Ubuntu"
@@ -37,17 +41,31 @@ def parse_os_release(content: str) -> Dict[str, str]:
     :param content: String contents of os-release file.
 
     :returns: Dictionary of key-mappings found in os-release. Values are
-              stripped of encapsulating double-quotes.
+              stripped of encapsulating quotes.
 
     """
     mappings: Dict[str, str] = dict()
 
     for line in content.splitlines():
         line = line.strip()
+
+        # Ignore commented lines.
+        if line.startswith("#"):
+            continue
+
+        # Ignore empty lines.
+        if not line:
+            continue
+
         if "=" in line:
             key, value = line.split("=", maxsplit=1)
+
+            # Strip encapsulating quotes, single or double.
             if value.startswith('"') and value.endswith('"'):
                 value = value[1:-1]
+            elif value.startswith("'") and value.endswith("'"):
+                value = value[1:-1]
+
             mappings[key] = value
 
     return mappings
