@@ -16,5 +16,6 @@
 
 __version__ = "0.0.0"  # noqa: F401
 
+from .base import Base  # noqa: F401
 from .errors import ProviderError  # noqa: F401
 from .executor import Executor  # noqa: F401
