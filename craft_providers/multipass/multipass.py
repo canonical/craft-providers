@@ -398,7 +398,7 @@ class Multipass:
         :param timeout: Optional time.time() stamp to timeout after.
 
         :returns: Tuple of parsed versions (multipass, multipassd).  multipassd
-            may be None if Multipass is not yet ready.
+            may be None if Multipass is not yet and the timeout limit is reached.
         """
         if timeout is not None:
             deadline: Optional[float] = time.time() + timeout
