@@ -57,12 +57,14 @@ class Base(ABC):
         Setup may be called more than once in a given instance to refresh/update
         the environment.
 
+        If timeout is specified, abort operation if time has been exceeded.
+
         :param executor: Executor for target container.
         :param retry_wait: Duration to sleep() between status checks (if
             required).
-        :param timeout: Optional time.time() stamp to timeout.
+        :param timeout: Timeout in seconds.
 
-        :raises ProviderError: on unexpected error.
+        :raises ProviderError: on timeout or unexpected error.
         """
 
     @abstractmethod
@@ -81,10 +83,12 @@ class Base(ABC):
         be used without the cost incurred by re-executing the steps
         unnecessarily.
 
+        If timeout is specified, abort operation if time has been exceeded.
+
         :param executor: Executor for target container.
         :param retry_wait: Duration to sleep() between status checks (if
             required).
-        :param timeout: Optional time.time() stamp to timeout after.
+        :param timeout: Timeout in seconds.
 
-        :raises ProviderError: on unexpected error.
+        :raises ProviderError: on timeout or unexpected error.
         """
