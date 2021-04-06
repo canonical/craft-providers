@@ -396,12 +396,23 @@ class Multipass:
 
         :param retry_wait: Time to sleep between retries.
         :param timeout: Optional time.time() stamp to timeout after.
+
+        :returns: Tuple of parsed versions (multipass, multipassd).  multipassd
+            may be None if Multipass is not yet ready.
         """
-        while timeout is None or time.time() < timeout:
+        if timeout is not None:
+            deadline: Optional[float] = time.time() + timeout
+        else:
+            deadline = None
+
+        while True:
             multipass_version, multipassd_version = self.version()
 
             if multipassd_version is not None:
                 return (multipass_version, multipassd_version)
+
+            if deadline is not None and time.time() >= deadline:
+                break
 
             time.sleep(retry_wait)
 

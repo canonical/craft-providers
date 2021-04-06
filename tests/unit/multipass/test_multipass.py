@@ -15,7 +15,6 @@ import io
 import json
 import pathlib
 import subprocess
-import time
 from unittest import mock
 
 import pytest
@@ -631,17 +630,33 @@ def test_wait_until_ready_with_retries(fake_process, wait_count):
     assert multipassd_version == "1.6.3"
 
 
-def test_wait_until_ready_timeout_error(fake_process):
+@pytest.mark.parametrize(
+    "time_values,timeout,version_calls",
+    [
+        ([9.0, 9.5], 0.5, 1),
+        ([9.0, 9.4, 9.5], 0.5, 2),
+        ([10.0, 20.0, 30.0, 40.0], 30.0, 3),
+    ],
+)
+def test_wait_until_ready_timeout_error(
+    fake_process, time_values, timeout, version_calls
+):
     fake_process.register_subprocess(
-        ["multipass", "version"], returncode=0, stdout="multipass  1.6.2\n"
+        ["multipass", "version"],
+        returncode=0,
+        stdout="multipass  1.6.2\n",
+        occurrences=version_calls,
     )
 
-    with pytest.raises(MultipassError) as exc_info:
-        Multipass().wait_until_ready(retry_wait=0.01, timeout=time.time())
+    with mock.patch("time.time", side_effect=time_values):
+        with pytest.raises(MultipassError) as exc_info:
+            Multipass().wait_until_ready(retry_wait=0.01, timeout=timeout)
 
     assert exc_info.value == MultipassError(
         "Timed out waiting for Multipass to become ready."
     )
+
+    assert len(fake_process.calls) == version_calls
 
 
 @pytest.mark.parametrize(
