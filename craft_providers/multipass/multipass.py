@@ -20,12 +20,13 @@ utility.
 
 import io
 import json
+import locale
 import logging
 import pathlib
 import shlex
 import subprocess
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from craft_providers import errors
 
@@ -390,7 +391,7 @@ class Multipass:
 
     def wait_until_ready(
         self, *, retry_wait: float = 0.25, timeout: Optional[float] = None
-    ):
+    ) -> Tuple[str, Optional[str]]:
         """Wait until Multipass is ready (upon install/startup).
 
         :param retry_wait: Time to sleep between retries.
@@ -408,34 +409,63 @@ class Multipass:
             brief="Timed out waiting for Multipass to become ready.",
         )
 
-    def version(self):
+    def version(self) -> Tuple[str, Optional[str]]:
         """Get multipass and multipassd versions.
-
-        Split multipass version output should look like:
-
-            - ['multipass', '1.5.0']
-
-            - ['multipass', '1.5.0', 'multipassd', '1.5.0']
-
-            - ['multipass', '1.5.0+mac', 'multipassd', '1.5.0+mac']
-
-            - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win']
-
-        In some cases, Multipass may spew additional data, so protect against
-        it.  See: https://github.com/canonical/multipass/issues/2020
 
         :returns: Tuple of parsed versions (multipass, multipassd).  multipassd
                   may be None if Multipass is not yet ready.
         """
         try:
-            proc = self._run(["version"], capture_output=True, check=True, text=True)
+            proc = self._run(["version"], capture_output=True, check=True)
         except subprocess.CalledProcessError as error:
             raise MultipassError(
                 brief="Failed to check version.",
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-        output_split = proc.stdout.split()
+        try:
+            output = proc.stdout.decode(encoding=locale.getpreferredencoding())
+        except UnicodeDecodeError as error:
+            raise MultipassError(
+                brief="Failed to check version.",
+                details=f"Failed to decode output: {proc.stdout!r}",
+            ) from error
+
+        # Expected multipass version output should look like:
+        # * Scenario 1: multipassd not yet ready
+        #
+        #   multipass: 1.5.0
+        #
+        # * Scenario 2: typical Linux
+        #
+        #   multipass: 1.5.0
+        #   multipassd: 1.5.0
+        #
+        # * Scenario 3: typical Mac
+        #
+        #   multipass: 1.5.0+mac
+        #   multipassd: 1.5.0+mac
+        #
+        # * Scenario 4: typical Windows
+        #
+        #   multipass: 1.5.0+win
+        #   multipassd: 1.5.0+win
+        #
+        # * Scenario 5: outdated Windows version with notice message
+        #   See: https://github.com/canonical/multipass/issues/2020
+        #
+        #   multipass: 1.5.0+win
+        #   multipassd: 1.5.0+win
+        #
+        #   SOME NOTICE INFORMATION....
+        #
+        # After stripping and splitting:
+        #    - ['multipass', '1.5.0']
+        #    - ['multipass', '1.5.0', 'multipassd', '1.5.0']
+        #    - ['multipass', '1.5.0+mac', 'multipassd', '1.5.0+mac']
+        #    - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win']
+        #    - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win', ...]
+        output_split = output.strip().split()
         if len(output_split) < 2 or output_split[0] != "multipass":
             raise MultipassError(
                 brief=f"Unable to parse version output: {proc.stdout!r}",
