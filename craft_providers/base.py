@@ -13,6 +13,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Base configuration module."""
+
 import logging
 from abc import ABC, abstractmethod
 from typing import Optional
