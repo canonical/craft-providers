@@ -172,6 +172,25 @@ def test_setup(  # pylint: disable=too-many-arguments
     assert fake_executor.records_of_push_file == []
 
 
+@mock.patch("time.time", side_effect=[0.0, 1.0])
+def test_setup_timeout(  # pylint: disable=unused-argument
+    mock_time, fake_executor, fake_process, monkeypatch
+):
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
+    fake_process.register_subprocess([fake_process.any()])
+
+    with pytest.raises(errors.BaseConfigurationError) as exc_info:
+        base_config.setup(
+            executor=fake_executor,
+            retry_wait=0.01,
+            timeout=0.0,
+        )
+
+    assert exc_info.value == errors.BaseConfigurationError(
+        brief="Timed out configuring environment."
+    )
+
+
 def test_ensure_os_compatible_name_failure(
     fake_executor,
     monkeypatch,

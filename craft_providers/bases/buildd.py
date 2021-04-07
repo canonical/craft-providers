@@ -47,7 +47,7 @@ def default_command_environment() -> Dict[str, Optional[str]]:
 def _check_deadline(
     deadline: Optional[float],
     *,
-    message: str = "Timed out waiting for environment to be ready.",
+    message: str = "Timed out configuring environment.",
 ) -> None:
     """Check deadline and raise error if passed.
 
