@@ -14,12 +14,11 @@
 
 """Persistent instance config / datastore resident in provided environment."""
 
-import dataclasses
 import io
 import logging
 import pathlib
 import subprocess
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import Dict, Optional
 
 import pydantic
 import yaml
@@ -28,19 +27,10 @@ from craft_providers import Executor, errors
 
 from .errors import BaseConfigurationError
 
-# Avoid pyright errors by using dataclasses.dataclass during type checking by
-# importing the standard library version.
-# https://github.com/microsoft/pyright/issues/637
-if TYPE_CHECKING:
-    from dataclasses import dataclass
-else:
-    from pydantic.dataclasses import dataclass
-
 logger = logging.getLogger(__name__)
 
 
-@dataclass  # pylint: disable=used-before-assignment
-class InstanceConfiguration:
+class InstanceConfiguration(pydantic.BaseModel):
     """Instance configuration datastore.
 
     :param compatibility_tag: Compatibility tag for instance.
@@ -109,7 +99,7 @@ class InstanceConfiguration:
         :param executor: Executor for instance.
         :param config_path: Path to configuration file.
         """
-        data = dataclasses.asdict(self)
+        data = self.dict()
 
         executor.create_file(
             destination=config_path,
