@@ -23,6 +23,7 @@ with open("README.md") as readme_file:
     readme = readme_file.read()
 
 install_requires = [
+    "pydantic",
     "pyyaml",
 ]
 
@@ -46,6 +47,7 @@ test_requires = [
     "mypy",
     "pydocstyle",
     "pylint",
+    "pylint-fixme-info",
     "pytest",
     "pytest-subprocess",
     "tox",
