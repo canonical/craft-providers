@@ -20,11 +20,13 @@ utility.
 
 import io
 import json
+import locale
 import logging
 import pathlib
 import shlex
 import subprocess
-from typing import Any, Dict, List
+import time
+from typing import Any, Dict, List, Optional, Tuple
 
 from craft_providers import errors
 
@@ -386,3 +388,105 @@ class Multipass:
                 brief=f"Failed to unmount {mount!r}.",
                 details=errors.details_from_called_process_error(error),
             ) from error
+
+    def wait_until_ready(
+        self, *, retry_wait: float = 0.25, timeout: Optional[float] = None
+    ) -> Tuple[str, Optional[str]]:
+        """Wait until Multipass is ready (upon install/startup).
+
+        :param retry_wait: Time to sleep between retries.
+        :param timeout: Timeout in seconds.
+
+        :returns: Tuple of parsed versions (multipass, multipassd).  multipassd
+            may be None if Multipass is not ready and the timeout limit is reached.
+        """
+        if timeout is not None:
+            deadline: Optional[float] = time.time() + timeout
+        else:
+            deadline = None
+
+        while True:
+            multipass_version, multipassd_version = self.version()
+
+            if multipassd_version is not None:
+                return (multipass_version, multipassd_version)
+
+            if deadline is not None and time.time() >= deadline:
+                break
+
+            time.sleep(retry_wait)
+
+        raise MultipassError(
+            brief="Timed out waiting for Multipass to become ready.",
+        )
+
+    def version(self) -> Tuple[str, Optional[str]]:
+        """Get multipass and multipassd versions.
+
+        :returns: Tuple of parsed versions (multipass, multipassd).  multipassd
+                  may be None if Multipass is not yet ready.
+        """
+        try:
+            proc = self._run(["version"], capture_output=True, check=True)
+        except subprocess.CalledProcessError as error:
+            raise MultipassError(
+                brief="Failed to check version.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
+        try:
+            output = proc.stdout.decode(encoding=locale.getpreferredencoding())
+        except UnicodeDecodeError as error:
+            raise MultipassError(
+                brief="Failed to check version.",
+                details=f"Failed to decode output: {proc.stdout!r}",
+            ) from error
+
+        # Expected multipass version output should look like:
+        # * Scenario 1: multipassd not yet ready
+        #
+        #   multipass: 1.5.0
+        #
+        # * Scenario 2: typical Linux
+        #
+        #   multipass: 1.5.0
+        #   multipassd: 1.5.0
+        #
+        # * Scenario 3: typical Mac
+        #
+        #   multipass: 1.5.0+mac
+        #   multipassd: 1.5.0+mac
+        #
+        # * Scenario 4: typical Windows
+        #
+        #   multipass: 1.5.0+win
+        #   multipassd: 1.5.0+win
+        #
+        # * Scenario 5: outdated Windows version with notice message
+        #   See: https://github.com/canonical/multipass/issues/2020
+        #
+        #   multipass: 1.5.0+win
+        #   multipassd: 1.5.0+win
+        #
+        #   SOME NOTICE INFORMATION....
+        #
+        # After stripping and splitting:
+        #    - ['multipass', '1.5.0']
+        #    - ['multipass', '1.5.0', 'multipassd', '1.5.0']
+        #    - ['multipass', '1.5.0+mac', 'multipassd', '1.5.0+mac']
+        #    - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win']
+        #    - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win', ...]
+        output_split = output.strip().split()
+        if len(output_split) < 2 or output_split[0] != "multipass":
+            raise MultipassError(
+                brief=f"Unable to parse version output: {proc.stdout!r}",
+            )
+
+        multipass_version = output_split[1].split("+")[0]
+
+        if len(output_split) >= 4 and output_split[2] == "multipassd":
+            multipassd_version = output_split[3].split("+")[0]
+        else:
+            multipassd_version = None
+
+        return (multipass_version, multipassd_version)
