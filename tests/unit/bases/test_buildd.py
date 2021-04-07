@@ -17,7 +17,7 @@ from unittest import mock
 
 import pytest
 
-from craft_providers.bases import buildd, errors, instance_config
+from craft_providers.bases import buildd, errors
 from craft_providers.errors import details_from_called_process_error
 from craft_providers.util import env_cmd
 
@@ -29,11 +29,11 @@ DEFAULT_FAKE_CMD = [
 
 
 @pytest.mark.parametrize(
-    "alias,hostname,compatibility_tag",
+    "alias,hostname",
     [
-        (buildd.BuilddBaseAlias.XENIAL, "test-xenial-host", "test-xenial-compat-tag"),
-        (buildd.BuilddBaseAlias.BIONIC, "test-bionic-host", "test-bionic-compat-tag"),
-        (buildd.BuilddBaseAlias.FOCAL, "test-focal-host", "test-focal-compat-tag"),
+        (buildd.BuilddBaseAlias.XENIAL, "test-xenial-host"),
+        (buildd.BuilddBaseAlias.BIONIC, "test-bionic-host"),
+        (buildd.BuilddBaseAlias.FOCAL, "test-focal-host"),
     ],
 )
 @pytest.mark.parametrize(
@@ -58,14 +58,12 @@ def test_setup(  # pylint: disable=too-many-arguments
     fake_executor,
     alias,
     hostname,
-    compatibility_tag,
     command_environment,
     etc_environment_content,
 ):
     base_config = buildd.BuilddBase(
         alias=alias,
         hostname=hostname,
-        compatibility_tag=compatibility_tag,
         command_environment=command_environment,
     )
 
@@ -74,9 +72,6 @@ def test_setup(  # pylint: disable=too-many-arguments
 
     fake_cmd = ["fake-executor", *env_cmd.formulate_command(command_environment)]
 
-    fake_process.register_subprocess(
-        ["fake-executor", "test", "-f", "/etc/craft.conf"], returncode=1
-    )
     fake_process.register_subprocess(
         [*fake_cmd, "cat", "/etc/os-release"],
         stdout=dedent(
@@ -139,13 +134,6 @@ def test_setup(  # pylint: disable=too-many-arguments
             user="root",
         ),
         dict(
-            destination="/etc/craft.conf",
-            content=f"compatibility_tag: {compatibility_tag}\n".encode(),
-            file_mode="0644",
-            group="root",
-            user="root",
-        ),
-        dict(
             destination="/etc/hostname",
             content=f"{hostname}\n".encode(),
             file_mode="0644",
@@ -182,30 +170,6 @@ def test_setup(  # pylint: disable=too-many-arguments
     ]
     assert fake_executor.records_of_pull_file == []
     assert fake_executor.records_of_push_file == []
-
-
-def test_ensure_image_version_compatible_failure(
-    fake_executor,
-    monkeypatch,
-):
-    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
-    monkeypatch.setattr(
-        instance_config.InstanceConfiguration,
-        "load",
-        lambda **kwargs: instance_config.InstanceConfiguration(
-            compatibility_tag="invalid-tag"
-        ),
-    )
-
-    with pytest.raises(errors.BaseCompatibilityError) as exc_info:
-        base_config._ensure_instance_config_compatible(  # pylint: disable=protected-access
-            executor=fake_executor,
-            deadline=None,
-        )
-
-    assert exc_info.value == errors.BaseCompatibilityError(
-        "Expected image compatibility tag 'craft-buildd-image-v0', found 'invalid-tag'"
-    )
 
 
 def test_ensure_os_compatible_name_failure(

@@ -26,7 +26,6 @@ from typing import Any, Dict, Optional
 from craft_providers import Base, Executor, errors
 from craft_providers.util.os_release import parse_os_release
 
-from . import instance_config
 from .errors import BaseCompatibilityError, BaseConfigurationError
 
 logger = logging.getLogger(__name__)
@@ -73,29 +72,19 @@ class BuilddBase(Base):
 
     :param alias: Base alias / version.
     :param hostname: Hostname to configure.
-    :param instance_config_path: Path to persistent environment configuration used
-        for compatibility checks.
     :param command_environment: Additional environment to configure for command.
         If specifying an environment, default_command_environment() is provided
         for the minimum required environment configuration.
-    :param compatibility_tag: Tag/Version for variant of build configuration and
-        setup.  Any change to this version would indicate that prior [versioned]
-        instances are incompatible and must be cleaned.  As such, any new value
-        should be unique to old values (e.g. incrementing).
     """
 
     def __init__(
         self,
         *,
         alias: BuilddBaseAlias,
-        instance_config_path: pathlib.Path = pathlib.Path("/etc/craft.conf"),
-        compatibility_tag: str = "craft-buildd-image-v0",
         hostname: str = "craft-buildd-instance",
         command_environment: Optional[Dict[str, Optional[str]]] = None,
     ):
         self.alias: BuilddBaseAlias = alias
-        self.compatibility_tag = compatibility_tag
-        self.instance_config_path = instance_config_path
         self.hostname: str = hostname
 
         if command_environment is not None:
@@ -110,30 +99,7 @@ class BuilddBase(Base):
 
         :param executor: Executor for target container.
         """
-        self._ensure_instance_config_compatible(executor=executor, deadline=deadline)
         self._ensure_os_compatible(executor=executor, deadline=deadline)
-
-    def _ensure_instance_config_compatible(
-        self, *, executor: Executor, deadline: Optional[float]
-    ) -> None:
-        config = instance_config.InstanceConfiguration.load(
-            executor=executor,
-            config_path=self.instance_config_path,
-        )
-        _check_deadline(deadline)
-
-        # If no config has been written, assume it is compatible (likely an
-        # unfinished setup).
-        if config is None:
-            return
-
-        if config.compatibility_tag != self.compatibility_tag:
-            raise BaseCompatibilityError(
-                reason=(
-                    "Expected image compatibility tag "
-                    f"{self.compatibility_tag!r}, found {config.compatibility_tag!r}"
-                )
-            )
 
     def _ensure_os_compatible(
         self, *, executor: Executor, deadline: Optional[float]
@@ -234,7 +200,6 @@ class BuilddBase(Base):
         self._setup_wait_for_system_ready(
             executor=executor, deadline=deadline, retry_wait=retry_wait
         )
-        self._setup_instance_config(executor=executor, deadline=deadline)
         self._setup_hostname(executor=executor, deadline=deadline)
         self._setup_resolved(executor=executor, deadline=deadline)
         self._setup_networkd(executor=executor, deadline=deadline)
@@ -334,19 +299,6 @@ class BuilddBase(Base):
                 brief="Failed to set hostname.",
                 details=errors.details_from_called_process_error(error),
             ) from error
-
-    def _setup_instance_config(
-        self, *, executor: Executor, deadline: Optional[float]
-    ) -> None:
-        config = instance_config.InstanceConfiguration(
-            compatibility_tag=self.compatibility_tag
-        )
-
-        config.save(
-            executor=executor,
-            config_path=self.instance_config_path,
-        )
-        _check_deadline(deadline)
 
     def _setup_networkd(self, *, executor: Executor, deadline: Optional[float]) -> None:
         """Configure networkd and start it.
