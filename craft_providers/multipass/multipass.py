@@ -395,7 +395,7 @@ class Multipass:
         """Wait until Multipass is ready (upon install/startup).
 
         :param retry_wait: Time to sleep between retries.
-        :param timeout: Optional time.time() stamp to timeout after.
+        :param timeout: Timeout in seconds.
 
         :returns: Tuple of parsed versions (multipass, multipassd).  multipassd
             may be None if Multipass is not yet and the timeout limit is reached.
