@@ -46,10 +46,23 @@ def test_save(mock_executor):
     )
 
 
-def test_load(mock_executor):
+def test_load_no_config_returns_none(mock_executor):
+    error = subprocess.CalledProcessError(
+        -1, ["test", "-f", "/etc/craft-crafty.conf"], "", ""
+    )
+    mock_executor.execute_run.side_effect = [error]
+
+    config_path = pathlib.Path("/etc/crafty-crafty.conf")
+
+    config = InstanceConfiguration.load(executor=mock_executor, config_path=config_path)
+
+    assert config is None
+
+
+def test_load_with_valid_config(mock_executor):
     mock_executor.execute_run.side_effect = [
         None,
-        mock.Mock(stdout=b"compatibility_tag: tag-foo-v1\n"),
+        mock.Mock(stdout=b"compatibility_tag: foo\n"),
     ]
     config_path = pathlib.Path("/etc/crafty-crafty.conf")
 
@@ -69,23 +82,10 @@ def test_load(mock_executor):
         ),
     ]
 
-    assert config == InstanceConfiguration(compatibility_tag="tag-foo-v1")
+    assert config == InstanceConfiguration(compatibility_tag="foo")
 
 
-def test_load_no_file(mock_executor):
-    error = subprocess.CalledProcessError(
-        -1, ["test", "-f", "/etc/craft-crafty.conf"], "", ""
-    )
-    mock_executor.execute_run.side_effect = [error]
-
-    config_path = pathlib.Path("/etc/crafty-crafty.conf")
-
-    config = InstanceConfiguration.load(executor=mock_executor, config_path=config_path)
-
-    assert config is None
-
-
-def test_load_invalid_data(mock_executor):
+def test_load_with_invalid_config_raises_error(mock_executor):
     mock_executor.execute_run.side_effect = [
         None,
         mock.Mock(stdout=b"invalid: data"),
@@ -101,7 +101,7 @@ def test_load_invalid_data(mock_executor):
     )
 
 
-def test_load_error(mock_executor):
+def test_load_failure_to_pull_file_raises_error(mock_executor):
     error = subprocess.CalledProcessError(-1, ["cat", "/etc/craft-crafty.conf"], "", "")
     mock_executor.execute_run.side_effect = [None, error]
 
