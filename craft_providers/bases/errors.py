@@ -19,18 +19,3 @@ from craft_providers.errors import ProviderError
 
 class BaseConfigurationError(ProviderError):
     """Error configuring the base."""
-
-
-class BaseCompatibilityError(ProviderError):
-    """Base configuration compatibility error.
-
-    :param reason: Reason for incompatibility.
-    """
-
-    def __init__(self, reason: str) -> None:
-        self.reason = reason
-
-        brief = f"Incompatible base detected: {reason}"
-        resolution = "Clean incompatible image/instance and try again."
-
-        super().__init__(brief=brief, resolution=resolution)

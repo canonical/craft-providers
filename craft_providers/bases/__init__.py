@@ -16,5 +16,4 @@
 
 from .buildd import BuilddBase  # noqa: F401
 from .buildd import BuilddBaseAlias  # noqa: F401
-from .errors import BaseCompatibilityError  # noqa: F401
 from .errors import BaseConfigurationError  # noqa: F401

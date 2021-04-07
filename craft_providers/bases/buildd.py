@@ -21,12 +21,11 @@ import subprocess
 import time
 from textwrap import dedent
 from time import sleep
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 from craft_providers import Base, Executor, errors
-from craft_providers.util.os_release import parse_os_release
 
-from .errors import BaseCompatibilityError, BaseConfigurationError
+from .errors import BaseConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -92,65 +91,6 @@ class BuilddBase(Base):
         else:
             self.command_environment = default_command_environment()
 
-    def ensure_compatible(
-        self, *, executor: Executor, deadline: Optional[float]
-    ) -> None:
-        """Ensure exector target is compatible with image.
-
-        :param executor: Executor for target container.
-        """
-        self._ensure_os_compatible(executor=executor, deadline=deadline)
-
-    def _ensure_os_compatible(
-        self, *, executor: Executor, deadline: Optional[float]
-    ) -> None:
-        """Ensure OS is compatible with Base.
-
-        :raises BaseCompatibilityError: if instance is incompatible.
-        """
-        os_release = self._read_os_release(executor=executor, deadline=deadline)
-
-        os_id = os_release.get("NAME")
-        if os_id != "Ubuntu":
-            raise BaseCompatibilityError(
-                reason=f"Exepcted OS 'Ubuntu', found {os_id!r}"
-            )
-
-        compat_version_id = self.alias.value
-        version_id = os_release.get("VERSION_ID")
-        if version_id != compat_version_id:
-            raise BaseCompatibilityError(
-                reason=f"Expected OS version {compat_version_id!r}, found {version_id!r}"
-            )
-
-    def _read_os_release(
-        self, *, executor: Executor, deadline: Optional[float]
-    ) -> Dict[str, Any]:
-        """Read & parse /etc/os-release.
-
-        :param executor: Executor for target.
-
-        :returns: Dictionary of parsed /etc/os-release.
-
-        :raises BaseConfigurationError: on error.
-        """
-        try:
-            proc = executor.execute_run(
-                command=["cat", "/etc/os-release"],
-                capture_output=True,
-                check=True,
-                text=True,
-                env=self.command_environment,
-            )
-            _check_deadline(deadline)
-        except subprocess.CalledProcessError as error:
-            raise BaseConfigurationError(
-                brief="Failed to read /etc/os-release.",
-                details=errors.details_from_called_process_error(error),
-            ) from error
-
-        return parse_os_release(proc.stdout)
-
     def setup(
         self,
         *,
@@ -187,7 +127,6 @@ class BuilddBase(Base):
             required).
         :param timeout: Timeout in seconds.
 
-        :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.
         """
         if timeout is not None:
@@ -195,7 +134,6 @@ class BuilddBase(Base):
         else:
             deadline = None
 
-        self.ensure_compatible(executor=executor, deadline=deadline)
         self._setup_environment(executor=executor, deadline=deadline)
         self._setup_wait_for_system_ready(
             executor=executor, deadline=deadline, retry_wait=retry_wait
