@@ -47,6 +47,7 @@ test_requires = [
     "mypy",
     "pydocstyle",
     "pylint",
+    "pylint-fixme-info",
     "pytest",
     "pytest-subprocess",
     "tox",

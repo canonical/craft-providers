@@ -59,8 +59,8 @@ class InstanceConfiguration(pydantic.BaseModel):
 
         :returns: InstanceConfiguration object.
         """
-        # Ideally we replace test / cat with an improved
-        # Executor.pull_file_io() once Multipass bug is fixed.
+        # TODO: Replace test / cat usage with an improved
+        # Executor.pull_file_io() once available.
         try:
             proc = executor.execute_run(
                 command=["test", "-f", config_path.as_posix()],
