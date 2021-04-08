@@ -23,8 +23,7 @@ from craft_providers.util import env_cmd
 
 DEFAULT_FAKE_CMD = [
     "fake-executor",
-    "env",
-    "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin",
+    *env_cmd.formulate_command(buildd.default_command_environment()),
 ]
 
 
@@ -41,7 +40,7 @@ DEFAULT_FAKE_CMD = [
     [
         (
             None,
-            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin\n".encode(),
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin\n".encode(),
         ),
         (
             dict(
@@ -418,38 +417,28 @@ def test_wait_for_system_ready(
     assert fake_executor.records_of_push_file == []
     assert list(fake_process.calls) == [
         [
-            "fake-executor",
-            "env",
-            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin",
+            *DEFAULT_FAKE_CMD,
             "systemctl",
             "is-system-running",
         ],
         [
-            "fake-executor",
-            "env",
-            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin",
+            *DEFAULT_FAKE_CMD,
             "systemctl",
             "is-system-running",
         ],
         [
-            "fake-executor",
-            "env",
-            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin",
+            *DEFAULT_FAKE_CMD,
             "systemctl",
             "is-system-running",
         ],
         [
-            "fake-executor",
-            "env",
-            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin",
+            *DEFAULT_FAKE_CMD,
             "getent",
             "hosts",
             "snapcraft.io",
         ],
         [
-            "fake-executor",
-            "env",
-            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin",
+            *DEFAULT_FAKE_CMD,
             "getent",
             "hosts",
             "snapcraft.io",

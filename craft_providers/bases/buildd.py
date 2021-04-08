@@ -33,13 +33,14 @@ logger = logging.getLogger(__name__)
 def default_command_environment() -> Dict[str, Optional[str]]:
     """Provide default command environment dictionary.
 
-    The minimum environment for the buildd image to be configured and
-    function properly.
+    The minimum environment for the buildd image to be configured and function
+    properly.  This contains the default environment found in Ubuntu's
+    /etc/environment.
 
     :returns: Dictionary of environment key/values.
     """
     return dict(
-        PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
+        PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
     )
 
 
