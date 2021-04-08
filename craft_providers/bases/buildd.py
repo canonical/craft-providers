@@ -339,6 +339,7 @@ class BuilddBase(Base):
         :param deadline: Optional time.time() deadline.
         """
         try:
+            # TODO: Is udev required for LXD? it is not for Multipass.
             executor.execute_run(
                 [
                     "apt-get",
