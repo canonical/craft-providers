@@ -410,7 +410,7 @@ def test_wait_for_system_ready(
         returncode=0,
     )
 
-    base_config.wait_until_ready(executor=fake_executor, retry_wait=0.01)
+    base_config.wait_until_ready(executor=fake_executor, retry_wait=0.0)
 
     assert fake_executor.records_of_create_file == []
     assert fake_executor.records_of_pull_file == []
@@ -446,7 +446,7 @@ def test_wait_for_system_ready(
     ]
 
 
-@mock.patch("time.time", side_effect=[0.0, 1.0])
+@mock.patch("time.time", side_effect=[0.0, 0.0, 1.0])
 @pytest.mark.parametrize(
     "alias",
     [
@@ -470,8 +470,8 @@ def test_wait_for_system_ready_timeout(  # pylint: disable=unused-argument
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
         base_config.wait_until_ready(
             executor=fake_executor,
-            retry_wait=0.01,
-            timeout=0.0,
+            retry_wait=0.0,
+            timeout=0.1,
         )
 
     assert exc_info.value == errors.BaseConfigurationError(
@@ -479,7 +479,7 @@ def test_wait_for_system_ready_timeout(  # pylint: disable=unused-argument
     )
 
 
-@mock.patch("time.time", side_effect=[0.0, 1.0])
+@mock.patch("time.time", side_effect=[0.0, 0.0, 1.0])
 @pytest.mark.parametrize(
     "alias",
     [
@@ -504,7 +504,7 @@ def test_wait_for_system_ready_timeout_in_network(  # pylint: disable=unused-arg
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
         base_config.wait_until_ready(
             executor=fake_executor,
-            retry_wait=0.01,
+            retry_wait=0.00,
             timeout=1.0,
         )
 

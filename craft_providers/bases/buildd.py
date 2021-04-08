@@ -132,6 +132,7 @@ class BuilddBase(Base):
         """
         if timeout is not None:
             deadline: Optional[float] = time.time() + timeout
+            _check_deadline(deadline)
         else:
             deadline = None
 
@@ -507,6 +508,7 @@ class BuilddBase(Base):
         """
         if timeout is not None:
             deadline: Optional[float] = time.time() + timeout
+            _check_deadline(deadline)
         else:
             deadline = None
 
