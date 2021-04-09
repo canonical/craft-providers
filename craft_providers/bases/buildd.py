@@ -35,12 +35,19 @@ def default_command_environment() -> Dict[str, Optional[str]]:
 
     The minimum environment for the buildd image to be configured and function
     properly.  This contains the default environment found in Ubuntu's
-    /etc/environment.
+    /etc/environment, replaced with the "secure_path" defaults used by sudo for
+    instantiating PATH.  In practice it really just means the PATH set by sudo.
+
+    Default /etc/environment found in supported Ubuntu versions:
+    PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+
+    Default /etc/sudoers found in supported Ubuntu versions:
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
 
     :returns: Dictionary of environment key/values.
     """
     return dict(
-        PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+        PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
     )
 
 
@@ -67,30 +74,30 @@ class BuilddBaseAlias(enum.Enum):
     FOCAL = "20.04"
 
 
+# pylint: disable=no-self-use
 class BuilddBase(Base):
     """Support for Ubuntu minimal buildd images.
 
     :param alias: Base alias / version.
+    :param environment: Environment to set in /etc/environment.
     :param hostname: Hostname to configure.
-    :param command_environment: Additional environment to configure for command.
-        If specifying an environment, default_command_environment() is provided
-        for the minimum required environment configuration.
     """
 
     def __init__(
         self,
         *,
         alias: BuilddBaseAlias,
+        environment: Optional[Dict[str, Optional[str]]] = None,
         hostname: str = "craft-buildd-instance",
-        command_environment: Optional[Dict[str, Optional[str]]] = None,
     ):
         self.alias: BuilddBaseAlias = alias
-        self.hostname: str = hostname
 
-        if command_environment is not None:
-            self.command_environment = command_environment
+        if environment is None:
+            self.environment = default_command_environment()
         else:
-            self.command_environment = default_command_environment()
+            self.environment = environment
+
+        self.hostname = hostname
 
     def setup(
         self,
@@ -112,6 +119,8 @@ class BuilddBase(Base):
         If timeout is specified, abort operation if time has been exceeded.
 
         Guarantees provided by this setup:
+
+            - configured /etc/environment
 
             - configured hostname
 
@@ -135,7 +144,10 @@ class BuilddBase(Base):
         else:
             deadline = None
 
-        self._setup_environment(executor=executor, deadline=deadline)
+        self._setup_environment(
+            executor=executor,
+            deadline=deadline,
+        )
         self._setup_wait_for_system_ready(
             executor=executor, deadline=deadline, retry_wait=retry_wait
         )
@@ -166,7 +178,6 @@ class BuilddBase(Base):
                 ["apt-get", "update"],
                 capture_output=True,
                 check=True,
-                env=self.command_environment,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -180,7 +191,6 @@ class BuilddBase(Base):
                 ["apt-get", "install", "-y", "apt-utils"],
                 capture_output=True,
                 check=True,
-                env=self.command_environment,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -189,19 +199,21 @@ class BuilddBase(Base):
             ) from error
 
     def _setup_environment(
-        self, *, executor: Executor, deadline: Optional[float]
+        self,
+        *,
+        executor: Executor,
+        deadline: Optional[float],
     ) -> None:
-        """Configure hostname, installing /etc/hostname.
+        """Configure /etc/environment.
+
+        If environment is None, reset /etc/environment to the default.
 
         :param executor: Executor for target container.
+        :param deadline: Scheduled deadline.
         """
         content = (
             "\n".join(
-                [
-                    f"{k}={v}"
-                    for k, v in self.command_environment.items()
-                    if v is not None
-                ]
+                [f"{k}={v}" for k, v in self.environment.items() if v is not None]
             )
             + "\n"
         ).encode()
@@ -217,6 +229,7 @@ class BuilddBase(Base):
         """Configure hostname, installing /etc/hostname.
 
         :param executor: Executor for target container.
+        :param deadline: Scheduled deadline.
         """
         _check_deadline(deadline)
         executor.create_file(
@@ -231,7 +244,6 @@ class BuilddBase(Base):
                 ["hostname", "-F", "/etc/hostname"],
                 capture_output=True,
                 check=True,
-                env=self.command_environment,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -245,6 +257,7 @@ class BuilddBase(Base):
         Installs eth0 network configuration using ipv4.
 
         :param executor: Executor for target container.
+        :param deadline: Scheduled deadline.
         """
         _check_deadline(deadline)
         executor.create_file(
@@ -274,7 +287,6 @@ class BuilddBase(Base):
                 ["systemctl", "enable", "systemd-networkd"],
                 capture_output=True,
                 check=True,
-                env=self.command_environment,
             )
 
             _check_deadline(deadline)
@@ -282,7 +294,6 @@ class BuilddBase(Base):
                 ["systemctl", "restart", "systemd-networkd"],
                 check=True,
                 capture_output=True,
-                env=self.command_environment,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -294,7 +305,7 @@ class BuilddBase(Base):
         """Configure system-resolved to manage resolve.conf.
 
         :param executor: Executor for target container.
-        :param timeout_secs: Timeout in seconds.
+        :param deadline: Scheduled deadline.
         """
         try:
             _check_deadline(deadline)
@@ -307,7 +318,6 @@ class BuilddBase(Base):
                 ],
                 check=True,
                 capture_output=True,
-                env=self.command_environment,
             )
 
             _check_deadline(deadline)
@@ -315,7 +325,6 @@ class BuilddBase(Base):
                 ["systemctl", "enable", "systemd-resolved"],
                 check=True,
                 capture_output=True,
-                env=self.command_environment,
             )
 
             _check_deadline(deadline)
@@ -323,7 +332,6 @@ class BuilddBase(Base):
                 ["systemctl", "restart", "systemd-resolved"],
                 check=True,
                 capture_output=True,
-                env=self.command_environment,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -352,7 +360,6 @@ class BuilddBase(Base):
                 ],
                 check=True,
                 capture_output=True,
-                env=self.command_environment,
             )
 
             _check_deadline(deadline)
@@ -360,7 +367,6 @@ class BuilddBase(Base):
                 ["systemctl", "enable", "systemd-udevd"],
                 capture_output=True,
                 check=True,
-                env=self.command_environment,
             )
 
             _check_deadline(deadline)
@@ -368,7 +374,6 @@ class BuilddBase(Base):
                 ["systemctl", "start", "systemd-udevd"],
                 capture_output=True,
                 check=True,
-                env=self.command_environment,
             )
 
             _check_deadline(deadline)
@@ -376,7 +381,6 @@ class BuilddBase(Base):
                 ["apt-get", "install", "-y", "snapd"],
                 capture_output=True,
                 check=True,
-                env=self.command_environment,
             )
 
             _check_deadline(deadline)
@@ -384,7 +388,6 @@ class BuilddBase(Base):
                 ["systemctl", "start", "snapd.socket"],
                 capture_output=True,
                 check=True,
-                env=self.command_environment,
             )
 
             # Restart, not start, the service in case the environment
@@ -394,7 +397,6 @@ class BuilddBase(Base):
                 ["systemctl", "restart", "snapd.service"],
                 capture_output=True,
                 check=True,
-                env=self.command_environment,
             )
 
             _check_deadline(deadline)
@@ -402,7 +404,6 @@ class BuilddBase(Base):
                 ["snap", "wait", "system", "seed.loaded"],
                 capture_output=True,
                 check=True,
-                env=self.command_environment,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -432,7 +433,6 @@ class BuilddBase(Base):
                 check=False,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                env=self.command_environment,
             )
             if proc.returncode == 0:
                 return
@@ -463,7 +463,6 @@ class BuilddBase(Base):
                 ["systemctl", "is-system-running"],
                 capture_output=True,
                 check=False,
-                env=self.command_environment,
                 text=True,
             )
 
