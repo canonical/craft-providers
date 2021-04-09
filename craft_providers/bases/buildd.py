@@ -132,7 +132,6 @@ class BuilddBase(Base):
         """
         if timeout is not None:
             deadline: Optional[float] = time.time() + timeout
-            _check_deadline(deadline)
         else:
             deadline = None
 
@@ -154,6 +153,7 @@ class BuilddBase(Base):
 
         :param executor: Executor for target container.
         """
+        _check_deadline(deadline)
         executor.create_file(
             destination=pathlib.Path("/etc/apt/apt.conf.d/00no-recommends"),
             content=io.BytesIO('Apt::Install-Recommends "false";\n'.encode()),
@@ -161,13 +161,13 @@ class BuilddBase(Base):
         )
 
         try:
+            _check_deadline(deadline)
             executor.execute_run(
                 ["apt-get", "update"],
                 capture_output=True,
                 check=True,
                 env=self.command_environment,
             )
-            _check_deadline(deadline)
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to update apt cache.",
@@ -175,13 +175,13 @@ class BuilddBase(Base):
             ) from error
 
         try:
+            _check_deadline(deadline)
             executor.execute_run(
                 ["apt-get", "install", "-y", "apt-utils"],
                 capture_output=True,
                 check=True,
                 env=self.command_environment,
             )
-            _check_deadline(deadline)
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to install apt-utils.",
@@ -206,18 +206,19 @@ class BuilddBase(Base):
             + "\n"
         ).encode()
 
+        _check_deadline(deadline)
         executor.create_file(
             destination=pathlib.Path("/etc/environment"),
             content=io.BytesIO(content),
             file_mode="0644",
         )
-        _check_deadline(deadline)
 
     def _setup_hostname(self, *, executor: Executor, deadline: Optional[float]) -> None:
         """Configure hostname, installing /etc/hostname.
 
         :param executor: Executor for target container.
         """
+        _check_deadline(deadline)
         executor.create_file(
             destination=pathlib.Path("/etc/hostname"),
             content=io.BytesIO((self.hostname + "\n").encode()),
@@ -225,13 +226,13 @@ class BuilddBase(Base):
         )
 
         try:
+            _check_deadline(deadline)
             executor.execute_run(
                 ["hostname", "-F", "/etc/hostname"],
                 capture_output=True,
                 check=True,
                 env=self.command_environment,
             )
-            _check_deadline(deadline)
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to set hostname.",
@@ -245,6 +246,7 @@ class BuilddBase(Base):
 
         :param executor: Executor for target container.
         """
+        _check_deadline(deadline)
         executor.create_file(
             destination=pathlib.Path("/etc/systemd/network/10-eth0.network"),
             content=io.BytesIO(
@@ -267,21 +269,21 @@ class BuilddBase(Base):
         )
 
         try:
+            _check_deadline(deadline)
             executor.execute_run(
                 ["systemctl", "enable", "systemd-networkd"],
                 capture_output=True,
                 check=True,
                 env=self.command_environment,
             )
-            _check_deadline(deadline)
 
+            _check_deadline(deadline)
             executor.execute_run(
                 ["systemctl", "restart", "systemd-networkd"],
                 check=True,
                 capture_output=True,
                 env=self.command_environment,
             )
-            _check_deadline(deadline)
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to setup systemd-networkd.",
@@ -295,6 +297,7 @@ class BuilddBase(Base):
         :param timeout_secs: Timeout in seconds.
         """
         try:
+            _check_deadline(deadline)
             executor.execute_run(
                 [
                     "ln",
@@ -306,23 +309,22 @@ class BuilddBase(Base):
                 capture_output=True,
                 env=self.command_environment,
             )
-            _check_deadline(deadline)
 
+            _check_deadline(deadline)
             executor.execute_run(
                 ["systemctl", "enable", "systemd-resolved"],
                 check=True,
                 capture_output=True,
                 env=self.command_environment,
             )
-            _check_deadline(deadline)
 
+            _check_deadline(deadline)
             executor.execute_run(
                 ["systemctl", "restart", "systemd-resolved"],
                 check=True,
                 capture_output=True,
                 env=self.command_environment,
             )
-            _check_deadline(deadline)
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to setup systemd-resolved.",
@@ -339,6 +341,7 @@ class BuilddBase(Base):
         """
         try:
             # TODO: Is udev required for LXD? it is not for Multipass.
+            _check_deadline(deadline)
             executor.execute_run(
                 [
                     "apt-get",
@@ -351,57 +354,56 @@ class BuilddBase(Base):
                 capture_output=True,
                 env=self.command_environment,
             )
-            _check_deadline(deadline)
 
+            _check_deadline(deadline)
             executor.execute_run(
                 ["systemctl", "enable", "systemd-udevd"],
                 capture_output=True,
                 check=True,
                 env=self.command_environment,
             )
-            _check_deadline(deadline)
 
+            _check_deadline(deadline)
             executor.execute_run(
                 ["systemctl", "start", "systemd-udevd"],
                 capture_output=True,
                 check=True,
                 env=self.command_environment,
             )
-            _check_deadline(deadline)
 
+            _check_deadline(deadline)
             executor.execute_run(
                 ["apt-get", "install", "-y", "snapd"],
                 capture_output=True,
                 check=True,
                 env=self.command_environment,
             )
-            _check_deadline(deadline)
 
+            _check_deadline(deadline)
             executor.execute_run(
                 ["systemctl", "start", "snapd.socket"],
                 capture_output=True,
                 check=True,
                 env=self.command_environment,
             )
-            _check_deadline(deadline)
 
             # Restart, not start, the service in case the environment
             # has changed and the service is already running.
+            _check_deadline(deadline)
             executor.execute_run(
                 ["systemctl", "restart", "snapd.service"],
                 capture_output=True,
                 check=True,
                 env=self.command_environment,
             )
-            _check_deadline(deadline)
 
+            _check_deadline(deadline)
             executor.execute_run(
                 ["snap", "wait", "system", "seed.loaded"],
                 capture_output=True,
                 check=True,
                 env=self.command_environment,
             )
-            _check_deadline(deadline)
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to setup snapd.",
@@ -423,6 +425,7 @@ class BuilddBase(Base):
         """
         logger.debug("Waiting for networking to be ready...")
 
+        _check_deadline(deadline)
         while True:
             proc = executor.execute_run(
                 ["getent", "hosts", "snapcraft.io"],
@@ -454,6 +457,7 @@ class BuilddBase(Base):
         """
         logger.debug("Waiting for environment to be ready...")
 
+        _check_deadline(deadline)
         while True:
             proc = executor.execute_run(
                 ["systemctl", "is-system-running"],
@@ -506,7 +510,6 @@ class BuilddBase(Base):
         """
         if timeout is not None:
             deadline: Optional[float] = time.time() + timeout
-            _check_deadline(deadline)
         else:
             deadline = None
 
