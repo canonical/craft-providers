@@ -12,6 +12,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Base implementations."""
+"""Collection of bases used to configure build environments."""
 
+from .buildd import BuilddBase  # noqa: F401
+from .buildd import BuilddBaseAlias  # noqa: F401
 from .errors import BaseConfigurationError  # noqa: F401
