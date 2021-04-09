@@ -39,7 +39,9 @@ def install() -> str:
     elif sys.platform == "linux":
         _install_linux()
     elif sys.platform == "win32":
-        _install_windows()
+        raise errors.MultipassInstallationError(
+            "automated installation not yet supported for Windows"
+        )
     else:
         raise errors.MultipassInstallationError(
             f"unsupported platform {sys.platform!r}"
@@ -67,12 +69,6 @@ def _install_linux() -> None:
             "error during snap installation",
             details=details_from_called_process_error(error),
         ) from error
-
-
-def _install_windows() -> None:
-    raise errors.MultipassInstallationError(
-        "automated installation not yet supported for Windows"
-    )
 
 
 def is_installed() -> bool:
