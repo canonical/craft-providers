@@ -24,8 +24,9 @@ from time import sleep
 from typing import Dict, Optional
 
 from craft_providers import Base, Executor, errors
+from craft_providers.util.os_release import parse_os_release
 
-from .errors import BaseConfigurationError
+from .errors import BaseCompatibilityError, BaseConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,47 @@ class BuilddBase(Base):
 
         self.hostname = hostname
 
+    def _ensure_os_compatible(
+        self, *, executor: Executor, deadline: Optional[float]
+    ) -> None:
+        """Ensure OS is compatible with Base.
+
+        :raises BaseCompatibilityError: if instance is incompatible.
+        :raises BaseConfigurationError: on other unexpected error.
+        """
+        try:
+            # Replace encoding errors if it somehow occurs with utf-8. This
+            # doesn't need to be perfect for checking compatibility.
+            _check_deadline(deadline)
+            proc = executor.execute_run(
+                command=["cat", "/etc/os-release"],
+                capture_output=True,
+                check=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
+        except subprocess.CalledProcessError as error:
+            raise BaseConfigurationError(
+                brief="Failed to read /etc/os-release.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
+        os_release = parse_os_release(proc.stdout)
+
+        os_id = os_release.get("NAME")
+        if os_id != "Ubuntu":
+            raise BaseCompatibilityError(
+                reason=f"Exepcted OS 'Ubuntu', found {os_id!r}"
+            )
+
+        compat_version_id = self.alias.value
+        version_id = os_release.get("VERSION_ID")
+        if version_id != compat_version_id:
+            raise BaseCompatibilityError(
+                reason=f"Expected OS version {compat_version_id!r}, found {version_id!r}"
+            )
+
     def setup(
         self,
         *,
@@ -137,6 +179,7 @@ class BuilddBase(Base):
             required).
         :param timeout: Timeout in seconds.
 
+        :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.
         """
         if timeout is not None:
@@ -144,6 +187,10 @@ class BuilddBase(Base):
         else:
             deadline = None
 
+        self._ensure_os_compatible(
+            executor=executor,
+            deadline=deadline,
+        )
         self._setup_environment(
             executor=executor,
             deadline=deadline,
