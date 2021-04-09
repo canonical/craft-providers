@@ -164,6 +164,7 @@ class BuilddBase(Base):
         """Configure apt & update cache.
 
         :param executor: Executor for target container.
+        :param deadline: Optional time.time() deadline.
         """
         _check_deadline(deadline)
         executor.create_file(
@@ -209,7 +210,7 @@ class BuilddBase(Base):
         If environment is None, reset /etc/environment to the default.
 
         :param executor: Executor for target container.
-        :param deadline: Scheduled deadline.
+        :param deadline: Optional time.time() deadline.
         """
         content = (
             "\n".join(
@@ -229,7 +230,7 @@ class BuilddBase(Base):
         """Configure hostname, installing /etc/hostname.
 
         :param executor: Executor for target container.
-        :param deadline: Scheduled deadline.
+        :param deadline: Optional time.time() deadline.
         """
         _check_deadline(deadline)
         executor.create_file(
@@ -257,7 +258,7 @@ class BuilddBase(Base):
         Installs eth0 network configuration using ipv4.
 
         :param executor: Executor for target container.
-        :param deadline: Scheduled deadline.
+        :param deadline: Optional time.time() deadline.
         """
         _check_deadline(deadline)
         executor.create_file(
@@ -305,7 +306,7 @@ class BuilddBase(Base):
         """Configure system-resolved to manage resolve.conf.
 
         :param executor: Executor for target container.
-        :param deadline: Scheduled deadline.
+        :param deadline: Optional time.time() deadline.
         """
         try:
             _check_deadline(deadline)
