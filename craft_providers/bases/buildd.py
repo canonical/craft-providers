@@ -21,11 +21,12 @@ import subprocess
 import time
 from textwrap import dedent
 from time import sleep
-from typing import Dict, Optional
+from typing import Dict, Optional, Type
 
 from craft_providers import Base, Executor, errors
 from craft_providers.util.os_release import parse_os_release
 
+from . import instance_config
 from .errors import BaseCompatibilityError, BaseConfigurationError
 
 logger = logging.getLogger(__name__)
@@ -79,10 +80,31 @@ class BuilddBaseAlias(enum.Enum):
 class BuilddBase(Base):
     """Support for Ubuntu minimal buildd images.
 
+    :cvar compatibility_tag: Tag/Version for variant of build configuration and
+        setup.  Any change to this version would indicate that prior [versioned]
+        instances are incompatible and must be cleaned.  As such, any new value
+        should be unique to old values (e.g. incrementing).  It suggested to
+        extend this tag, not overwrite it, e.g.: compatibilty_tag =
+        f"{appname}-{BuildBase.compatibility_tag}.{apprevision}" to ensure base
+        compatibility levels are maintained.
+    :cvar instance_config_path: Path to persistent environment configuration
+        used for compatibility checks (or other data).  Set to
+        /etc/craft-instance.conf, but may be overridden for application-specific
+        reasons.
+    :cvar instance_config_type: Class defining instance configuration.  May be
+        overridden with an application-specific subclass of InstanceConfiguration
+        to enable application-specific extensions.
+
     :param alias: Base alias / version.
     :param environment: Environment to set in /etc/environment.
     :param hostname: Hostname to configure.
     """
+
+    compatibility_tag: str = "buildd-base-v0"
+    instance_config_path: pathlib.Path = pathlib.Path("/etc/craft-instance.conf")
+    instance_config_type: Type[
+        instance_config.InstanceConfiguration
+    ] = instance_config.InstanceConfiguration
 
     def __init__(
         self,
@@ -99,6 +121,33 @@ class BuilddBase(Base):
             self.environment = environment
 
         self.hostname = hostname
+
+    def _ensure_instance_config_compatible(
+        self, *, executor: Executor, deadline: Optional[float]
+    ) -> None:
+        """Ensure instance configuration is compatible.
+
+        :raises BaseCompatibilityError: if instance is incompatible.
+        :raises BaseConfigurationError: on other unexpected error.
+        """
+        _check_deadline(deadline)
+        config = self.instance_config_type.load(
+            executor=executor,
+            config_path=self.instance_config_path,
+        )
+
+        # If no config has been written, assume it is compatible (likely an
+        # unfinished setup).
+        if config is None:
+            return
+
+        if config.compatibility_tag != self.compatibility_tag:
+            raise BaseCompatibilityError(
+                reason=(
+                    "Expected image compatibility tag "
+                    f"{self.compatibility_tag!r}, found {config.compatibility_tag!r}"
+                )
+            )
 
     def _ensure_os_compatible(
         self, *, executor: Executor, deadline: Optional[float]
@@ -191,6 +240,7 @@ class BuilddBase(Base):
             executor=executor,
             deadline=deadline,
         )
+        self._ensure_instance_config_compatible(executor=executor, deadline=deadline)
         self._setup_environment(
             executor=executor,
             deadline=deadline,
@@ -198,6 +248,7 @@ class BuilddBase(Base):
         self._setup_wait_for_system_ready(
             executor=executor, deadline=deadline, retry_wait=retry_wait
         )
+        self._setup_instance_config(executor=executor, deadline=deadline)
         self._setup_hostname(executor=executor, deadline=deadline)
         self._setup_resolved(executor=executor, deadline=deadline)
         self._setup_networkd(executor=executor, deadline=deadline)
@@ -298,6 +349,19 @@ class BuilddBase(Base):
                 brief="Failed to set hostname.",
                 details=errors.details_from_called_process_error(error),
             ) from error
+
+    def _setup_instance_config(
+        self, *, executor: Executor, deadline: Optional[float]
+    ) -> None:
+        config = instance_config.InstanceConfiguration(
+            compatibility_tag=self.compatibility_tag
+        )
+
+        config.save(
+            executor=executor,
+            config_path=self.instance_config_path,
+        )
+        _check_deadline(deadline)
 
     def _setup_networkd(self, *, executor: Executor, deadline: Optional[float]) -> None:
         """Configure networkd and start it.
