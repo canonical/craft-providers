@@ -39,9 +39,9 @@ def default_command_environment() -> Dict[str, Optional[str]]:
     instantiating PATH.  In practice it really just means the PATH set by sudo.
 
     Default /etc/environment found in supported Ubuntu versions:
-    PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 
-    Default /etc/sudoers found in supported Ubuntu versions:
+    Default /etc/sudoers secure_path found in supported Ubuntu versions:
     PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
 
     :returns: Dictionary of environment key/values.
