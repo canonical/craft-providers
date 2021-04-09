@@ -80,4 +80,4 @@ def is_installed() -> bool:
 
     :returns: Bool if multipass is installed.
     """
-    return not shutil.which("multipass") is None
+    return shutil.which("multipass") is not None
