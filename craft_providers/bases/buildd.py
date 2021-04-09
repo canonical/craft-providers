@@ -188,8 +188,6 @@ class BuilddBase(Base):
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-        _check_deadline(deadline)
-
     def _setup_environment(
         self, *, executor: Executor, deadline: Optional[float]
     ) -> None:
