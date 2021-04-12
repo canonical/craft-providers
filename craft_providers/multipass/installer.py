@@ -18,6 +18,7 @@ import logging
 import shutil
 import subprocess
 import sys
+import time
 
 from craft_providers.errors import details_from_called_process_error
 
@@ -39,11 +40,19 @@ def install() -> str:
     elif sys.platform == "linux":
         _install_linux()
     elif sys.platform == "win32":
-        _install_windows()
+        raise errors.MultipassInstallationError(
+            "automated installation not yet supported for Windows"
+        )
     else:
         raise errors.MultipassInstallationError(
             f"unsupported platform {sys.platform!r}"
         )
+
+    # TODO: Multipass needs time after being installed or errors could happen on
+    # launch, i.e.: "Remote "" is unknown or unreachable." Current guidance is
+    # to sleep 20 seconds after install, but we should have a more reliable and
+    # timely approach. See: https://github.com/canonical/multipass/issues/1995
+    time.sleep(20)
 
     multipass_version, _ = Multipass().wait_until_ready()
     return multipass_version
@@ -69,15 +78,9 @@ def _install_linux() -> None:
         ) from error
 
 
-def _install_windows() -> None:
-    raise errors.MultipassInstallationError(
-        "automated installation not yet supported for Windows"
-    )
-
-
 def is_installed() -> bool:
     """Check if Multipass is installed (and found on PATH).
 
-    :returns: Bool if multipass is installed.
+    :returns: True if multipass is installed.
     """
-    return not shutil.which("multipass") is None
+    return shutil.which("multipass") is not None
