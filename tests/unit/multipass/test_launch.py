@@ -42,7 +42,7 @@ def test_launch_fresh(mock_base_configuration, mock_multipass_instance):
 
     assert mock_multipass_instance.mock_calls == [
         mock.call.exists(),
-        mock.call.launch(cpus=2, disk_gb=256, mem_gb=2, image="30.04"),
+        mock.call.launch(cpus=2, disk_gb=64, mem_gb=2, image="30.04"),
     ]
     assert mock_base_configuration.mock_calls == [
         mock.call.setup(executor=mock_multipass_instance)
