@@ -35,6 +35,7 @@ def core20_instance():
 @pytest.mark.parametrize(
     "alias,image_name",
     [
+        # TODO: add test when Multipass supports core on Windows
         pytest.param(
             BuilddBaseAlias.XENIAL,
             "snapcraft:core",
