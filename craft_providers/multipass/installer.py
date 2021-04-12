@@ -74,6 +74,6 @@ def _install_linux() -> None:
 def is_installed() -> bool:
     """Check if Multipass is installed (and found on PATH).
 
-    :returns: Bool if multipass is installed.
+    :returns: True if multipass is installed.
     """
     return shutil.which("multipass") is not None
