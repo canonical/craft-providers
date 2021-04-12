@@ -102,6 +102,7 @@ jobs:
       - name: Run integration tests on MacOS
         run: |
           source ${HOME}/.venv/bin/activate
+          export CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL=1
           make test-integrations
 
   unit-tests:
