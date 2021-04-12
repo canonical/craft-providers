@@ -128,10 +128,10 @@ class BuilddBase(Base):
 
         os_release = parse_os_release(proc.stdout)
 
-        os_id = os_release.get("NAME")
-        if os_id != "Ubuntu":
+        os_name = os_release.get("NAME")
+        if os_name != "Ubuntu":
             raise BaseCompatibilityError(
-                reason=f"Exepcted OS 'Ubuntu', found {os_id!r}"
+                reason=f"Exepcted OS 'Ubuntu', found {os_name!r}"
             )
 
         compat_version_id = self.alias.value
