@@ -19,12 +19,8 @@ import pytest
 
 from craft_providers.bases import buildd, errors
 from craft_providers.errors import details_from_called_process_error
-from craft_providers.util import env_cmd
 
-DEFAULT_FAKE_CMD = [
-    "fake-executor",
-    *env_cmd.formulate_command(buildd.default_command_environment()),
-]
+DEFAULT_FAKE_CMD = ["fake-executor"]
 
 
 @pytest.mark.parametrize(
@@ -36,11 +32,11 @@ DEFAULT_FAKE_CMD = [
     ],
 )
 @pytest.mark.parametrize(
-    "command_environment, etc_environment_content",
+    "environment, etc_environment_content",
     [
         (
             None,
-            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin\n".encode(),
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin\n".encode(),
         ),
         (
             dict(
@@ -57,22 +53,20 @@ def test_setup(  # pylint: disable=too-many-arguments
     fake_executor,
     alias,
     hostname,
-    command_environment,
+    environment,
     etc_environment_content,
 ):
+    if environment is None:
+        environment = buildd.default_command_environment()
+
     base_config = buildd.BuilddBase(
         alias=alias,
+        environment=environment,
         hostname=hostname,
-        command_environment=command_environment,
     )
 
-    if command_environment is None:
-        command_environment = buildd.default_command_environment()
-
-    fake_cmd = ["fake-executor", *env_cmd.formulate_command(command_environment)]
-
     fake_process.register_subprocess(
-        [*fake_cmd, "cat", "/etc/os-release"],
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
         stdout=dedent(
             f"""\
             NAME="Ubuntu"
@@ -83,43 +77,59 @@ def test_setup(  # pylint: disable=too-many-arguments
         ),
     )
     fake_process.register_subprocess(
-        [*fake_cmd, "systemctl", "is-system-running"], stdout="degraded"
-    )
-    fake_process.register_subprocess([*fake_cmd, "hostname", "-F", "/etc/hostname"])
-    fake_process.register_subprocess(
-        [*fake_cmd, "ln", "-sf", "/run/systemd/resolve/resolv.conf", "/etc/resolv.conf"]
+        [*DEFAULT_FAKE_CMD, "systemctl", "is-system-running"], stdout="degraded"
     )
     fake_process.register_subprocess(
-        [*fake_cmd, "systemctl", "enable", "systemd-resolved"]
+        [*DEFAULT_FAKE_CMD, "hostname", "-F", "/etc/hostname"]
     )
     fake_process.register_subprocess(
-        [*fake_cmd, "systemctl", "restart", "systemd-resolved"]
+        [
+            *DEFAULT_FAKE_CMD,
+            "ln",
+            "-sf",
+            "/run/systemd/resolve/resolv.conf",
+            "/etc/resolv.conf",
+        ]
     )
     fake_process.register_subprocess(
-        [*fake_cmd, "systemctl", "enable", "systemd-networkd"]
+        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "systemd-resolved"]
     )
     fake_process.register_subprocess(
-        [*fake_cmd, "systemctl", "restart", "systemd-networkd"]
-    )
-    fake_process.register_subprocess([*fake_cmd, "getent", "hosts", "snapcraft.io"])
-    fake_process.register_subprocess([*fake_cmd, "apt-get", "update"])
-    fake_process.register_subprocess(
-        [*fake_cmd, "apt-get", "install", "-y", "apt-utils"]
+        [*DEFAULT_FAKE_CMD, "systemctl", "restart", "systemd-resolved"]
     )
     fake_process.register_subprocess(
-        [*fake_cmd, "apt-get", "install", "-y", "fuse", "udev"]
+        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "systemd-networkd"]
     )
     fake_process.register_subprocess(
-        [*fake_cmd, "systemctl", "enable", "systemd-udevd"]
-    )
-    fake_process.register_subprocess([*fake_cmd, "systemctl", "start", "systemd-udevd"])
-    fake_process.register_subprocess([*fake_cmd, "apt-get", "install", "-y", "snapd"])
-    fake_process.register_subprocess([*fake_cmd, "systemctl", "start", "snapd.socket"])
-    fake_process.register_subprocess(
-        [*fake_cmd, "systemctl", "restart", "snapd.service"]
+        [*DEFAULT_FAKE_CMD, "systemctl", "restart", "systemd-networkd"]
     )
     fake_process.register_subprocess(
-        [*fake_cmd, "snap", "wait", "system", "seed.loaded"]
+        [*DEFAULT_FAKE_CMD, "getent", "hosts", "snapcraft.io"]
+    )
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "apt-utils"]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "fuse", "udev"]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "systemd-udevd"]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "systemctl", "start", "systemd-udevd"]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "snapd"]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "systemctl", "start", "snapd.socket"]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "systemctl", "restart", "snapd.service"]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "wait", "system", "seed.loaded"]
     )
 
     base_config.setup(executor=fake_executor)
