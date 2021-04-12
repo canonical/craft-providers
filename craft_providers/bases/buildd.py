@@ -431,9 +431,8 @@ class BuilddBase(Base):
         while True:
             proc = executor.execute_run(
                 ["getent", "hosts", "snapcraft.io"],
+                capture_output=True,
                 check=False,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
             )
             if proc.returncode == 0:
                 return
