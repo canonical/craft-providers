@@ -14,17 +14,12 @@
 
 import io
 import pathlib
-import shutil
 
 import pytest
 
 from craft_providers.multipass import MultipassInstance
 
 from . import conftest
-
-pytestmark = pytest.mark.skipif(
-    shutil.which("multipass") is None, reason="multipass not installed"
-)
 
 
 @pytest.fixture()

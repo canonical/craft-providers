@@ -13,15 +13,19 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Fixtures for Multipass integration tests."""
+import os
 import pathlib
 import random
 import string
 import subprocess
+import sys
 import tempfile
 import time
 from contextlib import contextmanager
 
 import pytest
+
+from craft_providers import multipass
 
 
 @pytest.fixture()
@@ -97,3 +101,43 @@ def tmp_instance(
         capture_output=True,
         check=False,
     )
+
+
+@pytest.fixture(autouse=True, scope="module")
+def installed_multipass():
+    """Ensure multipass is installed, or skip the test if we cannot.
+
+    If the environment has CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL=1,
+    force the installation of Multipass if uninstalled.
+    """
+    if os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL") == "1":
+        multipass.install()
+    elif not multipass.is_installed():
+        pytest.skip("multipass not installed, skipped")
+
+
+@pytest.fixture
+def uninstalled_multipass():
+    """Uninstall Multipass prior to test, if environment allows it.
+
+    Environment may enable this fixture with:
+    CRAFT_PROVIDER_TESTS_ENABLE_MULTIPASS_UNINSTALL=1
+    """
+    if not multipass.is_installed():
+        pytest.skip("multipass not installed, skipped")
+
+    if not os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL") == "1":
+        pytest.skip("not configured to uninstall multipass, skipped")
+
+    if sys.platform == "linux":
+        subprocess.run(["sudo", "snap", "remove", "multipass", "--purge"], check=True)
+    elif sys.platform == "darwin":
+        subprocess.run(["brew", "uninstall", "multipass"], check=True)
+    else:
+        pytest.skip("platform not supported to uninstall multipass, skipped")
+
+    yield
+
+    # Ensure it is installed after test.
+    if not multipass.is_installed():
+        multipass.install()
