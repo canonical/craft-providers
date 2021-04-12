@@ -28,7 +28,7 @@ def launch(
     *,
     base_configuration: Base,
     cpus: int = 2,
-    disk_gb: int = 256,
+    disk_gb: int = 64,
     image_name: str,
     mem_gb: int = 2,
 ) -> MultipassInstance:
