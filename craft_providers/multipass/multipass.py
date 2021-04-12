@@ -50,10 +50,10 @@ class Multipass:
         self,
         command: List[str],
         *,
-        check=True,
+        check: bool,
         **kwargs,
     ) -> subprocess.CompletedProcess:
-        """Execute command in instance_name, allowing output to console."""
+        """Execute multipass command."""
         command = [str(self.multipass_path), *command]
 
         logger.debug("Executing on host: %s", shlex.join(command))
