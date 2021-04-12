@@ -27,18 +27,18 @@ def launch(
     name: str,
     *,
     base_configuration: Base,
+    image_name: str,
     cpus: int = 2,
     disk_gb: int = 64,
-    image_name: str,
     mem_gb: int = 2,
 ) -> MultipassInstance:
     """Create, start, and configure instance.
 
     :param name: Name of instance.
     :param base_configuration: Base configuration to apply to instance.
+    :param image_name: Multipass image to use, e.g. snapcraft:core20.
     :param cpus: Number of CPUs.
     :param disk_gb: Disk allocation in gigabytes.
-    :param image_name: Multipass image to use, e.g. snapcraft:core20.
     :param mem_gb: Memory allocation in gigabytes.
 
     :returns: Multipass instance.
@@ -49,6 +49,7 @@ def launch(
     instance = MultipassInstance(name=name)
 
     if instance.exists():
+        # TODO: Warn if existing instance doesn't match cpu/disk/mem specs.
         instance.start()
     else:
         instance.launch(
