@@ -56,13 +56,16 @@ def test_launch(instance_name, alias, image_name):
         image_name=image_name,
     )
 
-    assert isinstance(instance, multipass.MultipassInstance)
-    assert instance.exists() is True
-    assert instance.is_running() is True
+    try:
+        assert isinstance(instance, multipass.MultipassInstance)
+        assert instance.exists() is True
+        assert instance.is_running() is True
 
-    proc = instance.execute_run(["echo", "hi"], check=True, stdout=subprocess.PIPE)
+        proc = instance.execute_run(["echo", "hi"], check=True, stdout=subprocess.PIPE)
 
-    assert proc.stdout == b"hi\n"
+        assert proc.stdout == b"hi\n"
+    finally:
+        instance.delete()
 
 
 def test_launch_existing_instance(core20_instance):
