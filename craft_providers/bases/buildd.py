@@ -91,7 +91,7 @@ class BuilddBase(Base):
         used for compatibility checks (or other data).  Set to
         /etc/craft-instance.conf, but may be overridden for application-specific
         reasons.
-    :cvar instance_config_type: Class defining instance configuration.  May be
+    :cvar instance_config_class: Class defining instance configuration.  May be
         overridden with an application-specific subclass of InstanceConfiguration
         to enable application-specific extensions.
 
@@ -102,7 +102,7 @@ class BuilddBase(Base):
 
     compatibility_tag: str = "buildd-base-v0"
     instance_config_path: pathlib.Path = pathlib.Path("/etc/craft-instance.conf")
-    instance_config_type: Type[
+    instance_config_class: Type[
         instance_config.InstanceConfiguration
     ] = instance_config.InstanceConfiguration
 
@@ -131,7 +131,7 @@ class BuilddBase(Base):
         :raises BaseConfigurationError: on other unexpected error.
         """
         _check_deadline(deadline)
-        config = self.instance_config_type.load(
+        config = self.instance_config_class.load(
             executor=executor,
             config_path=self.instance_config_path,
         )
