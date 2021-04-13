@@ -41,9 +41,9 @@ def default_command_environment() -> Dict[str, Optional[str]]:
     instantiating PATH.  In practice it really just means the PATH set by sudo.
 
     Default /etc/environment found in supported Ubuntu versions:
-    PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 
-    Default /etc/sudoers found in supported Ubuntu versions:
+    Default /etc/sudoers secure_path found in supported Ubuntu versions:
     PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
 
     :returns: Dictionary of environment key/values.
@@ -177,10 +177,10 @@ class BuilddBase(Base):
 
         os_release = parse_os_release(proc.stdout)
 
-        os_id = os_release.get("NAME")
-        if os_id != "Ubuntu":
+        os_name = os_release.get("NAME")
+        if os_name != "Ubuntu":
             raise BaseCompatibilityError(
-                reason=f"Exepcted OS 'Ubuntu', found {os_id!r}"
+                reason=f"Exepcted OS 'Ubuntu', found {os_name!r}"
             )
 
         compat_version_id = self.alias.value
@@ -542,9 +542,8 @@ class BuilddBase(Base):
         while True:
             proc = executor.execute_run(
                 ["getent", "hosts", "snapcraft.io"],
+                capture_output=True,
                 check=False,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
             )
             if proc.returncode == 0:
                 return

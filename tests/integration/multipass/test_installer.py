@@ -12,10 +12,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Multipass provider support package."""
+import shutil
 
-from ._launch import launch  # noqa: F401
-from .errors import MultipassError, MultipassInstallationError  # noqa: F401
-from .installer import install, is_installed  # noqa: F401
-from .multipass import Multipass  # noqa: F401
-from .multipass_instance import MultipassInstance  # noqa: F401
+from craft_providers import multipass
+
+
+def test_is_installed():
+    expected = shutil.which("multipass") is not None
+
+    assert multipass.is_installed() is expected
+
+
+def test_install(uninstalled_multipass):  # pylint: disable=unused-argument
+    assert multipass.is_installed() is False
+
+    multipass_version = multipass.install()
+
+    assert multipass.is_installed() is True
+    assert multipass_version is not None
