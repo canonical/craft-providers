@@ -17,7 +17,7 @@ from unittest import mock
 
 import pytest
 
-from craft_providers.bases import buildd, errors
+from craft_providers.bases import buildd, errors, instance_config
 from craft_providers.errors import details_from_called_process_error
 
 DEFAULT_FAKE_CMD = ["fake-executor"]
@@ -75,6 +75,10 @@ def test_setup(  # pylint: disable=too-many-arguments
             VERSION_ID="{alias.value}"
             """
         ),
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "test", "-f", "/etc/craft-instance.conf"],
+        returncode=1,
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "is-system-running"], stdout="degraded"
@@ -143,6 +147,13 @@ def test_setup(  # pylint: disable=too-many-arguments
             user="root",
         ),
         dict(
+            destination="/etc/craft-instance.conf",
+            content=f"compatibility_tag: {buildd.BuilddBase.compatibility_tag}\n".encode(),
+            file_mode="0644",
+            group="root",
+            user="root",
+        ),
+        dict(
             destination="/etc/hostname",
             content=f"{hostname}\n".encode(),
             file_mode="0644",
@@ -179,6 +190,30 @@ def test_setup(  # pylint: disable=too-many-arguments
     ]
     assert fake_executor.records_of_pull_file == []
     assert fake_executor.records_of_push_file == []
+
+
+def test_ensure_image_version_compatible_failure(
+    fake_executor,
+    monkeypatch,
+):
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
+    monkeypatch.setattr(
+        instance_config.InstanceConfiguration,
+        "load",
+        lambda **kwargs: instance_config.InstanceConfiguration(
+            compatibility_tag="invalid-tag"
+        ),
+    )
+
+    with pytest.raises(errors.BaseCompatibilityError) as exc_info:
+        base_config._ensure_instance_config_compatible(  # pylint: disable=protected-access
+            executor=fake_executor,
+            deadline=None,
+        )
+
+    assert exc_info.value == errors.BaseCompatibilityError(
+        "Expected image compatibility tag 'buildd-base-v0', found 'invalid-tag'"
+    )
 
 
 @mock.patch("time.time", side_effect=[0.0, 1.0])
