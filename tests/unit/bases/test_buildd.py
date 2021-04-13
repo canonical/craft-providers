@@ -200,6 +200,71 @@ def test_setup_timeout(  # pylint: disable=unused-argument
     )
 
 
+def test_ensure_os_compatible_name_failure(
+    fake_executor,
+    fake_process,
+):
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout="NAME=Fedora\nVERSION_ID=32\n",
+    )
+
+    with pytest.raises(errors.BaseCompatibilityError) as exc_info:
+        base_config._ensure_os_compatible(  # pylint: disable=protected-access
+            executor=fake_executor,
+            deadline=None,
+        )
+
+    assert exc_info.value == errors.BaseCompatibilityError(
+        "Exepcted OS 'Ubuntu', found 'Fedora'"
+    )
+
+
+def test_ensure_os_compatible_version_failure(
+    fake_executor,
+    fake_process,
+):
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout="NAME=Ubuntu\nVERSION_ID=12.04\n",
+    )
+
+    with pytest.raises(errors.BaseCompatibilityError) as exc_info:
+        base_config._ensure_os_compatible(  # pylint: disable=protected-access
+            executor=fake_executor,
+            deadline=None,
+        )
+
+    assert exc_info.value == errors.BaseCompatibilityError(
+        "Expected OS version '20.04', found '12.04'"
+    )
+
+
+def test_read_os_release_failure(
+    fake_process,
+    fake_executor,
+):
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        returncode=-1,
+    )
+
+    with pytest.raises(errors.BaseConfigurationError) as exc_info:
+        base_config._ensure_os_compatible(  # pylint: disable=protected-access
+            executor=fake_executor,
+            deadline=None,
+        )
+
+    assert exc_info.value.__cause__ is not None
+    assert exc_info.value == errors.BaseConfigurationError(
+        brief="Failed to read /etc/os-release.",
+        details=details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+    )
+
+
 def test_setup_hostname_failure(
     fake_process,
     fake_executor,
