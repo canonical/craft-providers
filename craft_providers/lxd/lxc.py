@@ -604,15 +604,13 @@ class LXC:  # pylint: disable=too-many-public-methods
         *,
         project: str = "default",
         remote: str = "local",
-    ) -> List[str]:
-        """List instances.
-
-        Parses list output to simply return a list of names.
+    ) -> List[Dict[str, Any]]:
+        """List instances and their status.
 
         :param project: Name of LXD project.
         :param remote: Name of LXD remote.
 
-        :returns: List of container names.
+        :returns: List of containers and their info.
 
         :raises LXDError: on unexpected error.
         """
@@ -632,17 +630,38 @@ class LXC:  # pylint: disable=too-many-public-methods
             ) from error
 
         try:
-            return [
-                instance["name"]
-                for instance in yaml.load(proc.stdout, Loader=yaml.Loader)
-            ]
-        except (yaml.YAMLError, KeyError) as error:
+            return yaml.load(proc.stdout, Loader=yaml.Loader)
+        except yaml.YAMLError as error:
             raise LXDError(
                 brief="Failed to parse lxc list.",
                 details=(
                     f"* Command that failed: {shlex.join(proc.args)!r}\n"
                     f"* Command output: {proc.stdout!r}"
                 ),
+            ) from error
+
+    def list_names(
+        self, *, project: str = "default", remote: str = "local"
+    ) -> List[str]:
+        """List container names.
+
+        A helper to get a list of container names from list().
+
+        :param project: Name of LXD project.
+        :param remote: Name of LXD remote.
+
+        :returns: List of container names.
+
+        :raises LXDError: on unexpected error.
+        """
+        instances = self.list(project=project, remote=remote)
+
+        try:
+            return [i["name"] for i in instances]
+        except KeyError as error:
+            raise LXDError(
+                brief="Failed to parse lxc list.",
+                details=(f"* Data received from lxc list: {instances!r}"),
             ) from error
 
     def profile_edit(

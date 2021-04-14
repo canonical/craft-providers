@@ -855,7 +855,7 @@ def test_list(fake_process):
     )
 
     assert len(fake_process.calls) == 1
-    assert container_names == ["test1", "test2"]
+    assert container_names == [{"name": "test1"}, {"name": "test2"}]
 
 
 def test_list_error(fake_process):
@@ -911,7 +911,29 @@ def test_list_parse_error(fake_process):
     )
 
 
-def test_list_parse_error_missing_name(fake_process):
+def test_list_names(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "list",
+            "test-remote:",
+            "--format=yaml",
+        ],
+        stdout="- name: test1\n- name: test2\n",
+    )
+
+    container_names = LXC().list_names(
+        project="test-project",
+        remote="test-remote",
+    )
+
+    assert len(fake_process.calls) == 1
+    assert container_names == ["test1", "test2"]
+
+
+def test_list_names_parse_error(fake_process):
     fake_process.register_subprocess(
         [
             "lxc",
@@ -925,17 +947,14 @@ def test_list_parse_error_missing_name(fake_process):
     )
 
     with pytest.raises(LXDError) as exc_info:
-        LXC().list(
+        LXC().list_names(
             project="test-project",
             remote="test-remote",
         )
 
     assert exc_info.value == LXDError(
         brief="Failed to parse lxc list.",
-        details=(
-            "* Command that failed: 'lxc --project test-project list test-remote: --format=yaml'\n"
-            "* Command output: b'- foo: bar'"
-        ),
+        details=("* Data received from lxc list: [{'foo': 'bar'}]"),
     )
 
 
