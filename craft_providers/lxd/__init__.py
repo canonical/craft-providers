@@ -16,3 +16,4 @@
 
 from .errors import LXDError  # noqa: F401
 from .lxc import LXC  # noqa: F401
+from .lxd_instance import LXDInstance  # noqa: F401

@@ -17,7 +17,7 @@ import subprocess
 
 import pytest
 
-from craft_providers.lxd import LXC, LXDError
+from craft_providers.lxd import LXDError
 
 from . import conftest
 
@@ -29,11 +29,6 @@ def instance(instance_name, project):
         project=project,
     ) as tmp_instance:
         yield tmp_instance
-
-
-@pytest.fixture()
-def lxc():
-    yield LXC()
 
 
 def test_exec(instance, lxc, project):
