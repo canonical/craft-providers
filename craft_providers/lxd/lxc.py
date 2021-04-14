@@ -335,7 +335,7 @@ class LXC:  # pylint: disable=too-many-public-methods
             )
         except subprocess.CalledProcessError as error:
             raise LXDError(
-                brief=f"Failed to pull file {str(source)!r} from instance {instance_name!r}.",
+                brief=f"Failed to pull file {source.as_posix()!r} from instance {instance_name!r}.",
                 details=errors.details_from_called_process_error(error),
             ) from error
 
@@ -399,7 +399,7 @@ class LXC:  # pylint: disable=too-many-public-methods
             )
         except subprocess.CalledProcessError as error:
             raise LXDError(
-                brief=f"Failed to push file {str(source)!r} to instance {instance_name!r}.",
+                brief=f"Failed to push file {source.as_posix()!r} to instance {instance_name!r}.",
                 details=errors.details_from_called_process_error(error),
             ) from error
 
