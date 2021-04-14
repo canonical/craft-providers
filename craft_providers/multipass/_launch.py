@@ -16,7 +16,7 @@
 
 import logging
 
-from craft_providers import Base
+from craft_providers import Base, bases
 
 from .multipass_instance import MultipassInstance
 
@@ -31,8 +31,12 @@ def launch(
     cpus: int = 2,
     disk_gb: int = 64,
     mem_gb: int = 2,
+    auto_clean: bool = False,
 ) -> MultipassInstance:
     """Create, start, and configure instance.
+
+    If auto_clean is enabled, automatically delete an existing instance that is
+    deemed to be incompatible, rebuilding it with the specified environment.
 
     :param name: Name of instance.
     :param base_configuration: Base configuration to apply to instance.
@@ -40,6 +44,7 @@ def launch(
     :param cpus: Number of CPUs.
     :param disk_gb: Disk allocation in gigabytes.
     :param mem_gb: Memory allocation in gigabytes.
+    :param auto_clean: Automatically clean instance, if incompatible.
 
     :returns: Multipass instance.
 
@@ -51,13 +56,25 @@ def launch(
     if instance.exists():
         # TODO: Warn if existing instance doesn't match cpu/disk/mem specs.
         instance.start()
-    else:
-        instance.launch(
-            cpus=cpus,
-            disk_gb=disk_gb,
-            mem_gb=mem_gb,
-            image=image_name,
-        )
+        try:
+            base_configuration.setup(executor=instance)
+            return instance
+        except bases.BaseCompatibilityError as error:
+            if auto_clean:
+                logger.debug(
+                    "Cleaning incompatible instance %r (reason: %s).",
+                    instance.name,
+                    error.reason,
+                )
+                instance.delete()
+            else:
+                raise error
 
+    instance.launch(
+        cpus=cpus,
+        disk_gb=disk_gb,
+        mem_gb=mem_gb,
+        image=image_name,
+    )
     base_configuration.setup(executor=instance)
     return instance
