@@ -517,7 +517,7 @@ def test_file_push_all_opts(fake_process, tmp_path):
             "test-remote:test-instance/root/foo",
             "--create-dirs",
             "--recursive",
-            "--mode=noninteractive",
+            "--mode=0644",
             "--gid=1",
             "--uid=2",
         ],
@@ -533,7 +533,7 @@ def test_file_push_all_opts(fake_process, tmp_path):
         recursive=True,
         gid=1,
         uid=2,
-        mode="noninteractive",
+        mode="0644",
     )
 
     assert len(fake_process.calls) == 1
