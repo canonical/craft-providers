@@ -666,6 +666,29 @@ def test_image_copy(fake_process):
             "copy",
             "test-image-remote:test-image",
             "test-remote:",
+        ]
+    )
+
+    LXC().image_copy(
+        image="test-image",
+        image_remote="test-image-remote",
+        project="test-project",
+        remote="test-remote",
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_image_copy_all_opts(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "image",
+            "copy",
+            "test-image-remote:test-image",
+            "test-remote:",
             "--alias=test-alias",
         ]
     )
@@ -691,7 +714,6 @@ def test_image_copy_error(fake_process):
             "copy",
             "test-image-remote:test-image",
             "test-remote:",
-            "--alias=test-alias",
         ],
         returncode=1,
     )
@@ -700,7 +722,6 @@ def test_image_copy_error(fake_process):
         LXC().image_copy(
             image="test-image",
             image_remote="test-image-remote",
-            alias="test-alias",
             project="test-project",
             remote="test-remote",
         )
@@ -1252,18 +1273,15 @@ def test_publish(fake_process):
             "--project",
             "test-project",
             "publish",
-            "--alias",
-            "test-alias",
             "test-remote:test-instance",
             "test-image-remote:",
         ],
     )
 
     LXC().publish(
-        alias="test-alias",
+        image_remote="test-image-remote",
         instance_name="test-instance",
         remote="test-remote",
-        image_remote="test-image-remote",
         project="test-project",
     )
 
@@ -1277,8 +1295,6 @@ def test_publish_error(fake_process):
             "--project",
             "test-project",
             "publish",
-            "--alias",
-            "test-alias",
             "test-remote:test-instance",
             "test-image-remote:",
         ],
@@ -1287,7 +1303,6 @@ def test_publish_error(fake_process):
 
     with pytest.raises(LXDError) as exc_info:
         LXC().publish(
-            alias="test-alias",
             instance_name="test-instance",
             remote="test-remote",
             image_remote="test-image-remote",
@@ -1300,28 +1315,27 @@ def test_publish_error(fake_process):
     )
 
 
-def test_publish_force(fake_process):
+def test_publish_all_opts(fake_process):
     fake_process.register_subprocess(
         [
             "lxc",
             "--project",
             "test-project",
             "publish",
-            "--alias",
-            "test-alias",
             "test-remote:test-instance",
             "test-image-remote:",
+            "--alias=test-alias",
             "--force",
         ],
     )
 
     LXC().publish(
         alias="test-alias",
+        force=True,
+        image_remote="test-image-remote",
         instance_name="test-instance",
         remote="test-remote",
-        image_remote="test-image-remote",
         project="test-project",
-        force=True,
     )
 
     assert len(fake_process.calls) == 1

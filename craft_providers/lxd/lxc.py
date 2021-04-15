@@ -211,7 +211,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         self,
         *,
         instance_name: str,
-        force=False,
+        force: bool = False,
         project: str = "default",
         remote: str = "local",
     ) -> None:
@@ -247,8 +247,8 @@ class LXC:  # pylint: disable=too-many-public-methods
         *,
         command: List[str],
         instance_name: str,
-        cwd: str = "/root",
-        mode: str = "auto",
+        cwd: Optional[str] = None,
+        mode: Optional[str] = None,
         project: str = "default",
         remote: str = "local",
         runner=subprocess.run,
@@ -258,9 +258,9 @@ class LXC:  # pylint: disable=too-many-public-methods
 
         :param command: Command to execute in the instance.
         :param instance_name: Name of instance to execute in.
-        :param cwd: Current working directory for command.
+        :param cwd: Optional current working directory for command.
         :param mode: Override terminal mode Valid options include: "auto",
-            "interactive", "non-interactive":w
+            "interactive", "non-interactive". lxd default is "auto".
         :param project: Name of LXD project.
         :param remote: Name of LXD remote.
         :param runner: Execution function to invoke, e.g. subprocess.run or
@@ -278,10 +278,10 @@ class LXC:  # pylint: disable=too-many-public-methods
             f"{remote}:{instance_name}",
         ]
 
-        if cwd != "/root":
+        if cwd is not None:
             final_cmd.extend(["--cwd", cwd])
 
-        if mode != "auto":
+        if mode is not None:
             final_cmd.extend(["--mode", mode])
 
         final_cmd += ["--", *command]
@@ -296,7 +296,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         instance_name: str,
         source: pathlib.Path,
         destination: pathlib.Path,
-        create_dirs: bool = True,
+        create_dirs: bool = False,
         recursive: bool = False,
         project: str = "default",
         remote: str = "local",
@@ -347,8 +347,8 @@ class LXC:  # pylint: disable=too-many-public-methods
         destination: pathlib.Path,
         create_dirs: bool = False,
         recursive: bool = False,
-        gid: int = -1,
-        uid: int = -1,
+        gid: Optional[int] = None,
+        uid: Optional[int] = None,
         mode: Optional[str] = None,
         project: str = "default",
         remote: str = "local",
@@ -360,9 +360,9 @@ class LXC:  # pylint: disable=too-many-public-methods
         :param destination: Path in environment to write to.
         :param create_dirs: Create any directories necessary.
         :param recursive: Recursively transfer files.
-        :param gid: Set the file's gid on push (default -1).
-        :param uid: Set the file's uid on push (default -1).
-        :param mode: Set the file's perms on push.
+        :param gid: Optional gid to set on push (lxd's default is -1).
+        :param uid: Optional uid to set on push (lxd's default is -1).
+        :param mode: Optional file mode to set on file.
         :param project: Name of LXD project.
         :param remote: Name of LXD remote.
 
@@ -381,13 +381,13 @@ class LXC:  # pylint: disable=too-many-public-methods
         if recursive:
             command.append("--recursive")
 
-        if mode:
+        if mode is not None:
             command.append(f"--mode={mode}")
 
-        if gid != -1:
+        if gid is not None:
             command.append(f"--gid={gid}")
 
-        if uid != -1:
+        if uid is not None:
             command.append(f"--uid={uid}")
 
         try:
@@ -501,13 +501,14 @@ class LXC:  # pylint: disable=too-many-public-methods
         *,
         image: str,
         image_remote: str,
-        alias: str,
+        alias: Optional[str] = None,
         project: str = "default",
         remote: str = "local",
     ) -> None:
         """Copy image.
 
         :param instance_name: Optional instance name.
+        :param alias: New alias to add to image.
         :param image: Image to copy.
         :param project: Name of LXD project.
         :param remote: Name of LXD remote.
@@ -519,8 +520,10 @@ class LXC:  # pylint: disable=too-many-public-methods
             "copy",
             f"{image_remote}:{image}",
             f"{remote}:",
-            f"--alias={alias}",
         ]
+
+        if alias is not None:
+            command.append(f"--alias={alias}")
 
         try:
             self._run_lxc(
@@ -809,19 +812,19 @@ class LXC:  # pylint: disable=too-many-public-methods
     def publish(
         self,
         *,
-        alias: str,
         instance_name: str,
+        alias: Optional[str] = None,
+        force: bool = False,
         image_remote: str = "local",
         project: str = "default",
-        force: bool = False,
         remote: str = "local",
     ) -> None:
         """Publish image from instance.
 
-        :param alias: Alias to publish.
         :param instance_name: Name of instance to publish image from.
-        :param image_remote: Name of remote to publish image to.
+        :param alias: New alias to define at target.
         :param force: Force publishing of image, even if container is running.
+        :param image_remote: Name of remote to publish image to.
         :param project: Name of LXD project.
         :param remote: Name of LXD remote instance is found on.
 
@@ -829,11 +832,13 @@ class LXC:  # pylint: disable=too-many-public-methods
         """
         command = [
             "publish",
-            "--alias",
-            alias,
             f"{remote}:{instance_name}",
             f"{image_remote}:",
         ]
+
+        if alias is not None:
+            command.append(f"--alias={alias}")
+
         if force:
             command.append("--force")
 
