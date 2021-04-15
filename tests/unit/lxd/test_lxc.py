@@ -390,6 +390,93 @@ def test_exec_error(fake_process):
         )
 
 
+def test_file_pull(fake_process, tmp_path):
+    source = pathlib.Path("/root/foo")
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "file",
+            "pull",
+            "test-remote:test-instance/root/foo",
+            tmp_path.as_posix(),
+        ],
+    )
+
+    LXC().file_pull(
+        instance_name="test-instance",
+        project="test-project",
+        remote="test-remote",
+        source=source,
+        destination=tmp_path,
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_file_pull_all_opts(fake_process, tmp_path):
+    source = pathlib.Path("/root/foo")
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "file",
+            "pull",
+            "test-remote:test-instance/root/foo",
+            tmp_path.as_posix(),
+            "--create-dirs",
+            "--recursive",
+        ],
+    )
+
+    LXC().file_pull(
+        instance_name="test-instance",
+        project="test-project",
+        remote="test-remote",
+        source=source,
+        destination=tmp_path,
+        create_dirs=True,
+        recursive=True,
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_file_pull_error(fake_process, tmp_path):
+    source = pathlib.Path("/root/foo")
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "file",
+            "pull",
+            "test-remote:test-instance/root/foo",
+            tmp_path.as_posix(),
+        ],
+        returncode=1,
+    )
+
+    with pytest.raises(LXDError) as exc_info:
+        LXC().file_pull(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+            source=source,
+            destination=tmp_path,
+        )
+
+    assert exc_info.value == LXDError(
+        brief="Failed to pull file '/root/foo' from instance 'test-instance'.",
+        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+    )
+
+
 def test_file_push(fake_process, tmp_path):
     destination = pathlib.Path("/root/foo")
 
