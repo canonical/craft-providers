@@ -12,13 +12,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import io
+import pathlib
 import subprocess
 import sys
 
 import pytest
 
-from craft_providers import multipass
-from craft_providers.bases import BuilddBase, BuilddBaseAlias
+from craft_providers import bases, multipass
 
 from . import conftest
 
@@ -29,7 +30,12 @@ def core20_instance():
         instance_name=conftest.generate_instance_name(),
         image_name="snapcraft:core20",
     ) as tmp_instance:
-        yield multipass.MultipassInstance(name=tmp_instance)
+        instance = multipass.MultipassInstance(name=tmp_instance)
+
+        yield instance
+
+        if instance.exists():
+            instance.delete()
 
 
 @pytest.mark.parametrize(
@@ -37,18 +43,18 @@ def core20_instance():
     [
         # TODO: add test when Multipass supports core on Windows
         pytest.param(
-            BuilddBaseAlias.XENIAL,
+            bases.BuilddBaseAlias.XENIAL,
             "snapcraft:core",
             marks=pytest.mark.skipif(
                 sys.platform == "win32", reason="unsupported on windows"
             ),
         ),
-        (BuilddBaseAlias.BIONIC, "snapcraft:core18"),
-        (BuilddBaseAlias.FOCAL, "snapcraft:core20"),
+        (bases.BuilddBaseAlias.BIONIC, "snapcraft:core18"),
+        (bases.BuilddBaseAlias.FOCAL, "snapcraft:core20"),
     ],
 )
 def test_launch(instance_name, alias, image_name):
-    base_configuration = BuilddBase(alias=alias)
+    base_configuration = bases.BuilddBase(alias=alias)
 
     instance = multipass.launch(
         name=instance_name,
@@ -69,7 +75,7 @@ def test_launch(instance_name, alias, image_name):
 
 
 def test_launch_existing_instance(core20_instance):
-    base_configuration = BuilddBase(alias=BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
 
     instance = multipass.launch(
         name=core20_instance.name,
@@ -84,3 +90,71 @@ def test_launch_existing_instance(core20_instance):
     proc = instance.execute_run(["echo", "hi"], check=True, stdout=subprocess.PIPE)
 
     assert proc.stdout == b"hi\n"
+
+
+def test_launch_os_incompatible_instance(core20_instance):
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+
+    core20_instance.create_file(
+        destination=pathlib.Path("/etc/os-release"),
+        content=io.BytesIO(b"NAME=Fedora\nVERSION_ID=32\n"),
+        file_mode="0644",
+    )
+
+    # Should raise compatibility error with auto_clean=False.
+    with pytest.raises(bases.BaseCompatibilityError) as exc_info:
+        multipass.launch(
+            name=core20_instance.name,
+            base_configuration=base_configuration,
+            image_name="snapcraft:core20",
+        )
+
+    assert (
+        exc_info.value.brief
+        == "Incompatible base detected: Exepcted OS 'Ubuntu', found 'Fedora'."
+    )
+
+    # Retry with auto_clean=True.
+    multipass.launch(
+        name=core20_instance.name,
+        base_configuration=base_configuration,
+        image_name="snapcraft:core20",
+        auto_clean=True,
+    )
+
+    assert core20_instance.exists() is True
+    assert core20_instance.is_running() is True
+
+
+def test_launch_instance_config_incompatible_instance(core20_instance):
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+
+    core20_instance.create_file(
+        destination=base_configuration.instance_config_path,
+        content=io.BytesIO(b"compatibility_tag: invalid\n"),
+        file_mode="0644",
+    )
+
+    # Should raise compatibility error with auto_clean=False.
+    with pytest.raises(bases.BaseCompatibilityError) as exc_info:
+        multipass.launch(
+            name=core20_instance.name,
+            base_configuration=base_configuration,
+            image_name="snapcraft:core20",
+        )
+
+    assert (
+        exc_info.value.brief
+        == "Incompatible base detected: Expected image compatibility tag 'buildd-base-v0', found 'invalid'."
+    )
+
+    # Retry with auto_clean=True.
+    multipass.launch(
+        name=core20_instance.name,
+        base_configuration=base_configuration,
+        image_name="snapcraft:core20",
+        auto_clean=True,
+    )
+
+    assert core20_instance.exists() is True
+    assert core20_instance.is_running() is True
