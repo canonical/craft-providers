@@ -60,14 +60,22 @@ def purge(*, lxc: LXC, project: str, remote: str = "local") -> None:
 
     :raises LXDError: on unexpected error.
     """
+    logger.debug("Purging project %r on remote %r.", project, remote)
     projects = lxc.project_list(remote=remote)
     if project not in projects:
-        logger.debug("Attempted to purge non-existent project '%s'.", project)
+        logger.debug(
+            "Attempted to purge non-existent project %r on remote %r.", project, remote
+        )
         return
 
     # Cleanup any outstanding instance_names.
     for instance_name in lxc.list_names(project=project, remote=remote):
-        logger.debug("Deleting instance_name '%s'.", instance_name)
+        logger.debug(
+            "Deleting instance %r from project %r on remote %r.",
+            instance_name,
+            project,
+            remote,
+        )
         lxc.delete(
             instance_name=instance_name,
             project=project,
@@ -77,9 +85,13 @@ def purge(*, lxc: LXC, project: str, remote: str = "local") -> None:
 
     # Cleanup any outstanding images.
     for image in lxc.image_list(project=project):
-        logger.debug("Deleting image '%s'.", image)
+        logger.debug(
+            "Deleting image %r from project %r on remote %r.", image, project, remote
+        )
         lxc.image_delete(image=image["fingerprint"], project=project, remote=remote)
 
     # Cleanup project.
-    logger.debug("Deleting project '%s'.", project)
+    logger.debug("Deleting project %r on remote %r.", project, remote)
     lxc.project_delete(project=project, remote=remote)
+
+    logger.debug("Project %r on remote %r was purged successfully.", project, remote)
