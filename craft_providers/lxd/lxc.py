@@ -571,7 +571,7 @@ class LXC:  # pylint: disable=too-many-public-methods
     def image_list(
         self, *, project: str = "default", remote: str = "local"
     ) -> List[Dict[str, Any]]:
-        """List instance_names.
+        """List images.
 
         :param project: Name of LXD project.
         :param remote: Name of LXD remote.
