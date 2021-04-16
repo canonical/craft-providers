@@ -134,7 +134,6 @@ def test_create_file(
 
     assert mock_named_temporary_file.mock_calls == [
         mock.call.__enter__(),
-        mock.call.__enter__().flush(),
         mock.call.__exit__(None, None, None),
     ]
     assert mock_shutil_copyfileobj.mock_calls == [

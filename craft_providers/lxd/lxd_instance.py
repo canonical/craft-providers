@@ -106,7 +106,6 @@ class LXDInstance(Executor):
         """
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             shutil.copyfileobj(content, temp_file)
-            temp_file.flush()
 
         temp_path = pathlib.Path(temp_file.name)
         self.lxc.file_push(
