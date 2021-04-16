@@ -16,6 +16,7 @@ import os
 import pathlib
 import shutil
 import subprocess
+import sys
 import tempfile
 from unittest import mock
 
@@ -376,18 +377,41 @@ def test_is_running_error(mock_lxc):
     )
 
 
-def test_launch_without_mknod(mock_lxc, instance):
+def test_launch(mock_lxc, instance):
     instance.launch(
         image="20.04",
         image_remote="ubuntu",
-        uid="1234",
     )
 
     assert mock_lxc.mock_calls == [
         mock.call.info(project=instance.project, remote=instance.remote),
         mock.call.launch(
-            config_keys={"raw.idmap": "both 1234 0"},
+            config_keys={},
             ephemeral=False,
+            instance_name=instance.name,
+            image="20.04",
+            image_remote="ubuntu",
+            project=instance.project,
+            remote=instance.remote,
+        ),
+    ]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="unsupported on windows")
+def test_launch_all_opts(mock_lxc, instance):
+    instance.launch(
+        image="20.04",
+        image_remote="ubuntu",
+        ephemeral=True,
+        map_user_uid=True,
+    )
+
+    uid = str(os.getuid())
+    assert mock_lxc.mock_calls == [
+        mock.call.info(project=instance.project, remote=instance.remote),
+        mock.call.launch(
+            config_keys={"raw.idmap": f"both {uid} 0"},
+            ephemeral=True,
             instance_name=instance.name,
             image="20.04",
             image_remote="ubuntu",
@@ -405,39 +429,15 @@ def test_launch_with_mknod(mock_lxc, instance):
     instance.launch(
         image="20.04",
         image_remote="ubuntu",
-        uid="1234",
     )
 
     assert mock_lxc.mock_calls == [
         mock.call.info(project=instance.project, remote=instance.remote),
         mock.call.launch(
             config_keys={
-                "raw.idmap": "both 1234 0",
                 "security.syscalls.intercept.mknod": "true",
             },
             ephemeral=False,
-            instance_name=instance.name,
-            image="20.04",
-            image_remote="ubuntu",
-            project=instance.project,
-            remote=instance.remote,
-        ),
-    ]
-
-
-def test_launch_all_opts(mock_lxc, instance):
-    instance.launch(
-        image="20.04",
-        image_remote="ubuntu",
-        uid="1234",
-        ephemeral=True,
-    )
-
-    assert mock_lxc.mock_calls == [
-        mock.call.info(project=instance.project, remote=instance.remote),
-        mock.call.launch(
-            config_keys={"raw.idmap": "both 1234 0"},
-            ephemeral=True,
             instance_name=instance.name,
             image="20.04",
             image_remote="ubuntu",

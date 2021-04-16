@@ -288,7 +288,7 @@ class LXDInstance(Executor):
         *,
         image: str,
         image_remote: str,
-        uid: str = str(os.getuid()),
+        map_user_uid: bool = False,
         ephemeral: bool = False,
     ) -> None:
         """Launch instance.
@@ -301,7 +301,10 @@ class LXDInstance(Executor):
         :raises LXDError: On unexpected error.
         """
         config_keys = dict()
-        config_keys["raw.idmap"] = f"both {uid!s} 0"
+
+        if map_user_uid:
+            uid = os.getuid()
+            config_keys["raw.idmap"] = f"both {uid!s} 0"
 
         if self._host_supports_mknod():
             config_keys["security.syscalls.intercept.mknod"] = "true"
