@@ -237,14 +237,12 @@ class LXDInstance(Executor):
         """Get state configuration for instance.
 
         :returns: State information parsed from lxc if instance exists, else
-            None.
+                  None.
 
         :raises LXDError: On unexpected error.
         """
         instances = self.lxc.list(project=self.project, remote=self.remote)
 
-        # lxc returns a filter instances starting with instance name rather
-        # than the exact instance.  Find the exact match...
         for instance in instances:
             if instance["name"] == self.name:
                 return instance
@@ -357,7 +355,7 @@ class LXDInstance(Executor):
     def _host_supports_mknod(self) -> bool:
         """Check if host supports mknod in container.
 
-        See: https://actions.linuxcontainers.org/lxd/docs/master/syscall-interception
+        See: https://linuxcontainers.org/lxd/docs/master/syscall-interception
 
         :returns: True if mknod is supported.
 
