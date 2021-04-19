@@ -413,6 +413,8 @@ class LXDInstance(Executor):
                 f"Directory not found: {str(destination.parent.as_posix())!r}"
             )
 
+        # Copy into target with uid/gid 0, rather than copying the IDs from the
+        # host file.
         self.lxc.file_push(
             instance_name=self.name,
             source=source,
