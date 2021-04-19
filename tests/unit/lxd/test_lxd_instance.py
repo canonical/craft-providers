@@ -46,7 +46,7 @@ def mock_lxc(project_path):
                 "source": project_path.as_posix(),
                 "type": "disk",
             },
-            "disk__target": {
+            "disk-/target": {
                 "path": "/target",
                 "source": "/source",
                 "type": "disk",
@@ -459,7 +459,29 @@ def test_mount(mock_lxc, tmp_path, instance):
             instance_name=instance.name,
             source=tmp_path,
             path=pathlib.Path("/mnt/foo"),
-            device="disk__mnt_foo",
+            device="disk-/mnt/foo",
+            project=instance.project,
+            remote=instance.remote,
+        ),
+    ]
+
+
+def test_mount_all_opts(mock_lxc, tmp_path, instance):
+    instance.mount(
+        host_source=tmp_path, target=pathlib.Path("/mnt/foo"), device_name="disk-xfoo"
+    )
+
+    assert mock_lxc.mock_calls == [
+        mock.call.config_device_show(
+            instance_name=instance.name,
+            project=instance.project,
+            remote=instance.remote,
+        ),
+        mock.call.config_device_add_disk(
+            instance_name=instance.name,
+            source=tmp_path,
+            path=pathlib.Path("/mnt/foo"),
+            device="disk-xfoo",
             project=instance.project,
             remote=instance.remote,
         ),
@@ -703,7 +725,7 @@ def test_unmount_all(mock_lxc, instance):
         ),
         mock.call.config_device_remove(
             instance_name=instance.name,
-            device="disk__target",
+            device="disk-/target",
             project=instance.project,
             remote=instance.remote,
         ),
@@ -712,7 +734,7 @@ def test_unmount_all(mock_lxc, instance):
 
 def test_unmount_error(mock_lxc, instance):
     mock_lxc.config_device_show.return_value = {
-        "disk__target": {
+        "disk-/target": {
             "path": "/target",
             "source": "/source",
             "type": "disk",
@@ -724,5 +746,5 @@ def test_unmount_error(mock_lxc, instance):
 
     assert exc_info.value == LXDError(
         brief="Failed to unmount 'not-mounted' in instance 'test-instance' - no such disk.",
-        details="* Disk device configuration: {'disk__target': {'path': '/target', 'source': '/source', 'type': 'disk'}}",
+        details="* Disk device configuration: {'disk-/target': {'path': '/target', 'source': '/source', 'type': 'disk'}}",
     )

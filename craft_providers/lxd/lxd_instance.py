@@ -325,11 +325,8 @@ class LXDInstance(Executor):
     ) -> None:
         """Mount host source directory to target mount point.
 
-        Checks first to see if already mounted. If no device name is
-        given, it will be generated with the format:
-         disk_<target.as_posix().replace("/", "_")>
-
-        For example:  /mnt/foo will be named "disk__mnt_foo"
+        Checks first to see if already mounted.  If no device name is given, it
+        will be generated with the format "disk-{target.as_posix()}".
 
         :param host_source: Host path to mount.
         :param target: Instance path to mount to.
@@ -337,11 +334,11 @@ class LXDInstance(Executor):
 
         :raises LXDError: On unexpected error.
         """
-        if device_name is None:
-            device_name = "disk_" + target.as_posix().replace("/", "_")
-
         if self.is_mounted(host_source=host_source, target=target):
             return
+
+        if device_name is None:
+            device_name = "disk-" + target.as_posix()
 
         self.lxc.config_device_add_disk(
             instance_name=self.name,
