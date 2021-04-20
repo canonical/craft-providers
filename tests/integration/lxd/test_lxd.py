@@ -29,10 +29,14 @@ def test_init(lxd):
 
 
 def test_version(lxd):
-    components = lxd.version().split(".")
+    version = lxd.version()
+
+    assert isinstance(version, str) is True
+
+    components = version.split(".")
 
     assert len(components) in [2, 3]
-    assert all(int(c) for c in components)
+    assert all([int(c) for c in components])
 
 
 def test_wait_ready(lxd):
