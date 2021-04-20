@@ -12,9 +12,36 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""LXD environment provider."""
 
-from .errors import LXDError  # noqa: F401
-from .lxc import LXC  # noqa: F401
-from .lxd import LXD  # noqa: F401
-from .lxd_instance import LXDInstance  # noqa: F401
+import pytest
+
+from craft_providers.lxd import LXD
+
+
+@pytest.fixture()
+def lxd():
+    yield LXD()
+
+
+def test_init(lxd):
+    lxd.init(auto=True)
+    lxd.init(sudo=True, auto=True)
+
+
+def test_version(lxd):
+    version = lxd.version()
+
+    assert isinstance(version, str) is True
+
+    components = version.split(".")
+
+    assert len(components) in [2, 3]
+
+
+def test_wait_ready(lxd):
+    lxd.wait_ready()
+    lxd.wait_ready(sudo=True)
+
+
+def test_is_supported_version(lxd):
+    assert lxd.is_supported_version() is True
