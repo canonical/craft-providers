@@ -35,7 +35,7 @@ def test_install_unsupported_platform(mocker, platform):
 
 def test_install_without_sudo(fake_process, mocker):
     mocker.patch.object(sys, "platform", "linux")
-    mocker.patch.object(os, "geteuid", lambda: 0)
+    mocker.patch.object(os, "geteuid", lambda: 0, create=True)
     fake_process.register_subprocess(
         [
             "snap",
@@ -71,7 +71,7 @@ def test_install_without_sudo(fake_process, mocker):
 
 def test_install_with_sudo(fake_process, mocker):
     mocker.patch.object(sys, "platform", "linux")
-    mocker.patch.object(os, "geteuid", lambda: 1000)
+    mocker.patch.object(os, "geteuid", lambda: 1000, create=True)
     fake_process.register_subprocess(
         [
             "sudo",
@@ -110,7 +110,7 @@ def test_install_with_sudo(fake_process, mocker):
 
 def test_install_requires_sudo(mocker):
     mocker.patch.object(sys, "platform", "linux")
-    mocker.patch.object(os, "geteuid", lambda: 1000)
+    mocker.patch.object(os, "geteuid", lambda: 1000, create=True)
 
     with pytest.raises(LXDInstallationError) as exc_info:
         install(sudo=False)
