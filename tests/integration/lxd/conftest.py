@@ -81,10 +81,12 @@ def tmp_instance(
 
     yield instance_name
 
-    if instance_name in lxc.list(project=project, remote=remote):
+    if instance_name in lxc.list_names(project=project, remote=remote):
         lxc.delete(
             instance_name=instance_name, project=project, remote=remote, force=True
         )
+
+    assert instance_name not in lxc.list_names(project=project, remote=remote)
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -95,6 +97,11 @@ def installed_lxd():
 
     if sys.platform != "linux":
         pytest.skip(f"lxd not supported on {sys.platform}")
+
+
+@pytest.fixture()
+def lxc():
+    yield LXC()
 
 
 @pytest.fixture()
