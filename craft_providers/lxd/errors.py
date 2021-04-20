@@ -14,8 +14,29 @@
 #
 """LXD Errors."""
 
+from typing import Optional
+
 from craft_providers.errors import ProviderError
 
 
 class LXDError(ProviderError):
     """Unexpected LXD error."""
+
+
+class LXDInstallationError(LXDError):
+    """LXD Installation Error.
+
+    :param reason: Reason for install failure.
+    :param details: Optional details to include.
+    """
+
+    def __init__(
+        self,
+        reason: str,
+        *,
+        details: Optional[str] = None,
+    ) -> None:
+        brief = f"Failed to install LXD: {reason}."
+        resolution = "Please visit https://linuxcontainers.org/lxd/getting-started-cli/ for instructions on installing LXD for your operating system."
+
+        super().__init__(brief=brief, details=details, resolution=resolution)

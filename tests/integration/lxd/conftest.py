@@ -13,9 +13,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Fixtures for LXD integration tests."""
+import os
 import random
-import shutil
 import string
+import subprocess
 import sys
 import time
 from contextlib import contextmanager
@@ -23,6 +24,7 @@ from typing import Any, Dict, Optional
 
 import pytest
 
+from craft_providers import lxd
 from craft_providers.lxd import LXC
 from craft_providers.lxd import project as lxc_project
 
@@ -91,12 +93,44 @@ def tmp_instance(
 
 @pytest.fixture(autouse=True, scope="module")
 def installed_lxd():
-    """Ensure lxd is installed, or skip the test if we cannot."""
-    if shutil.which("lxc") is None or shutil.which("lxd") is None:
-        pytest.skip("lxd not installed, skipped")
+    """Ensure lxd is installed, or skip the test if we cannot.
 
+    If the environment has CRAFT_PROVIDERS_TESTS_ENABLE_LXD_INSTALL=1,
+    force the installation of LXD if uninstalled.
+    """
     if sys.platform != "linux":
         pytest.skip(f"lxd not supported on {sys.platform}")
+
+    if os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_LXD_INSTALL") == "1":
+        lxd.install()
+    elif not lxd.is_installed():
+        pytest.skip("lxd not installed, skipped")
+
+
+@pytest.fixture
+def uninstalled_lxd():
+    """Uninstall Lxd prior to test, if environment allows it.
+
+    Environment may enable this fixture with:
+    CRAFT_PROVIDER_TESTS_ENABLE_LXD_UNINSTALL=1
+    """
+    if sys.platform != "linux":
+        pytest.skip(f"lxd not supported on {sys.platform}")
+
+    if not lxd.is_installed():
+        pytest.skip("lxd not installed, skipped")
+
+    if not os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_LXD_UNINSTALL") == "1":
+        pytest.skip("not configured to uninstall lxd, skipped")
+
+    if sys.platform == "linux":
+        subprocess.run(["sudo", "snap", "remove", "lxd", "--purge"], check=True)
+
+    yield
+
+    # Ensure it is installed after test.
+    if not lxd.is_installed():
+        lxd.install()
 
 
 @pytest.fixture()

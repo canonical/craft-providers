@@ -32,3 +32,24 @@ def test_lxd_error_with_details_resolution():
     error = errors.LXDError(brief="foo", details="bar", resolution="do this")
 
     assert str(error) == "foo\nbar\ndo this"
+
+
+def test_lxd_installation_error():
+    error = errors.LXDInstallationError(reason="error during foo")
+
+    assert str(error) == (
+        "Failed to install LXD: error during foo.\n"
+        "Please visit https://linuxcontainers.org/lxd/getting-started-cli/ for instructions on installing LXD for your operating system."
+    )
+
+
+def test_lxd_installation_error_with_details():
+    error = errors.LXDInstallationError(
+        reason="error during foo", details="Some details..."
+    )
+
+    assert str(error) == (
+        "Failed to install LXD: error during foo.\n"
+        "Some details...\n"
+        "Please visit https://linuxcontainers.org/lxd/getting-started-cli/ for instructions on installing LXD for your operating system."
+    )
