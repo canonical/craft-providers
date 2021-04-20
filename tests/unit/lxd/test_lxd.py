@@ -69,7 +69,14 @@ def test_init_error(fake_process):
 
 @pytest.mark.parametrize(
     "version,compatible",
-    [("3.0", False), ("3.1.4", False), ("4.0", True), ("4.1.4", True)],
+    [
+        ("3.0", False),
+        ("3.1.4", False),
+        ("3.10", False),
+        ("4.0", True),
+        ("4.1.4", True),
+        ("4.10", True),
+    ],
 )
 def test_is_supported_version(fake_process, version, compatible):
     fake_process.register_subprocess(

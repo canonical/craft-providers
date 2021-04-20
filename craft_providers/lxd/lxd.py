@@ -73,8 +73,8 @@ class LXD:
         version_components = version.split(".")
 
         try:
-            major_minor = ".".join([version_components[0], version_components[1]])
-            return float(major_minor) >= 4.0
+            major = int(version_components[0])
+            return major >= 4
         except (ValueError, IndexError) as error:
             raise LXDError(
                 "Failed to parse LXD version.",

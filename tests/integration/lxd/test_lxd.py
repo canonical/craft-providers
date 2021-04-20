@@ -37,9 +37,6 @@ def test_version(lxd):
 
     assert len(components) in [2, 3]
 
-    for component in components:
-        assert int(component) is True
-
 
 def test_wait_ready(lxd):
     lxd.wait_ready()
