@@ -36,7 +36,9 @@ def test_version(lxd):
     components = version.split(".")
 
     assert len(components) in [2, 3]
-    assert all([int(c) for c in components])
+
+    for component in components:
+        assert int(component) is True
 
 
 def test_wait_ready(lxd):
