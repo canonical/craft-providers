@@ -13,11 +13,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """LXD command-line interface helpers."""
-
 import logging
 import pathlib
 import subprocess
 from typing import Optional
+
+import pkg_resources
 
 from craft_providers.errors import details_from_called_process_error
 
@@ -70,16 +71,16 @@ class LXD:
         :returns: True if installed version is supported.
         """
         version = self.version()
-        version_components = version.split(".")
 
-        try:
-            major = int(version_components[0])
-            return major >= 4
-        except (ValueError, IndexError) as error:
+        if "." not in version:
             raise LXDError(
                 "Failed to parse LXD version.",
                 details=f"Version data returned: {version!r}",
-            ) from error
+            )
+
+        return pkg_resources.parse_version(version) >= pkg_resources.parse_version(
+            "4.0"
+        )
 
     def version(self) -> str:
         """Query LXD version.

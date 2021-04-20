@@ -91,7 +91,7 @@ def test_is_supported_version(fake_process, version, compatible):
     assert len(fake_process.calls) == 1
 
 
-@pytest.mark.parametrize("version_data", ["invalid", "invalid.version"])
+@pytest.mark.parametrize("version_data", ["", "invalid"])
 def test_is_supported_version_parse_error(fake_process, version_data):
     fake_process.register_subprocess(
         [
