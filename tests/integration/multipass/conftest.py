@@ -110,9 +110,12 @@ def installed_multipass():
     If the environment has CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL=1,
     force the installation of Multipass if uninstalled.
     """
+    if multipass.is_installed():
+        return
+
     if os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL") == "1":
         multipass.install()
-    elif not multipass.is_installed():
+    else:
         pytest.skip("multipass not installed, skipped")
 
 

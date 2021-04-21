@@ -101,9 +101,12 @@ def installed_lxd():
     if sys.platform != "linux":
         pytest.skip(f"lxd not supported on {sys.platform}")
 
+    if lxd.is_installed():
+        return
+
     if os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_LXD_INSTALL") == "1":
         lxd.install()
-    elif not lxd.is_installed():
+    else:
         pytest.skip("lxd not installed, skipped")
 
 
