@@ -50,7 +50,7 @@ def core20_instance():
         (bases.BuilddBaseAlias.FOCAL, "20.04"),
     ],
 )
-def test_launch(instance_name, alias, image_name):
+def test_launch_and_run(instance_name, alias, image_name):
     base_configuration = bases.BuilddBase(alias=alias)
 
     instance = lxd.launch(
