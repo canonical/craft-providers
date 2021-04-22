@@ -70,7 +70,7 @@ def launch(
                 )
                 instance.delete()
             else:
-                raise error
+                raise
 
     instance.launch(
         image=image_name,

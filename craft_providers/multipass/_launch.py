@@ -68,7 +68,7 @@ def launch(
                 )
                 instance.delete()
             else:
-                raise error
+                raise
 
     instance.launch(
         cpus=cpus,
