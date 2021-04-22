@@ -12,13 +12,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Multipass Provider."""
+"""LXD Instance Provider."""
 
 import logging
 
 from craft_providers import Base, bases
 
-from .multipass_instance import MultipassInstance
+from .lxd_instance import LXDInstance
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +28,11 @@ def launch(
     *,
     base_configuration: Base,
     image_name: str,
-    cpus: int = 2,
-    disk_gb: int = 64,
-    mem_gb: int = 2,
+    image_remote: str,
     auto_clean: bool = False,
-) -> MultipassInstance:
+    ephemeral: bool = False,
+    map_user_uid: bool = False,
+) -> LXDInstance:
     """Create, start, and configure instance.
 
     If auto_clean is enabled, automatically delete an existing instance that is
@@ -40,29 +40,31 @@ def launch(
 
     :param name: Name of instance.
     :param base_configuration: Base configuration to apply to instance.
-    :param image_name: Multipass image to use, e.g. snapcraft:core20.
-    :param cpus: Number of CPUs.
-    :param disk_gb: Disk allocation in gigabytes.
-    :param mem_gb: Memory allocation in gigabytes.
+    :param image_name: LXD image to use, e.g. "20.04".
+    :param image_remote: LXD image to use, e.g. "ubuntu".
     :param auto_clean: Automatically clean instance, if incompatible.
+    :param ephemeral: Create ephemeral instance.
+    :param map_user_uid: Map current uid/gid to instance's root uid/gid.
 
-    :returns: Multipass instance.
+    :returns: LXD instance.
 
     :raises BaseConfigurationError: on unexpected error configuration base.
-    :raises MultipassError: on unexpected Multipass error.
+    :raises LXDError: on unexpected LXD error.
     """
-    instance = MultipassInstance(name=name)
+    instance = LXDInstance(name=name)
 
     if instance.exists():
-        # TODO: Warn if existing instance doesn't match cpu/disk/mem specs.
-        instance.start()
+        # TODO: warn (or auto clean) if ephemeral or map_user_uid is mismatched.
+        if not instance.is_running():
+            instance.start()
+
         try:
             base_configuration.setup(executor=instance)
             return instance
         except bases.BaseCompatibilityError as error:
             if auto_clean:
                 logger.debug(
-                    "Cleaning incompatible instance %r (reason: %s).",
+                    "Cleaning incompatible container %r (reason: %s).",
                     instance.name,
                     error.reason,
                 )
@@ -71,10 +73,10 @@ def launch(
                 raise
 
     instance.launch(
-        cpus=cpus,
-        disk_gb=disk_gb,
-        mem_gb=mem_gb,
         image=image_name,
+        image_remote=image_remote,
+        ephemeral=ephemeral,
+        map_user_uid=map_user_uid,
     )
     base_configuration.setup(executor=instance)
     return instance
