@@ -12,10 +12,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""LXD environment provider."""
+import shutil
 
-from .errors import LXDError, LXDInstallationError  # noqa: F401
-from .installer import install, is_installed  # noqa: F401
-from .lxc import LXC  # noqa: F401
-from .lxd import LXD  # noqa: F401
-from .lxd_instance import LXDInstance  # noqa: F401
+from craft_providers import lxd
+
+
+def test_is_installed():
+    expected = shutil.which("lxd") is not None
+
+    assert lxd.is_installed() is expected
+
+
+def test_install(uninstalled_lxd):  # pylint: disable=unused-argument
+    assert lxd.is_installed() is False
+
+    lxd_version = lxd.install()
+
+    assert lxd.is_installed() is True
+    assert lxd_version is not None

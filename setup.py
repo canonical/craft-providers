@@ -49,6 +49,7 @@ test_requires = [
     "pylint",
     "pylint-fixme-info",
     "pytest",
+    "pytest-mock",
     "pytest-subprocess",
     "tox",
 ]
