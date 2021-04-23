@@ -29,16 +29,16 @@ class FakeExecutor(Executor):
     Provides a fake execution environment meant to be paired with the
     fake_subprocess fixture for complete control over execution behaviors.
 
-    This records create_file(), pull_file(), and push_file() in
+    This records push_file_io(), pull_file(), and push_file() in
     records_of_<name> for introspection, similar to mock_calls.
     """
 
     def __init__(self) -> None:
-        self.records_of_create_file: List[Dict[str, Any]] = list()
+        self.records_of_push_file_io: List[Dict[str, Any]] = list()
         self.records_of_pull_file: List[Dict[str, Any]] = list()
         self.records_of_push_file: List[Dict[str, Any]] = list()
 
-    def create_file(
+    def push_file_io(
         self,
         *,
         destination: pathlib.Path,
@@ -47,7 +47,7 @@ class FakeExecutor(Executor):
         group: str = "root",
         user: str = "root",
     ) -> None:
-        self.records_of_create_file.append(
+        self.records_of_push_file_io.append(
             dict(
                 destination=destination.as_posix(),
                 content=content.read(),

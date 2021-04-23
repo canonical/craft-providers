@@ -101,7 +101,7 @@ class InstanceConfiguration(pydantic.BaseModel):
         """
         data = self.dict()
 
-        executor.create_file(
+        executor.push_file_io(
             destination=config_path,
             content=io.BytesIO(yaml.dump(data).encode()),
             file_mode="0644",

@@ -85,7 +85,7 @@ class LXDInstance(Executor):
         else:
             self.lxc = lxc
 
-    def create_file(
+    def push_file_io(
         self,
         *,
         destination: pathlib.Path,

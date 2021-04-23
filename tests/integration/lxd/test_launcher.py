@@ -160,7 +160,7 @@ def test_launch_existing_instance(core20_instance):
 def test_launch_os_incompatible_instance(core20_instance):
     base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
 
-    core20_instance.create_file(
+    core20_instance.push_file_io(
         destination=pathlib.Path("/etc/os-release"),
         content=io.BytesIO(b"NAME=Fedora\nVERSION_ID=32\n"),
         file_mode="0644",
@@ -196,7 +196,7 @@ def test_launch_os_incompatible_instance(core20_instance):
 def test_launch_instance_config_incompatible_instance(core20_instance):
     base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
 
-    core20_instance.create_file(
+    core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,
         content=io.BytesIO(b"compatibility_tag: invalid\n"),
         file_mode="0644",

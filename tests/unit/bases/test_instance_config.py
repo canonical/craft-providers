@@ -35,7 +35,7 @@ def test_save(mock_executor):
     config.save(executor=mock_executor, config_path=config_path)
 
     assert mock_executor.mock_calls == [
-        mock.call.create_file(
+        mock.call.push_file_io(
             destination=config_path, content=mock.ANY, file_mode="0644"
         )
     ]
