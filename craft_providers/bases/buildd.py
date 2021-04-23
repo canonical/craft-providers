@@ -460,7 +460,6 @@ class BuilddBase(Base):
         :param deadline: Optional time.time() deadline.
         """
         try:
-            # TODO: Is udev required for LXD? it is not for Multipass.
             _check_deadline(deadline)
             executor.execute_run(
                 [
@@ -468,7 +467,6 @@ class BuilddBase(Base):
                     "install",
                     "-y",
                     "fuse",
-                    "udev",
                 ],
                 check=True,
                 capture_output=True,
