@@ -50,8 +50,8 @@ def reusable_instance():
 @pytest.mark.parametrize("content", [b"", b"\x00\xaa\xbb\xcc", "test-string".encode()])
 @pytest.mark.parametrize("mode", ["644", "600", "755"])
 @pytest.mark.parametrize("user,group", [("root", "root"), ("ubuntu", "ubuntu")])
-def test_create_file(reusable_instance, content, mode, user, group):
-    reusable_instance.create_file(
+def test_push_file_io(reusable_instance, content, mode, user, group):
+    reusable_instance.push_file_io(
         destination=pathlib.Path("/tmp/file-test.txt"),
         content=io.BytesIO(content),
         file_mode=mode,

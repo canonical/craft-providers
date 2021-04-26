@@ -98,7 +98,7 @@ def instance(mock_multipass):
     yield MultipassInstance(name="test-instance", multipass=mock_multipass)
 
 
-def test_create_file(mock_multipass, instance):
+def test_push_file_io(mock_multipass, instance):
     mock_multipass.exec.side_effect = [
         mock.Mock(stdout="/tmp/mktemp-result\n"),
         None,
@@ -107,7 +107,7 @@ def test_create_file(mock_multipass, instance):
         None,
     ]
 
-    instance.create_file(
+    instance.push_file_io(
         destination=pathlib.Path("/etc/test.conf"),
         content=io.BytesIO(b"foo"),
         file_mode="0644",
@@ -163,13 +163,13 @@ def test_create_file(mock_multipass, instance):
     ]
 
 
-def test_create_file_error(mock_multipass, instance):
+def test_push_file_io_error(mock_multipass, instance):
     error = subprocess.CalledProcessError(-1, ["mktemp"], "test stdout", "test stderr")
 
     mock_multipass.exec.side_effect = error
 
     with pytest.raises(MultipassError) as exc_info:
-        instance.create_file(
+        instance.push_file_io(
             destination=pathlib.Path("/etc/test.conf"),
             content=io.BytesIO(b"foo"),
             file_mode="0644",

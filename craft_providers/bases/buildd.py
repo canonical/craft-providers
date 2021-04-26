@@ -265,7 +265,7 @@ class BuilddBase(Base):
         :param deadline: Optional time.time() deadline.
         """
         _check_deadline(deadline)
-        executor.create_file(
+        executor.push_file_io(
             destination=pathlib.Path("/etc/apt/apt.conf.d/00no-recommends"),
             content=io.BytesIO('Apt::Install-Recommends "false";\n'.encode()),
             file_mode="0644",
@@ -318,7 +318,7 @@ class BuilddBase(Base):
         ).encode()
 
         _check_deadline(deadline)
-        executor.create_file(
+        executor.push_file_io(
             destination=pathlib.Path("/etc/environment"),
             content=io.BytesIO(content),
             file_mode="0644",
@@ -331,7 +331,7 @@ class BuilddBase(Base):
         :param deadline: Optional time.time() deadline.
         """
         _check_deadline(deadline)
-        executor.create_file(
+        executor.push_file_io(
             destination=pathlib.Path("/etc/hostname"),
             content=io.BytesIO((self.hostname + "\n").encode()),
             file_mode="0644",
@@ -372,7 +372,7 @@ class BuilddBase(Base):
         :param deadline: Optional time.time() deadline.
         """
         _check_deadline(deadline)
-        executor.create_file(
+        executor.push_file_io(
             destination=pathlib.Path("/etc/systemd/network/10-eth0.network"),
             content=io.BytesIO(
                 dedent(

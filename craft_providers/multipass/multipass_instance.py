@@ -74,7 +74,7 @@ class MultipassInstance(Executor):
         else:
             self._multipass = Multipass()
 
-    def create_file(
+    def push_file_io(
         self,
         *,
         destination: pathlib.Path,

@@ -138,7 +138,7 @@ def test_setup(  # pylint: disable=too-many-arguments
 
     base_config.setup(executor=fake_executor)
 
-    assert fake_executor.records_of_create_file == [
+    assert fake_executor.records_of_push_file_io == [
         dict(
             destination="/etc/environment",
             content=etc_environment_content,
@@ -522,7 +522,7 @@ def test_wait_for_system_ready(
 
     base_config.wait_until_ready(executor=fake_executor, retry_wait=0.0)
 
-    assert fake_executor.records_of_create_file == []
+    assert fake_executor.records_of_push_file_io == []
     assert fake_executor.records_of_pull_file == []
     assert fake_executor.records_of_push_file == []
     assert list(fake_process.calls) == [

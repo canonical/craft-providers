@@ -27,25 +27,6 @@ class Executor(ABC):
     """Interfaces to execute commands and move data in/out of an environment."""
 
     @abstractmethod
-    def create_file(
-        self,
-        *,
-        destination: pathlib.Path,
-        content: io.BytesIO,
-        file_mode: str,
-        group: str = "root",
-        user: str = "root",
-    ) -> None:
-        """Create a file with specified content and file mode.
-
-        :param destination: Path to file.
-        :param content: Contents of file.
-        :param file_mode: File mode string (e.g. '0644').
-        :param group: File owner group.
-        :param user: File owner user.
-        """
-
-    @abstractmethod
     def execute_popen(
         self,
         command: List[str],
@@ -112,4 +93,23 @@ class Executor(ABC):
         :raises FileNotFoundError: If source file or destination's parent
             directory does not exist.
         :raises ProviderError: On error copying file.
+        """
+
+    @abstractmethod
+    def push_file_io(
+        self,
+        *,
+        destination: pathlib.Path,
+        content: io.BytesIO,
+        file_mode: str,
+        group: str = "root",
+        user: str = "root",
+    ) -> None:
+        """Create a file with specified content and file mode.
+
+        :param destination: Path to file.
+        :param content: Contents of file.
+        :param file_mode: File mode string (e.g. '0644').
+        :param group: File owner group.
+        :param user: File owner user.
         """

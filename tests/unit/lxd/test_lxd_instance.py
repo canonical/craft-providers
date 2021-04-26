@@ -85,7 +85,7 @@ def instance(mock_lxc):
     yield LXDInstance(name="test-instance", lxc=mock_lxc)
 
 
-def test_create_file(
+def test_push_file_io(
     mock_lxc,
     mock_named_temporary_file,
     mock_shutil_copyfileobj,
@@ -99,7 +99,7 @@ def test_create_file(
         None,
     ]
 
-    instance.create_file(
+    instance.push_file_io(
         destination=pathlib.Path("/etc/test.conf"),
         content=io.BytesIO(b"foo"),
         file_mode="0644",
@@ -142,7 +142,7 @@ def test_create_file(
     assert mock_os_unlink.mock_calls == [mock.call("test-tmp-file")]
 
 
-def test_create_file_error(mock_lxc, instance):
+def test_push_file_io_error(mock_lxc, instance):
     error = subprocess.CalledProcessError(
         -1, ["chown", "root:root", "/etc/test.conf"], "test stdout", "test stderr"
     )
@@ -150,7 +150,7 @@ def test_create_file_error(mock_lxc, instance):
     mock_lxc.exec.side_effect = error
 
     with pytest.raises(LXDError) as exc_info:
-        instance.create_file(
+        instance.push_file_io(
             destination=pathlib.Path("/etc/test.conf"),
             content=io.BytesIO(b"foo"),
             file_mode="0644",
