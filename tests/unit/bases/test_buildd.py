@@ -115,7 +115,7 @@ def test_setup(  # pylint: disable=too-many-arguments
         [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "apt-utils"]
     )
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "fuse", "udev"]
+        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "fuse"]
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "enable", "systemd-udevd"]
@@ -446,7 +446,7 @@ def test_setup_snapd_failures(
     return_codes[fail_index] = 1
 
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "fuse", "udev"],
+        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "fuse"],
         returncode=return_codes[0],
     )
     fake_process.register_subprocess(
