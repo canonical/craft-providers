@@ -66,7 +66,7 @@ setup(
     description="Craft provider tooling",
     long_description=readme,
     author="Canonical Ltd.",
-    author_email="Canonical Ltd.",
+    author_email="snapcraft@lists.snapcraft.io",
     url="https://github.com/canonical/craft-providers",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
