@@ -35,6 +35,7 @@ dev_requires = [
 doc_requires = [
     "sphinx",
     "sphinx-autodoc-typehints",
+    "sphinx-pydantic",
     "sphinx-rtd-theme",
 ]
 

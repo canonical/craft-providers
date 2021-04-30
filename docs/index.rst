@@ -8,6 +8,8 @@ Here you will find all of the provider documentation...
 
    executors
 
+   bases
+
 .. toctree::
    :caption: Internal APIs:
 
