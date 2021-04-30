@@ -294,37 +294,37 @@ class Multipass:
         :raises MultipassError: On error.
         """
         command = [str(self.multipass_path), "transfer", source, "-"]
-        proc = subprocess.Popen(
+        with subprocess.Popen(
             command,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-        )
+        ) as proc:
 
-        # Should never happen, but mypy/pyright makes noise.
-        assert proc.stdout is not None
-        assert proc.stderr is not None
+            # Should never happen, but mypy/pyright makes noise.
+            assert proc.stdout is not None
+            assert proc.stderr is not None
 
-        while True:
-            data = proc.stdout.read(chunk_size)
-            if not data:
-                break
+            while True:
+                data = proc.stdout.read(chunk_size)
+                if not data:
+                    break
 
-            destination.write(data)
+                destination.write(data)
 
-        try:
-            _, stderr = proc.communicate(timeout=30)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            _, stderr = proc.communicate()
+            try:
+                _, stderr = proc.communicate(timeout=30)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                _, stderr = proc.communicate()
 
-        if proc.returncode != 0:
-            raise MultipassError(
-                brief=f"Failed to transfer file {source!r}.",
-                details=errors.details_from_command_error(
-                    cmd=command, stderr=stderr, returncode=proc.returncode
-                ),
-            )
+            if proc.returncode != 0:
+                raise MultipassError(
+                    brief=f"Failed to transfer file {source!r}.",
+                    details=errors.details_from_command_error(
+                        cmd=command, stderr=stderr, returncode=proc.returncode
+                    ),
+                )
 
     def transfer_source_io(
         self, *, source: io.BufferedIOBase, destination: str, chunk_size: int = 4096
@@ -342,33 +342,34 @@ class Multipass:
         :raises MultipassError: On error.
         """
         command = [str(self.multipass_path), "transfer", "-", destination]
-        proc = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+        with subprocess.Popen(
+            command, stdin=subprocess.PIPE, stderr=subprocess.PIPE
+        ) as proc:
+            # Should never happen, but mypy/pyright makes noise.
+            assert proc.stdin is not None
+            assert proc.stderr is not None
 
-        # Should never happen, but mypy/pyright makes noise.
-        assert proc.stdin is not None
-        assert proc.stderr is not None
+            while True:
+                data = source.read(chunk_size)
+                if not data:
+                    break
 
-        while True:
-            data = source.read(chunk_size)
-            if not data:
-                break
+                proc.stdin.write(data)
 
-            proc.stdin.write(data)
+            # Wait until process is complete.
+            try:
+                _, stderr = proc.communicate(timeout=30)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                _, stderr = proc.communicate()
 
-        # Wait until process is complete.
-        try:
-            _, stderr = proc.communicate(timeout=30)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            _, stderr = proc.communicate()
-
-        if proc.returncode != 0:
-            raise MultipassError(
-                brief=f"Failed to transfer file to destination {destination!r}.",
-                details=errors.details_from_command_error(
-                    cmd=command, stderr=stderr, returncode=proc.returncode
-                ),
-            )
+            if proc.returncode != 0:
+                raise MultipassError(
+                    brief=f"Failed to transfer file to destination {destination!r}.",
+                    details=errors.details_from_command_error(
+                        cmd=command, stderr=stderr, returncode=proc.returncode
+                    ),
+                )
 
     def umount(self, *, mount: str) -> None:
         """Unmount target in VM.
