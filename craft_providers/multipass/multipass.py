@@ -31,6 +31,8 @@ import subprocess
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
+import pkg_resources
+
 from craft_providers import errors
 
 from .errors import MultipassError
@@ -127,6 +129,20 @@ class Multipass:
             ) from error
 
         return json.loads(proc.stdout)
+
+    def is_supported_version(self) -> bool:
+        """Check if Multipass version is supported.
+
+        A helper to check if Multipass meets minimum supported version for
+        craft-providers.
+
+        :returns: True if installed version is supported.
+        """
+        version, _ = self.version()
+
+        return pkg_resources.parse_version(version) >= pkg_resources.parse_version(
+            "1.7"
+        )
 
     def launch(
         self,
