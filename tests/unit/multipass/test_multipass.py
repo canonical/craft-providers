@@ -19,6 +19,7 @@ from unittest import mock
 
 import pytest
 
+from craft_providers.errors import details_from_command_error
 from craft_providers.multipass import Multipass
 from craft_providers.multipass.errors import MultipassError
 
@@ -450,45 +451,36 @@ def test_transfer_destination_io_chunk_size(fake_process):
     ]
 
 
-@mock.patch("subprocess.Popen")
-def test_transfer_destination_io_error(mock_popen, mock_details_from_command_error):
-    mock_popen.return_value.stdout.read.return_value = b""
-    mock_popen.return_value.communicate.side_effect = [
-        subprocess.TimeoutExpired(cmd="...", timeout=30),
-        (b"", b""),
-    ]
-    mock_popen.return_value.returncode = -1
+def test_transfer_destination_io_error(fake_process):
+    cmd = ["multipass", "transfer", "test-instance:/test1", "-"]
+    returncode = 1
+    stdout = None
+    stderr = b"some stderr"
 
-    stream = mock.Mock()
+    fake_process.register_subprocess(
+        cmd,
+        returncode=returncode,
+        stdout=stdout,
+        stderr=stderr,
+    )
 
-    with pytest.raises(MultipassError) as exc_info:
-        Multipass().transfer_destination_io(
-            source="test-instance:/test1", destination=stream
-        )
+    with io.BytesIO() as stream:
+        with pytest.raises(MultipassError) as exc_info:
+            Multipass().transfer_destination_io(
+                source="test-instance:/test1", destination=stream
+            )
 
     assert exc_info.value == MultipassError(
         brief="Failed to transfer file 'test-instance:/test1'.",
-        details=mock_details_from_command_error.return_value,
-    )
-    assert mock_popen.mock_calls == [
-        mock.call(
-            ["multipass", "transfer", "test-instance:/test1", "-"],
-            stdin=-3,
-            stdout=-1,
-            stderr=-1,
+        details=details_from_command_error(
+            cmd=cmd, returncode=returncode, stdout=stdout, stderr=stderr
         ),
-        mock.call().stdout.read(4096),
-        mock.call().communicate(timeout=30),
-        mock.call().kill(),
-        mock.call().communicate(),
-    ]
-    assert stream.mock_calls == []
+    )
 
 
 @mock.patch("subprocess.Popen")
 def test_transfer_source_io(mock_popen):
-    mock_popen.return_value.communicate.return_value = b"", b""
-    mock_popen.return_value.returncode = 0
+    mock_popen.return_value.__enter__.return_value.returncode = 0
 
     test_io = io.BytesIO(b"Hello World!\n")
 
@@ -503,15 +495,16 @@ def test_transfer_source_io(mock_popen):
             stdin=-1,
             stderr=-1,
         ),
-        mock.call().stdin.write(b"Hello World!\n"),
-        mock.call().communicate(timeout=30),
+        mock.call().__enter__(),
+        mock.call().__enter__().stdin.write(b"Hello World!\n"),
+        mock.call().__enter__().stderr.read(),
+        mock.call().__exit__(None, None, None),
     ]
 
 
 @mock.patch("subprocess.Popen")
 def test_transfer_source_io_chunk_size(mock_popen):
-    mock_popen.return_value.communicate.return_value = b"", b""
-    mock_popen.return_value.returncode = 0
+    mock_popen.return_value.__enter__.return_value.returncode = 0
 
     test_io = io.BytesIO(b"Hello World!\n")
 
@@ -527,21 +520,19 @@ def test_transfer_source_io_chunk_size(mock_popen):
             stdin=-1,
             stderr=-1,
         ),
-        mock.call().stdin.write(b"Hell"),
-        mock.call().stdin.write(b"o Wo"),
-        mock.call().stdin.write(b"rld!"),
-        mock.call().stdin.write(b"\n"),
-        mock.call().communicate(timeout=30),
+        mock.call().__enter__(),
+        mock.call().__enter__().stdin.write(b"Hell"),
+        mock.call().__enter__().stdin.write(b"o Wo"),
+        mock.call().__enter__().stdin.write(b"rld!"),
+        mock.call().__enter__().stdin.write(b"\n"),
+        mock.call().__enter__().stderr.read(),
+        mock.call().__exit__(None, None, None),
     ]
 
 
 @mock.patch("subprocess.Popen")
 def test_transfer_source_io_error(mock_popen, mock_details_from_command_error):
-    mock_popen.return_value.communicate.side_effect = [
-        subprocess.TimeoutExpired(cmd="...", timeout=30),
-        (b"", b""),
-    ]
-    mock_popen.return_value.returncode = -1
+    mock_popen.return_value.__enter__.return_value.returncode = -1
     test_io = io.BytesIO(b"Hello World!\n")
 
     with pytest.raises(MultipassError) as exc_info:
@@ -560,10 +551,10 @@ def test_transfer_source_io_error(mock_popen, mock_details_from_command_error):
             stdin=-1,
             stderr=-1,
         ),
-        mock.call().stdin.write(b"Hello World!\n"),
-        mock.call().communicate(timeout=30),
-        mock.call().kill(),
-        mock.call().communicate(),
+        mock.call().__enter__(),
+        mock.call().__enter__().stdin.write(b"Hello World!\n"),
+        mock.call().__enter__().stderr.read(),
+        mock.call().__exit__(None, None, None),
     ]
 
 

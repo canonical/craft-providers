@@ -312,19 +312,17 @@ class Multipass:
 
                 destination.write(data)
 
-            try:
-                _, stderr = proc.communicate(timeout=30)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                _, stderr = proc.communicate()
+            # Take one read of stderr in case there is anything useful
+            # for debugging an error.
+            stderr = proc.stderr.read()
 
-            if proc.returncode != 0:
-                raise MultipassError(
-                    brief=f"Failed to transfer file {source!r}.",
-                    details=errors.details_from_command_error(
-                        cmd=command, stderr=stderr, returncode=proc.returncode
-                    ),
-                )
+        if proc.returncode != 0:
+            raise MultipassError(
+                brief=f"Failed to transfer file {source!r}.",
+                details=errors.details_from_command_error(
+                    cmd=command, stderr=stderr, returncode=proc.returncode
+                ),
+            )
 
     def transfer_source_io(
         self, *, source: io.BufferedIOBase, destination: str, chunk_size: int = 4096
@@ -356,20 +354,17 @@ class Multipass:
 
                 proc.stdin.write(data)
 
-            # Wait until process is complete.
-            try:
-                _, stderr = proc.communicate(timeout=30)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                _, stderr = proc.communicate()
+            # Take one read of stderr in case there is anything useful
+            # for debugging an error.
+            stderr = proc.stderr.read()
 
-            if proc.returncode != 0:
-                raise MultipassError(
-                    brief=f"Failed to transfer file to destination {destination!r}.",
-                    details=errors.details_from_command_error(
-                        cmd=command, stderr=stderr, returncode=proc.returncode
-                    ),
-                )
+        if proc.returncode != 0:
+            raise MultipassError(
+                brief=f"Failed to transfer file to destination {destination!r}.",
+                details=errors.details_from_command_error(
+                    cmd=command, stderr=stderr, returncode=proc.returncode
+                ),
+            )
 
     def umount(self, *, mount: str) -> None:
         """Unmount target in VM.
