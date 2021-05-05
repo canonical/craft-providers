@@ -497,6 +497,7 @@ def test_transfer_source_io(mock_popen):
         ),
         mock.call().__enter__(),
         mock.call().__enter__().stdin.write(b"Hello World!\n"),
+        mock.call().__enter__().stdin.close(),
         mock.call().__enter__().stderr.read(),
         mock.call().__exit__(None, None, None),
     ]
@@ -525,6 +526,7 @@ def test_transfer_source_io_chunk_size(mock_popen):
         mock.call().__enter__().stdin.write(b"o Wo"),
         mock.call().__enter__().stdin.write(b"rld!"),
         mock.call().__enter__().stdin.write(b"\n"),
+        mock.call().__enter__().stdin.close(),
         mock.call().__enter__().stderr.read(),
         mock.call().__exit__(None, None, None),
     ]
@@ -553,6 +555,7 @@ def test_transfer_source_io_error(mock_popen, mock_details_from_command_error):
         ),
         mock.call().__enter__(),
         mock.call().__enter__().stdin.write(b"Hello World!\n"),
+        mock.call().__enter__().stdin.close(),
         mock.call().__enter__().stderr.read(),
         mock.call().__exit__(None, None, None),
     ]

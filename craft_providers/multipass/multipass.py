@@ -354,6 +354,10 @@ class Multipass:
 
                 proc.stdin.write(data)
 
+            # Close stdin before reading stderr, otherwise read() will hang
+            # because process is waiting for more data.
+            proc.stdin.close()
+
             # Take one read of stderr in case there is anything useful
             # for debugging an error.
             stderr = proc.stderr.read()
