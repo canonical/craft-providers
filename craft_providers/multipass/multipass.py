@@ -294,29 +294,27 @@ class Multipass:
         :raises MultipassError: On error.
         """
         command = [str(self.multipass_path), "transfer", source, "-"]
-        proc = subprocess.Popen(
+        with subprocess.Popen(
             command,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-        )
+        ) as proc:
 
-        # Should never happen, but mypy/pyright makes noise.
-        assert proc.stdout is not None
-        assert proc.stderr is not None
+            # Should never happen, but mypy/pyright makes noise.
+            assert proc.stdout is not None
+            assert proc.stderr is not None
 
-        while True:
-            data = proc.stdout.read(chunk_size)
-            if not data:
-                break
+            while True:
+                data = proc.stdout.read(chunk_size)
+                if not data:
+                    break
 
-            destination.write(data)
+                destination.write(data)
 
-        try:
-            _, stderr = proc.communicate(timeout=30)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            _, stderr = proc.communicate()
+            # Take one read of stderr in case there is anything useful
+            # for debugging an error.
+            stderr = proc.stderr.read()
 
         if proc.returncode != 0:
             raise MultipassError(
@@ -342,25 +340,27 @@ class Multipass:
         :raises MultipassError: On error.
         """
         command = [str(self.multipass_path), "transfer", "-", destination]
-        proc = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+        with subprocess.Popen(
+            command, stdin=subprocess.PIPE, stderr=subprocess.PIPE
+        ) as proc:
+            # Should never happen, but mypy/pyright makes noise.
+            assert proc.stdin is not None
+            assert proc.stderr is not None
 
-        # Should never happen, but mypy/pyright makes noise.
-        assert proc.stdin is not None
-        assert proc.stderr is not None
+            while True:
+                data = source.read(chunk_size)
+                if not data:
+                    break
 
-        while True:
-            data = source.read(chunk_size)
-            if not data:
-                break
+                proc.stdin.write(data)
 
-            proc.stdin.write(data)
+            # Close stdin before reading stderr, otherwise read() will hang
+            # because process is waiting for more data.
+            proc.stdin.close()
 
-        # Wait until process is complete.
-        try:
-            _, stderr = proc.communicate(timeout=30)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            _, stderr = proc.communicate()
+            # Take one read of stderr in case there is anything useful
+            # for debugging an error.
+            stderr = proc.stderr.read()
 
         if proc.returncode != 0:
             raise MultipassError(

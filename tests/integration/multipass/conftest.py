@@ -124,7 +124,7 @@ def uninstalled_multipass():
     """Uninstall Multipass prior to test, if environment allows it.
 
     Environment may enable this fixture with:
-    CRAFT_PROVIDER_TESTS_ENABLE_MULTIPASS_UNINSTALL=1
+    CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL=1
     """
     if not multipass.is_installed():
         pytest.skip("multipass not installed, skipped")

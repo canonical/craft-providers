@@ -69,7 +69,9 @@ class FakeExecutor(Executor):
             env_args = env_cmd.formulate_command(env)
 
         final_cmd = ["fake-executor"] + env_args + command
-        return subprocess.Popen(final_cmd, **kwargs)
+        return subprocess.Popen(  # pylint: disable=consider-using-with
+            final_cmd, **kwargs
+        )
 
     def execute_run(
         self,
