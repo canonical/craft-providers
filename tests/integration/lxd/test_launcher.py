@@ -24,9 +24,9 @@ from . import conftest
 
 
 @pytest.fixture()
-def core20_instance():
+def core20_instance(instance_name):
     with conftest.tmp_instance(
-        instance_name=conftest.generate_instance_name(),
+        instance_name=instance_name,
         image="20.04",
         image_remote="ubuntu",
         project="default",
