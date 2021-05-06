@@ -49,6 +49,7 @@ test_requires = [
     "pydocstyle",
     "pylint",
     "pylint-fixme-info",
+    "pylint-pytest",
     "pytest",
     "pytest-mock",
     "pytest-subprocess",
