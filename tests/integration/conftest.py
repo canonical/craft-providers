@@ -12,7 +12,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Fixtures for LXD integration tests."""
+"""Fixtures for integration tests."""
 import os
 import pathlib
 import random
@@ -27,12 +27,17 @@ from craft_providers import lxd, multipass
 
 
 def generate_instance_name():
+    """Generate a random instance name."""
     return "itest-" + "".join(random.choices(string.ascii_uppercase, k=8))
 
 
 @pytest.fixture()
 def home_tmp_path():
-    """Multipass doesn't have access to /tmp."""
+    """Provide a temporary directory located in user's home directory.
+
+    Multipass doesn't have access to /tmp, this fixture provides an equivalent
+    to tmp_path for tests that require it.
+    """
     with tempfile.TemporaryDirectory(
         suffix=".tmp-pytest", dir=pathlib.Path.home()
     ) as temp_dir:
@@ -41,11 +46,13 @@ def home_tmp_path():
 
 @pytest.fixture()
 def instance_name():
+    """Provide a random name for an instance to launch."""
     yield generate_instance_name()
 
 
 @pytest.fixture(scope="module")
 def reusable_instance_name():
+    """Provide a random name for an instance to launch with scope=module."""
     yield generate_instance_name()
 
 
