@@ -34,15 +34,14 @@ def instance(instance_name, project):
 
 
 @pytest.fixture(scope="module")
-def reusable_instance():
+def reusable_instance(reusable_instance_name):
     """Reusable instance for tests that don't require a fresh instance."""
-    instance_name = conftest.generate_instance_name()
     with conftest.tmp_instance(
-        instance_name=instance_name,
+        instance_name=reusable_instance_name,
         ephemeral=False,
         project="default",
     ):
-        instance = LXDInstance(name=instance_name, project="default")
+        instance = LXDInstance(name=reusable_instance_name, project="default")
 
         yield instance
 
