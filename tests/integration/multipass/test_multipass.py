@@ -61,6 +61,10 @@ def test_exec(instance, multipass):
     assert proc.stdout == b"this is a test\n"
 
 
+def test_is_supported_version(multipass):
+    assert multipass.is_supported_version() is True
+
+
 def test_list(instance, multipass):
     instances = multipass.list()
 
@@ -175,13 +179,14 @@ def test_transfer_destination_io(instance, multipass, home_tmp_path):
     assert out_path.read_text() == "this is a test"
 
 
-@pytest.mark.xfail(run=False, reason="Multipass bug issue #2005")
 def test_transfer_destination_io_large(instance, multipass, home_tmp_path):
     test_file = home_tmp_path / "test.txt"
 
     with test_file.open("wb") as stream:
         stream.seek(1024 * 1024 * 1024 * 4)
         stream.write(b"test")
+
+    assert test_file.stat().st_size == 4294967300
 
     multipass.transfer(
         source=str(test_file),
