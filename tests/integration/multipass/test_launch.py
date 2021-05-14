@@ -25,9 +25,9 @@ from . import conftest
 
 
 @pytest.fixture()
-def core20_instance():
+def core20_instance(instance_name):
     with conftest.tmp_instance(
-        instance_name=conftest.generate_instance_name(),
+        instance_name=instance_name,
         image_name="snapcraft:core20",
     ) as tmp_instance:
         instance = multipass.MultipassInstance(name=tmp_instance)

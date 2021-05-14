@@ -23,18 +23,18 @@ from . import conftest
 
 
 @pytest.fixture()
-def instance():
+def instance(instance_name):
     with conftest.tmp_instance(
-        instance_name=conftest.generate_instance_name(),
+        instance_name=instance_name,
     ) as tmp_instance:
         yield MultipassInstance(name=tmp_instance)
 
 
 @pytest.fixture(scope="module")
-def reusable_instance():
+def reusable_instance(reusable_instance_name):
     """Reusable instance for tests that don't require a fresh instance."""
     with conftest.tmp_instance(
-        instance_name=conftest.generate_instance_name(),
+        instance_name=reusable_instance_name,
     ) as tmp_instance:
         yield MultipassInstance(name=tmp_instance)
 
