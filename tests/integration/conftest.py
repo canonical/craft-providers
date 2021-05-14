@@ -79,6 +79,9 @@ def installed_lxd():
 def uninstalled_lxd():
     """Uninstall Lxd prior to test, if environment allows it.
 
+    For consistency with installed_lxd fixture, LXD must be installed prior to
+    this, signaling that LXD will run OK.
+
     Environment may enable this fixture with:
     CRAFT_PROVIDERS_TESTS_ENABLE_LXD_UNINSTALL=1
     """
@@ -120,6 +123,9 @@ def installed_multipass():
 @pytest.fixture
 def uninstalled_multipass():
     """Uninstall Multipass prior to test, if environment allows it.
+
+    For consistency with installed_multipass fixture, Multipass must be
+    installed prior to this, signaling that Multipass will run OK.
 
     Environment may enable this fixture with:
     CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL=1
