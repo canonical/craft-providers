@@ -28,13 +28,3 @@ def home_temporary_directory() -> Iterator[pathlib.Path]:
         dir=pathlib.Path.home(),
     ) as tmp_dir:
         yield pathlib.Path(tmp_dir)
-
-
-@contextlib.contextmanager
-def home_temporary_file(name: str) -> Iterator[pathlib.Path]:
-    """Create temporary directory in home directory where Multipass has access.
-
-    :param name: Name of file to use (in temporary directory).
-    """
-    with home_temporary_directory() as tmp_dir:
-        yield tmp_dir / name
