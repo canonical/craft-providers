@@ -38,7 +38,17 @@ class Base(ABC):
     (3) any dependencies that are required for the operation to complete, e.g.
     installed applications, networking configuration, etc.  This includes any
     environment configuration that the application will assume is available.
+
+    :cvar compatibility_tag: Tag/Version for variant of build configuration and
+        setup.  Any change to this version would indicate that prior [versioned]
+        instances are incompatible and must be cleaned.  As such, any new value
+        should be unique to old values (e.g. incrementing).  It suggested to
+        extend this tag, not overwrite it, e.g.: compatibilty_tag =
+        f"{appname}-{Base.compatibility_tag}.{apprevision}" to ensure base
+        compatibility levels are maintained.
     """
+
+    compatibility_tag: str = "base-v0"
 
     @abstractmethod
     def setup(

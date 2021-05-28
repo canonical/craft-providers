@@ -100,7 +100,7 @@ class BuilddBase(Base):
     :param hostname: Hostname to configure.
     """
 
-    compatibility_tag: str = "buildd-base-v0"
+    compatibility_tag: str = f"buildd-{Base.compatibility_tag}"
     instance_config_path: pathlib.Path = pathlib.Path("/etc/craft-instance.conf")
     instance_config_class: Type[
         instance_config.InstanceConfiguration
