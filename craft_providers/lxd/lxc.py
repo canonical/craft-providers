@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 # pylint: disable=too-many-lines
 
 
-def _load_yaml(data):
+def load_yaml(data):
     """Load yaml without additional resolvers.
 
     LXD may return YAML that has datetimes that are not valid when parsed to
@@ -184,7 +184,7 @@ class LXC:  # pylint: disable=too-many-public-methods
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-        return _load_yaml(proc.stdout)
+        return load_yaml(proc.stdout)
 
     def config_set(
         self,
@@ -468,7 +468,7 @@ class LXC:  # pylint: disable=too-many-public-methods
             ) from error
 
         try:
-            return _load_yaml(proc.stdout)
+            return load_yaml(proc.stdout)
         except yaml.YAMLError as error:
             raise LXDError(
                 brief="Failed to parse lxc info.",
@@ -623,7 +623,7 @@ class LXC:  # pylint: disable=too-many-public-methods
             ) from error
 
         try:
-            return _load_yaml(proc.stdout)
+            return load_yaml(proc.stdout)
         except yaml.YAMLError as error:
             raise LXDError(
                 brief="Failed to parse lxc image list.",
@@ -664,7 +664,7 @@ class LXC:  # pylint: disable=too-many-public-methods
             ) from error
 
         try:
-            return _load_yaml(proc.stdout)
+            return load_yaml(proc.stdout)
         except yaml.YAMLError as error:
             raise LXDError(
                 brief="Failed to parse lxc list.",
@@ -757,7 +757,7 @@ class LXC:  # pylint: disable=too-many-public-methods
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-        return _load_yaml(proc.stdout)
+        return load_yaml(proc.stdout)
 
     def project_create(self, *, project: str, remote: str = "local") -> None:
         """Create project.
@@ -829,7 +829,7 @@ class LXC:  # pylint: disable=too-many-public-methods
             ) from error
 
         try:
-            projects = _load_yaml(proc.stdout)
+            projects = load_yaml(proc.stdout)
             return sorted([p["name"] for p in projects])
         except (KeyError, yaml.YAMLError) as error:
             raise LXDError(
@@ -931,7 +931,7 @@ class LXC:  # pylint: disable=too-many-public-methods
             ) from error
 
         try:
-            return _load_yaml(proc.stdout)
+            return load_yaml(proc.stdout)
         except yaml.YAMLError as error:
             raise LXDError(
                 brief="Failed to parse lxc remote list.",
