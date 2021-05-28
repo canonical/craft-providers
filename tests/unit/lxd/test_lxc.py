@@ -743,6 +743,30 @@ def test_launch_error(fake_process):
     )
 
 
+def test_has_image(fake_process):
+    lxc = LXC()
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "image",
+            "list",
+            "test-remote:",
+            "--format=yaml",
+        ],
+        stdout="- aliases:\n  - name: image1\n- aliases:\n  - name: image2\n",
+        occurrences=3,
+    )
+    fake_process.keep_last_process(True)
+
+    assert lxc.has_image("image1", project="test-project", remote="test-remote") is True
+    assert lxc.has_image("image2", project="test-project", remote="test-remote") is True
+    assert (
+        lxc.has_image("image3", project="test-project", remote="test-remote") is False
+    )
+
+
 def test_image_copy(fake_process):
     fake_process.register_subprocess(
         [
