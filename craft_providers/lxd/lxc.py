@@ -28,6 +28,19 @@ from .errors import LXDError
 logger = logging.getLogger(__name__)
 
 
+# pylint: disable=too-many-lines
+
+
+def load_yaml(data):
+    """Load yaml without additional resolvers.
+
+    LXD may return YAML that has datetimes that are not valid when parsed to
+    datetime.datetime().  Instead just use the base loader and avoid resolving
+    this type (and others).
+    """
+    return yaml.load(data, Loader=yaml.BaseLoader)
+
+
 class LXC:  # pylint: disable=too-many-public-methods
     """Wrapper for lxc command-line interface."""
 
@@ -171,7 +184,7 @@ class LXC:  # pylint: disable=too-many-public-methods
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-        return yaml.load(proc.stdout, Loader=yaml.Loader)
+        return load_yaml(proc.stdout)
 
     def config_set(
         self,
@@ -403,6 +416,24 @@ class LXC:  # pylint: disable=too-many-public-methods
                 details=errors.details_from_called_process_error(error),
             ) from error
 
+    def has_image(
+        self, image_name, *, project: str = "default", remote: str = "local"
+    ) -> bool:
+        """Check if image with given alias name is present.
+
+        :param image_name: Name of image alias.
+        :param project: Name of LXD project.
+        :param remote: Name of LXD remote.
+        """
+        image_list = self.image_list(project=project, remote=remote)
+
+        for image in image_list:
+            for alias in image["aliases"]:
+                if image_name == alias["name"]:
+                    return True
+
+        return False
+
     def info(
         self,
         *,
@@ -437,7 +468,7 @@ class LXC:  # pylint: disable=too-many-public-methods
             ) from error
 
         try:
-            return yaml.load(proc.stdout, Loader=yaml.Loader)
+            return load_yaml(proc.stdout)
         except yaml.YAMLError as error:
             raise LXDError(
                 brief="Failed to parse lxc info.",
@@ -592,7 +623,7 @@ class LXC:  # pylint: disable=too-many-public-methods
             ) from error
 
         try:
-            return yaml.load(proc.stdout, Loader=yaml.Loader)
+            return load_yaml(proc.stdout)
         except yaml.YAMLError as error:
             raise LXDError(
                 brief="Failed to parse lxc image list.",
@@ -633,7 +664,7 @@ class LXC:  # pylint: disable=too-many-public-methods
             ) from error
 
         try:
-            return yaml.load(proc.stdout, Loader=yaml.Loader)
+            return load_yaml(proc.stdout)
         except yaml.YAMLError as error:
             raise LXDError(
                 brief="Failed to parse lxc list.",
@@ -726,7 +757,7 @@ class LXC:  # pylint: disable=too-many-public-methods
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-        return yaml.load(proc.stdout, Loader=yaml.Loader)
+        return load_yaml(proc.stdout)
 
     def project_create(self, *, project: str, remote: str = "local") -> None:
         """Create project.
@@ -798,7 +829,7 @@ class LXC:  # pylint: disable=too-many-public-methods
             ) from error
 
         try:
-            projects = yaml.load(proc.stdout, Loader=yaml.Loader)
+            projects = load_yaml(proc.stdout)
             return sorted([p["name"] for p in projects])
         except (KeyError, yaml.YAMLError) as error:
             raise LXDError(
@@ -900,7 +931,7 @@ class LXC:  # pylint: disable=too-many-public-methods
             ) from error
 
         try:
-            return yaml.load(proc.stdout, Loader=yaml.Loader)
+            return load_yaml(proc.stdout)
         except yaml.YAMLError as error:
             raise LXDError(
                 brief="Failed to parse lxc remote list.",

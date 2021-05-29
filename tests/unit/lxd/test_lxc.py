@@ -17,7 +17,7 @@ import subprocess
 import pytest
 
 from craft_providers import errors
-from craft_providers.lxd import LXC, LXDError
+from craft_providers.lxd import LXC, LXDError, lxc
 
 # pylint: disable=too-many-lines
 
@@ -740,6 +740,30 @@ def test_launch_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to launch instance 'test-instance'.",
         details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+    )
+
+
+def test_has_image(fake_process):
+    lxc = LXC()
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "image",
+            "list",
+            "test-remote:",
+            "--format=yaml",
+        ],
+        stdout="- aliases:\n  - name: image1\n- aliases:\n  - name: image2\n",
+        occurrences=3,
+    )
+    fake_process.keep_last_process(True)
+
+    assert lxc.has_image("image1", project="test-project", remote="test-remote") is True
+    assert lxc.has_image("image2", project="test-project", remote="test-remote") is True
+    assert (
+        lxc.has_image("image3", project="test-project", remote="test-remote") is False
     )
 
 
@@ -1647,3 +1671,14 @@ def test_stop_error(fake_process):
         brief="Failed to stop 'test-instance'.",
         details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
     )
+
+
+def test_yaml_loader_invalid_timestamp():
+    # This would throw a `ValueError: year 0 is out of range` if loader is
+    # resolving timestamps.
+    data = "last_used_at: 0000-01-01T00:00:00Z"
+
+    obj = lxc.load_yaml(data)
+
+    assert "last_used_at" in obj
+    assert isinstance(obj["last_used_at"], str)
