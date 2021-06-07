@@ -83,7 +83,7 @@ class BuilddBase(Base):
     :cvar compatibility_tag: Tag/Version for variant of build configuration and
         setup.  Any change to this version would indicate that prior [versioned]
         instances are incompatible and must be cleaned.  As such, any new value
-        should be unique to old values (e.g. incrementing).  It suggested to
+        should be unique to old values (e.g. incrementing).  It is suggested to
         extend this tag, not overwrite it, e.g.: compatibilty_tag =
         f"{appname}-{BuildBase.compatibility_tag}.{apprevision}" to ensure base
         compatibility levels are maintained.
@@ -100,7 +100,7 @@ class BuilddBase(Base):
     :param hostname: Hostname to configure.
     """
 
-    compatibility_tag: str = "buildd-base-v0"
+    compatibility_tag: str = f"buildd-{Base.compatibility_tag}"
     instance_config_path: pathlib.Path = pathlib.Path("/etc/craft-instance.conf")
     instance_config_class: Type[
         instance_config.InstanceConfiguration
