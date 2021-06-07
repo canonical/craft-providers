@@ -105,6 +105,7 @@ def launch(
     :param ephemeral: Create ephemeral instance.
     :param map_user_uid: Map current uid/gid to instance's root uid/gid.
     :param use_snapshots: Use LXD snapshots for bootstrapping images.
+    :param lxc: LXC client.
 
     :returns: LXD instance.
 
