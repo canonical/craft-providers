@@ -18,7 +18,7 @@ import pytest
 import requests
 
 from craft_providers.actions import snap_installer
-from craft_providers.errors import details_from_called_process_error
+from craft_providers.errors import ProviderError, details_from_called_process_error
 
 
 @pytest.fixture()
@@ -93,6 +93,26 @@ def test_inject_from_host_strict(mock_requests, fake_executor, fake_process):
     ]
 
     assert len(fake_process.calls) == 2
+
+
+def test_inject_from_push_error(mock_requests, fake_executor, fake_process):
+    mock_executor = mock.Mock(spec=fake_executor, wraps=fake_executor)
+    mock_executor.push_file.side_effect = ProviderError(brief="foo")
+
+    fake_process.register_subprocess(
+        ["fake-executor", "rm", "-f", "/tmp/test-name.snap"]
+    )
+
+    with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
+        snap_installer.inject_from_host(
+            executor=mock_executor, snap_name="test-name", classic=False
+        )
+
+    assert exc_info.value == snap_installer.SnapInstallationError(
+        brief="Failed to inject snap 'test-name'.",
+        details="Error copying snap into target environment.",
+    )
+    assert exc_info.value.__cause__ is not None
 
 
 def test_inject_from_host_snapd_connection_error_using_pack_fallback(

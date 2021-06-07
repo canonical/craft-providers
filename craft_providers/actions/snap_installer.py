@@ -118,10 +118,16 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
         )
 
         with _get_host_snap(snap_name) as host_snap_path:
-            executor.push_file(
-                source=host_snap_path,
-                destination=target_snap_path,
-            )
+            try:
+                executor.push_file(
+                    source=host_snap_path,
+                    destination=target_snap_path,
+                )
+            except ProviderError as error:
+                raise SnapInstallationError(
+                    brief=f"Failed to inject snap {snap_name!r}.",
+                    details="Error copying snap into target environment.",
+                ) from error
 
         executor.execute_run(
             snap_cmd.formulate_install_command(
@@ -134,10 +140,6 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
         raise SnapInstallationError(
             brief=f"Failed to inject snap {snap_name!r}.",
             details=details_from_called_process_error(error),
-        ) from error
-    except ProviderError as error:
-        raise SnapInstallationError(
-            brief=f"Failed to inject snap {snap_name!r}.",
         ) from error
 
 
