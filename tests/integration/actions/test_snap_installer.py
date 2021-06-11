@@ -13,49 +13,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Tests for snap installer."""
-import os
-import pathlib
-import shutil
-import subprocess
-import sys
 
-import pytest
 
 from craft_providers.actions import snap_installer
-
-
-@pytest.fixture()
-def empty_test_snap(tmp_path):
-    """Fixture to provide an empty local-only snap for test purposes.
-
-    Requires:
-    CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL=1
-    """
-    snap_name = "craft-integration-test-snap"
-
-    if shutil.which("snap") is None or sys.platform != "linux":
-        pytest.skip("requires linux and snapd")
-
-    if not os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL") == "1":
-        pytest.skip("need permission to install snaps, skipped")
-
-    if pathlib.Path("/snap", snap_name).exists():
-        pytest.skip(f"test snap {snap_name} already exists, please remove")
-
-    tmp_path.chmod(0o755)
-
-    meta_dir = tmp_path / "meta"
-    meta_dir.mkdir()
-    snap_yaml = meta_dir / "snap.yaml"
-    snap_yaml.write_text(
-        f"name: {snap_name}\nversion: 1.0\ntype: base\nsummary: test snap\n"
-    )
-
-    subprocess.run(["sudo", "snap", "try", str(tmp_path)], check=True)
-
-    yield snap_name
-
-    subprocess.run(["sudo", "snap", "remove", snap_name], check=True)
 
 
 def test_inject_from_host(core20_lxd_instance, installed_snap, caplog):

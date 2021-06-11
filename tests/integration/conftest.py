@@ -23,6 +23,7 @@ import string
 import subprocess
 import sys
 import tempfile
+from typing import Optional
 
 import pytest
 
@@ -181,7 +182,7 @@ def installed_snap():
     """
 
     @contextlib.contextmanager
-    def _installed_snap(snap_name):
+    def _installed_snap(snap_name, *, try_path: Optional[pathlib.Path] = None):
         """Ensure snap is installed, or skip test."""
         if shutil.which("snap") is None or sys.platform != "linux":
             pytest.skip("requires linux and snapd")
@@ -194,8 +195,33 @@ def installed_snap():
             if not os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL") == "1":
                 pytest.skip(f"{snap_name!r} snap not installed, skipped")
 
-            subprocess.run(["sudo", "snap", "install", snap_name], check=True)
+            if try_path:
+                subprocess.run(["sudo", "snap", "try", str(try_path)], check=True)
+            else:
+                subprocess.run(["sudo", "snap", "install", snap_name], check=True)
             yield
             subprocess.run(["sudo", "snap", "remove", snap_name], check=True)
 
     return _installed_snap
+
+
+@pytest.fixture()
+def empty_test_snap(installed_snap, tmp_path):
+    """Fixture to provide an empty local-only snap for test purposes.
+
+    Requires:
+    CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL=1
+    """
+    snap_name = "craft-integration-test-snap"
+
+    tmp_path.chmod(0o755)
+
+    meta_dir = tmp_path / "meta"
+    meta_dir.mkdir()
+    snap_yaml = meta_dir / "snap.yaml"
+    snap_yaml.write_text(
+        f"name: {snap_name}\nversion: 1.0\ntype: base\nsummary: test snap\n"
+    )
+
+    with installed_snap(snap_name, try_path=tmp_path):
+        yield snap_name
