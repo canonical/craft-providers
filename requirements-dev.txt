@@ -4,9 +4,9 @@ astroid==2.5.6
 attrs==21.2.0
 autoflake==1.4
 Babel==2.9.1
-black==21.5b1
+black==21.5b2
 bleach==3.3.0
-certifi==2020.12.5
+certifi==2021.5.30
 cffi==1.14.5
 chardet==4.0.0
 click==8.0.1
@@ -14,13 +14,13 @@ codespell==2.0.0
 colorama==0.4.4
 coverage==5.5
 cryptography==3.4.7
-distlib==0.3.1
+distlib==0.3.2
 docutils==0.16
 filelock==3.0.12
 flake8==3.9.2
 idna==2.10
 imagesize==1.2.0
-importlib-metadata==4.3.0
+importlib-metadata==4.5.0
 iniconfig==1.1.1
 isort==5.8.0
 jeepney==0.6.0
@@ -43,7 +43,7 @@ pydantic==1.8.2
 pydocstyle==6.1.1
 pyflakes==2.3.1
 Pygments==2.9.0
-pylint==2.8.2
+pylint==2.8.3
 pylint-fixme-info==1.0.2
 pylint-pytest==1.1.2
 pyparsing==2.4.7
@@ -56,6 +56,7 @@ readme-renderer==29.0
 regex==2021.4.4
 requests==2.25.1
 requests-toolbelt==0.9.1
+requests-unixsocket==0.2.0
 rfc3986==1.5.0
 SecretStorage==3.3.1
 six==1.16.0

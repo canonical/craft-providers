@@ -74,6 +74,7 @@ jobs:
       - name: Run integration tests on Linux
         run: |
           source ${HOME}/.venv/bin/activate
+          export CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL=1
           export CRAFT_PROVIDERS_TESTS_ENABLE_LXD_INSTALL=1
           export CRAFT_PROVIDERS_TESTS_ENABLE_LXD_UNINSTALL=1
           sg lxd -c "lxc version"

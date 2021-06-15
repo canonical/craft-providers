@@ -25,6 +25,7 @@ with open("README.md") as readme_file:
 install_requires = [
     "pydantic",
     "pyyaml",
+    "requests_unixsocket",
 ]
 
 dev_requires = [
