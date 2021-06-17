@@ -467,6 +467,7 @@ class BuilddBase(Base):
                     "install",
                     "-y",
                     "fuse",
+                    "udev",
                 ],
                 check=True,
                 capture_output=True,
