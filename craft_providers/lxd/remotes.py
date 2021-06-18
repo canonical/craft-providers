@@ -20,7 +20,7 @@ from .lxc import LXC
 logger = logging.getLogger(__name__)
 
 
-BUILDD_REMOTE_NAME = "com.cloud-images.buildd.releases"
+BUILDD_REMOTE_NAME = "craft-com.ubuntu.cloud-buildd"
 BUILDD_REMOTE_ADDR = "https://cloud-images.ubuntu.com/buildd/releases"
 
 

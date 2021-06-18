@@ -31,12 +31,12 @@ def mock_lxc():
 def test_configure_buildd_image_remote_fresh(mock_lxc):
     name = lxd.remotes.configure_buildd_image_remote(lxc=mock_lxc)
 
-    assert name == "com.cloud-images.buildd.releases"
+    assert name == "craft-com.ubuntu.cloud-buildd"
     assert mock_lxc.mock_calls == [
         mock.call.remote_list(),
-        mock.call.remote_list().__contains__("com.cloud-images.buildd.releases"),
+        mock.call.remote_list().__contains__("craft-com.ubuntu.cloud-buildd"),
         mock.call.remote_add(
-            remote="com.cloud-images.buildd.releases",
+            remote="craft-com.ubuntu.cloud-buildd",
             addr="https://cloud-images.ubuntu.com/buildd/releases",
             protocol="simplestreams",
         ),
@@ -44,11 +44,11 @@ def test_configure_buildd_image_remote_fresh(mock_lxc):
 
 
 def test_configure_buildd_image_remote_already_exists(mock_lxc):
-    mock_lxc.remote_list.return_value = {"com.cloud-images.buildd.releases": {}}
+    mock_lxc.remote_list.return_value = {"craft-com.ubuntu.cloud-buildd": {}}
 
     name = lxd.remotes.configure_buildd_image_remote(lxc=mock_lxc)
 
-    assert name == "com.cloud-images.buildd.releases"
+    assert name == "craft-com.ubuntu.cloud-buildd"
     assert mock_lxc.mock_calls == [
         mock.call.remote_list(),
     ]

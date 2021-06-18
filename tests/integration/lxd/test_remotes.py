@@ -28,7 +28,7 @@ from craft_providers import bases, lxd
 )
 def test_configure_and_launch_buildd_remotes(instance_name, alias, image_name):
     image_remote = lxd.configure_buildd_image_remote()
-    assert image_remote == "com.cloud-images.buildd.releases"
+    assert image_remote == "craft-com.ubuntu.cloud-buildd"
 
     base_configuration = bases.BuilddBase(alias=alias)
     instance = lxd.launch(
