@@ -55,12 +55,10 @@ def _rootify_lxc_command(
 
     :returns: List of command strings for multipass exec.
     """
-    sudo_cmd = ["sudo", "-H", "--"]
-
     if env is not None:
-        sudo_cmd += env_cmd.formulate_command(env)
+        return env_cmd.formulate_command(env) + command
 
-    return sudo_cmd + command
+    return command
 
 
 class LXDInstance(Executor):

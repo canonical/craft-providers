@@ -117,9 +117,6 @@ def test_push_file_io(
         mock.call.exec(
             instance_name="test-instance",
             command=[
-                "sudo",
-                "-H",
-                "--",
                 "chown",
                 "root:root",
                 "/etc/test.conf",
@@ -181,7 +178,7 @@ def test_execute_popen(mock_lxc, instance):
     assert mock_lxc.mock_calls == [
         mock.call.exec(
             instance_name="test-instance",
-            command=["sudo", "-H", "--", "test-command", "flags"],
+            command=["test-command", "flags"],
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.Popen,
@@ -196,7 +193,7 @@ def test_execute_popen_with_env(mock_lxc, instance):
     assert mock_lxc.mock_calls == [
         mock.call.exec(
             instance_name="test-instance",
-            command=["sudo", "-H", "--", "env", "foo=bar", "test-command", "flags"],
+            command=["env", "foo=bar", "test-command", "flags"],
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.Popen,
@@ -210,7 +207,7 @@ def test_execute_run(mock_lxc, instance):
     assert mock_lxc.mock_calls == [
         mock.call.exec(
             instance_name="test-instance",
-            command=["sudo", "-H", "--", "test-command", "flags"],
+            command=["test-command", "flags"],
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
@@ -225,7 +222,7 @@ def test_execute_run_with_env(mock_lxc, instance):
     assert mock_lxc.mock_calls == [
         mock.call.exec(
             instance_name="test-instance",
-            command=["sudo", "-H", "--", "env", "foo=bar", "test-command", "flags"],
+            command=["env", "foo=bar", "test-command", "flags"],
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
@@ -242,9 +239,6 @@ def test_execute_run_with_env_unset(mock_lxc, instance):
         mock.call.exec(
             instance_name="test-instance",
             command=[
-                "sudo",
-                "-H",
-                "--",
                 "env",
                 "foo=bar",
                 "-u",
@@ -517,7 +511,7 @@ def test_pull_file(mock_lxc, instance, tmp_path):
     assert mock_lxc.mock_calls == [
         mock.call.exec(
             instance_name=instance.name,
-            command=["sudo", "-H", "--", "test", "-f", "/tmp/src.txt"],
+            command=["test", "-f", "/tmp/src.txt"],
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
@@ -548,7 +542,7 @@ def test_pull_file_no_source(mock_lxc, instance, tmp_path):
     assert mock_lxc.mock_calls == [
         mock.call.exec(
             instance_name=instance.name,
-            command=["sudo", "-H", "--", "test", "-f", "/tmp/src.txt"],
+            command=["test", "-f", "/tmp/src.txt"],
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
@@ -573,7 +567,7 @@ def test_pull_file_no_parent_directory(mock_lxc, instance, tmp_path):
     assert mock_lxc.mock_calls == [
         mock.call.exec(
             instance_name=instance.name,
-            command=["sudo", "-H", "--", "test", "-f", "/tmp/src.txt"],
+            command=["test", "-f", "/tmp/src.txt"],
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
@@ -598,7 +592,7 @@ def test_push_file(mock_lxc, instance, tmp_path):
     assert mock_lxc.mock_calls == [
         mock.call.exec(
             instance_name=instance.name,
-            command=["sudo", "-H", "--", "test", "-d", "/tmp"],
+            command=["test", "-d", "/tmp"],
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
@@ -646,7 +640,7 @@ def test_push_file_no_parent_directory(mock_lxc, instance, tmp_path):
     assert mock_lxc.mock_calls == [
         mock.call.exec(
             instance_name=instance.name,
-            command=["sudo", "-H", "--", "test", "-d", "/tmp"],
+            command=["test", "-d", "/tmp"],
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
