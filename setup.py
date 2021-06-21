@@ -65,7 +65,7 @@ extras_requires = {
 
 setup(
     name="craft-providers",
-    version="0.0.0",
+    version="1.0.0",
     description="Craft provider tooling",
     long_description=readme,
     author="Canonical Ltd.",
