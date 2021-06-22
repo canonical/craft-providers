@@ -73,6 +73,8 @@ def _publish_snapshot(
         alias=snapshot_name,
         instance_name=instance.name,
         force=True,
+        project=instance.project,
+        remote=instance.remote,
     )
 
     # Restart container and ensure it is ready.
@@ -90,6 +92,8 @@ def launch(
     ephemeral: bool = False,
     map_user_uid: bool = False,
     use_snapshots: bool = False,
+    project: str = "default",
+    remote: str = "local",
     lxc: LXC = LXC(),
 ) -> LXDInstance:
     """Create, start, and configure instance.
@@ -105,6 +109,8 @@ def launch(
     :param ephemeral: Create ephemeral instance.
     :param map_user_uid: Map current uid/gid to instance's root uid/gid.
     :param use_snapshots: Use LXD snapshots for bootstrapping images.
+    :param project: LXD project to create instance in.
+    :param remote: LXD remote to create instance on.
     :param lxc: LXC client.
 
     :returns: LXD instance.
@@ -112,7 +118,7 @@ def launch(
     :raises BaseConfigurationError: on unexpected error configuration base.
     :raises LXDError: on unexpected LXD error.
     """
-    instance = LXDInstance(name=name)
+    instance = LXDInstance(name=name, project=project, remote=remote)
 
     if instance.exists():
         # TODO: warn (or auto clean) if ephemeral or map_user_uid is mismatched.
@@ -139,10 +145,12 @@ def launch(
         image_remote=image_remote,
         compatibility_tag=base_configuration.compatibility_tag,
     )
-    if use_snapshots and lxc.has_image(image_name=snapshot_name):
+    if use_snapshots and lxc.has_image(
+        image_name=snapshot_name, project=project, remote=remote
+    ):
         logger.debug("Using compatible snapshot %r.", snapshot_name)
         image_name = snapshot_name
-        image_remote = "local"
+        image_remote = remote
 
         # Don't re-publish this snapshot later.
         use_snapshots = False
