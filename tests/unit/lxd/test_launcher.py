@@ -42,6 +42,8 @@ def mock_lxd_instance():
         spec=lxd.LXDInstance,
     ) as mock_instance:
         mock_instance.return_value.name = "test-instance"
+        mock_instance.return_value.project = "test-project"
+        mock_instance.return_value.remote = "test-remote"
         yield mock_instance.return_value
 
 
@@ -81,17 +83,23 @@ def test_launch_making_initial_snapshot(
         image_name="image-name",
         image_remote="image-remote",
         use_snapshots=True,
+        project="test-project",
+        remote="test-remote",
         lxc=mock_lxc,
     )
 
     assert mock_lxc.mock_calls == [
         mock.call.has_image(
-            image_name="snapshot-image-remote-image-name-mock-compat-tag-v100"
+            image_name="snapshot-image-remote-image-name-mock-compat-tag-v100",
+            project="test-project",
+            remote="test-remote",
         ),
         mock.call.publish(
             alias="snapshot-image-remote-image-name-mock-compat-tag-v100",
             instance_name="test-instance",
             force=True,
+            project="test-project",
+            remote="test-remote",
         ),
     ]
     assert mock_lxd_instance.mock_calls == [
@@ -123,19 +131,23 @@ def test_launch_using_existing_snapshot(
         image_name="image-name",
         image_remote="image-remote",
         use_snapshots=True,
+        project="test-project",
+        remote="test-remote",
         lxc=mock_lxc,
     )
 
     assert mock_lxc.mock_calls == [
         mock.call.has_image(
-            image_name="snapshot-image-remote-image-name-mock-compat-tag-v100"
+            image_name="snapshot-image-remote-image-name-mock-compat-tag-v100",
+            project="test-project",
+            remote="test-remote",
         ),
     ]
     assert mock_lxd_instance.mock_calls == [
         mock.call.exists(),
         mock.call.launch(
             image="snapshot-image-remote-image-name-mock-compat-tag-v100",
-            image_remote="local",
+            image_remote="test-remote",
             ephemeral=False,
             map_user_uid=False,
         ),
