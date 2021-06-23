@@ -1,16 +1,19 @@
+#
 # Copyright 2021 Canonical Ltd.
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 3 as
-# published by the Free Software Foundation.
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License version 3 as published by the Free Software Foundation.
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+#
 
 import io
 import pathlib
@@ -19,6 +22,7 @@ import subprocess
 import pytest
 
 from craft_providers import bases, lxd
+from craft_providers.lxd import project as lxd_project
 
 from . import conftest
 
@@ -103,6 +107,29 @@ def test_launch_with_snapshots(instance_name):
 
         if lxc.has_image(snapshot_name):
             lxc.image_delete(image=snapshot_name)
+
+
+def test_launch_creating_project(instance_name, project_name):
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    lxc = lxd.LXC()
+
+    assert project_name not in lxc.project_list()
+
+    try:
+        instance = lxd.launch(
+            name=instance_name,
+            base_configuration=base_configuration,
+            image_name="20.04",
+            image_remote="ubuntu",
+            auto_create_project=True,
+            project=project_name,
+            remote="local",
+        )
+
+        assert instance.exists()
+        assert project_name in lxc.project_list()
+    finally:
+        lxd_project.purge(lxc=lxc, project=project_name)
 
 
 def test_launch_with_project_and_snapshots(instance_name, project):

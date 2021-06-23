@@ -14,7 +14,7 @@ Host support is targeted for:
 
 # License
 
-Free software: GNU General Public License v3
+Free software: GNU Lesser General Public License v3
 
 # Documentation:
 
