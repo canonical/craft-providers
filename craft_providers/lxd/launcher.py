@@ -18,8 +18,10 @@ import logging
 
 from craft_providers import Base, bases
 
+from .errors import LXDError
 from .lxc import LXC
 from .lxd_instance import LXDInstance
+from .project import create_with_default_profile
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +84,35 @@ def _publish_snapshot(
     base_configuration.wait_until_ready(executor=instance)
 
 
+def _ensure_project_exists(
+    *,
+    create: bool,
+    project: str,
+    remote: str,
+    lxc: LXC,
+) -> None:
+    """Check if project exists, optionally creating it if needed.
+
+    :param create: Create project if not found.
+    :param project: LXD project name to create.
+    :param remote: LXD remote to create project on.
+    :param lxc: LXC client.
+
+    :raises LXDError: on error.
+    """
+    projects = lxc.project_list(remote)
+    if project in projects:
+        return
+
+    if create:
+        create_with_default_profile(project=project, remote=remote, lxc=lxc)
+    else:
+        raise LXDError(
+            brief=f"LXD project {project!r} not found on remote {remote!r}.",
+            details=f"Available projects: {projects!r}",
+        )
+
+
 def launch(
     name: str,
     *,
@@ -89,6 +120,7 @@ def launch(
     image_name: str,
     image_remote: str,
     auto_clean: bool = False,
+    auto_create_project: bool = False,
     ephemeral: bool = False,
     map_user_uid: bool = False,
     use_snapshots: bool = False,
@@ -106,6 +138,7 @@ def launch(
     :param image_name: LXD image to use, e.g. "20.04".
     :param image_remote: LXD image to use, e.g. "ubuntu".
     :param auto_clean: Automatically clean instance, if incompatible.
+    :param auto_create_project: Automatically create LXD project, if needed.
     :param ephemeral: Create ephemeral instance.
     :param map_user_uid: Map current uid/gid to instance's root uid/gid.
     :param use_snapshots: Use LXD snapshots for bootstrapping images.
@@ -118,6 +151,9 @@ def launch(
     :raises BaseConfigurationError: on unexpected error configuration base.
     :raises LXDError: on unexpected LXD error.
     """
+    _ensure_project_exists(
+        create=auto_create_project, project=project, remote=remote, lxc=lxc
+    )
     instance = LXDInstance(name=name, project=project, remote=remote)
 
     if instance.exists():
