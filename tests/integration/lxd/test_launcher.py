@@ -23,6 +23,7 @@ import subprocess
 import pytest
 
 from craft_providers import bases, lxd
+from craft_providers.lxd import project as lxd_project
 
 from . import conftest
 
@@ -107,6 +108,29 @@ def test_launch_with_snapshots(instance_name):
 
         if lxc.has_image(snapshot_name):
             lxc.image_delete(image=snapshot_name)
+
+
+def test_launch_creating_project(instance_name, project_name):
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    lxc = lxd.LXC()
+
+    assert project_name not in lxc.project_list()
+
+    try:
+        instance = lxd.launch(
+            name=instance_name,
+            base_configuration=base_configuration,
+            image_name="20.04",
+            image_remote="ubuntu",
+            auto_create_project=True,
+            project=project_name,
+            remote="local",
+        )
+
+        assert instance.exists()
+        assert project_name in lxc.project_list()
+    finally:
+        lxd_project.purge(lxc=lxc, project=project_name)
 
 
 def test_launch_with_project_and_snapshots(instance_name, project):

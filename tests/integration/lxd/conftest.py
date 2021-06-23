@@ -93,9 +93,14 @@ def lxc():
 
 
 @pytest.fixture()
-def project(lxc):
+def project_name():
     """Create temporary LXD project and assert expected properties."""
-    project_name = "ptest-" + "".join(random.choices(string.ascii_uppercase, k=4))
+    yield "ptest-" + "".join(random.choices(string.ascii_uppercase, k=4))
+
+
+@pytest.fixture()
+def project(lxc, project_name):
+    """Create temporary LXD project and assert expected properties."""
     lxc_project.create_with_default_profile(lxc=lxc, project=project_name)
 
     projects = lxc.project_list()
