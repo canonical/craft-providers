@@ -219,6 +219,48 @@ def test_execute_run(mock_lxc, instance):
     ]
 
 
+def test_execute_run_with_default_command_env(mock_lxc):
+    instance = LXDInstance(
+        name="test-instance",
+        default_command_environment={"env_key": "some-value"},
+        lxc=mock_lxc,
+    )
+
+    instance.execute_run(command=["test-command", "flags"], env=dict(foo="bar"))
+
+    assert mock_lxc.mock_calls == [
+        mock.call.exec(
+            instance_name="test-instance",
+            command=["env", "env_key=some-value", "foo=bar", "test-command", "flags"],
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+        )
+    ]
+
+
+def test_execute_run_with_default_command_env_unset(mock_lxc):
+    instance = LXDInstance(
+        name="test-instance",
+        default_command_environment={"env_key": "some-value"},
+        lxc=mock_lxc,
+    )
+
+    instance.execute_run(
+        command=["test-command", "flags"], env={"foo": "bar", "env_key": None}
+    )
+
+    assert mock_lxc.mock_calls == [
+        mock.call.exec(
+            instance_name="test-instance",
+            command=["env", "-u", "env_key", "foo=bar", "test-command", "flags"],
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+        )
+    ]
+
+
 def test_execute_run_with_env(mock_lxc, instance):
     instance.execute_run(command=["test-command", "flags"], env=dict(foo="bar"))
 

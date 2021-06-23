@@ -19,7 +19,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Dict, Optional
 
 from .executor import Executor
 
@@ -49,9 +49,18 @@ class Base(ABC):
         extend this tag, not overwrite it, e.g.: compatibilty_tag =
         f"{appname}-{Base.compatibility_tag}.{apprevision}" to ensure base
         compatibility levels are maintained.
+
+    :param environment: Command environment.
     """
 
     compatibility_tag: str = "base-v0"
+
+    def __init__(
+        self,
+        *,
+        environment: Dict[str, Optional[str]],
+    ):
+        self.environment = environment
 
     @abstractmethod
     def setup(

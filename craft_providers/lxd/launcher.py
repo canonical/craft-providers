@@ -157,7 +157,12 @@ def launch(
     _ensure_project_exists(
         create=auto_create_project, project=project, remote=remote, lxc=lxc
     )
-    instance = LXDInstance(name=name, project=project, remote=remote)
+    instance = LXDInstance(
+        name=name,
+        project=project,
+        remote=remote,
+        default_command_environment=base_configuration.environment.copy(),
+    )
 
     if instance.exists():
         # TODO: warn (or auto clean) if ephemeral or map_user_uid is mismatched.

@@ -116,12 +116,12 @@ class BuilddBase(Base):
         environment: Optional[Dict[str, Optional[str]]] = None,
         hostname: str = "craft-buildd-instance",
     ):
-        self.alias: BuilddBaseAlias = alias
-
         if environment is None:
-            self.environment = default_command_environment()
-        else:
-            self.environment = environment
+            environment = default_command_environment()
+
+        super().__init__(environment=environment)
+
+        self.alias: BuilddBaseAlias = alias
 
         self.hostname = hostname
 
