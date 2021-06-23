@@ -19,6 +19,7 @@ import subprocess
 import pytest
 
 from craft_providers import bases, lxd
+from craft_providers.lxd import project as lxd_project
 
 from . import conftest
 
@@ -125,7 +126,7 @@ def test_launch_creating_project(instance_name, project_name):
         assert instance.exists()
         assert project_name in lxc.project_list()
     finally:
-        lxd.project.purge(lxc=lxc, project=project_name)
+        lxd_project.purge(lxc=lxc, project=project_name)
 
 
 def test_launch_with_project_and_snapshots(instance_name, project):
