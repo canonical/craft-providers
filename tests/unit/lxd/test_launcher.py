@@ -194,6 +194,28 @@ def test_launch_all_opts(mock_base_configuration, mock_lxc, mock_lxd_instance):
     ]
 
 
+def test_launch_missing_project(mock_base_configuration, mock_lxc, mock_lxd_instance):
+    mock_lxd_instance.exists.return_value = False
+
+    with pytest.raises(lxd.LXDError) as exc_info:
+        lxd.launch(
+            "test-instance",
+            base_configuration=mock_base_configuration,
+            image_name="image-name",
+            image_remote="image-remote",
+            auto_create_project=False,
+            project="invalid-project",
+            remote="test-remote",
+            lxc=mock_lxc,
+        )
+
+    assert (
+        exc_info.value.brief
+        == "LXD project 'invalid-project' not found on remote 'test-remote'."
+    )
+    assert exc_info.value.details == "Available projects: ['default', 'test-project']"
+
+
 def test_launch_create_project(mock_base_configuration, mock_lxc, mock_lxd_instance):
     mock_lxd_instance.exists.return_value = False
 

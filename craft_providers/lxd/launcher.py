@@ -100,13 +100,17 @@ def _ensure_project_exists(
 
     :raises LXDError: on error.
     """
-    if project in lxc.project_list(remote):
+    projects = lxc.project_list(remote)
+    if project in projects:
         return
 
     if create:
         create_with_default_profile(project=project, remote=remote, lxc=lxc)
     else:
-        raise LXDError(f"LXD project {project!r} not found on remote {remote!r}.")
+        raise LXDError(
+            brief=f"LXD project {project!r} not found on remote {remote!r}.",
+            details=f"Available projects: {projects!r}",
+        )
 
 
 def launch(
