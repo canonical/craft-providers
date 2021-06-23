@@ -105,6 +105,29 @@ def test_launch_with_snapshots(instance_name):
             lxc.image_delete(image=snapshot_name)
 
 
+def test_launch_creating_project(instance_name, project_name):
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    lxc = lxd.LXC()
+
+    assert project_name not in lxc.project_list()
+
+    try:
+        instance = lxd.launch(
+            name=instance_name,
+            base_configuration=base_configuration,
+            image_name="20.04",
+            image_remote="ubuntu",
+            auto_create_project=True,
+            project=project_name,
+            remote="local",
+        )
+
+        assert instance.exists()
+        assert project_name in lxc.project_list()
+    finally:
+        lxd.project.purge(lxc=lxc, project=project_name)
+
+
 def test_launch_with_project_and_snapshots(instance_name, project):
     base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
     snapshot_name = "snapshot-ubuntu-20.04-buildd-base-v0"

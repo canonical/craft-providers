@@ -32,6 +32,7 @@ def mock_lxc():
         "craft_providers.lxd.launcher.LXC",
         spec=lxd.LXC,
     ) as mock_lxc:
+        mock_lxc.return_value.project_list.return_value = ["default", "test-project"]
         yield mock_lxc.return_value
 
 
@@ -47,7 +48,7 @@ def mock_lxd_instance():
         yield mock_instance.return_value
 
 
-def test_launch(mock_base_configuration, mock_lxd_instance):
+def test_launch(mock_base_configuration, mock_lxc, mock_lxd_instance):
     mock_lxd_instance.exists.return_value = False
 
     lxd.launch(
@@ -55,8 +56,10 @@ def test_launch(mock_base_configuration, mock_lxd_instance):
         base_configuration=mock_base_configuration,
         image_name="image-name",
         image_remote="image-remote",
+        lxc=mock_lxc,
     )
 
+    assert mock_lxc.mock_calls == [mock.call.project_list("local")]
     assert mock_lxd_instance.mock_calls == [
         mock.call.exists(),
         mock.call.launch(
@@ -89,6 +92,7 @@ def test_launch_making_initial_snapshot(
     )
 
     assert mock_lxc.mock_calls == [
+        mock.call.project_list("test-remote"),
         mock.call.has_image(
             image_name="snapshot-image-remote-image-name-mock-compat-tag-v100",
             project="test-project",
@@ -137,6 +141,7 @@ def test_launch_using_existing_snapshot(
     )
 
     assert mock_lxc.mock_calls == [
+        mock.call.project_list("test-remote"),
         mock.call.has_image(
             image_name="snapshot-image-remote-image-name-mock-compat-tag-v100",
             project="test-project",
@@ -157,7 +162,7 @@ def test_launch_using_existing_snapshot(
     ]
 
 
-def test_launch_all_opts(mock_base_configuration, mock_lxd_instance):
+def test_launch_all_opts(mock_base_configuration, mock_lxc, mock_lxd_instance):
     mock_lxd_instance.exists.return_value = False
 
     lxd.launch(
@@ -165,10 +170,16 @@ def test_launch_all_opts(mock_base_configuration, mock_lxd_instance):
         base_configuration=mock_base_configuration,
         image_name="image-name",
         image_remote="image-remote",
+        auto_clean=True,
+        auto_create_project=True,
         ephemeral=True,
         map_user_uid=True,
+        project="test-project",
+        remote="test-remote",
+        lxc=mock_lxc,
     )
 
+    assert mock_lxc.mock_calls == [mock.call.project_list("test-remote")]
     assert mock_lxd_instance.mock_calls == [
         mock.call.exists(),
         mock.call.launch(
@@ -183,8 +194,49 @@ def test_launch_all_opts(mock_base_configuration, mock_lxd_instance):
     ]
 
 
+def test_launch_create_project(mock_base_configuration, mock_lxc, mock_lxd_instance):
+    mock_lxd_instance.exists.return_value = False
+
+    lxd.launch(
+        "test-instance",
+        base_configuration=mock_base_configuration,
+        image_name="image-name",
+        image_remote="image-remote",
+        auto_create_project=True,
+        project="project-to-create",
+        remote="test-remote",
+        lxc=mock_lxc,
+    )
+
+    assert mock_lxc.mock_calls == [
+        mock.call.project_list("test-remote"),
+        mock.call.project_create(project="project-to-create", remote="test-remote"),
+        mock.call.profile_show(
+            profile="default", project="default", remote="test-remote"
+        ),
+        mock.call.profile_edit(
+            profile="default",
+            project="project-to-create",
+            config=mock_lxc.profile_show.return_value,
+            remote="test-remote",
+        ),
+    ]
+    assert mock_lxd_instance.mock_calls == [
+        mock.call.exists(),
+        mock.call.launch(
+            image="image-name",
+            image_remote="image-remote",
+            ephemeral=False,
+            map_user_uid=False,
+        ),
+    ]
+    assert mock_base_configuration.mock_calls == [
+        mock.call.setup(executor=mock_lxd_instance)
+    ]
+
+
 def test_launch_with_existing_instance_not_running(
-    mock_base_configuration, mock_lxd_instance
+    mock_base_configuration, mock_lxc, mock_lxd_instance
 ):
     mock_lxd_instance.exists.return_value = True
     mock_lxd_instance.is_running.return_value = False
@@ -194,8 +246,10 @@ def test_launch_with_existing_instance_not_running(
         base_configuration=mock_base_configuration,
         image_name="image-name",
         image_remote="image-remote",
+        lxc=mock_lxc,
     )
 
+    assert mock_lxc.mock_calls == [mock.call.project_list("local")]
     assert mock_lxd_instance.mock_calls == [
         mock.call.exists(),
         mock.call.is_running(),
@@ -207,7 +261,7 @@ def test_launch_with_existing_instance_not_running(
 
 
 def test_launch_with_existing_instance_running(
-    mock_base_configuration, mock_lxd_instance
+    mock_base_configuration, mock_lxc, mock_lxd_instance
 ):
     mock_lxd_instance.exists.return_value = True
     mock_lxd_instance.is_running.return_value = True
@@ -217,8 +271,10 @@ def test_launch_with_existing_instance_running(
         base_configuration=mock_base_configuration,
         image_name="image-name",
         image_remote="image-remote",
+        lxc=mock_lxc,
     )
 
+    assert mock_lxc.mock_calls == [mock.call.project_list("local")]
     assert mock_lxd_instance.mock_calls == [
         mock.call.exists(),
         mock.call.is_running(),
@@ -229,7 +285,7 @@ def test_launch_with_existing_instance_running(
 
 
 def test_launch_with_existing_instance_incompatible_with_auto_clean(
-    mock_base_configuration, mock_lxd_instance
+    mock_base_configuration, mock_lxc, mock_lxd_instance
 ):
     mock_lxd_instance.exists.return_value = True
     mock_lxd_instance.is_running.return_value = False
@@ -244,8 +300,10 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
         image_name="image-name",
         image_remote="image-remote",
         auto_clean=True,
+        lxc=mock_lxc,
     )
 
+    assert mock_lxc.mock_calls == [mock.call.project_list("local")]
     assert mock_lxd_instance.mock_calls == [
         mock.call.exists(),
         mock.call.is_running(),
@@ -265,7 +323,7 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
 
 
 def test_launch_with_existing_instance_incompatible_without_auto_clean(
-    mock_base_configuration, mock_lxd_instance
+    mock_base_configuration, mock_lxc, mock_lxd_instance
 ):
     mock_lxd_instance.exists.return_value = True
     mock_lxd_instance.is_running.return_value = False
@@ -280,8 +338,10 @@ def test_launch_with_existing_instance_incompatible_without_auto_clean(
             image_name="image-name",
             image_remote="image-remote",
             auto_clean=False,
+            lxc=mock_lxc,
         )
 
+    assert mock_lxc.mock_calls == [mock.call.project_list("local")]
     assert mock_lxd_instance.mock_calls == [
         mock.call.exists(),
         mock.call.is_running(),
