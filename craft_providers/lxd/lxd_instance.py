@@ -64,7 +64,7 @@ class LXDInstance(Executor):
         else:
             self.lxc = lxc
 
-    def _rootify_lxc_command(
+    def _finalize_lxc_command(
         self,
         command: List[str],
         *,
@@ -72,18 +72,11 @@ class LXDInstance(Executor):
     ) -> List[str]:
         """Wrap a command to run as root with specified environment.
 
-        Formulate command to:
+        LXD will run commands as root.
 
-            - Use sudo to run as root (LXD defaults to root, but doesn't
-              initialize environment like sudo will, e.g. read
-              /etc/environment).  For consistency with Multipass and other
-              providers, always use sudo.
-
-            - Configure sudo to set home directory.
-
-            - Account for environment flags in env, if any.  Use the default
-              environment flags, overridden with the command flags parameter
-              'env'.
+        Account for the command environment by using the default command
+        environment as the baseline, updating it to reflect the command's env
+        parameter, if any.
 
         :param command: Command to execute.
         :param env: Additional environment flags to set/unset.
@@ -182,7 +175,7 @@ class LXDInstance(Executor):
         """
         return self.lxc.exec(
             instance_name=self.name,
-            command=self._rootify_lxc_command(command=command, env=env),
+            command=self._finalize_lxc_command(command=command, env=env),
             project=self.project,
             remote=self.remote,
             runner=subprocess.Popen,
@@ -212,7 +205,7 @@ class LXDInstance(Executor):
         """
         return self.lxc.exec(
             instance_name=self.name,
-            command=self._rootify_lxc_command(command=command, env=env),
+            command=self._finalize_lxc_command(command=command, env=env),
             project=self.project,
             remote=self.remote,
             runner=subprocess.run,
