@@ -161,7 +161,7 @@ def launch(
         name=name,
         project=project,
         remote=remote,
-        default_command_environment=base_configuration.environment.copy(),
+        default_command_environment=base_configuration.get_command_environment(),
     )
 
     if instance.exists():

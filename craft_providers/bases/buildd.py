@@ -116,12 +116,12 @@ class BuilddBase(Base):
         environment: Optional[Dict[str, Optional[str]]] = None,
         hostname: str = "craft-buildd-instance",
     ):
-        if environment is None:
-            environment = default_command_environment()
-
-        super().__init__(environment=environment)
-
         self.alias: BuilddBaseAlias = alias
+
+        if environment is None:
+            self.environment = default_command_environment()
+        else:
+            self.environment = environment
 
         self.hostname = hostname
 
@@ -192,6 +192,16 @@ class BuilddBase(Base):
             raise BaseCompatibilityError(
                 reason=f"Expected OS version {compat_version_id!r}, found {version_id!r}"
             )
+
+    def get_command_environment(
+        self,
+    ) -> Dict[str, Optional[str]]:
+        """Get command environment to use when executing commands.
+
+        :returns: Dictionary of environment, allowing None as a value to
+                  indicate that a value should be unset.
+        """
+        return self.environment.copy()
 
     def setup(
         self,

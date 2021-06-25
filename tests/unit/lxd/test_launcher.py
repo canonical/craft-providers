@@ -26,7 +26,7 @@ from craft_providers import Base, bases, lxd
 def mock_base_configuration():
     mock_base = mock.Mock(spec=Base)
     mock_base.compatibility_tag = "mock-compat-tag-v100"
-    mock_base.environment = {"foo": "bar"}
+    mock_base.get_command_environment.return_value = {"foo": "bar"}
     yield mock_base
 
 
@@ -80,7 +80,8 @@ def test_launch(mock_base_configuration, mock_lxc, mock_lxd_instance):
         ),
     ]
     assert mock_base_configuration.mock_calls == [
-        mock.call.setup(executor=mock_lxd_instance.return_value)
+        mock.call.get_command_environment(),
+        mock.call.setup(executor=mock_lxd_instance.return_value),
     ]
 
 
@@ -134,6 +135,7 @@ def test_launch_making_initial_snapshot(
         mock.call().start(),
     ]
     assert mock_base_configuration.mock_calls == [
+        mock.call.get_command_environment(),
         mock.call.setup(executor=mock_lxd_instance.return_value),
         mock.call.wait_until_ready(executor=mock_lxd_instance.return_value),
     ]
@@ -180,6 +182,7 @@ def test_launch_using_existing_snapshot(
         ),
     ]
     assert mock_base_configuration.mock_calls == [
+        mock.call.get_command_environment(),
         mock.call.setup(executor=mock_lxd_instance.return_value),
     ]
 
@@ -218,7 +221,8 @@ def test_launch_all_opts(mock_base_configuration, mock_lxc, mock_lxd_instance):
         ),
     ]
     assert mock_base_configuration.mock_calls == [
-        mock.call.setup(executor=mock_lxd_instance.return_value)
+        mock.call.get_command_environment(),
+        mock.call.setup(executor=mock_lxd_instance.return_value),
     ]
 
 
@@ -287,7 +291,8 @@ def test_launch_create_project(mock_base_configuration, mock_lxc, mock_lxd_insta
         ),
     ]
     assert mock_base_configuration.mock_calls == [
-        mock.call.setup(executor=mock_lxd_instance.return_value)
+        mock.call.get_command_environment(),
+        mock.call.setup(executor=mock_lxd_instance.return_value),
     ]
 
 
@@ -318,7 +323,8 @@ def test_launch_with_existing_instance_not_running(
         mock.call().start(),
     ]
     assert mock_base_configuration.mock_calls == [
-        mock.call.setup(executor=mock_lxd_instance.return_value)
+        mock.call.get_command_environment(),
+        mock.call.setup(executor=mock_lxd_instance.return_value),
     ]
 
 
@@ -348,7 +354,8 @@ def test_launch_with_existing_instance_running(
         mock.call().is_running(),
     ]
     assert mock_base_configuration.mock_calls == [
-        mock.call.setup(executor=mock_lxd_instance.return_value)
+        mock.call.get_command_environment(),
+        mock.call.setup(executor=mock_lxd_instance.return_value),
     ]
 
 
@@ -391,6 +398,7 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
         ),
     ]
     assert mock_base_configuration.mock_calls == [
+        mock.call.get_command_environment(),
         mock.call.setup(executor=mock_lxd_instance.return_value),
         mock.call.setup(executor=mock_lxd_instance.return_value),
     ]
@@ -428,5 +436,6 @@ def test_launch_with_existing_instance_incompatible_without_auto_clean(
         mock.call().start(),
     ]
     assert mock_base_configuration.mock_calls == [
-        mock.call.setup(executor=mock_lxd_instance.return_value)
+        mock.call.get_command_environment(),
+        mock.call.setup(executor=mock_lxd_instance.return_value),
     ]

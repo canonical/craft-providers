@@ -49,18 +49,19 @@ class Base(ABC):
         extend this tag, not overwrite it, e.g.: compatibilty_tag =
         f"{appname}-{Base.compatibility_tag}.{apprevision}" to ensure base
         compatibility levels are maintained.
-
-    :param environment: Command environment.
     """
 
     compatibility_tag: str = "base-v0"
 
-    def __init__(
+    @abstractmethod
+    def get_command_environment(
         self,
-        *,
-        environment: Dict[str, Optional[str]],
-    ):
-        self.environment = environment
+    ) -> Dict[str, Optional[str]]:
+        """Get command environment to use when executing commands.
+
+        :returns: Dictionary of environment, allowing None as a value to
+                  indicate that a value should be unset.
+        """
 
     @abstractmethod
     def setup(
