@@ -19,7 +19,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Dict, Optional
 
 from .executor import Executor
 
@@ -52,6 +52,16 @@ class Base(ABC):
     """
 
     compatibility_tag: str = "base-v0"
+
+    @abstractmethod
+    def get_command_environment(
+        self,
+    ) -> Dict[str, Optional[str]]:
+        """Get command environment to use when executing commands.
+
+        :returns: Dictionary of environment, allowing None as a value to
+                  indicate that a value should be unset.
+        """
 
     @abstractmethod
     def setup(

@@ -36,34 +36,6 @@ from .lxc import LXC
 logger = logging.getLogger(__name__)
 
 
-def _rootify_lxc_command(
-    command: List[str],
-    *,
-    env: Optional[Dict[str, Optional[str]]] = None,
-) -> List[str]:
-    """Wrap a command to run as root with specified environment.
-
-    Formulate command to:
-
-        - Use sudo to run as root (LXD defaults to root, but doesn't initialize
-          environment like sudo will, e.g. read /etc/environment).  For
-          consistency with Multipass and other providers, always use sudo.
-
-        - Configure sudo to set home directory.
-
-        - Account for environment flags in env, if any.
-
-    :param command: Command to execute.
-    :param env: Additional environment flags to set.
-
-    :returns: List of command strings for multipass exec.
-    """
-    if env is not None:
-        return env_cmd.formulate_command(env) + command
-
-    return command
-
-
 class LXDInstance(Executor):
     """LXD Instance Lifecycle."""
 
@@ -71,11 +43,17 @@ class LXDInstance(Executor):
         self,
         *,
         name: str,
+        default_command_environment: Optional[Dict[str, Optional[str]]] = None,
         project: str = "default",
         remote: str = "local",
         lxc: Optional[LXC] = None,
     ):
         super().__init__()
+
+        if default_command_environment is not None:
+            self.default_command_environment = default_command_environment
+        else:
+            self.default_command_environment = {}
 
         self.name = name
         self.project = project
@@ -85,6 +63,35 @@ class LXDInstance(Executor):
             self.lxc = LXC()
         else:
             self.lxc = lxc
+
+    def _finalize_lxc_command(
+        self,
+        command: List[str],
+        *,
+        env: Optional[Dict[str, Optional[str]]] = None,
+    ) -> List[str]:
+        """Wrap a command to run as root with specified environment.
+
+        LXD will run commands as root.
+
+        Account for the command environment by using the default command
+        environment as the baseline, updating it to reflect the command's env
+        parameter, if any.
+
+        :param command: Command to execute.
+        :param env: Additional environment flags to set/unset.
+
+        :returns: List of command strings for multipass exec.
+        """
+        command_env = self.default_command_environment.copy()
+
+        if env:
+            command_env.update(env)
+
+        if command_env:
+            return env_cmd.formulate_command(command_env) + command
+
+        return command
 
     def push_file_io(
         self,
@@ -168,7 +175,7 @@ class LXDInstance(Executor):
         """
         return self.lxc.exec(
             instance_name=self.name,
-            command=_rootify_lxc_command(command=command, env=env),
+            command=self._finalize_lxc_command(command=command, env=env),
             project=self.project,
             remote=self.remote,
             runner=subprocess.Popen,
@@ -198,7 +205,7 @@ class LXDInstance(Executor):
         """
         return self.lxc.exec(
             instance_name=self.name,
-            command=_rootify_lxc_command(command=command, env=env),
+            command=self._finalize_lxc_command(command=command, env=env),
             project=self.project,
             remote=self.remote,
             runner=subprocess.run,
