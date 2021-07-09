@@ -26,6 +26,7 @@ import sys
 from craft_providers.errors import details_from_called_process_error
 
 from . import errors
+from .lxc import LXC
 from .lxd import LXD
 
 logger = logging.getLogger(__name__)
@@ -67,6 +68,19 @@ def install(sudo: bool = True) -> str:
     lxd.init(auto=True, sudo=sudo)
 
     return lxd.version()
+
+
+def is_initialized(*, remote: str, lxc: LXC) -> bool:
+    """Verify that LXD has been initialized and configuration looks valid.
+
+    If LXD has been installed but the user has not initialized it (lxd init),
+    the default profile won't have devices configured.  Trying to launch an
+    instance or create a project using this profile will result in failures.
+
+    :returns: True if initialized, else False.
+    """
+    devices = lxc.profile_show(profile="default", remote=remote).get("devices")
+    return bool(devices)
 
 
 def is_installed() -> bool:

@@ -52,7 +52,19 @@ def mock_lxd_instance():
         yield mock_instance
 
 
-def test_launch(mock_base_configuration, mock_lxc, mock_lxd_instance):
+@pytest.fixture(autouse=True)
+def mock_is_initialized():
+    with mock.patch(
+        "craft_providers.lxd.launcher.is_initialized",
+        spec=lxd.LXDInstance,
+    ) as mock_is_initialized:
+        mock_is_initialized.return_value = True
+        yield mock_is_initialized
+
+
+def test_launch(
+    mock_base_configuration, mock_is_initialized, mock_lxc, mock_lxd_instance
+):
     mock_lxd_instance.return_value.exists.return_value = False
 
     lxd.launch(
@@ -63,6 +75,7 @@ def test_launch(mock_base_configuration, mock_lxc, mock_lxd_instance):
         lxc=mock_lxc,
     )
 
+    assert mock_is_initialized.mock_calls == [mock.call(lxc=mock_lxc, remote="local")]
     assert mock_lxc.mock_calls == [mock.call.project_list("local")]
     assert mock_lxd_instance.mock_calls == [
         mock.call(
@@ -83,6 +96,27 @@ def test_launch(mock_base_configuration, mock_lxc, mock_lxd_instance):
         mock.call.get_command_environment(),
         mock.call.setup(executor=mock_lxd_instance.return_value),
     ]
+
+
+def test_launch_lxd_not_initialized(
+    mock_base_configuration, mock_is_initialized, mock_lxc, mock_lxd_instance
+):
+    mock_is_initialized.return_value = False
+
+    with pytest.raises(lxd.LXDError) as exc_info:
+        lxd.launch(
+            "test-instance",
+            base_configuration=mock_base_configuration,
+            image_name="image-name",
+            image_remote="image-remote",
+            lxc=mock_lxc,
+        )
+
+    assert mock_is_initialized.mock_calls == [mock.call(lxc=mock_lxc, remote="local")]
+    assert exc_info.value == lxd.LXDError(
+        brief="LXD has not been properly initialized.",
+        resolution="Consider executing 'lxd init --auto' to initialize LXD.",
+    )
 
 
 def test_launch_making_initial_snapshot(
@@ -187,7 +221,9 @@ def test_launch_using_existing_snapshot(
     ]
 
 
-def test_launch_all_opts(mock_base_configuration, mock_lxc, mock_lxd_instance):
+def test_launch_all_opts(
+    mock_base_configuration, mock_is_initialized, mock_lxc, mock_lxd_instance
+):
     mock_lxd_instance.return_value.exists.return_value = False
 
     lxd.launch(
@@ -204,6 +240,9 @@ def test_launch_all_opts(mock_base_configuration, mock_lxc, mock_lxd_instance):
         lxc=mock_lxc,
     )
 
+    assert mock_is_initialized.mock_calls == [
+        mock.call(lxc=mock_lxc, remote="test-remote")
+    ]
     assert mock_lxc.mock_calls == [mock.call.project_list("test-remote")]
     assert mock_lxd_instance.mock_calls == [
         mock.call(
