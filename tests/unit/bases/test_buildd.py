@@ -185,7 +185,14 @@ def test_setup(  # pylint: disable=too-many-arguments
         ),
         dict(
             destination="/etc/apt/apt.conf.d/00no-recommends",
-            content=b'Apt::Install-Recommends "false";\n',
+            content=b'APT::Install-Recommends "false";\n',
+            file_mode="0644",
+            group="root",
+            user="root",
+        ),
+        dict(
+            destination="/etc/apt/apt.conf.d/00update-errors",
+            content=b'APT::Update::Error-Mode "any";\n',
             file_mode="0644",
             group="root",
             user="root",

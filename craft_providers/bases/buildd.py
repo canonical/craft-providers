@@ -280,7 +280,14 @@ class BuilddBase(Base):
         _check_deadline(deadline)
         executor.push_file_io(
             destination=pathlib.Path("/etc/apt/apt.conf.d/00no-recommends"),
-            content=io.BytesIO('Apt::Install-Recommends "false";\n'.encode()),
+            content=io.BytesIO('APT::Install-Recommends "false";\n'.encode()),
+            file_mode="0644",
+        )
+
+        _check_deadline(deadline)
+        executor.push_file_io(
+            destination=pathlib.Path("/etc/apt/apt.conf.d/00update-errors"),
+            content=io.BytesIO('APT::Update::Error-Mode "any";\n'.encode()),
             file_mode="0644",
         )
 
