@@ -324,3 +324,22 @@ def test_launch_instance_config_incompatible_instance(core20_instance):
 
     assert core20_instance.exists() is True
     assert core20_instance.is_running() is True
+
+
+def test_launch_errors_with_uninitialized_lxd(
+    installed_lxd_without_init, instance_name
+):
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+
+    with pytest.raises(lxd.LXDError) as exc_info:
+        lxd.launch(
+            name=instance_name,
+            base_configuration=base_configuration,
+            image_name="20.04",
+            image_remote="ubuntu",
+        )
+
+    assert exc_info.value == lxd.LXDError(
+        brief="LXD has not been properly initialized.",
+        resolution="Consider executing 'lxd init --auto' to initialize LXD.",
+    )

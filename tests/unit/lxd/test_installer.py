@@ -18,10 +18,17 @@
 import os
 import shutil
 import sys
+from unittest import mock
 
 import pytest
 
-from craft_providers.lxd import LXDInstallationError, install, is_installed
+from craft_providers.lxd import (
+    LXC,
+    LXDInstallationError,
+    install,
+    is_initialized,
+    is_installed,
+)
 
 
 @pytest.mark.parametrize("platform", ["win32", "darwin", "other"])
@@ -121,6 +128,17 @@ def test_install_requires_sudo(mocker):
     assert exc_info.value == LXDInstallationError(
         "sudo required if not running as root"
     )
+
+
+def test_is_initialized():
+    mock_lxc = mock.Mock(spec=LXC)
+
+    is_initialized(lxc=mock_lxc, remote="some-remote")
+
+    assert mock_lxc.mock_calls == [
+        mock.call.profile_show(profile="default", remote="some-remote"),
+        mock.call.profile_show().get("devices"),
+    ]
 
 
 @pytest.mark.parametrize("which,installed", [("/path/to/lxd", True), (None, False)])

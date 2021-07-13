@@ -20,6 +20,14 @@ import shutil
 from craft_providers import lxd
 
 
+def test_is_initialized(installed_lxd):
+    assert lxd.is_initialized(lxc=lxd.LXC(), remote="local") is True
+
+
+def test_is_initialized_false(installed_lxd_without_init):
+    assert lxd.is_initialized(lxc=lxd.LXC(), remote="local") is False
+
+
 def test_is_installed():
     expected = shutil.which("lxd") is not None
 

@@ -22,6 +22,7 @@ import logging
 from craft_providers import Base, bases
 
 from .errors import LXDError
+from .installer import is_initialized
 from .lxc import LXC
 from .lxd_instance import LXDInstance
 from .project import create_with_default_profile
@@ -154,6 +155,12 @@ def launch(
     :raises BaseConfigurationError: on unexpected error configuration base.
     :raises LXDError: on unexpected LXD error.
     """
+    if not is_initialized(lxc=lxc, remote=remote):
+        raise LXDError(
+            brief="LXD has not been properly initialized.",
+            resolution="Consider executing 'lxd init --auto' to initialize LXD.",
+        )
+
     _ensure_project_exists(
         create=auto_create_project, project=project, remote=remote, lxc=lxc
     )
