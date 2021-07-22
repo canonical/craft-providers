@@ -16,8 +16,10 @@
 #
 
 """Fixtures for LXD integration tests."""
+import os
 import random
 import string
+import subprocess
 import time
 from contextlib import contextmanager
 from typing import Any, Dict, Optional
@@ -31,6 +33,23 @@ from craft_providers.lxd import project as lxc_project
 @pytest.fixture(autouse=True, scope="module")
 def installed_lxd_required(installed_lxd):
     """All LXD integration tests required LXD to be installed."""
+
+
+@pytest.fixture
+def installed_lxd_without_init(uninstalled_lxd):
+    """Ensure lxd is installed, but not initialized.
+
+    Initialize LXD on cleanup to ensure it is functional for other tests.
+
+    Requires CRAFT_PROVIDERS_TESTS_ENABLE_LXD_INSTALL=1.
+    """
+    if os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_LXD_INSTALL") == "1":
+        subprocess.run(["sudo", "snap", "install", "lxd"], check=True)
+        subprocess.run(["sudo", "lxd", "waitready"], check=True)
+        yield
+        subprocess.run(["sudo", "lxd", "init", "--auto"], check=True)
+    else:
+        pytest.skip("lxd not installed, skipped")
 
 
 @contextmanager
