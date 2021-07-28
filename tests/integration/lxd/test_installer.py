@@ -17,6 +17,8 @@
 
 import shutil
 
+import pytest
+
 from craft_providers import lxd
 
 
@@ -41,3 +43,13 @@ def test_install(uninstalled_lxd):  # pylint: disable=unused-argument
 
     assert lxd.is_installed() is True
     assert lxd_version is not None
+
+
+def test_ensure_lxd_is_ready(installed_lxd_without_init):
+    with pytest.raises(lxd.LXDError) as exc_info:
+        lxd.ensure_lxd_is_ready()
+
+    assert exc_info.value == lxd.LXDError(
+        brief="LXD has not been properly initialized.",
+        resolution="Consider executing 'lxd init --auto' to initialize LXD.",
+    )

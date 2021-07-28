@@ -29,6 +29,10 @@ from . import errors
 from .lxc import LXC
 from .lxd import LXD
 
+# grp does not exist on Windows.
+if sys.platform == "linux":
+    import grp
+
 logger = logging.getLogger(__name__)
 
 
@@ -67,6 +71,11 @@ def install(sudo: bool = True) -> str:
     lxd.wait_ready(sudo=sudo)
     lxd.init(auto=True, sudo=sudo)
 
+    if not is_user_permitted():
+        raise errors.LXDInstallationError(
+            "user must be manually added to 'lxd' group before using LXD"
+        )
+
     return lxd.version()
 
 
@@ -89,3 +98,41 @@ def is_installed() -> bool:
     :returns: True if lxd is installed.
     """
     return shutil.which("lxd") is not None
+
+
+def is_user_permitted() -> bool:
+    """Check if user has permisisons to connect to LXD.
+
+    The user must be root or be in lxd group to talk to the local LXD socket.
+
+    :returns: True if user has correct permissions.
+    """
+    return (
+        any(grp.getgrgid(g).gr_name == "lxd" for g in os.getgroups())
+        or os.geteuid() == 0
+    )
+
+
+def ensure_lxd_is_ready(*, remote: str = "local", lxc: LXC = LXC()) -> None:
+    """Ensure LXD is ready for use.
+
+    :raises LXDError: on error.
+    """
+    if not is_installed():
+        raise errors.LXDError(
+            brief="LXD is required, but not installed.",
+            details="Please visit https://snapcraft.io/lxd for instructions "
+            "on how to install the LXD snap for your distribution.",
+        )
+
+    if not is_user_permitted():
+        raise errors.LXDError(
+            brief="LXD requires additional permissions.",
+            resolution="Please ensure that the user is in the 'lxd' group.",
+        )
+
+    if not is_initialized(lxc=lxc, remote=remote):
+        raise errors.LXDError(
+            brief="LXD has not been properly initialized.",
+            resolution="Consider executing 'lxd init --auto' to initialize LXD.",
+        )
