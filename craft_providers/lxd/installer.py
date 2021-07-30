@@ -107,9 +107,8 @@ def is_user_permitted() -> bool:
 
     :returns: True if user has correct permissions.
     """
-    return (
-        any(grp.getgrgid(g).gr_name == "lxd" for g in os.getgroups())
-        or os.geteuid() == 0
+    return os.geteuid() == 0 or any(
+        grp.getgrgid(g).gr_name == "lxd" for g in os.getgroups()
     )
 
 
