@@ -18,7 +18,13 @@
 """LXD environment provider."""
 
 from .errors import LXDError, LXDInstallationError  # noqa: F401
-from .installer import install, is_initialized, is_installed  # noqa: F401
+from .installer import (  # noqa: F401
+    ensure_lxd_is_ready,
+    install,
+    is_initialized,
+    is_installed,
+    is_user_permitted,
+)
 from .launcher import launch  # noqa: F401
 from .lxc import LXC  # noqa: F401
 from .lxd import LXD  # noqa: F401
