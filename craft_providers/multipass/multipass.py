@@ -44,7 +44,10 @@ class Multipass:
     """Wrapper for multipass command.
 
     :param multipass_path: Path to multipass command to use.
+    :cvar minimum_required_version: Minimum required version for compatibility.
     """
+
+    minimum_required_version = "1.7"
 
     def __init__(
         self, *, multipass_path: pathlib.Path = pathlib.Path("multipass")
@@ -141,7 +144,7 @@ class Multipass:
         version, _ = self.version()
 
         return pkg_resources.parse_version(version) >= pkg_resources.parse_version(
-            "1.7"
+            self.minimum_required_version
         )
 
     def launch(
