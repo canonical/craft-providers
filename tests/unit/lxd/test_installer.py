@@ -24,11 +24,68 @@ import pytest
 
 from craft_providers.lxd import (
     LXC,
+    LXDError,
     LXDInstallationError,
     install,
+    installer,
     is_initialized,
     is_installed,
+    is_user_permitted,
 )
+
+if sys.platform == "linux":
+    import grp
+
+
+@pytest.fixture
+def mock_is_installed():
+    with mock.patch(
+        "craft_providers.lxd.installer.is_installed", return_value=True
+    ) as mock_is_installed:
+        yield mock_is_installed
+
+
+@pytest.fixture
+def mock_is_user_permitted():
+    with mock.patch(
+        "craft_providers.lxd.installer.is_user_permitted", return_value=True
+    ) as mock_is_user_permitted:
+        yield mock_is_user_permitted
+
+
+@pytest.fixture
+def mock_is_initialized():
+    with mock.patch(
+        "craft_providers.lxd.installer.is_initialized", return_value=True
+    ) as mock_is_initialized:
+        yield mock_is_initialized
+
+
+@pytest.fixture
+def mock_os_geteuid():
+    with mock.patch.object(
+        os, "geteuid", return_value=500, create=True
+    ) as mock_os_geteuid:
+        yield mock_os_geteuid
+
+
+@pytest.fixture
+def mock_os_getgroups():
+    with mock.patch.object(
+        os, "getgroups", return_value=[], create=True
+    ) as mock_os_getgroups:
+        yield mock_os_getgroups
+
+
+@pytest.fixture
+def mock_grp():
+    with mock.patch.object(
+        installer,
+        "grp",
+        create=True,
+    ) as mock_grp:
+        mock_grp.getgrgid.return_value = []
+        yield mock_grp
 
 
 @pytest.mark.parametrize("platform", ["win32", "darwin", "other"])
@@ -43,9 +100,11 @@ def test_install_unsupported_platform(mocker, platform):
     )
 
 
-def test_install_without_sudo(fake_process, mocker):
+def test_install_without_sudo(
+    fake_process, mocker, mock_is_user_permitted, mock_os_geteuid
+):
     mocker.patch.object(sys, "platform", "linux")
-    mocker.patch.object(os, "geteuid", lambda: 0, create=True)
+    mock_os_geteuid.return_value = 0
     fake_process.register_subprocess(
         [
             "snap",
@@ -77,11 +136,13 @@ def test_install_without_sudo(fake_process, mocker):
     version = install(sudo=False)
 
     assert version == "4.0"
+    mock_is_user_permitted.assert_called_once()
 
 
-def test_install_with_sudo(fake_process, mocker):
+def test_install_with_sudo(
+    fake_process, mocker, mock_is_user_permitted, mock_os_geteuid
+):
     mocker.patch.object(sys, "platform", "linux")
-    mocker.patch.object(os, "geteuid", lambda: 1000, create=True)
     fake_process.register_subprocess(
         [
             "sudo",
@@ -116,17 +177,61 @@ def test_install_with_sudo(fake_process, mocker):
     version = install(sudo=True)
 
     assert version == "4.0"
+    mock_is_user_permitted.assert_called_once()
 
 
-def test_install_requires_sudo(mocker):
+def test_install_requires_sudo(mocker, mock_is_user_permitted, mock_os_geteuid):
     mocker.patch.object(sys, "platform", "linux")
-    mocker.patch.object(os, "geteuid", lambda: 1000, create=True)
 
     with pytest.raises(LXDInstallationError) as exc_info:
         install(sudo=False)
 
     assert exc_info.value == LXDInstallationError(
         "sudo required if not running as root"
+    )
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason=f"unsupported on {sys.platform}")
+def test_install_requires_user_to_be_added_to_lxd_group(
+    fake_process, mock_is_user_permitted
+):
+    mock_is_user_permitted.return_value = False
+    fake_process.register_subprocess(
+        [
+            "sudo",
+            "snap",
+            "install",
+            "lxd",
+        ]
+    )
+    fake_process.register_subprocess(
+        [
+            "sudo",
+            "lxd",
+            "waitready",
+        ]
+    )
+    fake_process.register_subprocess(
+        [
+            "sudo",
+            "lxd",
+            "init",
+            "--auto",
+        ]
+    )
+    fake_process.register_subprocess(
+        [
+            "lxd",
+            "version",
+        ],
+        stdout="4.0",
+    )
+
+    with pytest.raises(LXDInstallationError) as exc_info:
+        install(sudo=True)
+
+    assert exc_info.value == LXDInstallationError(
+        "user must be manually added to 'lxd' group before using LXD"
     )
 
 
@@ -146,3 +251,80 @@ def test_is_installed(which, installed, monkeypatch):
     monkeypatch.setattr(shutil, "which", lambda x: which)
 
     assert is_installed() == installed
+
+
+def test_is_user_permitted_root(mock_os_geteuid, mock_os_getgroups):
+    mock_os_geteuid.return_value = 0
+
+    assert is_user_permitted() is True
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason=f"unsupported on {sys.platform}")
+def test_is_user_permitted_lxd_group(mock_os_geteuid, mock_os_getgroups, mock_grp):
+    mock_os_getgroups.return_value = [1, 2, 3]
+    mock_grp.getgrgid.side_effect = (
+        lambda g: grp.struct_group(["lxd", "x", g, []])  # type: ignore
+        if g == 2
+        else grp.struct_group([f"group-{g}", "x", g, []])  # type: ignore
+    )
+
+    assert is_user_permitted() is True
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason=f"unsupported on {sys.platform}")
+def test_is_user_permitted_failure(mock_os_geteuid, mock_os_getgroups, mock_grp):
+    mock_os_getgroups.return_value = [1, 2, 3]
+    mock_grp.getgrgid.side_effect = lambda g: grp.struct_group(
+        ["not-lxd-group", "x", g, []]
+    )  # type: ignore
+
+    assert is_user_permitted() is False
+
+
+def test_ensure_lxd_is_ready_not_installed(
+    mock_is_installed, mock_is_user_permitted, mock_is_initialized
+):
+    mock_is_installed.return_value = False
+
+    with pytest.raises(LXDError) as exc_info:
+        installer.ensure_lxd_is_ready()
+
+    assert exc_info.value == LXDError(
+        brief="LXD is required, but not installed.",
+        details="Please visit https://snapcraft.io/lxd for instructions "
+        "on how to install the LXD snap for your distribution.",
+    )
+
+
+def test_ensure_lxd_is_ready_not_permitted(
+    mock_is_installed, mock_is_user_permitted, mock_is_initialized
+):
+    mock_is_user_permitted.return_value = False
+
+    with pytest.raises(LXDError) as exc_info:
+        installer.ensure_lxd_is_ready()
+
+    assert exc_info.value == LXDError(
+        brief="LXD requires additional permissions.",
+        resolution="Please ensure that the user is in the 'lxd' group.",
+    )
+
+
+def test_ensure_lxd_is_ready_not_initialized(
+    mock_is_installed, mock_is_user_permitted, mock_is_initialized
+):
+    mock_is_initialized.return_value = False
+
+    with pytest.raises(LXDError) as exc_info:
+        installer.ensure_lxd_is_ready()
+
+    assert exc_info.value == LXDError(
+        brief="LXD has not been properly initialized.",
+        resolution="Consider executing 'lxd init --auto' to initialize LXD.",
+    )
+
+
+def test_ensure_lxd_is_ready_ok(
+    mock_is_installed, mock_is_user_permitted, mock_is_initialized
+):
+    installer.ensure_lxd_is_ready()
