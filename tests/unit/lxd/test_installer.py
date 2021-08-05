@@ -24,6 +24,7 @@ import pytest
 
 from craft_providers.lxd import (
     LXC,
+    LXD,
     LXDError,
     LXDInstallationError,
     install,
@@ -59,6 +60,16 @@ def mock_is_initialized():
         "craft_providers.lxd.installer.is_initialized", return_value=True
     ) as mock_is_initialized:
         yield mock_is_initialized
+
+
+@pytest.fixture
+def mock_lxd():
+    mock_lxd = mock.Mock(spec=LXD)
+    mock_lxd.is_supported_version.return_value = True
+    mock_lxd.version.return_value = "4.4"
+    mock_lxd.minimum_required_version = LXD.minimum_required_version
+
+    yield mock_lxd
 
 
 @pytest.fixture
@@ -282,12 +293,12 @@ def test_is_user_permitted_failure(mock_os_geteuid, mock_os_getgroups, mock_grp)
 
 
 def test_ensure_lxd_is_ready_not_installed(
-    mock_is_installed, mock_is_user_permitted, mock_is_initialized
+    mock_lxd, mock_is_installed, mock_is_user_permitted, mock_is_initialized
 ):
     mock_is_installed.return_value = False
 
     with pytest.raises(LXDError) as exc_info:
-        installer.ensure_lxd_is_ready()
+        installer.ensure_lxd_is_ready(lxd=mock_lxd)
 
     assert exc_info.value == LXDError(
         brief="LXD is required, but not installed.",
@@ -297,19 +308,13 @@ def test_ensure_lxd_is_ready_not_installed(
 
 
 def test_ensure_lxd_is_ready_not_minimum_version(
-    fake_process, mock_is_installed, mock_is_user_permitted, mock_is_initialized
+    mock_lxd, mock_is_installed, mock_is_user_permitted, mock_is_initialized
 ):
-    fake_process.keep_last_process(True)
-    fake_process.register_subprocess(
-        [
-            "lxd",
-            "version",
-        ],
-        stdout="3.12",
-    )
+    mock_lxd.is_supported_version.return_value = False
+    mock_lxd.version.return_value = "3.12"
 
     with pytest.raises(LXDError) as exc_info:
-        installer.ensure_lxd_is_ready()
+        installer.ensure_lxd_is_ready(lxd=mock_lxd)
 
     assert exc_info.value == LXDError(
         brief="LXD '3.12' does not meet the minimum required version '4.0'.",
@@ -319,12 +324,12 @@ def test_ensure_lxd_is_ready_not_minimum_version(
 
 
 def test_ensure_lxd_is_ready_not_permitted(
-    mock_is_installed, mock_is_user_permitted, mock_is_initialized
+    mock_lxd, mock_is_installed, mock_is_user_permitted, mock_is_initialized
 ):
     mock_is_user_permitted.return_value = False
 
     with pytest.raises(LXDError) as exc_info:
-        installer.ensure_lxd_is_ready()
+        installer.ensure_lxd_is_ready(lxd=mock_lxd)
 
     assert exc_info.value == LXDError(
         brief="LXD requires additional permissions.",
@@ -333,12 +338,12 @@ def test_ensure_lxd_is_ready_not_permitted(
 
 
 def test_ensure_lxd_is_ready_not_initialized(
-    mock_is_installed, mock_is_user_permitted, mock_is_initialized
+    mock_lxd, mock_is_installed, mock_is_user_permitted, mock_is_initialized
 ):
     mock_is_initialized.return_value = False
 
     with pytest.raises(LXDError) as exc_info:
-        installer.ensure_lxd_is_ready()
+        installer.ensure_lxd_is_ready(lxd=mock_lxd)
 
     assert exc_info.value == LXDError(
         brief="LXD has not been properly initialized.",
@@ -347,6 +352,6 @@ def test_ensure_lxd_is_ready_not_initialized(
 
 
 def test_ensure_lxd_is_ready_ok(
-    mock_is_installed, mock_is_user_permitted, mock_is_initialized
+    mock_lxd, mock_is_installed, mock_is_user_permitted, mock_is_initialized
 ):
-    installer.ensure_lxd_is_ready()
+    installer.ensure_lxd_is_ready(lxd=mock_lxd)
