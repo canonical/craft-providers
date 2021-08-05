@@ -291,7 +291,29 @@ def test_ensure_lxd_is_ready_not_installed(
 
     assert exc_info.value == LXDError(
         brief="LXD is required, but not installed.",
-        details="Please visit https://snapcraft.io/lxd for instructions "
+        resolution="Visit https://snapcraft.io/lxd for instructions "
+        "on how to install the LXD snap for your distribution.",
+    )
+
+
+def test_ensure_lxd_is_ready_not_minimum_version(
+    fake_process, mock_is_installed, mock_is_user_permitted, mock_is_initialized
+):
+    fake_process.keep_last_process(True)
+    fake_process.register_subprocess(
+        [
+            "lxd",
+            "version",
+        ],
+        stdout="3.12",
+    )
+
+    with pytest.raises(LXDError) as exc_info:
+        installer.ensure_lxd_is_ready()
+
+    assert exc_info.value == LXDError(
+        brief="LXD '3.12' does not meet the minimum required version '4.0'.",
+        resolution="Visit https://snapcraft.io/lxd for instructions "
         "on how to install the LXD snap for your distribution.",
     )
 
@@ -306,7 +328,7 @@ def test_ensure_lxd_is_ready_not_permitted(
 
     assert exc_info.value == LXDError(
         brief="LXD requires additional permissions.",
-        resolution="Please ensure that the user is in the 'lxd' group.",
+        resolution="Ensure that the user is in the 'lxd' group.",
     )
 
 
@@ -320,7 +342,7 @@ def test_ensure_lxd_is_ready_not_initialized(
 
     assert exc_info.value == LXDError(
         brief="LXD has not been properly initialized.",
-        resolution="Consider executing 'lxd init --auto' to initialize LXD.",
+        resolution="Execute 'lxd init --auto' to initialize LXD.",
     )
 
 

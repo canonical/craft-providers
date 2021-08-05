@@ -112,7 +112,9 @@ def is_user_permitted() -> bool:
     )
 
 
-def ensure_lxd_is_ready(*, remote: str = "local", lxc: LXC = LXC()) -> None:
+def ensure_lxd_is_ready(
+    *, remote: str = "local", lxc: LXC = LXC(), lxd: LXD = LXD()
+) -> None:
     """Ensure LXD is ready for use.
 
     :raises LXDError: on error.
@@ -120,18 +122,27 @@ def ensure_lxd_is_ready(*, remote: str = "local", lxc: LXC = LXC()) -> None:
     if not is_installed():
         raise errors.LXDError(
             brief="LXD is required, but not installed.",
-            details="Please visit https://snapcraft.io/lxd for instructions "
+            resolution="Visit https://snapcraft.io/lxd for instructions "
+            "on how to install the LXD snap for your distribution.",
+        )
+
+    if not lxd.is_supported_version():
+        version = lxd.version()
+        min_version = lxd.minimum_required_version
+        raise errors.LXDError(
+            brief=f"LXD {version!r} does not meet the minimum required version {min_version!r}.",
+            resolution="Visit https://snapcraft.io/lxd for instructions "
             "on how to install the LXD snap for your distribution.",
         )
 
     if not is_user_permitted():
         raise errors.LXDError(
             brief="LXD requires additional permissions.",
-            resolution="Please ensure that the user is in the 'lxd' group.",
+            resolution="Ensure that the user is in the 'lxd' group.",
         )
 
     if not is_initialized(lxc=lxc, remote=remote):
         raise errors.LXDError(
             brief="LXD has not been properly initialized.",
-            resolution="Consider executing 'lxd init --auto' to initialize LXD.",
+            resolution="Execute 'lxd init --auto' to initialize LXD.",
         )
