@@ -51,5 +51,5 @@ def test_ensure_lxd_is_ready(installed_lxd_without_init):
 
     assert exc_info.value == lxd.LXDError(
         brief="LXD has not been properly initialized.",
-        resolution="Consider executing 'lxd init --auto' to initialize LXD.",
+        resolution="Execute 'lxd init --auto' to initialize LXD.",
     )
