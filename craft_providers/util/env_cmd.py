@@ -16,11 +16,15 @@
 #
 
 """Helper(s) for env command."""
+import pathlib
 from typing import Dict, List, Optional
 
 
 def formulate_command(
-    env: Optional[Dict[str, Optional[str]]] = None, *, ignore_environment: bool = False
+    env: Optional[Dict[str, Optional[str]]] = None,
+    *,
+    chdir: Optional[pathlib.Path] = None,
+    ignore_environment: bool = False,
 ) -> List[str]:
     """Create an env command with the specified environment.
 
@@ -31,12 +35,19 @@ def formulate_command(
 
     An empty environment will simply yield the env command.
 
+    NOTE: not all versions of `env` support --chdir, it is up to the caller to
+    ensure compatibility.
+
     :param env: Environment flags to set/unset.
+    :param chdir: Optional directory to run in.
     :param ignore_environment: Start with an empty environment.
 
     :returns: List of env command strings.
     """
     env_cmd = ["env"]
+
+    if chdir:
+        env_cmd.append(f"--chdir={chdir.as_posix()}")
 
     if ignore_environment:
         env_cmd.append("-i")

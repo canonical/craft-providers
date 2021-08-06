@@ -15,6 +15,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
+import pathlib
 
 import pytest
 
@@ -53,3 +54,21 @@ def test_formulate_command(env, expected):
 )
 def test_formulate_command_ignore(env, expected):
     assert env_cmd.formulate_command(env, ignore_environment=True) == expected
+
+
+def test_formulate_command_chdir():
+    assert env_cmd.formulate_command(chdir=pathlib.Path("/tmp/foo")) == [
+        "env",
+        "--chdir=/tmp/foo",
+    ]
+
+
+def test_formulate_command_all_opts():
+    assert (
+        env_cmd.formulate_command(
+            env={"VAR_A": "1", "VAR_B": "2"},
+            ignore_environment=True,
+            chdir=pathlib.Path("/tmp/foo"),
+        )
+        == ["env", "--chdir=/tmp/foo", "-i", "VAR_A=1", "VAR_B=2"]
+    )
