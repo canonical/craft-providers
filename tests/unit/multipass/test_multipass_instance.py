@@ -230,6 +230,26 @@ def test_execute_run(mock_multipass, instance):
     ]
 
 
+def test_execute_run_with_cwd(mock_multipass, instance, tmp_path):
+    instance.execute_run(command=["test-command", "flags"], cwd=tmp_path)
+
+    assert mock_multipass.mock_calls == [
+        mock.call.exec(
+            instance_name="test-instance",
+            command=[
+                "sudo",
+                "-H",
+                "--",
+                "env",
+                f"--chdir={tmp_path.as_posix()}",
+                "test-command",
+                "flags",
+            ],
+            runner=subprocess.run,
+        )
+    ]
+
+
 def test_execute_run_with_env(mock_multipass, instance):
     instance.execute_run(command=["test-command", "flags"], env=dict(foo="bar"))
 
