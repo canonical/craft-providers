@@ -34,7 +34,10 @@ class LXD:
     """Interface to `lxd` command-line.
 
     :param lxd_path: Path to lxd.
+    :cvar minimum_required_version: Minimum lxd version required for compatibility.
     """
+
+    minimum_required_version = "4.0"
 
     def __init__(self, *, lxd_path: pathlib.Path = pathlib.Path("lxd")) -> None:
         self.lxd_path = lxd_path
@@ -82,7 +85,7 @@ class LXD:
             )
 
         return pkg_resources.parse_version(version) >= pkg_resources.parse_version(
-            "4.0"
+            self.minimum_required_version
         )
 
     def version(self) -> str:
