@@ -196,6 +196,38 @@ def test_info_error(fake_process, mock_details_from_process_error):
     )
 
 
+def test_is_supported_version(fake_process):
+    fake_process.register_subprocess(
+        ["multipass", "version"], stdout=b"multipass  1.7.0\nmultipassd 1.7.0\n"
+    )
+
+    assert Multipass().is_supported_version() is True
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_supported_version_false(fake_process):
+    fake_process.register_subprocess(
+        ["multipass", "version"], stdout=b"multipass  1.4.0\nmultipassd 1.4.0\n"
+    )
+
+    assert Multipass().is_supported_version() is False
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_supported_version_error(fake_process, mock_details_from_process_error):
+    fake_process.register_subprocess(["multipass", "version"], stdout="invalid output")
+
+    with pytest.raises(MultipassError) as exc_info:
+        Multipass().is_supported_version()
+
+    assert len(fake_process.calls) == 1
+    assert exc_info.value == MultipassError(
+        brief="Unable to parse version output: b'invalid output'"
+    )
+
+
 def test_launch(fake_process):
     fake_process.register_subprocess(
         ["multipass", "launch", "test-image", "--name", "test-instance"]
