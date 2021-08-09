@@ -105,13 +105,13 @@ def test_execute_popen(reusable_instance):
 def test_execute_popen_cwd(reusable_instance):
     with reusable_instance.execute_popen(
         command=["pwd"],
-        cwd=pathlib.Path("/"),
+        cwd=pathlib.Path("/tmp"),
         stdout=subprocess.PIPE,
         text=True,
     ) as proc:
         stdout, _ = proc.communicate()
 
-    assert stdout.strip() == "/"
+    assert stdout.strip() == "/tmp"
 
 
 def test_execute_run(reusable_instance):
