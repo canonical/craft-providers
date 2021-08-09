@@ -20,7 +20,7 @@ import io
 import logging
 import pathlib
 import subprocess
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from craft_providers import errors
 from craft_providers.util import env_cmd
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 def _rootify_multipass_command(
     command: List[str],
     *,
-    cwd: Union[pathlib.Path, str, None] = None,
+    cwd: Optional[pathlib.Path] = None,
     env: Optional[Dict[str, Optional[str]]] = None,
 ) -> List[str]:
     """Wrap a command to run as root with specified environment.
@@ -51,13 +51,8 @@ def _rootify_multipass_command(
     """
     sudo_cmd = ["sudo", "-H", "--"]
 
-    if cwd is not None:
-        cwd_path: Optional[pathlib.Path] = pathlib.Path(cwd)
-    else:
-        cwd_path = None
-
-    if env is not None or cwd_path is not None:
-        sudo_cmd += env_cmd.formulate_command(env, chdir=cwd_path)
+    if env is not None or cwd is not None:
+        sudo_cmd += env_cmd.formulate_command(env, chdir=cwd)
 
     return sudo_cmd + command
 
@@ -152,6 +147,8 @@ class MultipassInstance(Executor):
     def execute_popen(
         self,
         command: List[str],
+        *,
+        cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         **kwargs,
     ) -> subprocess.Popen:
@@ -169,7 +166,7 @@ class MultipassInstance(Executor):
         """
         return self._multipass.exec(
             instance_name=self.name,
-            command=_rootify_multipass_command(command, env=env),
+            command=_rootify_multipass_command(command, cwd=cwd, env=env),
             runner=subprocess.Popen,
             **kwargs,
         )
@@ -177,6 +174,8 @@ class MultipassInstance(Executor):
     def execute_run(
         self,
         command: List[str],
+        *,
+        cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         **kwargs,
     ) -> subprocess.CompletedProcess:
@@ -195,8 +194,6 @@ class MultipassInstance(Executor):
         :raises subprocess.CalledProcessError: if command fails and check is
             True.
         """
-        cwd = kwargs.pop("cwd", None)
-
         return self._multipass.exec(
             instance_name=self.name,
             command=_rootify_multipass_command(command, cwd=cwd, env=env),

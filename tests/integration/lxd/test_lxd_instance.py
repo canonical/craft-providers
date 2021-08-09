@@ -17,6 +17,7 @@
 
 import io
 import pathlib
+import subprocess
 
 import pytest
 
@@ -88,6 +89,50 @@ def test_delete(instance):
     instance.delete()
 
     assert instance.exists() is False
+
+
+def test_execute_popen(reusable_instance):
+    with reusable_instance.execute_popen(
+        command=["pwd"],
+        stdout=subprocess.PIPE,
+        text=True,
+    ) as proc:
+        stdout, _ = proc.communicate()
+
+    assert stdout.strip() == "/root"
+
+
+def test_execute_popen_cwd(reusable_instance):
+    with reusable_instance.execute_popen(
+        command=["pwd"],
+        cwd=pathlib.Path("/"),
+        stdout=subprocess.PIPE,
+        text=True,
+    ) as proc:
+        stdout, _ = proc.communicate()
+
+    assert stdout.strip() == "/"
+
+
+def test_execute_run(reusable_instance):
+    proc = reusable_instance.execute_run(
+        command=["pwd"],
+        capture_output=True,
+        text=True,
+    )
+
+    assert proc.stdout.strip() == "/root"
+
+
+def test_execute_run_cwd(reusable_instance):
+    proc = reusable_instance.execute_run(
+        command=["pwd"],
+        cwd=pathlib.Path("/"),
+        capture_output=True,
+        text=True,
+    )
+
+    assert proc.stdout.strip() == "/"
 
 
 def test_exists(reusable_instance):

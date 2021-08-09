@@ -63,13 +63,15 @@ class FakeExecutor(Executor):
     def execute_popen(
         self,
         command: List[str],
+        *,
+        cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         **kwargs,
     ) -> subprocess.Popen:
         if env is None:
             env_args = []
         else:
-            env_args = env_cmd.formulate_command(env)
+            env_args = env_cmd.formulate_command(env, chdir=cwd)
 
         final_cmd = ["fake-executor"] + env_args + command
         return subprocess.Popen(  # pylint: disable=consider-using-with
@@ -79,13 +81,15 @@ class FakeExecutor(Executor):
     def execute_run(
         self,
         command: List[str],
+        *,
+        cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         **kwargs,
     ) -> subprocess.CompletedProcess:
         if env is None:
             env_args = []
         else:
-            env_args = env_cmd.formulate_command(env)
+            env_args = env_cmd.formulate_command(env, chdir=cwd)
 
         final_cmd = ["fake-executor"] + env_args + command
         return subprocess.run(  # pylint: disable=subprocess-run-check

@@ -124,6 +124,7 @@ def test_push_file_io(
                 "root:root",
                 "/etc/test.conf",
             ],
+            cwd=None,
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
@@ -182,6 +183,25 @@ def test_execute_popen(mock_lxc, instance):
         mock.call.exec(
             instance_name="test-instance",
             command=["test-command", "flags"],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.Popen,
+            input="foo",
+        )
+    ]
+
+
+def test_execute_popen_with_cwd(mock_lxc, instance):
+    instance.execute_popen(
+        command=["test-command", "flags"], cwd=pathlib.Path("/tmp"), input="foo"
+    )
+
+    assert mock_lxc.mock_calls == [
+        mock.call.exec(
+            instance_name="test-instance",
+            command=["test-command", "flags"],
+            cwd="/tmp",
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.Popen,
@@ -197,6 +217,7 @@ def test_execute_popen_with_env(mock_lxc, instance):
         mock.call.exec(
             instance_name="test-instance",
             command=["env", "foo=bar", "test-command", "flags"],
+            cwd=None,
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.Popen,
@@ -211,6 +232,25 @@ def test_execute_run(mock_lxc, instance):
         mock.call.exec(
             instance_name="test-instance",
             command=["test-command", "flags"],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            input="foo",
+        )
+    ]
+
+
+def test_execute_run_with_cwd(mock_lxc, instance):
+    instance.execute_run(
+        command=["test-command", "flags"], cwd=pathlib.Path("/tmp"), input="foo"
+    )
+
+    assert mock_lxc.mock_calls == [
+        mock.call.exec(
+            instance_name="test-instance",
+            command=["test-command", "flags"],
+            cwd="/tmp",
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
@@ -232,6 +272,7 @@ def test_execute_run_with_default_command_env(mock_lxc):
         mock.call.exec(
             instance_name="test-instance",
             command=["env", "env_key=some-value", "foo=bar", "test-command", "flags"],
+            cwd=None,
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
@@ -254,6 +295,7 @@ def test_execute_run_with_default_command_env_unset(mock_lxc):
         mock.call.exec(
             instance_name="test-instance",
             command=["env", "-u", "env_key", "foo=bar", "test-command", "flags"],
+            cwd=None,
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
@@ -268,6 +310,7 @@ def test_execute_run_with_env(mock_lxc, instance):
         mock.call.exec(
             instance_name="test-instance",
             command=["env", "foo=bar", "test-command", "flags"],
+            cwd=None,
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
@@ -291,6 +334,7 @@ def test_execute_run_with_env_unset(mock_lxc, instance):
                 "test-command",
                 "flags",
             ],
+            cwd=None,
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
@@ -557,6 +601,7 @@ def test_pull_file(mock_lxc, instance, tmp_path):
         mock.call.exec(
             instance_name=instance.name,
             command=["test", "-f", "/tmp/src.txt"],
+            cwd=None,
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
@@ -588,6 +633,7 @@ def test_pull_file_no_source(mock_lxc, instance, tmp_path):
         mock.call.exec(
             instance_name=instance.name,
             command=["test", "-f", "/tmp/src.txt"],
+            cwd=None,
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
@@ -613,6 +659,7 @@ def test_pull_file_no_parent_directory(mock_lxc, instance, tmp_path):
         mock.call.exec(
             instance_name=instance.name,
             command=["test", "-f", "/tmp/src.txt"],
+            cwd=None,
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
@@ -638,6 +685,7 @@ def test_push_file(mock_lxc, instance, tmp_path):
         mock.call.exec(
             instance_name=instance.name,
             command=["test", "-d", "/tmp"],
+            cwd=None,
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
@@ -686,6 +734,7 @@ def test_push_file_no_parent_directory(mock_lxc, instance, tmp_path):
         mock.call.exec(
             instance_name=instance.name,
             command=["test", "-d", "/tmp"],
+            cwd=None,
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,

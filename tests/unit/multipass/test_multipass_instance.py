@@ -205,6 +205,29 @@ def test_execute_popen(mock_multipass, instance):
     ]
 
 
+def test_execute_popen_with_cwd(mock_multipass, instance):
+    instance.execute_popen(
+        command=["test-command", "flags"], cwd=pathlib.Path("/tmp"), input="foo"
+    )
+
+    assert mock_multipass.mock_calls == [
+        mock.call.exec(
+            instance_name="test-instance",
+            command=[
+                "sudo",
+                "-H",
+                "--",
+                "env",
+                "--chdir=/tmp",
+                "test-command",
+                "flags",
+            ],
+            runner=subprocess.Popen,
+            input="foo",
+        )
+    ]
+
+
 def test_execute_popen_with_env(mock_multipass, instance):
     instance.execute_popen(command=["test-command", "flags"], env=dict(foo="bar"))
 
