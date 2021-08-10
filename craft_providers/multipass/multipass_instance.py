@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 def _rootify_multipass_command(
     command: List[str],
     *,
+    cwd: Optional[pathlib.Path] = None,
     env: Optional[Dict[str, Optional[str]]] = None,
 ) -> List[str]:
     """Wrap a command to run as root with specified environment.
@@ -50,8 +51,8 @@ def _rootify_multipass_command(
     """
     sudo_cmd = ["sudo", "-H", "--"]
 
-    if env is not None:
-        sudo_cmd += env_cmd.formulate_command(env)
+    if env is not None or cwd is not None:
+        sudo_cmd += env_cmd.formulate_command(env, chdir=cwd)
 
     return sudo_cmd + command
 
@@ -146,6 +147,8 @@ class MultipassInstance(Executor):
     def execute_popen(
         self,
         command: List[str],
+        *,
+        cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         **kwargs,
     ) -> subprocess.Popen:
@@ -163,7 +166,7 @@ class MultipassInstance(Executor):
         """
         return self._multipass.exec(
             instance_name=self.name,
-            command=_rootify_multipass_command(command, env=env),
+            command=_rootify_multipass_command(command, cwd=cwd, env=env),
             runner=subprocess.Popen,
             **kwargs,
         )
@@ -171,6 +174,8 @@ class MultipassInstance(Executor):
     def execute_run(
         self,
         command: List[str],
+        *,
+        cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         **kwargs,
     ) -> subprocess.CompletedProcess:
@@ -191,7 +196,7 @@ class MultipassInstance(Executor):
         """
         return self._multipass.exec(
             instance_name=self.name,
-            command=_rootify_multipass_command(command, env=env),
+            command=_rootify_multipass_command(command, cwd=cwd, env=env),
             runner=subprocess.run,
             **kwargs,
         )

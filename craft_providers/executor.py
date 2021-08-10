@@ -33,6 +33,8 @@ class Executor(ABC):
     def execute_popen(
         self,
         command: List[str],
+        *,
+        cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         **kwargs,
     ) -> subprocess.Popen:
@@ -53,6 +55,8 @@ class Executor(ABC):
     def execute_run(
         self,
         command: List[str],
+        *,
+        cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         **kwargs,
     ) -> subprocess.CompletedProcess:

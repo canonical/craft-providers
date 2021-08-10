@@ -158,6 +158,8 @@ class LXDInstance(Executor):
     def execute_popen(
         self,
         command: List[str],
+        *,
+        cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         **kwargs,
     ) -> subprocess.Popen:
@@ -173,18 +175,26 @@ class LXDInstance(Executor):
 
         :returns: Popen instance.
         """
+        if cwd is None:
+            cwd_path = None
+        else:
+            cwd_path = cwd.as_posix()
+
         return self.lxc.exec(
             instance_name=self.name,
             command=self._finalize_lxc_command(command=command, env=env),
             project=self.project,
             remote=self.remote,
             runner=subprocess.Popen,
+            cwd=cwd_path,
             **kwargs,
         )
 
     def execute_run(
         self,
         command: List[str],
+        *,
+        cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         **kwargs,
     ) -> subprocess.CompletedProcess:
@@ -203,12 +213,18 @@ class LXDInstance(Executor):
         :raises subprocess.CalledProcessError: if command fails and check is
             True.
         """
+        if cwd is None:
+            cwd_path = None
+        else:
+            cwd_path = cwd.as_posix()
+
         return self.lxc.exec(
             instance_name=self.name,
             command=self._finalize_lxc_command(command=command, env=env),
             project=self.project,
             remote=self.remote,
             runner=subprocess.run,
+            cwd=cwd_path,
             **kwargs,
         )
 
