@@ -30,3 +30,18 @@ from .lxc import LXC  # noqa: F401
 from .lxd import LXD  # noqa: F401
 from .lxd_instance import LXDInstance  # noqa: F401
 from .remotes import configure_buildd_image_remote  # noqa: F401
+
+__all__ = [
+    "LXC",
+    "LXD",
+    "LXDInstance",
+    "LXDError",
+    "LXDInstallationError",
+    "install",
+    "is_installed",
+    "is_initialized",
+    "is_user_permitted",
+    "ensure_lxd_is_ready",
+    "configure_buildd_image_remote",
+    "launch",
+]
