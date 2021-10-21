@@ -23,3 +23,14 @@ from .errors import MultipassError, MultipassInstallationError  # noqa: F401
 from .installer import install, is_installed  # noqa: F401
 from .multipass import Multipass  # noqa: F401
 from .multipass_instance import MultipassInstance  # noqa: F401
+
+__all__ = [
+    "Multipass",
+    "MultipassInstance",
+    "MultipassError",
+    "MultipassInstallationError",
+    "install",
+    "is_installed",
+    "ensure_multipass_is_ready",
+    "launch",
+]
