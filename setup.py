@@ -50,7 +50,9 @@ test_requires = [
     "isort",
     "mypy",
     "pydocstyle",
-    "pylint",
+    # Incompatible with current pylint-fixme-info==1.0.2
+    # https://github.com/PyCQA/pylint/issues/5390
+    "pylint<2.12.0",
     "pylint-fixme-info",
     "pylint-pytest",
     "pytest",
@@ -63,7 +65,7 @@ test_requires = [
 ]
 
 extras_requires = {
-    "dev": dev_requires + doc_requires + test_requires,
+    "dev": dev_requires + test_requires,
     "doc": doc_requires,
     "test": test_requires,
 }
