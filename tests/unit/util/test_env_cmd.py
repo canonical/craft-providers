@@ -25,7 +25,7 @@ from craft_providers.util import env_cmd
 @pytest.mark.parametrize(
     "env,expected",
     [
-        (dict(), ["env"]),
+        ({}, ["env"]),
         (dict(foo="bar"), ["env", "foo=bar"]),
         (dict(foo="bar", foo2="bar2"), ["env", "foo=bar", "foo2=bar2"]),
         (
@@ -42,7 +42,7 @@ def test_formulate_command(env, expected):
 @pytest.mark.parametrize(
     "env,expected",
     [
-        (dict(), ["env", "-i"]),
+        ({}, ["env", "-i"]),
         (dict(foo="bar"), ["env", "-i", "foo=bar"]),
         (dict(foo="bar", foo2="bar2"), ["env", "-i", "foo=bar", "foo2=bar2"]),
         (
