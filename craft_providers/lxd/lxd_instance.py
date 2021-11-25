@@ -321,7 +321,7 @@ class LXDInstance(Executor):
 
         :raises LXDError: On unexpected error.
         """
-        config_keys = dict()
+        config_keys = {}
 
         if map_user_uid:
             uid = os.getuid()
@@ -383,8 +383,8 @@ class LXDInstance(Executor):
         :raises LXDError: On unexpected error.
         """
         cfg = self.lxc.info(project=self.project, remote=self.remote)
-        env = cfg.get("environment", dict())
-        kernel_features = env.get("kernel_features", dict())
+        env = cfg.get("environment", {})
+        kernel_features = env.get("kernel_features", {})
         seccomp_listener = kernel_features.get("seccomp_listener", "false")
 
         return seccomp_listener == "true"

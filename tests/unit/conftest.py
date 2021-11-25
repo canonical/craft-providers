@@ -37,9 +37,9 @@ class FakeExecutor(Executor):
     """
 
     def __init__(self) -> None:
-        self.records_of_push_file_io: List[Dict[str, Any]] = list()
-        self.records_of_pull_file: List[Dict[str, Any]] = list()
-        self.records_of_push_file: List[Dict[str, Any]] = list()
+        self.records_of_push_file_io: List[Dict[str, Any]] = []
+        self.records_of_pull_file: List[Dict[str, Any]] = []
+        self.records_of_push_file: List[Dict[str, Any]] = []
 
     def push_file_io(
         self,

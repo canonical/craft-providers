@@ -47,7 +47,7 @@ def parse_os_release(content: str) -> Dict[str, str]:
               stripped of encapsulating quotes.
 
     """
-    mappings: Dict[str, str] = dict()
+    mappings: Dict[str, str] = {}
 
     for line in content.splitlines():
         line = line.strip()

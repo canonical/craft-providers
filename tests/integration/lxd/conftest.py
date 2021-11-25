@@ -65,7 +65,7 @@ def tmp_instance(
     lxc: LXC = LXC(),
 ):
     if config_keys is None:
-        config_keys = dict()
+        config_keys = {}
 
     lxc.launch(
         instance_name=instance_name,

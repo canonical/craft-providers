@@ -241,7 +241,7 @@ class MultipassInstance(Executor):
         :raises MultipassError: On unexpected failure.
         """
         info = self._get_info()
-        mounts = info.get("mounts", dict())
+        mounts = info.get("mounts", {})
 
         for mount_point, mount_config in mounts.items():
             # Even on Windows, Multipass writes source_path as posix, e.g.:
