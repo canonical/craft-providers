@@ -96,7 +96,7 @@ class LXDInstance(Executor):
     def push_file_io(
         self,
         *,
-        destination: pathlib.Path,
+        destination: pathlib.PurePath,
         content: io.BytesIO,
         file_mode: str,
         group: str = "root",
@@ -273,7 +273,9 @@ class LXDInstance(Executor):
 
         return None
 
-    def is_mounted(self, *, host_source: pathlib.Path, target: pathlib.Path) -> bool:
+    def is_mounted(
+        self, *, host_source: pathlib.Path, target: pathlib.PurePath
+    ) -> bool:
         """Check if path is mounted at target.
 
         :param host_source: Host path to check.
@@ -344,7 +346,7 @@ class LXDInstance(Executor):
         self,
         *,
         host_source: pathlib.Path,
-        target: pathlib.Path,
+        target: pathlib.PurePath,
         device_name: Optional[str] = None,
     ) -> None:
         """Mount host source directory to target mount point.
@@ -389,7 +391,7 @@ class LXDInstance(Executor):
 
         return seccomp_listener == "true"
 
-    def pull_file(self, *, source: pathlib.Path, destination: pathlib.Path) -> None:
+    def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:
         """Copy a file from the environment to host.
 
         :param source: Environment file to copy.
@@ -415,7 +417,7 @@ class LXDInstance(Executor):
             remote=self.remote,
         )
 
-    def push_file(self, *, source: pathlib.Path, destination: pathlib.Path) -> None:
+    def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:
         """Copy a file from the host into the environment.
 
         :param source: Host file to copy.
