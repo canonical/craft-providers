@@ -87,7 +87,7 @@ class BuilddBase(Base):
         setup.  Any change to this version would indicate that prior [versioned]
         instances are incompatible and must be cleaned.  As such, any new value
         should be unique to old values (e.g. incrementing).  It is suggested to
-        extend this tag, not overwrite it, e.g.: compatibilty_tag =
+        extend this tag, not overwrite it, e.g.: compatibility_tag =
         f"{appname}-{BuildBase.compatibility_tag}.{apprevision}" to ensure base
         compatibility levels are maintained.
     :cvar instance_config_path: Path to persistent environment configuration
@@ -183,7 +183,7 @@ class BuilddBase(Base):
         os_name = os_release.get("NAME")
         if os_name != "Ubuntu":
             raise BaseCompatibilityError(
-                reason=f"Exepcted OS 'Ubuntu', found {os_name!r}"
+                reason=f"Expected OS 'Ubuntu', found {os_name!r}"
             )
 
         compat_version_id = self.alias.value

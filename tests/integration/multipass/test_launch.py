@@ -114,7 +114,7 @@ def test_launch_os_incompatible_instance(core20_instance):
 
     assert (
         exc_info.value.brief
-        == "Incompatible base detected: Exepcted OS 'Ubuntu', found 'Fedora'."
+        == "Incompatible base detected: Expected OS 'Ubuntu', found 'Fedora'."
     )
 
     # Retry with auto_clean=True.
