@@ -262,7 +262,7 @@ def test_ensure_os_compatible_name_failure(
         )
 
     assert exc_info.value == errors.BaseCompatibilityError(
-        "Exepcted OS 'Ubuntu', found 'Fedora'"
+        "Expected OS 'Ubuntu', found 'Fedora'"
     )
 
 
