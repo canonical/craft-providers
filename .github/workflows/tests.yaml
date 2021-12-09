@@ -104,10 +104,9 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install craft-providers
+      - name: Install tox
         run: |
-          pip3 install -U .[dev]
-          pip3 install -e .
-      - name: Run unit tests
-        run: |
-          make test-units
+          pip3 install -U pip
+          pip3 install tox tox-gh-actions
+      - name: Run tox for Python ${{ matrix.python-version }}
+        run: tox
