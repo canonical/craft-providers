@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2022 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -20,7 +20,7 @@ import logging
 import pathlib
 import shlex
 import subprocess
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import yaml
 
@@ -267,7 +267,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         mode: Optional[str] = None,
         project: str = "default",
         remote: str = "local",
-        runner=subprocess.run,
+        runner: Callable = subprocess.run,
         **kwargs,
     ):
         """Execute command in instance_name with specified runner.

@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2022 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -29,7 +29,7 @@ import pathlib
 import shlex
 import subprocess
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import pkg_resources
 
@@ -93,7 +93,7 @@ class Multipass:
         *,
         command: List[str],
         instance_name: str,
-        runner=subprocess.run,
+        runner: Callable = subprocess.run,
         **kwargs,
     ):
         """Execute command in instance_name with specified runner.
@@ -152,9 +152,9 @@ class Multipass:
         *,
         instance_name: str,
         image: str,
-        cpus: str = None,
-        mem: str = None,
-        disk: str = None,
+        cpus: Optional[str] = None,
+        mem: Optional[str] = None,
+        disk: Optional[str] = None,
     ) -> None:
         """Launch multipass VM.
 
@@ -207,8 +207,8 @@ class Multipass:
         *,
         source: pathlib.Path,
         target: str,
-        uid_map: Dict[str, str] = None,
-        gid_map: Dict[str, str] = None,
+        uid_map: Optional[Dict[str, str]] = None,
+        gid_map: Optional[Dict[str, str]] = None,
     ) -> None:
         """Mount host source path to target.
 
