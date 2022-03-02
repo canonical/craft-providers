@@ -72,7 +72,7 @@ extras_requires = {
 
 setup(
     name="craft-providers",
-    version="1.0.3",
+    version="1.0.4",
     description="Craft provider tooling",
     long_description=readme,
     long_description_content_type="text/markdown",
