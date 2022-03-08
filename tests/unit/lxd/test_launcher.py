@@ -77,6 +77,7 @@ def test_launch(mock_base_configuration, mock_lxc, mock_lxd_instance):
             image_remote="image-remote",
             ephemeral=False,
             map_user_uid=False,
+            uid=None,
         ),
     ]
     assert mock_base_configuration.mock_calls == [
@@ -130,6 +131,7 @@ def test_launch_making_initial_snapshot(
             image_remote="image-remote",
             ephemeral=False,
             map_user_uid=False,
+            uid=None,
         ),
         mock.call().stop(),
         mock.call().start(),
@@ -179,6 +181,7 @@ def test_launch_using_existing_snapshot(
             image_remote="test-remote",
             ephemeral=False,
             map_user_uid=False,
+            uid=None,
         ),
     ]
     assert mock_base_configuration.mock_calls == [
@@ -199,6 +202,7 @@ def test_launch_all_opts(mock_base_configuration, mock_lxc, mock_lxd_instance):
         auto_create_project=True,
         ephemeral=True,
         map_user_uid=True,
+        uid=1234,
         project="test-project",
         remote="test-remote",
         lxc=mock_lxc,
@@ -218,6 +222,7 @@ def test_launch_all_opts(mock_base_configuration, mock_lxc, mock_lxd_instance):
             image_remote="image-remote",
             ephemeral=True,
             map_user_uid=True,
+            uid=1234,
         ),
     ]
     assert mock_base_configuration.mock_calls == [
@@ -288,6 +293,7 @@ def test_launch_create_project(mock_base_configuration, mock_lxc, mock_lxd_insta
             image_remote="image-remote",
             ephemeral=False,
             map_user_uid=False,
+            uid=None,
         ),
     ]
     assert mock_base_configuration.mock_calls == [
@@ -395,6 +401,7 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
             image_remote="image-remote",
             ephemeral=False,
             map_user_uid=False,
+            uid=None,
         ),
     ]
     assert mock_base_configuration.mock_calls == [

@@ -313,12 +313,14 @@ class LXDInstance(Executor):
         image_remote: str,
         map_user_uid: bool = False,
         ephemeral: bool = False,
+        uid: Optional[int] = None,
     ) -> None:
         """Launch instance.
 
         :param image: Image name to launch.
         :param image_remote: Image remote name.
-        :param uid: Host user ID to map to instance root.
+        :param map_user_id: Whether id mapping should be used.
+        :param uid: If ``map_user_id`` is True, the host user ID to map to instance root.
         :param ephemeral: Flag to enable ephemeral instance.
 
         :raises LXDError: On unexpected error.
@@ -326,7 +328,8 @@ class LXDInstance(Executor):
         config_keys = {}
 
         if map_user_uid:
-            uid = os.getuid()
+            if not uid:
+                uid = os.getuid()
             config_keys["raw.idmap"] = f"both {uid!s} 0"
 
         if self._host_supports_mknod():
