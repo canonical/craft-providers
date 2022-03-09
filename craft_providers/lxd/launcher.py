@@ -18,6 +18,7 @@
 """LXD Instance Provider."""
 
 import logging
+from typing import Optional
 
 from craft_providers import Base, bases
 
@@ -126,6 +127,7 @@ def launch(
     auto_create_project: bool = False,
     ephemeral: bool = False,
     map_user_uid: bool = False,
+    uid: Optional[int] = None,
     use_snapshots: bool = False,
     project: str = "default",
     remote: str = "local",
@@ -143,7 +145,8 @@ def launch(
     :param auto_clean: Automatically clean instance, if incompatible.
     :param auto_create_project: Automatically create LXD project, if needed.
     :param ephemeral: Create ephemeral instance.
-    :param map_user_uid: Map current uid/gid to instance's root uid/gid.
+    :param map_user_uid: Map host uid/gid to instance's root uid/gid.
+    :param uid: The uid to be mapped, if ``map_user_id`` is enabled.
     :param use_snapshots: Use LXD snapshots for bootstrapping images.
     :param project: LXD project to create instance in.
     :param remote: LXD remote to create instance on.
@@ -204,6 +207,7 @@ def launch(
         image_remote=image_remote,
         ephemeral=ephemeral,
         map_user_uid=map_user_uid,
+        uid=uid,
     )
     base_configuration.setup(executor=instance)
 

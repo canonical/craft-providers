@@ -16,6 +16,7 @@
 #
 
 import io
+import os
 import pathlib
 import subprocess
 
@@ -190,6 +191,30 @@ def test_launch_ephemeral(instance_name):
 
 
 def test_launch_map_user_uid_true(instance_name, tmp_path):
+    tmp_path.chmod(0o755)
+
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+
+    instance = lxd.launch(
+        name=instance_name,
+        base_configuration=base_configuration,
+        image_name="20.04",
+        image_remote="ubuntu",
+        map_user_uid=True,
+        uid=os.stat(tmp_path).st_uid,
+    )
+
+    try:
+        instance.mount(host_source=tmp_path, target=pathlib.Path("/mnt"))
+
+        # If user ID mappings are enabled, we will be able to write.
+        instance.execute_run(["touch", "/mnt/foo"], capture_output=True, check=True)
+    finally:
+        if instance.exists():
+            instance.delete()
+
+
+def test_launch_map_user_uid_true_no_uid(instance_name, tmp_path):
     tmp_path.chmod(0o755)
 
     base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
