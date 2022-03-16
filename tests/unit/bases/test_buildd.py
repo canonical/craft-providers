@@ -32,6 +32,7 @@ DEFAULT_FAKE_CMD = ["fake-executor"]
         (buildd.BuilddBaseAlias.XENIAL, "test-xenial-host"),
         (buildd.BuilddBaseAlias.BIONIC, "test-bionic-host"),
         (buildd.BuilddBaseAlias.FOCAL, "test-focal-host"),
+        (buildd.BuilddBaseAlias.JAMMY, "test-jammy-host"),
     ],
 )
 @pytest.mark.parametrize(
@@ -502,6 +503,7 @@ def test_setup_snapd_failures(
         buildd.BuilddBaseAlias.XENIAL,
         buildd.BuilddBaseAlias.BIONIC,
         buildd.BuilddBaseAlias.FOCAL,
+        buildd.BuilddBaseAlias.JAMMY,
     ],
 )
 @pytest.mark.parametrize("system_running_ready_stdout", ["degraded", "running"])
@@ -573,6 +575,7 @@ def test_wait_for_system_ready(
         buildd.BuilddBaseAlias.XENIAL,
         buildd.BuilddBaseAlias.BIONIC,
         buildd.BuilddBaseAlias.FOCAL,
+        buildd.BuilddBaseAlias.JAMMY,
     ],
 )
 def test_wait_for_system_ready_timeout(  # pylint: disable=unused-argument
@@ -606,6 +609,7 @@ def test_wait_for_system_ready_timeout(  # pylint: disable=unused-argument
         buildd.BuilddBaseAlias.XENIAL,
         buildd.BuilddBaseAlias.BIONIC,
         buildd.BuilddBaseAlias.FOCAL,
+        buildd.BuilddBaseAlias.JAMMY,
     ],
 )
 def test_wait_for_system_ready_timeout_in_network(  # pylint: disable=unused-argument

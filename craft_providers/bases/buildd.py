@@ -77,6 +77,7 @@ class BuilddBaseAlias(enum.Enum):
     XENIAL = "16.04"
     BIONIC = "18.04"
     FOCAL = "20.04"
+    JAMMY = "22.04"
 
 
 # pylint: disable=no-self-use
