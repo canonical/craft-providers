@@ -29,10 +29,6 @@ from . import errors
 from .lxc import LXC
 from .lxd import LXD
 
-# grp does not exist on Windows.
-if sys.platform == "linux":
-    import grp
-
 logger = logging.getLogger(__name__)
 
 
@@ -103,13 +99,9 @@ def is_installed() -> bool:
 def is_user_permitted() -> bool:
     """Check if user has permisisons to connect to LXD.
 
-    The user must be root or be in lxd group to talk to the local LXD socket.
-
     :returns: True if user has correct permissions.
     """
-    return os.geteuid() == 0 or any(
-        grp.getgrgid(g).gr_name == "lxd" for g in os.getgroups()
-    )
+    return os.access("/var/snap/lxd/common/lxd/unix.socket", os.O_RDWR)
 
 
 def ensure_lxd_is_ready(
