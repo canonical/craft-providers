@@ -18,94 +18,128 @@
 """Persistent instance config / datastore resident in provided environment."""
 
 import io
-import logging
 import pathlib
-import subprocess
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import pydantic
 import yaml
 
 from craft_providers import Executor, errors
+from craft_providers.util import temp_paths
 
 from .errors import BaseConfigurationError
 
-logger = logging.getLogger(__name__)
 
-
-class InstanceConfiguration(pydantic.BaseModel):
+class InstanceConfiguration(pydantic.BaseModel, extra=pydantic.Extra.forbid):
     """Instance configuration datastore.
 
     :param compatibility_tag: Compatibility tag for instance.
+
+    :param snaps: dictionary of snaps and their revisions, e.g.
+      snaps:
+        snapcraft:
+          revision: "x100"
+        charmcraft:
+          revision: 834
     """
 
-    compatibility_tag: str
+    compatibility_tag: Optional[str] = None
+    snaps: Optional[Dict[str, Dict[str, Any]]] = None
 
     @classmethod
-    def unmarshal(cls, data: Dict[str, str]) -> "InstanceConfiguration":
-        """Unmarshal data dictionary.
+    def unmarshal(cls, data: Dict[str, Any]) -> "InstanceConfiguration":
+        """Create and populate a new `InstanceConfig` object from dictionary data.
 
-        :param data: Dictionary to unmarshal.
+        The unmarshal method validates the data in the dictionary and populates
+        the corresponding fields in the `InstanceConfig` object.
 
-        :returns: InstanceConfiguration.
+        :param data: The dictionary data to unmarshal.
+
+        :return: The newly created `InstanceConfiguration` object.
+
+        :raise BaseConfigurationError: If validation fails.
         """
-        return cls(compatibility_tag=data["compatibility_tag"])  # type: ignore
+        return InstanceConfiguration(**data)
+
+    def marshal(self) -> Dict[str, Any]:
+        """Create a dictionary containing the InstanceConfiguration data.
+
+        :return: The newly created dictionary.
+        """
+        return self.dict(by_alias=True, exclude_unset=True)
 
     @classmethod
     def load(
-        cls, *, executor: Executor, config_path: pathlib.Path
+        cls,
+        executor: Executor,
+        config_path: pathlib.Path = pathlib.Path("/etc/craft-instance.conf"),
     ) -> Optional["InstanceConfiguration"]:
-        """Load instance configuration from executed environment.
+        """Load an instance config file from an environment.
 
         :param executor: Executor for instance.
-        :param config_path: Path to configuration file.
+        :param config_path: Path to configuration file. Default is `/etc/craft-instance.conf`.
 
-        :returns: InstanceConfiguration object.
+        :return: The InstanceConfiguration object or None if the config does not exist or is empty.
+
+        :raise BaseConfigurationError: If the file cannot be loaded from the environment.
         """
-        # TODO: Replace test / cat usage with an improved
-        # Executor.pull_file_io() once available.
-        try:
-            proc = executor.execute_run(
-                command=["test", "-f", config_path.as_posix()],
-                capture_output=True,
-                check=True,
-            )
-        except subprocess.CalledProcessError:
-            return None
+        with temp_paths.home_temporary_file() as temp_config_file:
+            try:
+                executor.pull_file(source=config_path, destination=temp_config_file)
+            except errors.ProviderError as error:
+                raise BaseConfigurationError(
+                    brief=f"Failed to read instance config in environment at {config_path}",
+                ) from error
+            except FileNotFoundError:
+                return None
+            with open(temp_config_file, encoding="utf8") as file:
+                data = yaml.safe_load(file)
+                if data is None:
+                    return None
 
-        try:
-            proc = executor.execute_run(
-                command=["cat", config_path.as_posix()],
-                capture_output=True,
-                check=True,
-                text=True,
-            )
-        except subprocess.CalledProcessError as error:
-            raise BaseConfigurationError(
-                brief=f"Failed to read instance config in environment at {config_path.as_posix()}",
-                details=errors.details_from_called_process_error(error),
-            ) from error
+                return cls.unmarshal(data)
 
-        data = yaml.safe_load(proc.stdout)
-
-        try:
-            return cls.unmarshal(data)
-        except (pydantic.ValidationError, KeyError) as error:
-            raise BaseConfigurationError(
-                brief="Invalid instance config data.",
-                details=f"Instance configuration data: {data!r}",
-            ) from error
-
-    def save(self, *, executor: Executor, config_path: pathlib.Path) -> None:
-        """Save instance configuration in executed environment.
+    def save(
+        self,
+        executor: Executor,
+        config_path: pathlib.Path = pathlib.Path("/etc/craft-instance.conf"),
+    ) -> None:
+        """Save an instance config file to an environment.
 
         :param executor: Executor for instance.
-        :param config_path: Path to configuration file.
+        :param config_path: Path to configuration file. Default is `/etc/craft-instance.conf`.
+
         """
-        data = self.dict()
+        data = self.marshal()
 
         executor.push_file_io(
             destination=config_path,
             content=io.BytesIO(yaml.dump(data).encode()),
             file_mode="0644",
         )
+
+    @classmethod
+    def update(
+        cls,
+        executor: Executor,
+        data: Dict[str, Any],
+        config_path: pathlib.Path = pathlib.Path("/etc/craft-instance.conf"),
+    ) -> "InstanceConfiguration":
+        """Update an instance config file in an environment.
+
+        If there is no existing config to update, then a new config is created.
+
+        :param executor: Executor for instance.
+        :param data: The dictionary to update instance with.
+
+        :return: The updated `InstanceConfiguration` object.
+        """
+        old_instance = cls.load(executor=executor, config_path=config_path)
+        if old_instance is None:
+            new_instance = cls.unmarshal(data)
+        else:
+            new_instance = old_instance.copy(update=data)
+
+        new_instance.save(executor=executor, config_path=config_path)
+
+        return new_instance

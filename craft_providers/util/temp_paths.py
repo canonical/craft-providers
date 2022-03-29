@@ -31,3 +31,11 @@ def home_temporary_directory() -> Iterator[pathlib.Path]:
         dir=pathlib.Path.home(),
     ) as tmp_dir:
         yield pathlib.Path(tmp_dir)
+
+
+@contextlib.contextmanager
+def home_temporary_file() -> Iterator[pathlib.Path]:
+    """Create a temporary directory in the home directory where Multipass has access."""
+    with home_temporary_directory() as tmp_dir:
+        with tempfile.NamedTemporaryFile(dir=tmp_dir) as tmp_file:
+            yield pathlib.Path(tmp_file.name)
