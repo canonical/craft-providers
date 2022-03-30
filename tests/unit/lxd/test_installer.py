@@ -34,9 +34,6 @@ from craft_providers.lxd import (
     is_user_permitted,
 )
 
-if sys.platform == "linux":
-    import grp
-
 
 @pytest.fixture
 def mock_is_installed():
@@ -89,14 +86,11 @@ def mock_os_getgroups():
 
 
 @pytest.fixture
-def mock_grp():
+def mock_os_access():
     with mock.patch.object(
-        installer,
-        "grp",
-        create=True,
-    ) as mock_grp:
-        mock_grp.getgrgid.return_value = []
-        yield mock_grp
+        os, "access", return_value=True, create=True
+    ) as mock_os_access:
+        yield mock_os_access
 
 
 @pytest.mark.parametrize("platform", ["win32", "darwin", "other"])
@@ -264,30 +258,16 @@ def test_is_installed(which, installed, monkeypatch):
     assert is_installed() == installed
 
 
-def test_is_user_permitted_root(mock_os_geteuid, mock_os_getgroups):
-    mock_os_geteuid.return_value = 0
+@pytest.mark.skipif(sys.platform != "linux", reason=f"unsupported on {sys.platform}")
+def test_is_user_permitted(mock_os_access):
+    mock_os_access.return_value = True
 
     assert is_user_permitted() is True
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason=f"unsupported on {sys.platform}")
-def test_is_user_permitted_lxd_group(mock_os_geteuid, mock_os_getgroups, mock_grp):
-    mock_os_getgroups.return_value = [1, 2, 3]
-    mock_grp.getgrgid.side_effect = (
-        lambda g: grp.struct_group(["lxd", "x", g, []])  # type: ignore
-        if g == 2
-        else grp.struct_group([f"group-{g}", "x", g, []])  # type: ignore
-    )
-
-    assert is_user_permitted() is True
-
-
-@pytest.mark.skipif(sys.platform != "linux", reason=f"unsupported on {sys.platform}")
-def test_is_user_permitted_failure(mock_os_geteuid, mock_os_getgroups, mock_grp):
-    mock_os_getgroups.return_value = [1, 2, 3]
-    mock_grp.getgrgid.side_effect = lambda g: grp.struct_group(
-        ["not-lxd-group", "x", g, []]
-    )  # type: ignore
+def test_is_user_permitted_failure(mock_os_access):
+    mock_os_access.return_value = False
 
     assert is_user_permitted() is False
 
