@@ -16,15 +16,26 @@
 #
 
 import pathlib
-import textwrap
 from unittest import mock
 
 import pytest
+import yaml
 from pydantic import ValidationError
 
 from craft_providers import Executor
 from craft_providers.bases.errors import BaseConfigurationError, ProviderError
 from craft_providers.bases.instance_config import InstanceConfiguration
+
+
+@pytest.fixture
+def default_config_data():
+    return {
+        "compatibility_tag": "tag-foo-v1",
+        "snaps": {
+            "charmcraft": {"revision": 834},
+            "core22": {"revision": 147},
+        },
+    }
 
 
 @pytest.fixture
@@ -51,25 +62,6 @@ def config_fixture(mocker, tmpdir):
         return config_file
 
     yield _config_fixture
-
-
-@pytest.fixture()
-def config_fixture_default(config_fixture):
-    """Creates an instance config file containing default data."""
-
-    def _config_fixture_default():
-        data = textwrap.dedent(
-            """\
-            compatibility_tag: tag-foo-v1
-            snaps:
-              charmcraft:
-                revision: 834
-            """
-        )
-        my_config_fixture = config_fixture(data=data)
-        return my_config_fixture
-
-    yield _config_fixture_default()
 
 
 def test_save(mock_executor):
@@ -110,8 +102,8 @@ def test_load_empty_config_returns_none(mock_executor, config_fixture):
     assert config_instance is None
 
 
-def test_load_with_valid_config(mock_executor, config_fixture_default):
-    config_file = config_fixture_default
+def test_load_with_valid_config(mock_executor, config_fixture, default_config_data):
+    config_file = config_fixture(data=yaml.dump(default_config_data))
     config_path = pathlib.Path("/etc/crafty-crafty.conf")
     config_instance = InstanceConfiguration.load(
         executor=mock_executor, config_path=config_path
@@ -126,7 +118,7 @@ def test_load_with_valid_config(mock_executor, config_fixture_default):
 
     assert config_instance == {
         "compatibility_tag": "tag-foo-v1",
-        "snaps": {"charmcraft": {"revision": 834}},
+        "snaps": {"charmcraft": {"revision": 834}, "core22": {"revision": 147}},
     }
 
 
@@ -155,3 +147,68 @@ def test_load_failure_to_pull_file_raises_error(mock_executor):
     assert exc_info.value == BaseConfigurationError(
         brief=f"Failed to read instance config in environment at {config_path}",
     )
+
+
+def test_update_single_value(default_config_data, mock_executor, mocker, tmpdir):
+    """Test that a single value in a config is properly updated."""
+    mocker.patch(
+        "craft_providers.bases.instance_config.InstanceConfiguration.load",
+        return_value=InstanceConfiguration(**default_config_data),
+    )
+
+    updated_config = InstanceConfiguration.update(
+        executor=mock_executor,
+        data={"compatibility_tag": "updated-tag-value"},
+        config_path=pathlib.Path(tmpdir / "crafty-crafty.conf"),
+    )
+
+    assert updated_config.compatibility_tag == "updated-tag-value"
+
+
+def test_update_update_nested_values(
+    default_config_data, mock_executor, mocker, tmpdir
+):
+    """Test updating a config by updating an existing nested value."""
+    mocker.patch(
+        "craft_providers.bases.instance_config.InstanceConfiguration.load",
+        return_value=InstanceConfiguration(**default_config_data),
+    )
+
+    updated_config = InstanceConfiguration.update(
+        executor=mock_executor,
+        data={
+            "snaps": {
+                "charmcraft": {"revision": 835},
+            }
+        },
+        config_path=pathlib.Path(tmpdir / "crafty-crafty.conf"),
+    )
+
+    assert updated_config.snaps == {
+        "charmcraft": {"revision": 835},
+        "core22": {"revision": 147},
+    }
+
+
+def test_update_add_nested_values(default_config_data, mock_executor, mocker, tmpdir):
+    """Test updating a config by adding a new nested value."""
+    mocker.patch(
+        "craft_providers.bases.instance_config.InstanceConfiguration.load",
+        return_value=InstanceConfiguration(**default_config_data),
+    )
+
+    updated_config = InstanceConfiguration.update(
+        executor=mock_executor,
+        data={
+            "snaps": {
+                "new-test-snap": {"revision": 1},
+            }
+        },
+        config_path=pathlib.Path(tmpdir / "crafty-crafty.conf"),
+    )
+
+    assert updated_config.snaps == {
+        "charmcraft": {"revision": 834},
+        "core22": {"revision": 147},
+        "new-test-snap": {"revision": 1},
+    }

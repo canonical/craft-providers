@@ -51,7 +51,7 @@ def test_inject_from_host_using_pack_fallback(
 
     log_messages = [r.message for r in caplog.records]
     assert log_messages == [
-        "Failed to fetch snap from snapd, falling back to `snap pack` to recreate."
+        "Failed to fetch snap from snapd, falling back to `snap pack` to recreate"
     ]
 
 
