@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2022 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -155,6 +155,18 @@ def test_setup(  # pylint: disable=too-many-arguments
     base_config.setup(executor=fake_executor)
 
     assert fake_executor.records_of_push_file_io == [
+        dict(
+            destination="/etc/apt/apt.conf.d/20auto-upgrades",
+            content=dedent(
+                """\
+                APT::Periodic::Update-Package-Lists "10000";
+                APT::Periodic::Unattended-Upgrade "0";
+                """
+            ).encode(),
+            file_mode="0644",
+            group="root",
+            user="root",
+        ),
         dict(
             destination="/etc/environment",
             content=etc_environment_content,

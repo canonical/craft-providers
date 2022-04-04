@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2022 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -258,15 +258,10 @@ class BuilddBase(Base):
         else:
             deadline = None
 
-        self._ensure_os_compatible(
-            executor=executor,
-            deadline=deadline,
-        )
+        self._ensure_os_compatible(executor=executor, deadline=deadline)
         self._ensure_instance_config_compatible(executor=executor, deadline=deadline)
-        self._setup_environment(
-            executor=executor,
-            deadline=deadline,
-        )
+        self._disable_automatic_apt(executor=executor, deadline=deadline)
+        self._setup_environment(executor=executor, deadline=deadline)
         self._setup_wait_for_system_ready(
             executor=executor, deadline=deadline, retry_wait=retry_wait
         )
@@ -279,6 +274,32 @@ class BuilddBase(Base):
         )
         self._setup_apt(executor=executor, deadline=deadline)
         self._setup_snapd(executor=executor, deadline=deadline)
+
+    def _disable_automatic_apt(
+        self, *, executor: Executor, deadline: Optional[float]
+    ) -> None:
+        """Disable automatic apt actions.
+
+        This should happen as soon as possible in the instance overall setup, to reduce the
+        chances of an automatic apt work being triggered during the setup itself (because it
+        includes apt work which may clash the triggered unattended jobs).
+
+        :param executor: Executor for target container.
+        :param deadline: Optional time.time() deadline.
+        """
+        _check_deadline(deadline)
+        # set the verification frequency in 10000 days and disable the upgrade
+        content = dedent(
+            """\
+            APT::Periodic::Update-Package-Lists "10000";
+            APT::Periodic::Unattended-Upgrade "0";
+        """
+        ).encode()
+        executor.push_file_io(
+            destination=pathlib.Path("/etc/apt/apt.conf.d/20auto-upgrades"),
+            content=io.BytesIO(content),
+            file_mode="0644",
+        )
 
     def _setup_apt(self, *, executor: Executor, deadline: Optional[float]) -> None:
         """Configure apt & update cache.
