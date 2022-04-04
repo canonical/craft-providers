@@ -26,3 +26,11 @@ def test_home_temporary_directory():
         assert tmp_path.is_dir() is True
 
     assert tmp_path.exists() is False
+
+
+def test_home_temporary_file():
+    with temp_paths.home_temporary_file() as tmp_file:
+        assert tmp_file.relative_to(pathlib.Path.home())
+        assert tmp_file.is_file() is True
+
+    assert tmp_file.exists() is False

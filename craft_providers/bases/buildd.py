@@ -26,11 +26,13 @@ from textwrap import dedent
 from time import sleep
 from typing import Dict, Optional, Type
 
+from pydantic import ValidationError
+
 from craft_providers import Base, Executor, errors
 from craft_providers.util.os_release import parse_os_release
 
-from . import instance_config
 from .errors import BaseCompatibilityError, BaseConfigurationError
+from .instance_config import InstanceConfiguration
 
 logger = logging.getLogger(__name__)
 
@@ -106,9 +108,7 @@ class BuilddBase(Base):
 
     compatibility_tag: str = f"buildd-{Base.compatibility_tag}"
     instance_config_path: pathlib.Path = pathlib.Path("/etc/craft-instance.conf")
-    instance_config_class: Type[
-        instance_config.InstanceConfiguration
-    ] = instance_config.InstanceConfiguration
+    instance_config_class: Type[InstanceConfiguration] = InstanceConfiguration
 
     def __init__(
         self,
@@ -135,13 +135,21 @@ class BuilddBase(Base):
         :raises BaseConfigurationError: on other unexpected error.
         """
         _check_deadline(deadline)
-        config = self.instance_config_class.load(
-            executor=executor,
-            config_path=self.instance_config_path,
-        )
 
-        # If no config has been written, assume it is compatible (likely an
-        # unfinished setup).
+        try:
+            config = InstanceConfiguration.load(
+                executor=executor,
+                config_path=self.instance_config_path,
+            )
+        except ValidationError as error:
+            raise BaseConfigurationError(
+                brief="Failed to parse instance configuration file.",
+            ) from error
+        # if no config exists, assume base is compatible (likely unfinished setup)
+        except FileNotFoundError:
+            return
+
+        # make the same assumption as above for empty configs
         if config is None:
             return
 
@@ -374,12 +382,9 @@ class BuilddBase(Base):
     def _setup_instance_config(
         self, *, executor: Executor, deadline: Optional[float]
     ) -> None:
-        config = instance_config.InstanceConfiguration(
-            compatibility_tag=self.compatibility_tag
-        )
-
-        config.save(
+        InstanceConfiguration.update(
             executor=executor,
+            data={"compatibility_tag": self.compatibility_tag},
             config_path=self.instance_config_path,
         )
         _check_deadline(deadline)

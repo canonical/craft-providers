@@ -19,11 +19,22 @@ from textwrap import dedent
 from unittest import mock
 
 import pytest
+from pydantic import ValidationError
 
 from craft_providers.bases import buildd, errors, instance_config
 from craft_providers.errors import details_from_called_process_error
 
 DEFAULT_FAKE_CMD = ["fake-executor"]
+
+
+@pytest.fixture()
+def mock_load(mocker):
+    mocker.patch(
+        "craft_providers.bases.instance_config.InstanceConfiguration.load",
+        return_value=instance_config.InstanceConfiguration(
+            compatibility_tag="buildd-base-v0"
+        ),
+    )
 
 
 @pytest.mark.parametrize(
@@ -59,6 +70,7 @@ def test_setup(  # pylint: disable=too-many-arguments
     hostname,
     environment,
     etc_environment_content,
+    mock_load,
 ):
     if environment is None:
         environment = buildd.default_command_environment()
@@ -634,4 +646,36 @@ def test_wait_for_system_ready_timeout_in_network(  # pylint: disable=unused-arg
 
     assert exc_info.value == errors.BaseConfigurationError(
         brief="Timed out waiting for networking to be ready."
+    )
+
+
+@mock.patch(
+    "craft_providers.bases.instance_config.InstanceConfiguration.load",
+    side_effect=ValidationError("foo", instance_config.InstanceConfiguration),
+)
+def test_ensure_config_compatible_validation_error(fake_executor):
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
+
+    with pytest.raises(errors.BaseConfigurationError) as exc_info:
+        base_config._ensure_instance_config_compatible(
+            executor=fake_executor, deadline=None
+        )
+
+    assert exc_info.value == errors.BaseConfigurationError(
+        brief="Failed to parse instance configuration file."
+    )
+
+
+@mock.patch(
+    "craft_providers.bases.instance_config.InstanceConfiguration.load",
+    return_value=None,
+)
+def test_ensure_config_compatible_empty_config_returns_none(fake_executor):
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
+
+    assert (
+        base_config._ensure_instance_config_compatible(
+            executor=fake_executor, deadline=None
+        )
+        is None
     )
