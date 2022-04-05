@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2022 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -330,7 +330,7 @@ def test_launch_with_existing_instance_not_running(
     ]
     assert mock_base_configuration.mock_calls == [
         mock.call.get_command_environment(),
-        mock.call.setup(executor=mock_lxd_instance.return_value),
+        mock.call.warmup(executor=mock_lxd_instance.return_value),
     ]
 
 
@@ -361,7 +361,7 @@ def test_launch_with_existing_instance_running(
     ]
     assert mock_base_configuration.mock_calls == [
         mock.call.get_command_environment(),
-        mock.call.setup(executor=mock_lxd_instance.return_value),
+        mock.call.warmup(executor=mock_lxd_instance.return_value),
     ]
 
 
@@ -370,7 +370,7 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
 ):
     mock_lxd_instance.return_value.exists.return_value = True
     mock_lxd_instance.return_value.is_running.return_value = False
-    mock_base_configuration.setup.side_effect = [
+    mock_base_configuration.warmup.side_effect = [
         bases.BaseCompatibilityError(reason="foo"),
         None,
     ]
@@ -406,7 +406,7 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
     ]
     assert mock_base_configuration.mock_calls == [
         mock.call.get_command_environment(),
-        mock.call.setup(executor=mock_lxd_instance.return_value),
+        mock.call.warmup(executor=mock_lxd_instance.return_value),
         mock.call.setup(executor=mock_lxd_instance.return_value),
     ]
 
@@ -416,7 +416,7 @@ def test_launch_with_existing_instance_incompatible_without_auto_clean(
 ):
     mock_lxd_instance.return_value.exists.return_value = True
     mock_lxd_instance.return_value.is_running.return_value = False
-    mock_base_configuration.setup.side_effect = [
+    mock_base_configuration.warmup.side_effect = [
         bases.BaseCompatibilityError(reason="foo")
     ]
 
@@ -444,5 +444,5 @@ def test_launch_with_existing_instance_incompatible_without_auto_clean(
     ]
     assert mock_base_configuration.mock_calls == [
         mock.call.get_command_environment(),
-        mock.call.setup(executor=mock_lxd_instance.return_value),
+        mock.call.warmup(executor=mock_lxd_instance.return_value),
     ]

@@ -21,7 +21,13 @@ from unittest import mock
 import pytest
 from pydantic import ValidationError
 
-from craft_providers.bases import buildd, errors, instance_config
+from craft_providers.bases import (
+    BaseCompatibilityError,
+    BaseConfigurationError,
+    buildd,
+    errors,
+    instance_config,
+)
 from craft_providers.errors import details_from_called_process_error
 
 DEFAULT_FAKE_CMD = ["fake-executor"]
@@ -691,3 +697,139 @@ def test_ensure_config_compatible_empty_config_returns_none(fake_executor):
         )
         is None
     )
+
+
+def test_warmup_overall(fake_process, fake_executor, mock_load):
+    alias = buildd.BuilddBaseAlias.JAMMY
+    base_config = buildd.BuilddBase(
+        alias=alias,
+        environment=buildd.default_command_environment(),
+    )
+
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout=dedent(
+            f"""\
+            NAME="Ubuntu"
+            ID=ubuntu
+            ID_LIKE=debian
+            VERSION_ID="{alias.value}"
+            """
+        ),
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "systemctl", "is-system-running"], stdout="degraded"
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "getent", "hosts", "snapcraft.io"]
+    )
+
+    base_config.warmup(executor=fake_executor)
+
+    assert fake_executor.records_of_push_file_io == []
+    assert fake_executor.records_of_pull_file == []
+    assert fake_executor.records_of_push_file == []
+
+
+def test_warmup_bad_os(fake_process, fake_executor, mock_load):
+    base_config = buildd.BuilddBase(
+        alias=buildd.BuilddBaseAlias.JAMMY,
+        environment=buildd.default_command_environment(),
+    )
+
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout=dedent(
+            """\
+            NAME="D.O.S."
+            ID=dos
+            ID_LIKE=dos
+            VERSION_ID="DOS 5.1"
+            """
+        ),
+    )
+
+    with pytest.raises(BaseCompatibilityError):
+        base_config.warmup(executor=fake_executor)
+
+
+def test_warmup_bad_instance_config(fake_process, fake_executor, mock_load):
+    alias = buildd.BuilddBaseAlias.JAMMY
+    base_config = buildd.BuilddBase(
+        alias=alias,
+        environment=buildd.default_command_environment(),
+    )
+    base_config.compatibility_tag = "different-tag"
+
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout=dedent(
+            f"""\
+            NAME="Ubuntu"
+            ID=ubuntu
+            ID_LIKE=debian
+            VERSION_ID="{alias.value}"
+            """
+        ),
+    )
+
+    with pytest.raises(BaseCompatibilityError):
+        base_config.warmup(executor=fake_executor)
+
+
+def test_warmup_never_ready(fake_process, fake_executor, mock_load):
+    alias = buildd.BuilddBaseAlias.JAMMY
+    base_config = buildd.BuilddBase(
+        alias=alias,
+        environment=buildd.default_command_environment(),
+    )
+
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout=dedent(
+            f"""\
+            NAME="Ubuntu"
+            ID=ubuntu
+            ID_LIKE=debian
+            VERSION_ID="{alias.value}"
+            """
+        ),
+    )
+    for _ in range(3):  # it will called twice until timeout, one extra for safety
+        fake_process.register_subprocess(
+            [*DEFAULT_FAKE_CMD, "systemctl", "is-system-running"],
+            stdout="starting",
+        )
+
+    with pytest.raises(BaseConfigurationError):
+        base_config.warmup(executor=fake_executor, timeout=0.01, retry_wait=0.1)
+
+
+def test_warmup_never_network(fake_process, fake_executor, mock_load):
+    alias = buildd.BuilddBaseAlias.JAMMY
+    base_config = buildd.BuilddBase(
+        alias=alias,
+        environment=buildd.default_command_environment(),
+    )
+
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout=dedent(
+            f"""\
+            NAME="Ubuntu"
+            ID=ubuntu
+            ID_LIKE=debian
+            VERSION_ID="{alias.value}"
+            """
+        ),
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "systemctl", "is-system-running"], stdout="degraded"
+    )
+    for _ in range(3):  # it will called twice until timeout, one extra for safety
+        fake_process.register_subprocess(
+            [*DEFAULT_FAKE_CMD, "getent", "hosts", "snapcraft.io"], returncode=1
+        )
+
+    with pytest.raises(BaseConfigurationError):
+        base_config.warmup(executor=fake_executor, timeout=0.01, retry_wait=0.1)

@@ -275,6 +275,48 @@ class BuilddBase(Base):
         self._setup_apt(executor=executor, deadline=deadline)
         self._setup_snapd(executor=executor, deadline=deadline)
 
+    def warmup(
+        self,
+        *,
+        executor: Executor,
+        retry_wait: float = 0.25,
+        timeout: Optional[float] = None,
+    ) -> None:
+        """Prepare a previously created and setup instance for use by the application.
+
+        Ensure the instance is still valid and wait for environment to become ready.
+
+        Guarantees provided by this wait:
+
+            - OS and instance config are compatible
+
+            - networking available (IP & DNS resolution)
+
+            - system services are started and ready
+
+        If timeout is specified, abort operation if time has been exceeded.
+
+        :param executor: Executor for target container.
+        :param retry_wait: Duration to sleep() between status checks (if required).
+        :param timeout: Timeout in seconds.
+
+        :raises BaseCompatibilityError: if instance is incompatible.
+        :raises BaseConfigurationError: on other unexpected error.
+        """
+        if timeout is not None:
+            deadline: Optional[float] = time.time() + timeout
+        else:
+            deadline = None
+
+        self._ensure_os_compatible(executor=executor, deadline=deadline)
+        self._ensure_instance_config_compatible(executor=executor, deadline=deadline)
+        self._setup_wait_for_system_ready(
+            executor=executor, deadline=deadline, retry_wait=retry_wait
+        )
+        self._setup_wait_for_network(
+            executor=executor, deadline=deadline, retry_wait=retry_wait
+        )
+
     def _disable_automatic_apt(
         self, *, executor: Executor, deadline: Optional[float]
     ) -> None:

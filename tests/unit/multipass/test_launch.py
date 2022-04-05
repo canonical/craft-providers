@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2022 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -67,7 +67,7 @@ def test_launch_with_existing_instance(
         mock.call.start(),
     ]
     assert mock_base_configuration.mock_calls == [
-        mock.call.setup(executor=mock_multipass_instance)
+        mock.call.warmup(executor=mock_multipass_instance)
     ]
 
 
@@ -75,7 +75,7 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
     mock_base_configuration, mock_multipass_instance
 ):
     mock_multipass_instance.exists.return_value = True
-    mock_base_configuration.setup.side_effect = [
+    mock_base_configuration.warmup.side_effect = [
         bases.BaseCompatibilityError(reason="foo"),
         None,
     ]
@@ -97,7 +97,7 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
         mock.call.launch(cpus=2, disk_gb=64, mem_gb=2, image="30.04"),
     ]
     assert mock_base_configuration.mock_calls == [
-        mock.call.setup(executor=mock_multipass_instance),
+        mock.call.warmup(executor=mock_multipass_instance),
         mock.call.setup(executor=mock_multipass_instance),
     ]
 
@@ -106,7 +106,7 @@ def test_launch_with_existing_instance_incompatible_without_auto_clean(
     mock_base_configuration, mock_multipass_instance
 ):
     mock_multipass_instance.exists.return_value = True
-    mock_base_configuration.setup.side_effect = [
+    mock_base_configuration.warmup.side_effect = [
         bases.BaseCompatibilityError(reason="foo")
     ]
 
@@ -123,5 +123,5 @@ def test_launch_with_existing_instance_incompatible_without_auto_clean(
         mock.call.start(),
     ]
     assert mock_base_configuration.mock_calls == [
-        mock.call.setup(executor=mock_multipass_instance)
+        mock.call.warmup(executor=mock_multipass_instance)
     ]
