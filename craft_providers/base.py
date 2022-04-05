@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2022 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -78,8 +78,8 @@ class Base(ABC):
         of the installed dependencies required for subsequent use by the
         application.
 
-        Setup may be called more than once in a given instance to refresh/update
-        the environment.
+        Setup should not be called more than once in a given instance to
+        refresh/update the environment, use `warmup` for that.
 
         If timeout is specified, abort operation if time has been exceeded.
 
@@ -88,7 +88,30 @@ class Base(ABC):
             required).
         :param timeout: Timeout in seconds.
 
-        :raises ProviderError: on timeout or unexpected error.
+        :raises BaseCompatibilityError: if instance is incompatible.
+        :raises BaseConfigurationError: on other unexpected error.
+        """
+
+    @abstractmethod
+    def warmup(
+        self,
+        *,
+        executor: Executor,
+        retry_wait: float = 0.25,
+        timeout: Optional[float] = None,
+    ) -> None:
+        """Prepare a previously created and setup instance for use by the application.
+
+        Ensure the instance is still valid and wait for environment to become ready.
+
+        If timeout is specified, abort operation if time has been exceeded.
+
+        :param executor: Executor for target container.
+        :param retry_wait: Duration to sleep() between status checks (if required).
+        :param timeout: Timeout in seconds.
+
+        :raises BaseCompatibilityError: if instance is incompatible.
+        :raises BaseConfigurationError: on other unexpected error.
         """
 
     @abstractmethod
@@ -114,5 +137,6 @@ class Base(ABC):
             required).
         :param timeout: Timeout in seconds.
 
-        :raises ProviderError: on timeout or unexpected error.
+        :raises BaseCompatibilityError: if instance is incompatible.
+        :raises BaseConfigurationError: on other unexpected error.
         """

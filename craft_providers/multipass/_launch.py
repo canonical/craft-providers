@@ -60,7 +60,7 @@ def launch(
         # TODO: Warn if existing instance doesn't match cpu/disk/mem specs.
         instance.start()
         try:
-            base_configuration.setup(executor=instance)
+            base_configuration.warmup(executor=instance)
             return instance
         except bases.BaseCompatibilityError as error:
             if auto_clean:

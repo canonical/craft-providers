@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2022 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -173,7 +173,7 @@ def launch(
             instance.start()
 
         try:
-            base_configuration.setup(executor=instance)
+            base_configuration.warmup(executor=instance)
             return instance
         except bases.BaseCompatibilityError as error:
             if auto_clean:
