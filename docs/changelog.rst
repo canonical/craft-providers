@@ -2,6 +2,14 @@
 Changelog
 *********
 
+1.2.0 (2022-04-07)
+------------------
+
+- Refactor instance configuration
+- Disable automatic apt actions in instance setup
+- Warm-start existing instances instead of rerunning full setup
+- Don't reinstall snaps already installed on target
+
 1.1.1 (2022-03-30)
 ------------------
 
