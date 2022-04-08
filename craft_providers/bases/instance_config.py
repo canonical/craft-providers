@@ -30,6 +30,26 @@ from craft_providers.util import temp_paths
 from .errors import BaseConfigurationError
 
 
+def update_nested_dictionaries(
+    config_data: Dict[str, Any], new_data: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Recursively update a dictionary containing nested dictionaries.
+
+    New values are added and existing values are updated. No data are removed.
+
+    :param config_data: dictionary of config data to update.
+    :param new_data: data to update `config_data` with.
+    """
+    for key, value in new_data.items():
+        if isinstance(value, dict):
+            config_data[key] = update_nested_dictionaries(
+                config_data.get(key, {}), value
+            )
+        else:
+            config_data[key] = value
+    return config_data
+
+
 class InstanceConfiguration(pydantic.BaseModel, extra=pydantic.Extra.forbid):
     """Instance configuration datastore.
 
@@ -127,6 +147,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra=pydantic.Extra.forbid):
     ) -> "InstanceConfiguration":
         """Update an instance config file in an environment.
 
+        New values are added and existing values are updated. No data are removed.
         If there is no existing config to update, then a new config is created.
 
         :param executor: Executor for instance.
@@ -134,12 +155,15 @@ class InstanceConfiguration(pydantic.BaseModel, extra=pydantic.Extra.forbid):
 
         :return: The updated `InstanceConfiguration` object.
         """
-        old_instance = cls.load(executor=executor, config_path=config_path)
-        if old_instance is None:
-            new_instance = cls.unmarshal(data)
+        config_instance = cls.load(executor=executor, config_path=config_path)
+        if config_instance is None:
+            updated_config_instance = cls.unmarshal(data)
         else:
-            new_instance = old_instance.copy(update=data)
+            updated_config_data = update_nested_dictionaries(
+                config_data=config_instance.marshal(), new_data=data
+            )
+            updated_config_instance = InstanceConfiguration(**updated_config_data)
 
-        new_instance.save(executor=executor, config_path=config_path)
+        updated_config_instance.save(executor=executor, config_path=config_path)
 
-        return new_instance
+        return updated_config_instance
