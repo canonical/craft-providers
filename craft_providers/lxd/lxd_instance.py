@@ -102,7 +102,7 @@ class LXDInstance(Executor):
         group: str = "root",
         user: str = "root",
     ) -> None:
-        """Create file with content and file mode.
+        """Create or replace file with content and file mode.
 
         :param destination: Path to file.
         :param content: Contents of file.

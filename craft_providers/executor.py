@@ -112,7 +112,7 @@ class Executor(ABC):
         group: str = "root",
         user: str = "root",
     ) -> None:
-        """Create a file with specified content and file mode.
+        """Create or replace a file with specified content and file mode.
 
         :param destination: Path to file.
         :param content: Contents of file.
