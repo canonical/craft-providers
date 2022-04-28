@@ -87,7 +87,7 @@ class MultipassInstance(Executor):
         group: str = "root",
         user: str = "root",
     ) -> None:
-        """Create file with content and file mode.
+        """Create or replace file with content and file mode.
 
         Multipass transfers data as "ubuntu" user, forcing us to first copy a
         file to a temporary location before moving to a (possibly) root-owned
