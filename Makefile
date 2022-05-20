@@ -26,7 +26,6 @@ clean: ## Clean artifacts from building, testing, etc.
 	find . -name '*.pyo' -exec rm -f {} +
 	find . -name '*~' -exec rm -f {} +
 	find . -name '__pycache__' -exec rm -rf {} +
-	rm -rf .tox/
 	rm -f .coverage
 	rm -rf htmlcov/
 	rm -rf .pytest_cache
