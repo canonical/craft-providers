@@ -15,14 +15,18 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
+import json
 import pathlib
 import textwrap
 from unittest import mock
 
 import pytest
 import requests
+import yaml
+from logassert import Exact  # type: ignore
 
 from craft_providers.actions import snap_installer
+from craft_providers.bases.instance_config import InstanceConfiguration
 from craft_providers.errors import ProviderError, details_from_called_process_error
 
 
@@ -36,26 +40,26 @@ def mock_requests():
 
 
 @pytest.fixture(params=["1"])
-def config_fixture(request, tmpdir, mocker):
+def config_fixture(request, tmp_path, mocker):
     """Creates an instance config file in the pytest temp directory.
 
     Patches the temp_paths functions to point to the temporary directory containing the config.
 
     :param request: The revision of the target's snap. Default revision = 1.
     """
-    temp_path = pathlib.Path(tmpdir)
     config_content = textwrap.dedent(
         f"""\
         compatibility_tag: tag-foo-v1
         snaps:
           test-name:
-            revision: {request.param}
+            revision: '{request.param}'
+            source: {snap_installer.SNAP_SRC_HOST}
         """
     )
 
     def config_generator():
         """Generate a fresh config file so we do not __enter__ after __exit__."""
-        config_file = temp_path / "craft-instance.conf"
+        config_file = tmp_path / "craft-instance.conf"
         config_file.write_text(config_content)
         return config_file
 
@@ -65,7 +69,7 @@ def config_fixture(request, tmpdir, mocker):
     )
     mocker.patch(
         "craft_providers.bases.instance_config.temp_paths.home_temporary_directory",
-        return_value=temp_path,
+        return_value=tmp_path,
     )
 
 
@@ -75,20 +79,33 @@ def mock_get_host_snap_revision(request, mocker):
 
     :param request: The revision of the host's snap. Default revision = 2.
     """
+    mockee = "craft_providers.actions.snap_installer._get_host_snap_revision"
+    if isinstance(request.param, Exception):
+        mocker.patch(mockee, side_effect=request.param)
+    else:
+        mocker.patch(mockee, return_value=request.param)
+
+
+@pytest.fixture(params=["3"])
+def mock_get_snap_revision_ensuring_source(request, mocker):
+    """Mocks the _get_snap_revision_ensuring_source() function
+
+    :param request: The revision of the snap. Default revision = 3.
+    """
     mocker.patch(
-        "craft_providers.actions.snap_installer._get_host_snap_revision",
+        "craft_providers.actions.snap_installer._get_snap_revision_ensuring_source",
         return_value=request.param,
     )
 
 
-@pytest.fixture(params=["3"])
-def mock_get_store_snap_revision(request, mocker):
-    """Mocks the get_store_snap_revision() function
+@pytest.fixture(params=["4"])
+def mock_get_target_snap_revision_from_snapd(request, mocker):
+    """Mocks the _get_target_snap_revision_from_snapd() function
 
-    :param request: The revision of the store's snap. Default revision = 3.
+    :param request: The revision of the snap. Default revision = 4.
     """
     mocker.patch(
-        "craft_providers.actions.snap_installer._get_store_snap_revision",
+        "craft_providers.actions.snap_installer._get_target_snap_revision_from_snapd",
         return_value=request.param,
     )
 
@@ -99,6 +116,8 @@ def test_inject_from_host_classic(
     mock_requests,
     fake_executor,
     fake_process,
+    logs,
+    tmp_path,
 ):
 
     fake_process.register_subprocess(
@@ -127,6 +146,21 @@ def test_inject_from_host_classic(
     ]
 
     assert len(fake_process.calls) == 2
+    assert Exact("Installing snap 'test-name' from host (classic=True)") in logs.debug
+    assert "Revisions found: host='2', target='1'" in logs.debug
+
+    # check saved config
+    (saved_config_record,) = [
+        x
+        for x in fake_executor.records_of_push_file_io
+        if "craft-instance.conf" in x["destination"]
+    ]
+    config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
+    assert config.snaps is not None
+    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+        "revision": "2",
+        "source": snap_installer.SNAP_SRC_HOST,
+    }
 
 
 def test_inject_from_host_strict(
@@ -135,6 +169,8 @@ def test_inject_from_host_strict(
     mock_requests,
     fake_executor,
     fake_process,
+    logs,
+    tmp_path,
 ):
     fake_process.register_subprocess(
         ["fake-executor", "rm", "-f", "/tmp/test-name.snap"]
@@ -161,6 +197,21 @@ def test_inject_from_host_strict(
     ]
 
     assert len(fake_process.calls) == 2
+    assert Exact("Installing snap 'test-name' from host (classic=False)") in logs.debug
+    assert "Revisions found: host='2', target='1'" in logs.debug
+
+    # check saved config
+    (saved_config_record,) = [
+        x
+        for x in fake_executor.records_of_push_file_io
+        if "craft-instance.conf" in x["destination"]
+    ]
+    config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
+    assert config.snaps is not None
+    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+        "revision": "2",
+        "source": snap_installer.SNAP_SRC_HOST,
+    }
 
 
 @pytest.mark.parametrize("config_fixture", ["10"], indirect=True)
@@ -171,6 +222,7 @@ def test_inject_from_host_matching_revision_no_op(
     mock_requests,
     fake_executor,
     fake_process,
+    logs,
 ):
     """Injection shouldn't occur if target revision equals the host revision"""
     snap_installer.inject_from_host(
@@ -179,9 +231,26 @@ def test_inject_from_host_matching_revision_no_op(
 
     assert mock_requests.mock_calls == []
     assert len(fake_process.calls) == 0
+    assert "Revisions found: host='10', target='10'" in logs.debug
+    assert (
+        "Skipping snap injection: target is already up-to-date with revision on host"
+    ) in logs.debug
 
 
-def test_inject_from_push_error(
+@pytest.mark.parametrize(
+    "mock_get_host_snap_revision",
+    [snap_installer.SnapInstallationError("msg")],
+    indirect=True,
+)
+def test_inject_from_host_no_snapd(mock_get_host_snap_revision, fake_executor):
+    """The host does not have snapd at all."""
+    with pytest.raises(snap_installer.SnapInstallationError):
+        snap_installer.inject_from_host(
+            executor=fake_executor, snap_name="test-name", classic=False
+        )
+
+
+def test_inject_from_host_push_error(
     config_fixture, mock_requests, fake_executor, fake_process
 ):
     mock_executor = mock.Mock(spec=fake_executor, wraps=fake_executor)
@@ -210,7 +279,7 @@ def test_inject_from_host_snapd_connection_error_using_pack_fallback(
     fake_executor,
     fake_process,
     tmpdir,
-):  # pylint: disable=too-many-arguments
+):
     mock_requests.get.side_effect = requests.exceptions.ConnectionError()
 
     fake_process.register_subprocess(
@@ -251,7 +320,7 @@ def test_inject_from_host_snapd_http_error_using_pack_fallback(
     fake_executor,
     fake_process,
     tmpdir,
-):  # pylint: disable=too-many-arguments
+):
     mock_requests.get.return_value.raise_for_status.side_effect = (
         requests.exceptions.HTTPError()
     )
@@ -318,27 +387,25 @@ def test_inject_from_host_install_failure(
     assert len(fake_process.calls) == 2
 
 
+@pytest.mark.parametrize(
+    "mock_get_snap_revision_ensuring_source", [None], indirect=True
+)
 def test_install_from_store_strict(
-    config_fixture, mock_get_store_snap_revision, fake_executor, fake_process
+    config_fixture,
+    mock_get_snap_revision_ensuring_source,
+    fake_executor,
+    fake_process,
+    logs,
+    mock_get_target_snap_revision_from_snapd,
 ):
     fake_process.register_subprocess(
         [
             "fake-executor",
             "snap",
-            "download",
-            "test-name",
-            "--channel=test-chan",
-            "--basename=test-name",
-            "--target-directory=/tmp",
-        ]
-    )
-    fake_process.register_subprocess(
-        [
-            "fake-executor",
-            "snap",
             "install",
-            "/tmp/test-name.snap",
-            "--dangerous",
+            "test-name",
+            "--channel",
+            "test-chan",
         ],
     )
 
@@ -349,31 +416,50 @@ def test_install_from_store_strict(
         channel="test-chan",
     )
 
-    assert len(fake_process.calls) == 2
+    assert len(fake_process.calls) == 1
+    assert (
+        Exact(
+            "Installing snap 'test-name' from store (channel='test-chan', classic=False)"
+        )
+        in logs.debug
+    )
+    assert "Revision found in target: None" in logs.debug
+    assert "Revision after install/refresh: '4'" in logs.debug
+
+    # check saved config
+    (saved_config_record,) = [
+        x
+        for x in fake_executor.records_of_push_file_io
+        if "craft-instance.conf" in x["destination"]
+    ]
+    config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
+    assert config.snaps is not None
+    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+        "revision": "4",
+        "source": snap_installer.SNAP_SRC_STORE,
+    }
 
 
+@pytest.mark.parametrize(
+    "mock_get_snap_revision_ensuring_source", [None], indirect=True
+)
 def test_install_from_store_classic(
-    config_fixture, mock_get_store_snap_revision, fake_executor, fake_process
+    config_fixture,
+    mock_get_snap_revision_ensuring_source,
+    fake_executor,
+    fake_process,
+    logs,
+    mock_get_target_snap_revision_from_snapd,
 ):
     fake_process.register_subprocess(
         [
             "fake-executor",
             "snap",
-            "download",
-            "test-name",
-            "--channel=test-chan",
-            "--basename=test-name",
-            "--target-directory=/tmp",
-        ]
-    )
-    fake_process.register_subprocess(
-        [
-            "fake-executor",
-            "snap",
             "install",
-            "/tmp/test-name.snap",
+            "test-name",
+            "--channel",
+            "test-chan",
             "--classic",
-            "--dangerous",
         ],
     )
 
@@ -381,21 +467,78 @@ def test_install_from_store_classic(
         executor=fake_executor, snap_name="test-name", classic=True, channel="test-chan"
     )
 
-    assert len(fake_process.calls) == 2
+    assert len(fake_process.calls) == 1
+    assert (
+        Exact(
+            "Installing snap 'test-name' from store (channel='test-chan', classic=True)"
+        )
+        in logs.debug
+    )
+    assert "Revision found in target: None" in logs.debug
+    assert "Revision after install/refresh: '4'" in logs.debug
 
 
-def test_install_from_store_failure(
-    config_fixture, mock_get_store_snap_revision, fake_executor, fake_process
+def test_refresh_from_store(
+    config_fixture,
+    mock_get_snap_revision_ensuring_source,
+    fake_executor,
+    fake_process,
+    logs,
+    mock_get_target_snap_revision_from_snapd,
 ):
     fake_process.register_subprocess(
         [
             "fake-executor",
             "snap",
-            "download",
+            "refresh",
             "test-name",
-            "--channel=test-chan",
-            "--basename=test-name",
-            "--target-directory=/tmp",
+            "--channel",
+            "test-chan",
+        ],
+    )
+
+    snap_installer.install_from_store(
+        executor=fake_executor,
+        snap_name="test-name",
+        classic=False,
+        channel="test-chan",
+    )
+
+    assert len(fake_process.calls) == 1
+    assert (
+        Exact(
+            "Installing snap 'test-name' from store (channel='test-chan', classic=False)"
+        )
+        in logs.debug
+    )
+    assert "Revision found in target: '3'" in logs.debug
+    assert "Revision after install/refresh: '4'" in logs.debug
+
+    # check saved config
+    (saved_config_record,) = [
+        x
+        for x in fake_executor.records_of_push_file_io
+        if "craft-instance.conf" in x["destination"]
+    ]
+    config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
+    assert config.snaps is not None
+    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+        "revision": "4",
+        "source": snap_installer.SNAP_SRC_STORE,
+    }
+
+
+def test_install_from_store_failure(
+    config_fixture, mock_get_snap_revision_ensuring_source, fake_executor, fake_process
+):
+    fake_process.register_subprocess(
+        [
+            "fake-executor",
+            "snap",
+            "refresh",
+            "test-name",
+            "--channel",
+            "test-chan",
         ],
         returncode=1,
     )
@@ -409,19 +552,186 @@ def test_install_from_store_failure(
         )
 
     assert exc_info.value == snap_installer.SnapInstallationError(
-        brief="Failed to install snap 'test-name'.",
+        brief="Failed to install/refresh snap 'test-name'.",
         details=details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
     )
 
 
-@pytest.mark.parametrize("config_fixture", ["10"], indirect=True)
-@pytest.mark.parametrize("mock_get_store_snap_revision", ["10"], indirect=True)
-def test_install_from_store_matching_revision_no_op(
-    config_fixture, mock_get_store_snap_revision, fake_executor, fake_process
-):
-    """Installation from store shouldn't occur if target revision equals the host revision"""
-    snap_installer.install_from_store(
-        executor=fake_executor, snap_name="test-name", classic=True, channel="test-chan"
+# -- tests for the helping functions
+
+
+def test_get_host_snap_revision_ok(responses):
+    """Revision retrieved ok."""
+    snap_info = {"result": {"revision": "15"}}
+    responses.add(
+        responses.GET,
+        "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-snap",
+        json=snap_info,
+    )
+    result = snap_installer._get_host_snap_revision("test-snap")
+    assert result == "15"
+
+
+def test_get_host_snap_revision_connection_error(responses):
+    """Error when connecting to snapd.
+
+    Note that nothing is added to responses, so ConnectionError will be raised when
+    trying to connect, which is the effect we want.
+    """
+    with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
+        snap_installer._get_host_snap_revision("test-snap")
+    assert exc_info.value == snap_installer.SnapInstallationError(
+        brief="Unable to connect to snapd service."
+    )
+    assert exc_info.value.__cause__ is not None
+
+
+def test_get_target_snap_revision_from_snapd_process_error(fake_process, fake_executor):
+    """Error when running curl to get info from snapd in target environment."""
+    expected_cmd = [
+        "fake-executor",
+        "curl",
+        "--silent",
+        "--unix-socket",
+        "/run/snapd.socket",
+        "http://localhost/v2/snaps/test-snap",
+    ]
+    fake_process.register_subprocess(expected_cmd, returncode=1)
+
+    with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
+        snap_installer._get_target_snap_revision_from_snapd("test-snap", fake_executor)
+    assert exc_info.value == snap_installer.SnapInstallationError(
+        "Unable to get target snap revision."
+    )
+    assert exc_info.value.__cause__ is not None
+
+
+def test_get_target_snap_revision_from_snapd_ok(fake_process, fake_executor):
+    """Proper info retrieved ok."""
+    expected_cmd = [
+        "fake-executor",
+        "curl",
+        "--silent",
+        "--unix-socket",
+        "/run/snapd.socket",
+        "http://localhost/v2/snaps/test-snap",
+    ]
+    fake_snapd_response = json.dumps({"status-code": 200, "result": {"revision": "17"}})
+    fake_process.register_subprocess(expected_cmd, stdout=fake_snapd_response)
+
+    result = snap_installer._get_target_snap_revision_from_snapd(
+        "test-snap", fake_executor
+    )
+    assert result == "17"
+
+
+def test_get_target_snap_revision_from_snapd_not_found(fake_process, fake_executor):
+    """The requested snap is not found in target's snapd."""
+    expected_cmd = [
+        "fake-executor",
+        "curl",
+        "--silent",
+        "--unix-socket",
+        "/run/snapd.socket",
+        "http://localhost/v2/snaps/test-snap",
+    ]
+    fake_snapd_response = {"status-code": 404}
+    fake_process.register_subprocess(
+        expected_cmd, stdout=json.dumps(fake_snapd_response)
     )
 
-    assert len(fake_process.calls) == 0
+    result = snap_installer._get_target_snap_revision_from_snapd(
+        "test-snap", fake_executor
+    )
+    assert result is None
+
+
+def test_get_target_snap_revision_from_snapd_unknown(fake_process, fake_executor):
+    """The target's snapd returns an unknown response."""
+    expected_cmd = [
+        "fake-executor",
+        "curl",
+        "--silent",
+        "--unix-socket",
+        "/run/snapd.socket",
+        "http://localhost/v2/snaps/test-snap",
+    ]
+    fake_snapd_response = {"status-code": 666}
+    fake_process.register_subprocess(
+        expected_cmd, stdout=json.dumps(fake_snapd_response)
+    )
+
+    with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
+        snap_installer._get_target_snap_revision_from_snapd("test-snap", fake_executor)
+    assert exc_info.value == snap_installer.SnapInstallationError(
+        f"Unknown response from snapd: {fake_snapd_response!r}"
+    )
+
+
+def test_get_snap_revision_ensuring_source_ok(config_fixture, fake_executor):
+    """Snap is available being installed by specified source."""
+    result = snap_installer._get_snap_revision_ensuring_source(
+        "test-name", snap_installer.SNAP_SRC_HOST, fake_executor
+    )
+    assert result == "1"
+
+
+@pytest.mark.parametrize(
+    "fake_config",
+    [
+        None,
+        InstanceConfiguration(snaps=None),
+        InstanceConfiguration(snaps={"othersnap": {"revision": "1000"}}),
+    ],
+)
+def test_get_snap_revision_ensuring_source_no_config(fake_config, fake_executor):
+    """No config available for the indicated snap."""
+    with mock.patch.object(InstanceConfiguration, "load", return_value=fake_config):
+        result = snap_installer._get_snap_revision_ensuring_source(
+            "test-name", snap_installer.SNAP_SRC_HOST, fake_executor
+        )
+    assert result is None
+
+
+def test_get_snap_revision_ensuring_source_missing_source(
+    fake_process, fake_executor, config_fixture
+):
+    """Support for instances that have old configuration and then the lib is updated."""
+    fake_config = InstanceConfiguration(snaps={"test-name": {"revision": "1000"}})
+    fake_process.register_subprocess(["fake-executor", "snap", "remove", "test-name"])
+    with mock.patch.object(InstanceConfiguration, "load", return_value=fake_config):
+        result = snap_installer._get_snap_revision_ensuring_source(
+            "test-name", snap_installer.SNAP_SRC_STORE, fake_executor
+        )
+    assert result is None
+    assert len(fake_process.calls) == 1
+
+
+def test_get_snap_revision_ensuring_source_different_source_ok(
+    fake_process, fake_executor, config_fixture
+):
+    """Snap is available but from other source; snap removal ended ok."""
+    fake_process.register_subprocess(["fake-executor", "snap", "remove", "test-name"])
+    result = snap_installer._get_snap_revision_ensuring_source(
+        "test-name", snap_installer.SNAP_SRC_STORE, fake_executor
+    )
+    assert result is None
+    assert len(fake_process.calls) == 1
+
+
+def test_get_snap_revision_ensuring_source_different_source_error(
+    fake_process, fake_executor, config_fixture
+):
+    """Snap is available but from other source; snap removal failed."""
+    fake_process.register_subprocess(
+        ["fake-executor", "snap", "remove", "test-name"], returncode=1
+    )
+    with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
+        snap_installer._get_snap_revision_ensuring_source(
+            "test-name", snap_installer.SNAP_SRC_STORE, fake_executor
+        )
+    assert exc_info.value == snap_installer.SnapInstallationError(
+        brief="Failed to inject snap 'test-name'.",
+        details="unable to remove previously installed snap",
+    )
+    assert exc_info.value.__cause__ is not None

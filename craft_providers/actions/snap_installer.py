@@ -18,6 +18,7 @@
 """Helpers for snap commands."""
 
 import contextlib
+import json
 import logging
 import pathlib
 import shlex
@@ -34,6 +35,12 @@ from craft_providers.errors import ProviderError, details_from_called_process_er
 from craft_providers.util import snap_cmd, temp_paths
 
 logger = logging.getLogger(__name__)
+
+
+# possible sources for the snap (using these two constants instead of an enum because the
+# values are persisted with JSON)
+SNAP_SRC_HOST = "host"
+SNAP_SRC_STORE = "store"
 
 
 class SnapInstallationError(ProviderError):
@@ -96,28 +103,60 @@ def _get_host_snap_revision(snap_name: str) -> str:
     return snap_info.json()["result"]["revision"]
 
 
-def _get_target_snap_revision(snap_name: str, executor: Executor) -> Optional[str]:
+def _get_target_snap_revision_from_snapd(
+    snap_name: str, executor: Executor
+) -> Optional[str]:
     """Get the revision of the snap on the target."""
-    config = InstanceConfiguration.load(executor=executor)
-    if config is not None and config.snaps is not None:
-        snap = config.snaps.get(snap_name)
-        if snap is not None:
-            return str(snap.get("revision"))
-    return None
-
-
-def _get_store_snap_revision(snap_name: str, channel: str) -> str:
-    """Get the revision of a snap from the store."""
     quoted_name = urllib.parse.quote(snap_name, safe="")
-    url = f"http+unix://%2Frun%2Fsnapd.socket/v2/find?name={quoted_name}"
+    url = f"http://localhost/v2/snaps/{quoted_name}"
+    cmd = ["curl", "--silent", "--unix-socket", "/run/snapd.socket", url]
     try:
-        snap_info = requests_unixsocket.get(url)
-    except requests.exceptions.ConnectionError as error:
+        proc = executor.execute_run(cmd, check=True, capture_output=True)
+    except subprocess.CalledProcessError as error:
         raise SnapInstallationError(
-            brief="Unable to connect to snapd service."
+            brief="Unable to get target snap revision."
         ) from error
-    snap_info.raise_for_status()
-    return snap_info.json()["result"][0]["channels"][channel]["revision"]
+
+    result = json.loads(proc.stdout)
+    if result["status-code"] == 404:
+        # snap not found
+        return None
+    if result["status-code"] == 200:
+        return result["result"]["revision"]
+    raise SnapInstallationError(f"Unknown response from snapd: {result!r}")
+
+
+def _get_snap_revision_ensuring_source(
+    snap_name: str, source: str, executor: Executor
+) -> Optional[str]:
+    """Get the revision of the snap on the target ensuring it's installed from same source."""
+    instance_config = InstanceConfiguration.load(executor=executor)
+    if instance_config is None or instance_config.snaps is None:
+        return None
+
+    config = instance_config.snaps.get(snap_name)
+    if config is None:
+        # not installed before
+        return None
+
+    # use 'get' to retrieve the source to support configs saved by previous versions of the lib
+    if config.get("source") == source:
+        # previously installed from specified source: ok
+        return config["revision"]
+
+    # installed from other source: remove it
+    logger.debug(
+        "Snap %r installed from other source (%s), removing", snap_name, config
+    )
+    cmd = snap_cmd.formulate_remove_command(snap_name)
+    try:
+        executor.execute_run(cmd, check=True, capture_output=True)
+    except subprocess.CalledProcessError as error:
+        raise SnapInstallationError(
+            brief=f"Failed to inject snap {snap_name!r}.",
+            details="unable to remove previously installed snap",
+        ) from error
+    return None
 
 
 @contextlib.contextmanager
@@ -148,23 +187,23 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
 
     :raises SnapInstallationError: on unexpected error.
     """
-    target_snap_path = pathlib.Path(f"/tmp/{snap_name}.snap")
+    logger.debug("Installing snap %r from host (classic=%s)", snap_name, classic)
+
     host_revision = _get_host_snap_revision(snap_name=snap_name)
-    target_revision = _get_target_snap_revision(snap_name=snap_name, executor=executor)
-    logger.debug(
-        "Revisions found for snap %r: host = %r, target = %r",
-        snap_name,
-        host_revision,
-        target_revision,
+    target_revision = _get_snap_revision_ensuring_source(
+        snap_name=snap_name,
+        source=SNAP_SRC_HOST,
+        executor=executor,
     )
+    logger.debug("Revisions found: host=%r, target=%r", host_revision, target_revision)
 
     if target_revision is not None and target_revision == host_revision:
         logger.debug(
-            "Skipping snap injection for snap %r: target is already up-to-date with revision on host",
-            snap_name,
+            "Skipping snap injection: target is already up-to-date with revision on host"
         )
         return
 
+    target_snap_path = pathlib.Path(f"/tmp/{snap_name}.snap")
     try:
         # Clean outdated snap, if exists.
         executor.execute_run(
@@ -186,7 +225,7 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
                 ) from error
 
         executor.execute_run(
-            snap_cmd.formulate_install_command(
+            snap_cmd.formulate_local_install_command(
                 classic=classic, dangerous=True, snap_path=target_snap_path
             ),
             check=True,
@@ -200,16 +239,14 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
 
     InstanceConfiguration.update(
         executor=executor,
-        data={"snaps": {snap_name: {"revision": host_revision}}},
+        data={
+            "snaps": {snap_name: {"revision": host_revision, "source": SNAP_SRC_HOST}}
+        },
     )
 
 
 def install_from_store(
-    *,
-    executor: Executor,
-    snap_name: str,
-    channel: str,
-    classic: bool,
+    *, executor: Executor, snap_name: str, channel: str, classic: bool
 ) -> None:
     """Install snap from store into target.
 
@@ -222,53 +259,52 @@ def install_from_store(
 
     :raises SnapInstallationError: on unexpected error.
     """
-    target_snap_path = pathlib.Path(f"/tmp/{snap_name}.snap")
-    store_revision = _get_store_snap_revision(snap_name=snap_name, channel=channel)
-    target_revision = _get_target_snap_revision(snap_name=snap_name, executor=executor)
     logger.debug(
-        "Revisions found for snap %r: store = %r, target = %r",
+        "Installing snap %r from store (channel=%r, classic=%s)",
         snap_name,
-        store_revision,
-        target_revision,
+        channel,
+        classic,
     )
+    target_revision = _get_snap_revision_ensuring_source(
+        snap_name=snap_name,
+        source=SNAP_SRC_STORE,
+        executor=executor,
+    )
+    logger.debug("Revision found in target: %r", target_revision)
 
-    if target_revision is not None and target_revision == store_revision:
-        logger.debug(
-            "Skipping snap store download for snap %r: target is already up-to-date with store",
-            snap_name,
+    if target_revision is None:
+        # no snap present in the target environment, just install it
+        cmd = snap_cmd.formulate_remote_install_command(
+            snap_name=snap_name,
+            channel=channel,
+            classic=classic,
         )
-        return
+    else:
+        # refresh the already installed snap
+        cmd = snap_cmd.formulate_refresh_command(
+            snap_name=snap_name,
+            channel=channel,
+        )
 
     try:
-        executor.execute_run(
-            [
-                "snap",
-                "download",
-                snap_name,
-                f"--channel={channel}",
-                f"--basename={snap_name}",
-                "--target-directory=/tmp",
-            ],
-            check=True,
-            capture_output=True,
-        )
-
-        executor.execute_run(
-            snap_cmd.formulate_install_command(
-                classic=classic,
-                dangerous=True,
-                snap_path=target_snap_path,
-            ),
-            check=True,
-            capture_output=True,
-        )
+        executor.execute_run(cmd, check=True, capture_output=True)
     except subprocess.CalledProcessError as error:
         raise SnapInstallationError(
-            brief=f"Failed to install snap {snap_name!r}.",
+            brief=f"Failed to install/refresh snap {snap_name!r}.",
             details=details_from_called_process_error(error),
         ) from error
 
+    new_target_revision = _get_target_snap_revision_from_snapd(
+        snap_name=snap_name,
+        executor=executor,
+    )
+    logger.debug("Revision after install/refresh: %r", new_target_revision)
+
     InstanceConfiguration.update(
         executor=executor,
-        data={"snaps": {snap_name: {"revision": store_revision}}},
+        data={
+            "snaps": {
+                snap_name: {"revision": new_target_revision, "source": SNAP_SRC_STORE}
+            }
+        },
     )

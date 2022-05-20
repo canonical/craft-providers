@@ -134,7 +134,7 @@ def test_setup(  # pylint: disable=too-many-arguments
     )
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "apt-utils"]
+        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "apt-utils", "curl"]
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "fuse", "udev"]

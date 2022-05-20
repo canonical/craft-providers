@@ -344,7 +344,7 @@ class BuilddBase(Base):
         )
 
     def _setup_apt(self, *, executor: Executor, deadline: Optional[float]) -> None:
-        """Configure apt & update cache.
+        """Configure apt, update cache and install needed packages.
 
         :param executor: Executor for target container.
         :param deadline: Optional time.time() deadline.
@@ -379,13 +379,13 @@ class BuilddBase(Base):
         try:
             _check_deadline(deadline)
             executor.execute_run(
-                ["apt-get", "install", "-y", "apt-utils"],
+                ["apt-get", "install", "-y", "apt-utils", "curl"],
                 capture_output=True,
                 check=True,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
-                brief="Failed to install apt-utils.",
+                brief="Failed to install packages.",
                 details=errors.details_from_called_process_error(error),
             ) from error
 

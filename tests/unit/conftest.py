@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2022 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -21,6 +21,7 @@ import subprocess
 from typing import Any, Dict, List, Optional
 
 import pytest
+import responses as responses_module
 
 from craft_providers import Executor
 from craft_providers.util import env_cmd
@@ -116,3 +117,10 @@ class FakeExecutor(Executor):
 @pytest.fixture
 def fake_executor():
     yield FakeExecutor()
+
+
+@pytest.fixture
+def responses():
+    """Simple helper to use responses module as a fixture, for easier integration in tests."""
+    with responses_module.RequestsMock() as rsps:
+        yield rsps
