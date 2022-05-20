@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2022 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -735,4 +735,22 @@ def test_version_error(fake_process, mock_details_from_process_error):
     assert exc_info.value == MultipassError(
         brief="Failed to check version.",
         details=mock_details_from_process_error.return_value,
+    )
+
+
+def test_generic_run_base():
+    """The generic run should check the return code and capture the output."""
+    with mock.patch("subprocess.run") as run_mock:
+        Multipass()._run(["foo", "1"])
+    run_mock.assert_called_with(
+        ["multipass", "foo", "1"], check=True, capture_output=True
+    )
+
+
+def test_generic_run_extra_args():
+    """Support for extra parameters in the generic run."""
+    with mock.patch("subprocess.run") as run_mock:
+        Multipass()._run(["foo", "1"], extra="whatever")
+    run_mock.assert_called_with(
+        ["multipass", "foo", "1"], check=True, capture_output=True, extra="whatever"
     )
