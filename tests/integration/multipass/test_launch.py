@@ -18,7 +18,6 @@
 import io
 import pathlib
 import subprocess
-import sys
 
 import pytest
 
@@ -44,14 +43,6 @@ def core20_instance(instance_name):
 @pytest.mark.parametrize(
     "alias,image_name",
     [
-        # TODO: add test when Multipass supports core on Windows
-        pytest.param(
-            bases.BuilddBaseAlias.XENIAL,
-            "snapcraft:core",
-            marks=pytest.mark.skipif(
-                sys.platform == "win32", reason="unsupported on windows"
-            ),
-        ),
         (bases.BuilddBaseAlias.BIONIC, "snapcraft:core18"),
         (bases.BuilddBaseAlias.FOCAL, "snapcraft:core20"),
         # FIXME: enable after image is available
