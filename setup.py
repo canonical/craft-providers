@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2022 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -49,6 +49,7 @@ test_requires = [
     "flake8",
     "isort",
     "mypy",
+    "logassert",
     "pydocstyle",
     "pylint",
     "pylint-fixme-info",
@@ -56,6 +57,7 @@ test_requires = [
     "pytest",
     "pytest-mock",
     "pytest-subprocess",
+    "responses",
     "types-requests",
     "types-setuptools",
     "types-pyyaml",

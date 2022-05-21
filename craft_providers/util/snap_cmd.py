@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2022 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -21,7 +21,7 @@ import pathlib
 from typing import List
 
 
-def formulate_install_command(
+def formulate_local_install_command(
     classic: bool, dangerous: bool, snap_path: pathlib.Path
 ) -> List[str]:
     """Formulate snap install command.
@@ -39,4 +39,47 @@ def formulate_install_command(
     if dangerous:
         install_cmd.append("--dangerous")
 
+    return install_cmd
+
+
+def formulate_remote_install_command(
+    snap_name: str, channel: str, classic: bool
+) -> List[str]:
+    """Formulate the command to snap install from Store.
+
+    :param snap_name: The name of the channel.
+    :param channel: The channel to install the snap from.
+    :param classic: Flag to enable installation of classic snap.
+    :param dangerous: Flag to enable installation of snap without ack.
+
+    :returns: List of command parts.
+    """
+    install_cmd = ["snap", "install", snap_name, "--channel", channel]
+
+    if classic:
+        install_cmd.append("--classic")
+
+    return install_cmd
+
+
+def formulate_refresh_command(snap_name: str, channel: str) -> List[str]:
+    """Formulate snap refresh command.
+
+    :param snap_name: The name of the channel.
+    :param channel: The channel to install the snap from.
+
+    :returns: List of command parts.
+    """
+    install_cmd = ["snap", "refresh", snap_name, "--channel", channel]
+    return install_cmd
+
+
+def formulate_remove_command(snap_name: str) -> List[str]:
+    """Formulate snap remove command.
+
+    :param snap_name: The name of the channel.
+
+    :returns: List of command parts.
+    """
+    install_cmd = ["snap", "remove", snap_name]
     return install_cmd
