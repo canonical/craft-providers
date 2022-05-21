@@ -54,18 +54,16 @@ class Multipass:
     ) -> None:
         self.multipass_path = multipass_path
 
-    def _run(
-        self,
-        command: List[str],
-        *,
-        check: bool,
-        **kwargs,
-    ) -> subprocess.CompletedProcess:
-        """Execute multipass command."""
+    def _run(self, command: List[str], **kwargs) -> subprocess.CompletedProcess:
+        """Execute a multipass command.
+
+        It always checks the result (as no errors should pass silently) and captures the
+        output (so `multipass` does not pollute the terminal).
+        """
         command = [str(self.multipass_path), *command]
 
         logger.debug("Executing on host: %s", shlex.join(command))
-        return subprocess.run(command, check=check, **kwargs)
+        return subprocess.run(command, check=True, capture_output=True, **kwargs)
 
     def delete(self, *, instance_name: str, purge=True) -> None:
         """Passthrough for running multipass delete.
@@ -81,7 +79,7 @@ class Multipass:
             command.append("--purge")
 
         try:
-            self._run(command, capture_output=True, check=True)
+            self._run(command)
         except subprocess.CalledProcessError as error:
             raise MultipassError(
                 brief=f"Failed to delete VM {instance_name!r}.",
@@ -124,7 +122,7 @@ class Multipass:
         command = ["info", instance_name, "--format", "json"]
 
         try:
-            proc = self._run(command, capture_output=True, check=True, text=True)
+            proc = self._run(command, text=True)
         except subprocess.CalledProcessError as error:
             raise MultipassError(
                 brief=f"Failed to query info for VM {instance_name!r}.",
@@ -175,7 +173,7 @@ class Multipass:
             command.extend(["--disk", disk])
 
         try:
-            self._run(command, capture_output=True, check=True)
+            self._run(command)
         except subprocess.CalledProcessError as error:
             raise MultipassError(
                 brief=f"Failed to launch VM {instance_name!r}.",
@@ -192,7 +190,7 @@ class Multipass:
         command = ["list", "--format", "json"]
 
         try:
-            proc = self._run(command, capture_output=True, check=True, text=True)
+            proc = self._run(command, text=True)
         except subprocess.CalledProcessError as error:
             raise MultipassError(
                 brief="Failed to query list of VMs.",
@@ -235,7 +233,7 @@ class Multipass:
                 command.extend(["--gid-map", f"{host_id}:{instance_id}"])
 
         try:
-            self._run(command, capture_output=True, check=True)
+            self._run(command)
         except subprocess.CalledProcessError as error:
             raise MultipassError(
                 brief=f"Failed to mount {str(source)!r} to {target!r}.",
@@ -252,7 +250,7 @@ class Multipass:
         command = ["start", instance_name]
 
         try:
-            self._run(command, check=True)
+            self._run(command)
         except subprocess.CalledProcessError as error:
             raise MultipassError(
                 brief=f"Failed to start VM {instance_name!r}.",
@@ -273,7 +271,7 @@ class Multipass:
             command.extend(["--time", str(delay_mins)])
 
         try:
-            self._run(command, capture_output=True, check=True)
+            self._run(command)
         except subprocess.CalledProcessError as error:
             raise MultipassError(
                 brief=f"Failed to stop VM {instance_name!r}.",
@@ -293,7 +291,7 @@ class Multipass:
         command = ["transfer", source, destination]
 
         try:
-            self._run(command, capture_output=True, check=True)
+            self._run(command)
         except subprocess.CalledProcessError as error:
             raise MultipassError(
                 brief=f"Failed to transfer {source!r} to {destination!r}.",
@@ -404,7 +402,7 @@ class Multipass:
         command = ["umount", mount]
 
         try:
-            self._run(command, capture_output=True, check=True)
+            self._run(command)
         except subprocess.CalledProcessError as error:
             raise MultipassError(
                 brief=f"Failed to unmount {mount!r}.",
@@ -449,7 +447,7 @@ class Multipass:
                   may be None if Multipass is not yet ready.
         """
         try:
-            proc = self._run(["version"], capture_output=True, check=True)
+            proc = self._run(["version"])
         except subprocess.CalledProcessError as error:
             raise MultipassError(
                 brief="Failed to check version.",
