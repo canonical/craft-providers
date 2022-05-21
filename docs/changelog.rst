@@ -2,6 +2,13 @@
 Changelog
 *********
 
+1.3.0 (2022-05-21)
+------------------
+
+- Refactor snap injection logic
+- Always check multipass command execution results
+- Update tests and documentation
+
 1.2.0 (2022-04-07)
 ------------------
 
