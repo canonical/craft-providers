@@ -56,7 +56,6 @@ test_requires = [
     "pytest",
     "pytest-mock",
     "pytest-subprocess",
-    "tox",
     "types-requests",
     "types-setuptools",
     "types-pyyaml",
