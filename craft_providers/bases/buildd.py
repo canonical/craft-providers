@@ -82,7 +82,6 @@ class BuilddBaseAlias(enum.Enum):
     JAMMY = "22.04"
 
 
-# pylint: disable=no-self-use
 class BuilddBase(Base):
     """Support for Ubuntu minimal buildd images.
 

@@ -96,7 +96,7 @@ test-pydocstyle:
 .PHONY: test-pylint
 test-pylint:
 	pylint craft_providers
-	pylint tests --disable=missing-module-docstring,missing-function-docstring,redefined-outer-name,protected-access,too-many-arguments
+	pylint tests --disable=missing-module-docstring,missing-function-docstring,redefined-outer-name,protected-access,too-many-arguments,unnecessary-dunder-call
 
 .PHONY: test-pyright
 test-pyright:
