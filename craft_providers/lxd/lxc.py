@@ -16,6 +16,7 @@
 #
 
 """LXC wrapper."""
+import enum
 import logging
 import pathlib
 import shlex
@@ -32,6 +33,13 @@ logger = logging.getLogger(__name__)
 
 
 # pylint: disable=too-many-lines
+
+
+class StdinType(enum.Enum):
+    """Mappings for input stream to pass to stdin for lxc commands."""
+
+    INTERACTIVE = subprocess.DEVNULL
+    NULL = None
 
 
 def load_yaml(data):
@@ -60,11 +68,17 @@ class LXC:  # pylint: disable=too-many-public-methods
         *,
         check: bool,
         project: Optional[str] = None,
+        stdin: StdinType = StdinType.INTERACTIVE,
         **kwargs,
     ) -> subprocess.CompletedProcess:
         """Execute lxc command on host, allowing output to console.
 
         Handles the --project=project options if project is specified.
+        :param command: lxc command to execute.
+        :param check: Check if the lxc command exits with a non-zero exit code.
+        :param project: Name of LXD project.
+        :param stdin: What input stream to pass to lxc.
+        :param kwargs: Additional parameters to pass to the lxc command.
 
         :returns: Completed process.
         """
@@ -76,7 +90,12 @@ class LXC:  # pylint: disable=too-many-public-methods
         lxc_cmd += command
 
         logger.debug("Executing on host: %s", shlex.join(lxc_cmd))
-        return subprocess.run(lxc_cmd, check=check, **kwargs)
+
+        # for subprocess, input takes priority over stdin
+        if "input" in kwargs:
+            return subprocess.run(lxc_cmd, check=check, **kwargs)
+
+        return subprocess.run(lxc_cmd, check=check, stdin=stdin.value, **kwargs)
 
     def config_device_add_disk(
         self,
@@ -522,6 +541,7 @@ class LXC:  # pylint: disable=too-many-public-methods
                 command,
                 capture_output=True,
                 check=True,
+                stdin=StdinType.INTERACTIVE,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
