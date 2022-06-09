@@ -2,6 +2,11 @@
 Changelog
 *********
 
+1.3.1 (2022-06-09)
+------------------
+
+- Add stdin parameter for LXC commands (default: null)
+
 1.3.0 (2022-05-21)
 ------------------
 
