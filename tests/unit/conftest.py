@@ -121,6 +121,9 @@ def fake_executor():
 
 @pytest.fixture
 def responses():
-    """Simple helper to use responses module as a fixture, for easier integration in tests."""
+    """Simple helper to use responses module as a fixture.
+
+    Used for easier integration in tests.
+    """
     with responses_module.RequestsMock() as rsps:
         yield rsps

@@ -46,7 +46,8 @@ def default_command_environment() -> Dict[str, Optional[str]]:
     instantiating PATH.  In practice it really just means the PATH set by sudo.
 
     Default /etc/environment found in supported Ubuntu versions:
-    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:
+         /usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 
     Default /etc/sudoers secure_path found in supported Ubuntu versions:
     PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
@@ -198,7 +199,10 @@ class BuilddBase(Base):
         version_id = os_release.get("VERSION_ID")
         if version_id != compat_version_id:
             raise BaseCompatibilityError(
-                reason=f"Expected OS version {compat_version_id!r}, found {version_id!r}"
+                reason=(
+                    f"Expected OS version {compat_version_id!r},"
+                    f" found {version_id!r}"
+                )
             )
 
     def get_command_environment(
@@ -321,9 +325,10 @@ class BuilddBase(Base):
     ) -> None:
         """Disable automatic apt actions.
 
-        This should happen as soon as possible in the instance overall setup, to reduce the
-        chances of an automatic apt work being triggered during the setup itself (because it
-        includes apt work which may clash the triggered unattended jobs).
+        This should happen as soon as possible in the instance overall setup,
+        to reduce the chances of an automatic apt work being triggered during
+        the setup itself (because it includes apt work which may clash
+        the triggered unattended jobs).
 
         :param executor: Executor for target container.
         :param deadline: Optional time.time() deadline.

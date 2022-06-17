@@ -42,7 +42,8 @@ def test_multipass_installation_error():
 
     assert str(error) == (
         "Failed to install Multipass: error during foo.\n"
-        "Please visit https://multipass.run/ for instructions on installing Multipass for your operating system."
+        "Please visit https://multipass.run/ for instructions"
+        " on installing Multipass for your operating system."
     )
 
 
@@ -54,5 +55,6 @@ def test_multipass_installation_error_with_details():
     assert str(error) == (
         "Failed to install Multipass: error during foo.\n"
         "Some details...\n"
-        "Please visit https://multipass.run/ for instructions on installing Multipass for your operating system."
+        "Please visit https://multipass.run/ for instructions"
+        " on installing Multipass for your operating system."
     )

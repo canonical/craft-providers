@@ -42,7 +42,10 @@ def ensure_multipass_is_ready(*, multipass: Multipass = Multipass()) -> None:
         version = multipass.version()
         min_version = multipass.minimum_required_version
         raise errors.MultipassError(
-            brief=f"Multipass {version!r} does not meet the minimum required version {min_version!r}.",
+            brief=(
+                f"Multipass {version!r} does not meet the"
+                f" minimum required version {min_version!r}."
+            ),
             resolution="Visit https://multipass.run for instructions on "
             "installing Multipass for your operating system.",
         )

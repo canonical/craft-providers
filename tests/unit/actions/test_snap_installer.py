@@ -43,7 +43,8 @@ def mock_requests():
 def config_fixture(request, tmp_path, mocker):
     """Creates an instance config file in the pytest temp directory.
 
-    Patches the temp_paths functions to point to the temporary directory containing the config.
+    Patches the temp_paths functions to point to the
+    temporary directory containing the config.
 
     :param request: The revision of the target's snap. Default revision = 1.
     """
@@ -381,7 +382,9 @@ def test_inject_from_host_install_failure(
 
     assert exc_info.value == snap_installer.SnapInstallationError(
         brief="Failed to inject snap 'test-name'.",
-        details=details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
     assert len(fake_process.calls) == 2
@@ -419,7 +422,8 @@ def test_install_from_store_strict(
     assert len(fake_process.calls) == 1
     assert (
         Exact(
-            "Installing snap 'test-name' from store (channel='test-chan', classic=False)"
+            "Installing snap 'test-name' from store"
+            " (channel='test-chan', classic=False)"
         )
         in logs.debug
     )
@@ -507,7 +511,8 @@ def test_refresh_from_store(
     assert len(fake_process.calls) == 1
     assert (
         Exact(
-            "Installing snap 'test-name' from store (channel='test-chan', classic=False)"
+            "Installing snap 'test-name' from store"
+            " (channel='test-chan', classic=False)"
         )
         in logs.debug
     )
@@ -553,7 +558,9 @@ def test_install_from_store_failure(
 
     assert exc_info.value == snap_installer.SnapInstallationError(
         brief="Failed to install/refresh snap 'test-name'.",
-        details=details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 

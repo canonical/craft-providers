@@ -133,7 +133,10 @@ class MultipassInstance(Executor):
             )
         except subprocess.CalledProcessError as error:
             raise MultipassError(
-                brief=f"Failed to create file {destination.as_posix()!r} in {self.name!r} VM.",
+                brief=(
+                    f"Failed to create file {destination.as_posix()!r}"
+                    f" in {self.name!r} VM."
+                ),
                 details=errors.details_from_called_process_error(error),
             ) from error
 

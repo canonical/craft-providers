@@ -184,7 +184,9 @@ def test_config_device_add_disk_error(fake_process, tmp_path):
 
     assert exc_info.value == LXDError(
         brief="Failed to add disk to instance 'test-instance'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -237,7 +239,9 @@ def test_config_device_remove_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to remove device from instance 'test-instance'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -288,7 +292,9 @@ def test_config_device_show_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to show devices for instance 'test-instance'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -342,8 +348,13 @@ def test_config_set_error(fake_process):
         )
 
     assert exc_info.value == LXDError(
-        brief="Failed to set config key 'test-key' to 'test-value' for instance 'test-instance'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        brief=(
+            "Failed to set config key 'test-key' to 'test-value'"
+            " for instance 'test-instance'."
+        ),
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -410,7 +421,9 @@ def test_delete_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to delete instance 'test-instance'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -576,7 +589,9 @@ def test_file_pull_error(fake_process, tmp_path):
 
     assert exc_info.value == LXDError(
         brief="Failed to pull file '/root/foo' from instance 'test-instance'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -667,7 +682,9 @@ def test_file_push_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to push file '/somefile' to instance 'test-instance'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -734,7 +751,9 @@ def test_info_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to get info for remote 'test-remote'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -842,7 +861,9 @@ def test_launch_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to launch instance 'test-instance'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -942,7 +963,9 @@ def test_image_copy_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to copy image 'test-image'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -989,7 +1012,9 @@ def test_image_delete_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to delete image 'test-image'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -1038,7 +1063,9 @@ def test_image_list_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to list images for project 'test-project'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -1065,7 +1092,8 @@ def test_image_list_parse_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to parse lxc image list.",
         details=(
-            "* Command that failed: 'lxc --project test-project image list test-remote: --format=yaml'\n"
+            "* Command that failed:"
+            " 'lxc --project test-project image list test-remote: --format=yaml'\n"
             "* Command output: b'fail:\\nthis\\n'"
         ),
     )
@@ -1114,7 +1142,9 @@ def test_list_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to list instances for project 'test-project'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -1140,7 +1170,8 @@ def test_list_parse_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to parse lxc list.",
         details=(
-            "* Command that failed: 'lxc --project test-project list test-remote: --format=yaml'\n"
+            "* Command that failed:"
+            " 'lxc --project test-project list test-remote: --format=yaml'\n"
             "* Command output: b'fail:\\nthis\\n'"
         ),
     )
@@ -1242,7 +1273,9 @@ def test_profile_edit_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to set profile 'test-profile'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -1291,7 +1324,9 @@ def test_profile_show_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to show profile 'test-profile'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -1336,7 +1371,9 @@ def test_project_create_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to create project 'test-project'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -1381,7 +1418,9 @@ def test_project_delete_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to delete project 'test-project'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -1424,7 +1463,9 @@ def test_project_list_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to list projects on remote 'test-remote'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -1525,7 +1566,9 @@ def test_publish_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to publish image from 'test-instance'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -1598,7 +1641,9 @@ def test_remote_add_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to add remote 'test-remote'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -1635,7 +1680,9 @@ def test_remote_list_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to list remotes.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -1703,7 +1750,9 @@ def test_start_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to start 'test-instance'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -1772,7 +1821,9 @@ def test_stop_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to stop 'test-instance'.",
-        details=errors.details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
