@@ -79,6 +79,7 @@ jobs:
           pip3 install -U -e .
       - name: Install Multipass
         run: |
+          brew update
           brew install multipass
           multipass version
           sleep 20
