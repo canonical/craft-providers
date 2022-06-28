@@ -37,8 +37,8 @@ from craft_providers.util import snap_cmd, temp_paths
 logger = logging.getLogger(__name__)
 
 
-# possible sources for the snap (using these two constants instead of an enum because the
-# values are persisted with JSON)
+# possible sources for the snap (using these two constants instead
+# of an enum because the values are persisted with JSON)
 SNAP_SRC_HOST = "host"
 SNAP_SRC_STORE = "store"
 
@@ -129,7 +129,7 @@ def _get_target_snap_revision_from_snapd(
 def _get_snap_revision_ensuring_source(
     snap_name: str, source: str, executor: Executor
 ) -> Optional[str]:
-    """Get the revision of the snap on the target ensuring it's installed from same source."""
+    """Get revision of snap on target and ensure the installation source."""
     instance_config = InstanceConfiguration.load(executor=executor)
     if instance_config is None or instance_config.snaps is None:
         return None
@@ -139,7 +139,8 @@ def _get_snap_revision_ensuring_source(
         # not installed before
         return None
 
-    # use 'get' to retrieve the source to support configs saved by previous versions of the lib
+    # use 'get' to retrieve the source to support configs
+    # saved by previous versions of the lib
     if config.get("source") == source:
         # previously installed from specified source: ok
         return config["revision"]
@@ -175,7 +176,8 @@ def _get_host_snap(snap_name: str) -> Iterator[pathlib.Path]:
             _download_host_snap(snap_name=snap_name, output=snap_path)
         except SnapInstallationError:
             logger.warning(
-                "Failed to fetch snap from snapd, falling back to `snap pack` to recreate"
+                "Failed to fetch snap from snapd,"
+                " falling back to `snap pack` to recreate"
             )
             _pack_host_snap(snap_name=snap_name, output=snap_path)
 
@@ -199,7 +201,8 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
 
     if target_revision is not None and target_revision == host_revision:
         logger.debug(
-            "Skipping snap injection: target is already up-to-date with revision on host"
+            "Skipping snap injection:"
+            " target is already up-to-date with revision on host"
         )
         return
 

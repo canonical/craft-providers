@@ -122,7 +122,10 @@ def ensure_lxd_is_ready(
         version = lxd.version()
         min_version = lxd.minimum_required_version
         raise errors.LXDError(
-            brief=f"LXD {version!r} does not meet the minimum required version {min_version!r}.",
+            brief=(
+                f"LXD {version!r} does not meet the"
+                f" minimum required version {min_version!r}."
+            ),
             resolution="Visit https://snapcraft.io/lxd for instructions "
             "on how to install the LXD snap for your distribution.",
         )

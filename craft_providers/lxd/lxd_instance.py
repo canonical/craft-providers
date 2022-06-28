@@ -135,7 +135,10 @@ class LXDInstance(Executor):
             )
         except subprocess.CalledProcessError as error:
             raise LXDError(
-                brief=f"Failed to create file {destination.as_posix()!r} in instance {self.name!r}.",
+                brief=(
+                    f"Failed to create file {destination.as_posix()!r}"
+                    f" in instance {self.name!r}."
+                ),
                 details=errors.details_from_called_process_error(error),
             ) from error
 
@@ -320,7 +323,8 @@ class LXDInstance(Executor):
         :param image: Image name to launch.
         :param image_remote: Image remote name.
         :param map_user_id: Whether id mapping should be used.
-        :param uid: If ``map_user_id`` is True, the host user ID to map to instance root.
+        :param uid: If ``map_user_id`` is True,
+                    the host user ID to map to instance root.
         :param ephemeral: Flag to enable ephemeral instance.
 
         :raises LXDError: On unexpected error.
@@ -499,7 +503,10 @@ class LXDInstance(Executor):
 
         if not unmounted:
             raise LXDError(
-                brief=f"Failed to unmount {target.as_posix()!r} in instance {self.name!r} - no such disk.",
+                brief=(
+                    f"Failed to unmount {target.as_posix()!r}"
+                    f" in instance {self.name!r} - no such disk."
+                ),
                 details=f"* Disk device configuration: {disks!r}",
             )
 

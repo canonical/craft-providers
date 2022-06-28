@@ -57,7 +57,10 @@ def mock_load(mocker):
     [
         (
             None,
-            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin\n".encode(),
+            (
+                "PATH=/usr/local/sbin:/usr/local/bin:"
+                "/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin\n"
+            ).encode(),
         ),
         (
             dict(
@@ -65,7 +68,10 @@ def mock_load(mocker):
                 PATH="/snap",
                 http_proxy="http://foo.bar:8080",
             ),
-            "https_proxy=http://foo.bar:8081\nPATH=/snap\nhttp_proxy=http://foo.bar:8080\n".encode(),
+            (
+                "https_proxy=http://foo.bar:8081\n"
+                "PATH=/snap\nhttp_proxy=http://foo.bar:8080\n"
+            ).encode(),
         ),
     ],
 )
@@ -182,7 +188,9 @@ def test_setup(  # pylint: disable=too-many-arguments
         ),
         dict(
             destination="/etc/craft-instance.conf",
-            content=f"compatibility_tag: {buildd.BuilddBase.compatibility_tag}\n".encode(),
+            content=(
+                "compatibility_tag:" f" {buildd.BuilddBase.compatibility_tag}\n"
+            ).encode(),
             file_mode="0644",
             group="root",
             user="root",
@@ -337,7 +345,9 @@ def test_read_os_release_failure(
     assert exc_info.value.__cause__ is not None
     assert exc_info.value == errors.BaseConfigurationError(
         brief="Failed to read /etc/os-release.",
-        details=details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -359,7 +369,9 @@ def test_setup_hostname_failure(
 
     assert exc_info.value == errors.BaseConfigurationError(
         brief="Failed to set hostname.",
-        details=details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -381,7 +393,9 @@ def test_setup_networkd_enable_failure(
 
     assert exc_info.value == errors.BaseConfigurationError(
         brief="Failed to setup systemd-networkd.",
-        details=details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -406,7 +420,9 @@ def test_setup_networkd_restart_failure(
 
     assert exc_info.value == errors.BaseConfigurationError(
         brief="Failed to setup systemd-networkd.",
-        details=details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -437,7 +453,9 @@ def test_setup_resolved_enable_failure(
 
     assert exc_info.value == errors.BaseConfigurationError(
         brief="Failed to setup systemd-resolved.",
-        details=details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -471,7 +489,9 @@ def test_setup_resolved_restart_failure(
 
     assert exc_info.value == errors.BaseConfigurationError(
         brief="Failed to setup systemd-resolved.",
-        details=details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
@@ -523,7 +543,9 @@ def test_setup_snapd_failures(
 
     assert exc_info.value == errors.BaseConfigurationError(
         brief="Failed to setup snapd.",
-        details=details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 

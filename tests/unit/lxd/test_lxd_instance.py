@@ -371,7 +371,10 @@ def test_get_disk_devices_path_parse_error(mock_lxc, instance):
 
     assert exc_info.value == LXDError(
         brief="Failed to parse lxc device 'mount_missing_path'.",
-        details="* Device configuration: {'mount_missing_path': {'source': '/foo', 'type': 'disk'}}",
+        details=(
+            "* Device configuration:"
+            " {'mount_missing_path': {'source': '/foo', 'type': 'disk'}}"
+        ),
     )
 
 
@@ -388,7 +391,10 @@ def test_get_disk_devices_source_parse_error(mock_lxc, instance):
 
     assert exc_info.value == LXDError(
         brief="Failed to parse lxc device 'mount_missing_source'.",
-        details="* Device configuration: {'mount_missing_source': {'path': '/foo', 'type': 'disk'}}",
+        details=(
+            "* Device configuration:"
+            " {'mount_missing_source': {'path': '/foo', 'type': 'disk'}}"
+        ),
     )
 
 
@@ -833,6 +839,12 @@ def test_unmount_error(mock_lxc, instance):
         instance.unmount(target=pathlib.Path("not-mounted"))
 
     assert exc_info.value == LXDError(
-        brief="Failed to unmount 'not-mounted' in instance 'test-instance' - no such disk.",
-        details="* Disk device configuration: {'disk-/target': {'path': '/target', 'source': '/source', 'type': 'disk'}}",
+        brief=(
+            "Failed to unmount 'not-mounted'"
+            " in instance 'test-instance' - no such disk."
+        ),
+        details=(
+            "* Disk device configuration: {'disk-/target':"
+            " {'path': '/target', 'source': '/source', 'type': 'disk'}}"
+        ),
     )

@@ -335,9 +335,9 @@ def test_launch_instance_config_incompatible_instance(core20_instance):
             image_remote="ubuntu",
         )
 
-    assert (
-        exc_info.value.brief
-        == "Incompatible base detected: Expected image compatibility tag 'buildd-base-v0', found 'invalid'."
+    assert exc_info.value.brief == (
+        "Incompatible base detected:"
+        " Expected image compatibility tag 'buildd-base-v0', found 'invalid'."
     )
 
     # Retry with auto_clean=True.

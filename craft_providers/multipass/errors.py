@@ -40,6 +40,9 @@ class MultipassInstallationError(MultipassError):
         details: Optional[str] = None,
     ) -> None:
         brief = f"Failed to install Multipass: {reason}."
-        resolution = "Please visit https://multipass.run/ for instructions on installing Multipass for your operating system."
+        resolution = (
+            "Please visit https://multipass.run/ for instructions"
+            " on installing Multipass for your operating system."
+        )
 
         super().__init__(brief=brief, details=details, resolution=resolution)
