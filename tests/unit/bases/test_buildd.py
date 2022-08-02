@@ -15,6 +15,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
+from pathlib import Path
 from textwrap import dedent
 from unittest import mock
 
@@ -41,6 +42,12 @@ def mock_load(mocker):
             compatibility_tag="buildd-base-v0"
         ),
     )
+
+
+# The variable name "fs" causes a pylint warning.  Provide a longer name.
+@pytest.fixture
+def fake_filesystem(fs):  # pylint: disable=invalid-name
+    yield fs
 
 
 @pytest.mark.parametrize(
@@ -75,17 +82,31 @@ def mock_load(mocker):
         ),
     ],
 )
+@pytest.mark.parametrize("no_cdn", [False, True])
 def test_setup(  # pylint: disable=too-many-arguments
     fake_process,
     fake_executor,
+    fake_filesystem,
     alias,
     hostname,
     environment,
     etc_environment_content,
+    no_cdn,
     mock_load,
 ):
     if environment is None:
         environment = buildd.default_command_environment()
+
+    if no_cdn:
+        fake_filesystem.create_file(
+            "/etc/systemd/system/snapd.service.d/no-cdn.conf",
+            contents=dedent(
+                """\
+                [Service]
+                Environment=SNAPPY_STORE_NO_CDN=1
+                """
+            ),
+        )
 
     base_config = buildd.BuilddBase(
         alias=alias,
@@ -151,6 +172,10 @@ def test_setup(  # pylint: disable=too-many-arguments
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "start", "systemd-udevd"]
     )
+    if no_cdn:
+        fake_process.register_subprocess(
+            [*DEFAULT_FAKE_CMD, "mkdir", "-p", "/etc/systemd/system/snapd.service.d"]
+        )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "snapd"]
     )
@@ -166,7 +191,7 @@ def test_setup(  # pylint: disable=too-many-arguments
 
     base_config.setup(executor=fake_executor)
 
-    assert fake_executor.records_of_push_file_io == [
+    expected_push_file_io = [
         dict(
             destination="/etc/apt/apt.conf.d/20auto-upgrades",
             content=dedent(
@@ -237,8 +262,18 @@ def test_setup(  # pylint: disable=too-many-arguments
             user="root",
         ),
     ]
+    expected_push_file = []
+    if no_cdn:
+        expected_push_file.append(
+            dict(
+                source=Path("/etc/systemd/system/snapd.service.d/no-cdn.conf"),
+                destination=Path("/etc/systemd/system/snapd.service.d/no-cdn.conf"),
+            )
+        )
+
+    assert fake_executor.records_of_push_file_io == expected_push_file_io
     assert fake_executor.records_of_pull_file == []
-    assert fake_executor.records_of_push_file == []
+    assert fake_executor.records_of_push_file == expected_push_file
 
 
 def test_ensure_image_version_compatible_failure(
