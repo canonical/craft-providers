@@ -29,7 +29,7 @@ from . import conftest
 @pytest.fixture()
 def instance(instance_name, project):
     with conftest.tmp_instance(
-        instance_name=instance_name,
+        name=instance_name,
         project=project,
     ):
         instance = LXDInstance(name=instance_name, project=project)
@@ -41,7 +41,7 @@ def instance(instance_name, project):
 def reusable_instance(reusable_instance_name):
     """Reusable instance for tests that don't require a fresh instance."""
     with conftest.tmp_instance(
-        instance_name=reusable_instance_name,
+        name=reusable_instance_name,
         ephemeral=False,
         project="default",
     ):

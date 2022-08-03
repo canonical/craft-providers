@@ -28,7 +28,7 @@ from . import conftest
 @pytest.fixture()
 def instance(instance_name, project):
     with conftest.tmp_instance(
-        instance_name=instance_name,
+        name=instance_name,
         project=project,
     ) as tmp_instance:
         yield tmp_instance
