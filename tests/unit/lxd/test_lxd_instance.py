@@ -880,7 +880,8 @@ def test_unmount_error(mock_lxc, instance):
         "test",
         "test1",
         "test-1",
-        "this-is-40-characters-xxxxxxxxxxxxxxxxxX",
+        "this-is-40-characters-xxxxxxxxxxxxxxxxxx",
+        "this-is-63-characters-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     ],
 )
 def test_set_instance_name_unchanged(mock_lxc, name):
@@ -910,10 +911,16 @@ def test_set_instance_name_unchanged(mock_lxc, name):
         ("test-!@#$%^&*()test", "test-test"),
         ("$1test", "test"),
         ("test-$", "test"),
-        # truncate at 40 characters
+        # this name contains invalid characters so it gets converted, even
+        # though it is less than 63 characters
         (
-            "this-is-41-characters-xxxxxxxxxxxxxxxxxXx",
-            "this-is-41-characters-xxxxxxxxxxxxxxxxxX",
+            "this-is-63-characters-with-invalid-characters-$$$xxxxxxxxxxxxxX",
+            "this-is-63-characters-with-invalid-chara",
+        ),
+        # this name is longer than 63 characters, so it gets converted
+        (
+            "this-is-70-characters-and-valid-xxxxxxxXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "this-is-70-characters-and-valid-xxxxxxxX",
         ),
     ],
 )
@@ -925,9 +932,7 @@ def test_set_instance_name(mock_lxc, name, expected_name):
     )
 
     # compute hash
-    hasher = hashlib.sha1()
-    hasher.update(name.encode())
-    hashed_name = hasher.hexdigest()[:20]
+    hashed_name = hashlib.sha1(name.encode()).hexdigest()[:20]
 
     assert instance.instance_name == f"{expected_name}-{hashed_name}"
     assert len(instance.instance_name) <= 63

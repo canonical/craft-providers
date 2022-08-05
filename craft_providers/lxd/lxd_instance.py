@@ -113,19 +113,23 @@ class LXDInstance(Executor):
                 details="name must contain at least one alphanumeric character",
             )
 
-        # truncate to 40 characters
-        truncated_name = trimmed_name.group("valid_part_of_name")[:40]
+        # if the original name meets LXD's naming convention, then use the original name
+        if (
+            self.name == trimmed_name.group("valid_part_of_name")
+            and len(self.name) <= 63
+        ):
+            instance_name = self.name
 
-        # if the name is unchanged, then use the original name
-        if self.name == truncated_name:
-            self.instance_name = self.name
+        # else, continue converting the name
         else:
+            # truncate to 40 characters
+            truncated_name = trimmed_name.group("valid_part_of_name")[:40]
             # hash the entire name, not the truncated name
-            hasher = hashlib.sha1()
-            hasher.update(self.name.encode())
-            hashed_name = hasher.hexdigest()[:20]
+            hashed_name = hashlib.sha1(self.name.encode()).hexdigest()[:20]
+            instance_name = f"{truncated_name}-{hashed_name}"
 
-            self.instance_name = f"{truncated_name}-{hashed_name}"
+        self.instance_name = instance_name
+        logger.debug("Set LXD instance name to %s")
 
     def _finalize_lxc_command(
         self,
