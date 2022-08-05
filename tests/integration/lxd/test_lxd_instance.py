@@ -161,6 +161,34 @@ def test_launch(instance_name):
         instance.delete()
 
 
+@pytest.mark.parametrize(
+    "name",
+    [
+        "test-name",
+        "more-than-63-characters-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "more-than-63-characters-and-invalid-characters-$$$xxxxxxxxxxxxxxxxxxxx",
+        "invalid-characters-$$$",
+    ],
+)
+def test_launch_with_name(instance_name, name):
+    """Verify we can launch an instance even when we pass in an invalid name."""
+    # prepend the tester's random instance name
+    name = f"{instance_name}-{name}"
+    instance = LXDInstance(name=name)
+
+    assert instance.exists() is False
+
+    instance.launch(
+        image="20.04",
+        image_remote="ubuntu",
+    )
+
+    try:
+        assert instance.exists() is True
+    finally:
+        instance.delete()
+
+
 def test_mount_unmount(reusable_instance, tmp_path):
     tmp_path.chmod(0o755)
 

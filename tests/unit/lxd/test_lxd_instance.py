@@ -26,6 +26,7 @@ import tempfile
 from unittest import mock
 
 import pytest
+from logassert import Exact  # type: ignore
 
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, LXDInstance
@@ -884,7 +885,7 @@ def test_unmount_error(mock_lxc, instance):
         "this-is-63-characters-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     ],
 )
-def test_set_instance_name_unchanged(mock_lxc, name):
+def test_set_instance_name_unchanged(logs, mock_lxc, name):
     """Verify names that are already compliant are not changed."""
     instance = LXDInstance(
         name=name,
@@ -892,6 +893,7 @@ def test_set_instance_name_unchanged(mock_lxc, name):
     )
 
     assert instance.instance_name == name
+    assert Exact(f"Set LXD instance name to {name!r}") in logs.debug
 
 
 @pytest.mark.parametrize(
@@ -924,7 +926,7 @@ def test_set_instance_name_unchanged(mock_lxc, name):
         ),
     ],
 )
-def test_set_instance_name(mock_lxc, name, expected_name):
+def test_set_instance_name(logs, mock_lxc, name, expected_name):
     """Verify name is compliant with LXD naming conventions."""
     instance = LXDInstance(
         name=name,
@@ -936,6 +938,7 @@ def test_set_instance_name(mock_lxc, name, expected_name):
 
     assert instance.instance_name == f"{expected_name}-{hashed_name}"
     assert len(instance.instance_name) <= 63
+    assert Exact(f"Set LXD instance name to {instance.instance_name!r}") in logs.debug
 
 
 def test_set_instance_name_hash_value(mock_lxc):
