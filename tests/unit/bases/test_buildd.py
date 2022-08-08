@@ -19,6 +19,7 @@ from textwrap import dedent
 from unittest import mock
 
 import pytest
+from logassert import Exact  # type: ignore
 from pydantic import ValidationError
 
 from craft_providers.bases import (
@@ -855,3 +856,84 @@ def test_warmup_never_network(fake_process, fake_executor, mock_load):
 
     with pytest.raises(BaseConfigurationError):
         base_config.warmup(executor=fake_executor, timeout=0.01, retry_wait=0.1)
+
+
+@pytest.mark.parametrize(
+    "hostname",
+    [
+        "t",
+        "test",
+        "test1",
+        "test-1",
+        "1-test",
+        "this-is-40-characters-xxxxxxxxxxxxxxxxxx",
+        "this-is-63-characters-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    ],
+)
+def test_set_hostname_unchanged(hostname, logs):
+    """Verify hostnames that are already compliant are not changed."""
+    base_config = buildd.BuilddBase(
+        alias=buildd.BuilddBaseAlias.JAMMY,
+        hostname=hostname,
+    )
+
+    assert base_config.hostname == hostname
+    assert Exact(f"Using hostname '{hostname}'") in logs.debug
+
+
+@pytest.mark.parametrize(
+    "hostname, expected_hostname",
+    [
+        # trim away invalid beginning characters
+        ("-test", "test"),
+        # trim away invalid ending characters
+        ("test-", "test"),
+        ("test--", "test"),
+        ("test1-", "test1"),
+        # trim away invalid characters
+        ("test$", "test"),
+        ("test-!@#$%^&*()test", "test-test"),
+        ("$1test", "1test"),
+        ("test-$", "test"),
+        # this name contains invalid characters so it gets converted, even
+        # though it is 63 characters
+        (
+            "this-is-63-characters-with-invalid-characters-$$$xxxxxxxxxxxxxX",
+            "this-is-63-characters-with-invalid-characters-xxxxxxxxxxxxxX",
+        ),
+        # this name is longer than 63 characters, so it gets converted
+        (
+            "this-is-70-characters-with-valid-characters-xxxxxxxxxxxxxxxxxxXxxxxxxx",
+            "this-is-70-characters-with-valid-characters-xxxxxxxxxxxxxxxxxxX",
+        ),
+    ],
+)
+def test_set_hostname(hostname, expected_hostname, logs):
+    """Verify hostname is compliant with hostname naming conventions."""
+    base_config = buildd.BuilddBase(
+        alias=buildd.BuilddBaseAlias.JAMMY,
+        hostname=hostname,
+    )
+
+    assert base_config.hostname == expected_hostname
+    assert Exact(f"Using hostname '{expected_hostname}'") in logs.debug
+
+
+@pytest.mark.parametrize(
+    "hostname",
+    [
+        "",
+        "-",
+        "$$$",
+        "-$-$-",
+    ],
+)
+def test_set_hostname_invalid(hostname):
+    """Verify invalid hostnames raise an error."""
+    with pytest.raises(BaseConfigurationError) as error:
+        buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY, hostname=hostname)
+
+    assert error.value == BaseConfigurationError(
+        brief=f"failed to create base with hostname {hostname!r}.",
+        details="hostname must contain at least one alphanumeric character",
+    )
