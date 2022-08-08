@@ -82,12 +82,12 @@ class LXDInstance(Executor):
         """Convert a name to a LXD-compatible name.
 
         LXD naming convention:
-        - be between 1 and 63 characters long
-        - be made up exclusively of letters, numbers and dashes from the ASCII table
-        - not start with a digit or a dash
-        - not end with a dash
+        - between 1 and 63 characters long
+        - made up exclusively of letters, numbers, and hyphens from the ASCII table
+        - not begin with a digit or a hyphen
+        - not end with a hyphen
 
-        To create a LXD-compatible name, forbidden characters are removed, the name is
+        To create a LXD-compatible name, invalid characters are removed, the name is
         truncated to 40 characters, then a hash is appended:
         <truncated-name>-<hash-of-name>
         └     1 - 40   ┘1└     20     ┘
@@ -95,24 +95,24 @@ class LXDInstance(Executor):
         :param name: name of instance
         :raises LXDError: if name contains no alphanumeric characters
         """
-        # remove anything that is not an alphanumeric characters or dash
+        # remove anything that is not an alphanumeric characters or hyphen
         name_with_valid_chars = re.sub(r"[^\w-]", "", self.name)
         if name_with_valid_chars == "":
             raise LXDError(
-                brief=(f"failed to create LXD instance with name {self.name!r}."),
+                brief=f"failed to create LXD instance with name {self.name!r}.",
                 details="name must contain at least one alphanumeric character",
             )
 
-        # trim digits and dashes from the beginning and dashes from the end
-        trimmed_name = re.compile(r"^[0-9-]*(?P<valid_part_of_name>.*?)[-]*$").search(
+        # trim digits and hyphens from the beginning and hyphens from the end
+        trimmed_name = re.compile(r"^[0-9-]*(?P<valid_name>.*?)[-]*$").search(
             name_with_valid_chars
         )
-        if not trimmed_name or trimmed_name.group("valid_part_of_name") == "":
+        if not trimmed_name or trimmed_name.group("valid_name") == "":
             raise LXDError(
-                brief=(f"failed to create LXD instance with name {self.name!r}."),
+                brief=f"failed to create LXD instance with name {self.name!r}.",
                 details="name must contain at least one alphanumeric character",
             )
-        valid_name = trimmed_name.group("valid_part_of_name")
+        valid_name = trimmed_name.group("valid_name")
 
         # if the original name meets LXD's naming convention, then use the original name
         if self.name == valid_name and len(self.name) <= 63:

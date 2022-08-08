@@ -31,7 +31,7 @@ from logassert import Exact  # type: ignore
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, LXDInstance
 
-# These names include forbidden characters so a lxd-compatible instance_name
+# These names include invalid characters so a lxd-compatible instance_name
 # is generated. This ensures an Instance's `name` and `instance_name` are
 # differentiated when testing.
 _TEST_INSTANCE = {
@@ -914,7 +914,7 @@ def test_set_instance_name_unchanged(logs, mock_lxc, name):
         ("$1test", "test"),
         ("test-$", "test"),
         # this name contains invalid characters so it gets converted, even
-        # though it is less than 63 characters
+        # though it is 63 characters
         (
             "this-is-63-characters-with-invalid-characters-$$$xxxxxxxxxxxxxX",
             "this-is-63-characters-with-invalid-chara",
