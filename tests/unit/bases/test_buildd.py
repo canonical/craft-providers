@@ -903,8 +903,8 @@ def test_set_hostname_unchanged(hostname, logs):
         ),
         # this name is longer than 63 characters, so it gets converted
         (
-            "this-is-70-characters-with-valid-characters-xxxxxxxxxxxxxxxxxxXxxxxxxx",
-            "this-is-70-characters-with-valid-characters-xxxxxxxxxxxxxxxxxxX",
+            "this-is-64-characters-with-valid-characters-xxxxxxxxxxxxxxxxxxXx",
+            "this-is-64-characters-with-valid-characters-xxxxxxxxxxxxxxxxxxX",
         ),
     ],
 )
