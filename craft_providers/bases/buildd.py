@@ -20,6 +20,7 @@ import enum
 import io
 import logging
 import pathlib
+import re
 import subprocess
 import time
 from textwrap import dedent
@@ -124,7 +125,41 @@ class BuilddBase(Base):
         else:
             self.environment = environment
 
-        self.hostname = hostname
+        self._set_hostname(hostname)
+
+    def _set_hostname(self, hostname: str) -> None:
+        """Set hostname.
+
+        hostname naming convention:
+        - between 1 and 63 characters long
+        - be made up exclusively of letters, numbers, and hyphens from the ASCII table
+        - not begin or end with a hyphen
+
+        If needed, the provided hostname will be trimmed to meet naming conventions.
+
+        :param hostname: hostname to set
+        :raises BaseConfigurationError: if the hostname contains no
+          alphanumeric characters
+        """
+        # remove anything that is not an alphanumeric character or hyphen
+        name_with_valid_chars = re.sub(r"[^\w-]", "", hostname)
+
+        # trim hyphens from the beginning and end
+        trimmed_name = re.compile(r"^[-]*(?P<valid_name>.*?)[-]*$").search(
+            name_with_valid_chars
+        )
+        if not trimmed_name or trimmed_name.group("valid_name") == "":
+            raise BaseConfigurationError(
+                brief=f"failed to create base with hostname {hostname!r}.",
+                details="hostname must contain at least one alphanumeric character",
+            )
+        valid_name = trimmed_name.group("valid_name")
+
+        # truncate to 63 characters
+        truncated_name = valid_name[:63]
+
+        logger.debug("Using hostname %r", truncated_name)
+        self.hostname = truncated_name
 
     def _ensure_instance_config_compatible(
         self, *, executor: Executor, deadline: Optional[float]
