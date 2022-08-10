@@ -49,16 +49,12 @@ def mock_load(mocker):
 
 @pytest.fixture()
 def mock_install_from_store(mocker):
-    yield mocker.patch(
-        "craft_providers.actions.snap_installer.install_from_store",
-    )
+    yield mocker.patch("craft_providers.actions.snap_installer.install_from_store")
 
 
 @pytest.fixture()
 def mock_inject_from_host(mocker):
-    yield mocker.patch(
-        "craft_providers.actions.snap_installer.inject_from_host",
-    )
+    yield mocker.patch("craft_providers.actions.snap_installer.inject_from_host")
 
 
 @pytest.mark.parametrize(
@@ -306,8 +302,11 @@ def test_install_snaps_install_from_store(fake_executor, mock_install_from_store
     ]
 
 
-def test_install_snaps_inject_from_host_valid(fake_executor, mock_inject_from_host):
+def test_install_snaps_inject_from_host_valid(
+    fake_executor, mock_inject_from_host, mocker
+):
     """Verify installing snaps calls inject_from_host()."""
+    mocker.patch("sys.platform", "linux")
     my_snaps = [
         buildd.Snap(name="snap1", channel=None),
         buildd.Snap(name="snap2", channel=None, classic=True),
@@ -362,6 +361,7 @@ def test_install_snaps_install_from_store_error(fake_executor, mocker):
 
 def test_install_snaps_inject_from_host_error(fake_executor, mocker):
     """Verify install_snaps raises an error when inject_from_host fails."""
+    mocker.patch("sys.platform", "linux")
     mocker.patch(
         "craft_providers.actions.snap_installer.inject_from_host",
         side_effect=SnapInstallationError(brief="test error"),
