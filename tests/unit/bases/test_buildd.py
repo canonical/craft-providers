@@ -16,12 +16,13 @@
 #
 
 from textwrap import dedent
-from unittest import mock
+from unittest.mock import ANY, call, patch
 
 import pytest
 from logassert import Exact  # type: ignore
 from pydantic import ValidationError
 
+from craft_providers.actions.snap_installer import SnapInstallationError
 from craft_providers.bases import (
     BaseCompatibilityError,
     BaseConfigurationError,
@@ -30,6 +31,8 @@ from craft_providers.bases import (
     instance_config,
 )
 from craft_providers.errors import details_from_called_process_error
+
+# pylint: disable=too-many-lines
 
 DEFAULT_FAKE_CMD = ["fake-executor"]
 
@@ -42,6 +45,16 @@ def mock_load(mocker):
             compatibility_tag="buildd-base-v0"
         ),
     )
+
+
+@pytest.fixture()
+def mock_install_from_store(mocker):
+    yield mocker.patch("craft_providers.actions.snap_installer.install_from_store")
+
+
+@pytest.fixture()
+def mock_inject_from_host(mocker):
+    yield mocker.patch("craft_providers.actions.snap_installer.inject_from_host")
 
 
 @pytest.mark.parametrize(
@@ -76,6 +89,16 @@ def mock_load(mocker):
         ),
     ],
 )
+@pytest.mark.parametrize(
+    "snaps, expected_snap_call",
+    [
+        (None, []),
+        (
+            [buildd.Snap(name="snap1", channel="edge", classic=True)],
+            [call(executor=ANY, snap_name="snap1", channel="edge", classic=True)],
+        ),
+    ],
+)
 def test_setup(  # pylint: disable=too-many-arguments
     fake_process,
     fake_executor,
@@ -83,7 +106,11 @@ def test_setup(  # pylint: disable=too-many-arguments
     hostname,
     environment,
     etc_environment_content,
+    mock_inject_from_host,
+    mock_install_from_store,
     mock_load,
+    snaps,
+    expected_snap_call,
 ):
     if environment is None:
         environment = buildd.default_command_environment()
@@ -92,6 +119,7 @@ def test_setup(  # pylint: disable=too-many-arguments
         alias=alias,
         environment=environment,
         hostname=hostname,
+        snaps=snaps,
     )
 
     fake_process.register_subprocess(
@@ -240,6 +268,115 @@ def test_setup(  # pylint: disable=too-many-arguments
     ]
     assert fake_executor.records_of_pull_file == []
     assert fake_executor.records_of_push_file == []
+    assert mock_install_from_store.mock_calls == expected_snap_call
+
+
+def test_snaps_no_channel_raises_errors(fake_executor):
+    """Verify the Snap model raises an error when the channel is an empty string."""
+    with pytest.raises(errors.BaseConfigurationError) as exc_info:
+        buildd.Snap(name="snap1", channel="")
+
+    assert exc_info.value == errors.BaseConfigurationError(
+        brief="channel cannot be empty",
+        resolution="set channel to a non-empty string or `None`",
+    )
+
+
+def test_install_snaps_install_from_store(fake_executor, mock_install_from_store):
+    """Verify installing snaps calls install_from_store()."""
+    my_snaps = [
+        buildd.Snap(name="snap1"),
+        buildd.Snap(name="snap2", channel="edge"),
+        buildd.Snap(name="snap3", channel="edge", classic=True),
+    ]
+    base = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY, snaps=my_snaps)
+
+    base._install_snaps(executor=fake_executor, deadline=None)
+
+    assert mock_install_from_store.mock_calls == [
+        call(
+            executor=fake_executor, snap_name="snap1", channel="stable", classic=False
+        ),
+        call(executor=fake_executor, snap_name="snap2", channel="edge", classic=False),
+        call(executor=fake_executor, snap_name="snap3", channel="edge", classic=True),
+    ]
+
+
+def test_install_snaps_inject_from_host_valid(
+    fake_executor, mock_inject_from_host, mocker
+):
+    """Verify installing snaps calls inject_from_host()."""
+    mocker.patch("sys.platform", "linux")
+    my_snaps = [
+        buildd.Snap(name="snap1", channel=None),
+        buildd.Snap(name="snap2", channel=None, classic=True),
+    ]
+    base = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY, snaps=my_snaps)
+
+    base._install_snaps(executor=fake_executor, deadline=None)
+
+    assert mock_inject_from_host.mock_calls == [
+        call(executor=fake_executor, snap_name="snap1", classic=False),
+        call(executor=fake_executor, snap_name="snap2", classic=True),
+    ]
+
+
+def test_install_snaps_inject_from_host_not_linux_error(fake_executor, mocker):
+    """Verify install_snaps raises an error when injecting from host on
+    a non-linux system."""
+    mocker.patch("sys.platform", return_value="darwin")
+    my_snaps = [buildd.Snap(name="snap1", channel=None)]
+    base = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY, snaps=my_snaps)
+
+    with pytest.raises(errors.BaseConfigurationError) as exc_info:
+        base._install_snaps(executor=fake_executor, deadline=None)
+
+    assert exc_info.value == errors.BaseConfigurationError(
+        brief="cannot inject snap 'snap1' from host on a non-linux system",
+        resolution="install the snap from the store by setting the 'channel' parameter",
+    )
+
+
+def test_install_snaps_install_from_store_error(fake_executor, mocker):
+    """Verify install_snaps raises an error when install_from_store fails."""
+    mocker.patch(
+        "craft_providers.actions.snap_installer.install_from_store",
+        side_effect=SnapInstallationError(brief="test error"),
+    )
+    my_snaps = [
+        buildd.Snap(name="snap1", channel="candidate"),
+    ]
+    base = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY, snaps=my_snaps)
+
+    with pytest.raises(errors.BaseConfigurationError) as exc_info:
+        base._install_snaps(executor=fake_executor, deadline=None)
+
+    assert exc_info.value == errors.BaseConfigurationError(
+        brief=(
+            "failed to install snap 'snap1' from store"
+            " channel 'candidate' in target environment."
+        )
+    )
+
+
+def test_install_snaps_inject_from_host_error(fake_executor, mocker):
+    """Verify install_snaps raises an error when inject_from_host fails."""
+    mocker.patch("sys.platform", "linux")
+    mocker.patch(
+        "craft_providers.actions.snap_installer.inject_from_host",
+        side_effect=SnapInstallationError(brief="test error"),
+    )
+    my_snaps = [
+        buildd.Snap(name="snap1", channel=None),
+    ]
+    base = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY, snaps=my_snaps)
+
+    with pytest.raises(errors.BaseConfigurationError) as exc_info:
+        base._install_snaps(executor=fake_executor, deadline=None)
+
+    assert exc_info.value == errors.BaseConfigurationError(
+        brief="failed to inject host's snap 'snap1' into target environment."
+    )
 
 
 def test_ensure_image_version_compatible_failure(
@@ -266,7 +403,7 @@ def test_ensure_image_version_compatible_failure(
     )
 
 
-@mock.patch("time.time", side_effect=[0.0, 1.0])
+@patch("time.time", side_effect=[0.0, 1.0])
 def test_setup_timeout(  # pylint: disable=unused-argument
     mock_time, fake_executor, fake_process, monkeypatch
 ):
@@ -621,7 +758,7 @@ def test_wait_for_system_ready(
     ]
 
 
-@mock.patch("time.time", side_effect=[0.0, 0.0, 1.0])
+@patch("time.time", side_effect=[0.0, 0.0, 1.0])
 @pytest.mark.parametrize(
     "alias",
     [
@@ -655,7 +792,7 @@ def test_wait_for_system_ready_timeout(  # pylint: disable=unused-argument
     )
 
 
-@mock.patch("time.time", side_effect=[0.0, 0.0, 1.0])
+@patch("time.time", side_effect=[0.0, 0.0, 1.0])
 @pytest.mark.parametrize(
     "alias",
     [
@@ -690,7 +827,7 @@ def test_wait_for_system_ready_timeout_in_network(  # pylint: disable=unused-arg
     )
 
 
-@mock.patch(
+@patch(
     "craft_providers.bases.instance_config.InstanceConfiguration.load",
     side_effect=ValidationError("foo", instance_config.InstanceConfiguration),
 )
@@ -707,7 +844,7 @@ def test_ensure_config_compatible_validation_error(fake_executor):
     )
 
 
-@mock.patch(
+@patch(
     "craft_providers.bases.instance_config.InstanceConfiguration.load",
     return_value=None,
 )
