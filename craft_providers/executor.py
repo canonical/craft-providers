@@ -162,3 +162,14 @@ class Executor(ABC):
         :param group: File owner group.
         :param user: File owner user.
         """
+
+    @abstractmethod
+    def delete(self) -> None:
+        """Delete instance."""
+
+    @abstractmethod
+    def exists(self) -> bool:
+        """Check if instance exists.
+
+        :returns: True if instance exists.
+        """
