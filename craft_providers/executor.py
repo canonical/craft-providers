@@ -92,21 +92,16 @@ class Executor(ABC):
         :raises ProviderError: On error copying file.
         """
 
-    # FIXME: to discuss:
-    # - method name
-    # - is here the best place?
-    # - what about merging this with `pull file`? it's abstract here, though!
     @contextlib.contextmanager
-    def pull_file_as_temp(
+    def temporarily_pull_file(
         self, *, source: pathlib.Path, missing_ok: bool = False
     ) -> Generator[Optional[pathlib.Path], None, None]:
         """Copy a file from the environment to a temporary file in the host.
 
-        This is mainly a layer above `pull_file` that simplifies the work with
-        temporary files.
+        This is mainly a layer above `pull_file` that pulls the file into a
+        temporary path which is cleaned later.
 
         Works as a context manager, provides the file path in the host as target.
-
 
         :param source: Environment file to copy.
         :param missing_ok: Do not raise an error if the file does not exist in the

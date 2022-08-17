@@ -31,7 +31,7 @@ def fake_executor_local_pull(fake_executor):
     return fake_executor
 
 
-def test_pullfiletemp_ok(monkeypatch, tmp_path, fake_executor_local_pull):
+def test_temporarypull_ok(monkeypatch, tmp_path, fake_executor_local_pull):
     """Successful case."""
     # change dir so the temp file is created in a temp dir
     monkeypatch.chdir(tmp_path)
@@ -39,7 +39,7 @@ def test_pullfiletemp_ok(monkeypatch, tmp_path, fake_executor_local_pull):
     source = tmp_path / "source.txt"
     source.write_text("test content")
 
-    with fake_executor_local_pull.pull_file_as_temp(source=source) as localfilepath:
+    with fake_executor_local_pull.temporarily_pull_file(source=source) as localfilepath:
         # temp file located "here" and with proper naming
         assert localfilepath.parent == tmp_path
         assert localfilepath.name.startswith("craft-providers-")
@@ -52,31 +52,31 @@ def test_pullfiletemp_ok(monkeypatch, tmp_path, fake_executor_local_pull):
     assert not localfilepath.exists()
 
 
-def test_pullfiletemp_missing_file_error(
+def test_temporarypull_missing_file_error(
     monkeypatch, tmp_path, fake_executor_local_pull
 ):
     """The source is missing, by default it's an error."""
     source = tmp_path / "source.txt"  # note we're not creating it in disk
 
     with pytest.raises(FileNotFoundError):
-        with fake_executor_local_pull.pull_file_as_temp(source=source):
+        with fake_executor_local_pull.temporarily_pull_file(source=source):
             pass
 
 
-def test_pullfiletemp_missing_file_ok(monkeypatch, tmp_path, fake_executor_local_pull):
+def test_temporarypull_missing_file_ok(monkeypatch, tmp_path, fake_executor_local_pull):
     """The source is missing, but it's ok."""
     # change dir so the temp file is created in a temp dir
     monkeypatch.chdir(tmp_path)
 
     source = tmp_path / "source.txt"  # note we're not creating it in disk
 
-    with fake_executor_local_pull.pull_file_as_temp(
+    with fake_executor_local_pull.temporarily_pull_file(
         source=source, missing_ok=True
     ) as localfilepath:
         assert localfilepath is None
 
 
-def test_pullfiletemp_temp_file_cleaned(
+def test_temporarypull_temp_file_cleaned(
     monkeypatch, tmp_path, fake_executor_local_pull
 ):
     """The temp file is cleaned after usage."""
@@ -87,7 +87,9 @@ def test_pullfiletemp_temp_file_cleaned(
     source.write_text("test content")
 
     with pytest.raises(ValueError):
-        with fake_executor_local_pull.pull_file_as_temp(source=source) as localfilepath:
+        with fake_executor_local_pull.temporarily_pull_file(
+            source=source
+        ) as localfilepath:
             # internal crash
             raise ValueError("boom")
 
