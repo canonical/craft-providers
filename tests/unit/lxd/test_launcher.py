@@ -46,7 +46,9 @@ def mock_lxd_instance():
         "craft_providers.lxd.launcher.LXDInstance",
         spec=lxd.LXDInstance,
     ) as mock_instance:
-        mock_instance.return_value.name = "test-instance"
+        mock_instance.return_value.name = "test-instance-$"
+        # the name has an invalid character, so the instance_name will be different
+        mock_instance.return_value.instance_name = "test-instance-fa2d407652a1c51f6019"
         mock_instance.return_value.project = "test-project"
         mock_instance.return_value.remote = "test-remote"
         yield mock_instance
@@ -112,7 +114,7 @@ def test_launch_making_initial_snapshot(
         ),
         mock.call.publish(
             alias="snapshot-image-remote-image-name-mock-compat-tag-v100",
-            instance_name="test-instance",
+            instance_name="test-instance-fa2d407652a1c51f6019",
             force=True,
             project="test-project",
             remote="test-remote",
