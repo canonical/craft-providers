@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2022 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -29,7 +29,7 @@ from . import conftest
 @pytest.fixture()
 def instance(instance_name, project):
     with conftest.tmp_instance(
-        instance_name=instance_name,
+        name=instance_name,
         project=project,
     ):
         instance = LXDInstance(name=instance_name, project=project)
@@ -41,7 +41,7 @@ def instance(instance_name, project):
 def reusable_instance(reusable_instance_name):
     """Reusable instance for tests that don't require a fresh instance."""
     with conftest.tmp_instance(
-        instance_name=reusable_instance_name,
+        name=reusable_instance_name,
         ephemeral=False,
         project="default",
     ):
@@ -147,6 +147,34 @@ def test_exists_false():
 
 def test_launch(instance_name):
     instance = LXDInstance(name=instance_name)
+
+    assert instance.exists() is False
+
+    instance.launch(
+        image="20.04",
+        image_remote="ubuntu",
+    )
+
+    try:
+        assert instance.exists() is True
+    finally:
+        instance.delete()
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "test-name",
+        "more-than-63-characters-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "more-than-63-characters-and-invalid-characters-$$$xxxxxxxxxxxxxxxxxxxx",
+        "invalid-characters-$$$",
+    ],
+)
+def test_launch_with_name(instance_name, name):
+    """Verify we can launch an instance even when we pass in an invalid name."""
+    # prepend the tester's random instance name
+    name = f"{instance_name}-{name}"
+    instance = LXDInstance(name=name)
 
     assert instance.exists() is False
 

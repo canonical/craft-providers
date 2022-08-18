@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2022 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -31,12 +31,12 @@ from . import conftest
 @pytest.fixture()
 def core20_instance(instance_name):
     with conftest.tmp_instance(
-        instance_name=instance_name,
+        name=instance_name,
         image="20.04",
         image_remote="ubuntu",
         project="default",
-    ) as tmp_instance:
-        instance = lxd.LXDInstance(name=tmp_instance)
+    ):
+        instance = lxd.LXDInstance(name=instance_name)
 
         yield instance
 

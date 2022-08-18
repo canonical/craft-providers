@@ -20,15 +20,19 @@ import enum
 import io
 import logging
 import pathlib
+import re
 import subprocess
+import sys
 import time
 from textwrap import dedent
 from time import sleep
-from typing import Dict, Optional, Type
+from typing import Dict, List, Optional, Type
 
+import pydantic
 from pydantic import ValidationError
 
 from craft_providers import Base, Executor, errors
+from craft_providers.actions import snap_installer
 from craft_providers.util.os_release import parse_os_release
 
 from .errors import BaseCompatibilityError, BaseConfigurationError
@@ -83,6 +87,37 @@ class BuilddBaseAlias(enum.Enum):
     JAMMY = "22.04"
 
 
+class Snap(pydantic.BaseModel, extra=pydantic.Extra.forbid):
+    """Details of snap to install in the base.
+
+    :param name: name of snap
+    :param channel: snap store channel to install from (default is stable)
+      If channel is `None`, then the snap is injected from the host instead
+      of being installed from the store.
+    :param classic: true if snap is a classic snap (default is false)
+    """
+
+    name: str
+    channel: Optional[str] = "stable"
+    classic: bool = False
+
+    # pylint: disable=no-self-argument
+    @pydantic.validator("channel")
+    def validate_channel(cls, channel):
+        """Validate that channel is not an empty string.
+
+        :raises BaseConfigurationError: if channel is empty
+        """
+        if channel == "":
+            raise BaseConfigurationError(
+                brief="channel cannot be empty",
+                resolution="set channel to a non-empty string or `None`",
+            )
+        return channel
+
+    # pylint: enable=no-self-argument
+
+
 class BuilddBase(Base):
     """Support for Ubuntu minimal buildd images.
 
@@ -104,6 +139,7 @@ class BuilddBase(Base):
     :param alias: Base alias / version.
     :param environment: Environment to set in /etc/environment.
     :param hostname: Hostname to configure.
+    :param snaps: Optional list of snaps to install on the base image.
     """
 
     compatibility_tag: str = f"buildd-{Base.compatibility_tag}"
@@ -116,6 +152,7 @@ class BuilddBase(Base):
         alias: BuilddBaseAlias,
         environment: Optional[Dict[str, Optional[str]]] = None,
         hostname: str = "craft-buildd-instance",
+        snaps: Optional[List[Snap]] = None,
     ):
         self.alias: BuilddBaseAlias = alias
 
@@ -124,7 +161,42 @@ class BuilddBase(Base):
         else:
             self.environment = environment
 
-        self.hostname = hostname
+        self._set_hostname(hostname)
+        self.snaps = snaps
+
+    def _set_hostname(self, hostname: str) -> None:
+        """Set hostname.
+
+        hostname naming convention:
+        - between 1 and 63 characters long
+        - be made up exclusively of letters, numbers, and hyphens from the ASCII table
+        - not begin or end with a hyphen
+
+        If needed, the provided hostname will be trimmed to meet naming conventions.
+
+        :param hostname: hostname to set
+        :raises BaseConfigurationError: if the hostname contains no
+          alphanumeric characters
+        """
+        # remove anything that is not an alphanumeric character or hyphen
+        name_with_valid_chars = re.sub(r"[^\w-]", "", hostname)
+
+        # trim hyphens from the beginning and end
+        trimmed_name = re.compile(r"^[-]*(?P<valid_name>.*?)[-]*$").search(
+            name_with_valid_chars
+        )
+        if not trimmed_name or trimmed_name.group("valid_name") == "":
+            raise BaseConfigurationError(
+                brief=f"failed to create base with hostname {hostname!r}.",
+                details="hostname must contain at least one alphanumeric character",
+            )
+        valid_name = trimmed_name.group("valid_name")
+
+        # truncate to 63 characters
+        truncated_name = valid_name[:63]
+
+        logger.debug("Using hostname %r", truncated_name)
+        self.hostname = truncated_name
 
     def _ensure_instance_config_compatible(
         self, *, executor: Executor, deadline: Optional[float]
@@ -235,18 +307,12 @@ class BuilddBase(Base):
         If timeout is specified, abort operation if time has been exceeded.
 
         Guarantees provided by this setup:
-
-            - configured /etc/environment
-
-            - configured hostname
-
-            - networking available (IP & DNS resolution)
-
-            - apt cache up-to-date
-
-            - snapd configured and ready
-
-            - system services are started and ready
+          - configured /etc/environment
+          - configured hostname
+          - networking available (IP & DNS resolution)
+          - apt cache up-to-date
+          - snapd configured and ready
+          - system services are started and ready
 
         :param executor: Executor for target container.
         :param retry_wait: Duration to sleep() between status checks (if
@@ -277,6 +343,7 @@ class BuilddBase(Base):
         )
         self._setup_apt(executor=executor, deadline=deadline)
         self._setup_snapd(executor=executor, deadline=deadline)
+        self._install_snaps(executor=executor, deadline=deadline)
 
     def warmup(
         self,
@@ -290,12 +357,9 @@ class BuilddBase(Base):
         Ensure the instance is still valid and wait for environment to become ready.
 
         Guarantees provided by this wait:
-
-            - OS and instance config are compatible
-
-            - networking available (IP & DNS resolution)
-
-            - system services are started and ready
+          - OS and instance config are compatible
+          - networking available (IP & DNS resolution)
+          - system services are started and ready
 
         If timeout is specified, abort operation if time has been exceeded.
 
@@ -319,6 +383,7 @@ class BuilddBase(Base):
         self._setup_wait_for_network(
             executor=executor, deadline=deadline, retry_wait=retry_wait
         )
+        self._install_snaps(executor=executor, deadline=deadline)
 
     def _disable_automatic_apt(
         self, *, executor: Executor, deadline: Optional[float]
@@ -346,6 +411,75 @@ class BuilddBase(Base):
             content=io.BytesIO(content),
             file_mode="0644",
         )
+
+    def _install_snaps(self, *, executor: Executor, deadline: Optional[float]) -> None:
+        """Install snaps.
+
+        Snaps will either be installed from the store or injected from the host.
+        - If channel is `None` on a linux system, the host snap is injected
+          into the provider.
+        - If channel is `None` on a non-linux system, an error is raised
+          because host injection is not supported on non-linux systems.
+
+        :param executor: Executor for target container.
+        :param deadline: Optional time.time() deadline.
+        :raises BaseConfigurationError: if the snap cannot be installed
+        """
+        if not self.snaps:
+            logger.debug("No snaps to install.")
+            return
+
+        for snap in self.snaps:
+            _check_deadline(deadline)
+            logger.debug(
+                "Installing snap %r with channel=%r and classic=%r",
+                snap.name,
+                snap.channel,
+                snap.classic,
+            )
+
+            # don't inject snaps on non-linux hosts
+            if sys.platform != "linux" and not snap.channel:
+                raise BaseConfigurationError(
+                    brief=(
+                        f"cannot inject snap {snap.name!r} from host on "
+                        "a non-linux system"
+                    ),
+                    resolution=(
+                        "install the snap from the store by setting the "
+                        "'channel' parameter"
+                    ),
+                )
+
+            if snap.channel:
+                try:
+                    snap_installer.install_from_store(
+                        executor=executor,
+                        snap_name=snap.name,
+                        channel=snap.channel,
+                        classic=snap.classic,
+                    )
+                except snap_installer.SnapInstallationError as error:
+                    raise BaseConfigurationError(
+                        brief=(
+                            f"failed to install snap {snap.name!r} from store"
+                            f" channel {snap.channel!r} in target environment."
+                        )
+                    ) from error
+            else:
+                try:
+                    snap_installer.inject_from_host(
+                        executor=executor,
+                        snap_name=snap.name,
+                        classic=snap.classic,
+                    )
+                except snap_installer.SnapInstallationError as error:
+                    raise BaseConfigurationError(
+                        brief=(
+                            f"failed to inject host's snap {snap.name!r} "
+                            "into target environment."
+                        )
+                    ) from error
 
     def _setup_apt(self, *, executor: Executor, deadline: Optional[float]) -> None:
         """Configure apt, update cache and install needed packages.

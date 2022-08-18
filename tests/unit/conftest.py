@@ -113,6 +113,12 @@ class FakeExecutor(Executor):
             )
         )
 
+    def delete(self) -> None:
+        return
+
+    def exists(self) -> bool:
+        return True
+
 
 @pytest.fixture
 def fake_executor():

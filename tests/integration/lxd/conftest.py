@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2022 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -28,6 +28,7 @@ import pytest
 
 from craft_providers.lxd import LXC
 from craft_providers.lxd import project as lxc_project
+from craft_providers.lxd.lxd_instance import LXDInstance
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -55,7 +56,7 @@ def installed_lxd_without_init(uninstalled_lxd):
 @contextmanager
 def tmp_instance(
     *,
-    instance_name: str,
+    name: str,
     config_keys: Optional[Dict[str, Any]] = None,
     ephemeral: bool = True,
     image: str = "16.04",
@@ -66,6 +67,14 @@ def tmp_instance(
 ):
     if config_keys is None:
         config_keys = {}
+
+    instance = LXDInstance(
+        name=name,
+        project=project,
+        remote=remote,
+        lxc=lxc,
+    )
+    instance_name = instance.instance_name
 
     lxc.launch(
         instance_name=instance_name,
