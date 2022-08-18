@@ -80,7 +80,7 @@ class Executor(ABC):
         """
 
     @abstractmethod
-    def pull_file(self, *, source: pathlib.Path, destination: pathlib.Path) -> None:
+    def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:
         """Copy a file from the environment to host.
 
         :param source: Environment file to copy.
@@ -132,7 +132,7 @@ class Executor(ABC):
             local_filepath.unlink()
 
     @abstractmethod
-    def push_file(self, *, source: pathlib.Path, destination: pathlib.Path) -> None:
+    def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:
         """Copy a file from the host into the environment.
 
         :param source: Host file to copy.
@@ -148,7 +148,7 @@ class Executor(ABC):
     def push_file_io(
         self,
         *,
-        destination: pathlib.Path,
+        destination: pathlib.PurePath,
         content: io.BytesIO,
         file_mode: str,
         group: str = "root",
