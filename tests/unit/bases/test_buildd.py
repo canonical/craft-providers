@@ -15,6 +15,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
+import subprocess
 from textwrap import dedent
 from unittest.mock import ANY, call, patch
 
@@ -99,6 +100,13 @@ def mock_inject_from_host(mocker):
         ),
     ],
 )
+@pytest.mark.parametrize(
+    "packages, expected_packages",
+    [
+        (None, ["apt-utils", "curl"]),
+        (["grep", "git"], ["apt-utils", "curl", "grep", "git"]),
+    ],
+)
 def test_setup(  # pylint: disable=too-many-arguments
     fake_process,
     fake_executor,
@@ -111,6 +119,8 @@ def test_setup(  # pylint: disable=too-many-arguments
     mock_load,
     snaps,
     expected_snap_call,
+    packages,
+    expected_packages,
 ):
     if environment is None:
         environment = buildd.default_command_environment()
@@ -120,6 +130,7 @@ def test_setup(  # pylint: disable=too-many-arguments
         environment=environment,
         hostname=hostname,
         snaps=snaps,
+        packages=packages,
     )
 
     fake_process.register_subprocess(
@@ -169,7 +180,7 @@ def test_setup(  # pylint: disable=too-many-arguments
     )
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "apt-utils", "curl"]
+        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y"] + expected_packages
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "fuse", "udev"]
@@ -376,6 +387,70 @@ def test_install_snaps_inject_from_host_error(fake_executor, mocker):
 
     assert exc_info.value == errors.BaseConfigurationError(
         brief="failed to inject host's snap 'snap1' into target environment."
+    )
+
+
+def test_setup_apt(fake_executor, fake_process):
+    """Verify packages are installed as expected."""
+    packages = ["grep", "git"]
+    base = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY, packages=packages)
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "apt-get",
+            "install",
+            "-y",
+            "apt-utils",
+            "curl",
+            "grep",
+            "git",
+        ]
+    )
+
+    base._setup_apt(executor=fake_executor, deadline=None)
+
+
+def test_install_default(fake_executor, fake_process):
+    """Verify only default packages are installed."""
+    base = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "apt-utils", "curl"]
+    )
+
+    base._setup_apt(executor=fake_executor, deadline=None)
+
+
+def test_install_packages_update_error(mocker, fake_executor):
+    """Verify error is caught from `apt-get update` call."""
+    error = subprocess.CalledProcessError(100, ["error"])
+    base = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+
+    mocker.patch.object(fake_executor, "execute_run", side_effect=error)
+
+    with pytest.raises(errors.BaseConfigurationError) as exc_info:
+        base._setup_apt(executor=fake_executor, deadline=None)
+
+    assert exc_info.value == errors.BaseConfigurationError(
+        brief="Failed to update apt cache.",
+        details="* Command that failed: 'error'\n* Command exit code: 100",
+    )
+
+
+def test_install_packages_install_error(mocker, fake_executor):
+    """Verify error is caught from `apt-get install` call."""
+    error = subprocess.CalledProcessError(100, ["error"])
+    base = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+
+    mocker.patch.object(fake_executor, "execute_run", side_effect=[None, error])
+
+    with pytest.raises(errors.BaseConfigurationError) as exc_info:
+        base._setup_apt(executor=fake_executor, deadline=None)
+
+    assert exc_info.value == errors.BaseConfigurationError(
+        brief="Failed to install packages.",
+        details="* Command that failed: 'error'\n* Command exit code: 100",
     )
 
 

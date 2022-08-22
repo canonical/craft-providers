@@ -140,6 +140,7 @@ class BuilddBase(Base):
     :param environment: Environment to set in /etc/environment.
     :param hostname: Hostname to configure.
     :param snaps: Optional list of snaps to install on the base image.
+    :param packages: Optional list of system packages to install on the base image.
     """
 
     compatibility_tag: str = f"buildd-{Base.compatibility_tag}"
@@ -153,6 +154,7 @@ class BuilddBase(Base):
         environment: Optional[Dict[str, Optional[str]]] = None,
         hostname: str = "craft-buildd-instance",
         snaps: Optional[List[Snap]] = None,
+        packages: Optional[List[str]] = None,
     ):
         self.alias: BuilddBaseAlias = alias
 
@@ -163,6 +165,7 @@ class BuilddBase(Base):
 
         self._set_hostname(hostname)
         self.snaps = snaps
+        self.packages = packages
 
     def _set_hostname(self, hostname: str) -> None:
         """Set hostname.
@@ -514,10 +517,15 @@ class BuilddBase(Base):
                 details=errors.details_from_called_process_error(error),
             ) from error
 
+        # install required packages and user-defined packages
+        packages_to_install = ["apt-utils", "curl"]
+        if self.packages:
+            packages_to_install.extend(self.packages)
+
         try:
             _check_deadline(deadline)
             executor.execute_run(
-                ["apt-get", "install", "-y", "apt-utils", "curl"],
+                ["apt-get", "install", "-y"] + packages_to_install,
                 capture_output=True,
                 check=True,
             )
