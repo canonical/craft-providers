@@ -2,6 +2,28 @@
 Changelog
 *********
 
+
+1.4.0 (2022-08-22)
+------------------
+- Use LXD-compatible instance names
+- Add optional list of snaps to install in bases
+- Add optional list of system packages to install in bases
+- Add new temporarily_pull_file function to Executor base class
+- Add exists and delete function to Executor base class
+- Declare more instance paths as PurePath
+- Ensure BuilddBase hostname is valid
+- Move .pylintrc to pyproject.toml
+- Enforce line-too-long
+- Fix for unit tests on non-linux platforms
+
+Note: The provided name for a LXD executor object is converted to comply with
+      LXD naming conventions for instances. This may cause a compatibility issue
+      for applications that assume the LXD instance name will be identical to
+      the Executor name.
+
+      If a provided name already complies with LXD naming conventions, it is
+      not modified.
+
 1.3.1 (2022-06-09)
 ------------------
 
