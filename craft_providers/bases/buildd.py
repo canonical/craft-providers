@@ -151,6 +151,7 @@ class BuilddBase(Base):
         self,
         *,
         alias: BuilddBaseAlias,
+        compatibility_tag: Optional[str] = None,
         environment: Optional[Dict[str, Optional[str]]] = None,
         hostname: str = "craft-buildd-instance",
         snaps: Optional[List[Snap]] = None,
@@ -162,6 +163,9 @@ class BuilddBase(Base):
             self.environment = default_command_environment()
         else:
             self.environment = environment
+
+        if compatibility_tag:
+            self.compatibility_tag = compatibility_tag
 
         self._set_hostname(hostname)
         self.snaps = snaps
@@ -235,6 +239,9 @@ class BuilddBase(Base):
                     f"{self.compatibility_tag!r}, found {config.compatibility_tag!r}"
                 )
             )
+        logger.debug(
+            "Instance is compatible with compatibility tag %r", config.compatibility_tag
+        )
 
     def _ensure_os_compatible(
         self, *, executor: Executor, deadline: Optional[float]
