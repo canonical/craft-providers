@@ -107,6 +107,9 @@ def mock_inject_from_host(mocker):
         (["grep", "git"], ["apt-utils", "curl", "grep", "git"]),
     ],
 )
+@pytest.mark.parametrize(
+    "tag, expected_tag", [(None, "buildd-base-v0"), ("test-tag", "test-tag")]
+)
 def test_setup(  # pylint: disable=too-many-arguments
     fake_process,
     fake_executor,
@@ -116,17 +119,27 @@ def test_setup(  # pylint: disable=too-many-arguments
     etc_environment_content,
     mock_inject_from_host,
     mock_install_from_store,
-    mock_load,
+    mocker,
     snaps,
     expected_snap_call,
     packages,
     expected_packages,
+    tag,
+    expected_tag,
 ):
+    mocker.patch(
+        "craft_providers.bases.instance_config.InstanceConfiguration.load",
+        return_value=instance_config.InstanceConfiguration(
+            compatibility_tag=expected_tag
+        ),
+    )
+
     if environment is None:
         environment = buildd.default_command_environment()
 
     base_config = buildd.BuilddBase(
         alias=alias,
+        compatibility_tag=tag,
         environment=environment,
         hostname=hostname,
         snaps=snaps,
@@ -228,9 +241,7 @@ def test_setup(  # pylint: disable=too-many-arguments
         ),
         dict(
             destination="/etc/craft-instance.conf",
-            content=(
-                "compatibility_tag:" f" {buildd.BuilddBase.compatibility_tag}\n"
-            ).encode(),
+            content=(f"compatibility_tag: {expected_tag}\n").encode(),
             file_mode="0644",
             group="root",
             user="root",
