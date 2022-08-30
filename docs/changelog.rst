@@ -2,6 +2,11 @@
 Changelog
 *********
 
+1.4.1 (2022-08-30)
+------------------
+- Fix bug in BuilddBase where hostnames longer than 64 characters may
+  not having trailing hyphens removed.
+- Allow overriding of compatibility tag in Bases
 
 1.4.0 (2022-08-22)
 ------------------
