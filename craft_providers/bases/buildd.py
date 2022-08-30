@@ -192,15 +192,12 @@ class BuilddBase(Base):
         name_with_valid_chars = re.sub(r"[^\w-]", "", truncated_name)
 
         # trim hyphens from the beginning and end
-        trimmed_name = re.compile(r"^[-]*(?P<valid_name>.*?)[-]*$").search(
-            name_with_valid_chars
-        )
-        if not trimmed_name or trimmed_name.group("valid_name") == "":
+        valid_name = name_with_valid_chars.strip("-")
+        if not valid_name:
             raise BaseConfigurationError(
                 brief=f"failed to create base with hostname {hostname!r}.",
                 details="hostname must contain at least one alphanumeric character",
             )
-        valid_name = trimmed_name.group("valid_name")
 
         logger.debug("Using hostname %r", valid_name)
         self.hostname = valid_name
