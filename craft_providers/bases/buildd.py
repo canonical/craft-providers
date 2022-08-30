@@ -185,25 +185,22 @@ class BuilddBase(Base):
         :raises BaseConfigurationError: if the hostname contains no
           alphanumeric characters
         """
+        # truncate to 63 characters
+        truncated_name = hostname[:63]
+
         # remove anything that is not an alphanumeric character or hyphen
-        name_with_valid_chars = re.sub(r"[^\w-]", "", hostname)
+        name_with_valid_chars = re.sub(r"[^\w-]", "", truncated_name)
 
         # trim hyphens from the beginning and end
-        trimmed_name = re.compile(r"^[-]*(?P<valid_name>.*?)[-]*$").search(
-            name_with_valid_chars
-        )
-        if not trimmed_name or trimmed_name.group("valid_name") == "":
+        valid_name = name_with_valid_chars.strip("-")
+        if not valid_name:
             raise BaseConfigurationError(
                 brief=f"failed to create base with hostname {hostname!r}.",
                 details="hostname must contain at least one alphanumeric character",
             )
-        valid_name = trimmed_name.group("valid_name")
 
-        # truncate to 63 characters
-        truncated_name = valid_name[:63]
-
-        logger.debug("Using hostname %r", truncated_name)
-        self.hostname = truncated_name
+        logger.debug("Using hostname %r", valid_name)
+        self.hostname = valid_name
 
     def _ensure_instance_config_compatible(
         self, *, executor: Executor, deadline: Optional[float]

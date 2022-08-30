@@ -1129,6 +1129,16 @@ def test_set_hostname_unchanged(hostname, logs):
             "this-is-64-characters-with-valid-characters-xxxxxxxxxxxxxxxxxxXx",
             "this-is-64-characters-with-valid-characters-xxxxxxxxxxxxxxxxxxX",
         ),
+        # trim away away invalid characters and truncate to 63 characters
+        (
+            "-this-is-64-characters-and-has-invalid-characters-$$$xxxxxxxxxx-",
+            "this-is-64-characters-and-has-invalid-characters-xxxxxxxxxx",
+        ),
+        # ensure invalid ending characters are removed after truncating
+        (
+            "this-is-64-characters-and-has-a-hyphen-at-character-63-xxxxxxx-x",
+            "this-is-64-characters-and-has-a-hyphen-at-character-63-xxxxxxx",
+        ),
     ],
 )
 def test_set_hostname(hostname, expected_hostname, logs):
