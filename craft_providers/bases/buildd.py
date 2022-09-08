@@ -755,6 +755,23 @@ class BuilddBase(Base):
                 capture_output=True,
                 check=True,
             )
+
+            _check_deadline(deadline)
+            http_proxy = self.environment.get("http_proxy")
+            if http_proxy:
+                command = ["snap", "set", "system", f"proxy.http={http_proxy}"]
+            else:
+                command = ["snap", "unset", "system", "proxy.http"]
+            executor.execute_run(command, capture_output=True, check=True)
+
+            _check_deadline(deadline)
+            https_proxy = self.environment.get("https_proxy")
+            if https_proxy:
+                command = ["snap", "set", "system", f"proxy.https={https_proxy}"]
+            else:
+                command = ["snap", "unset", "system", "proxy.https"]
+            executor.execute_run(command, capture_output=True, check=True)
+
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to setup snapd.",

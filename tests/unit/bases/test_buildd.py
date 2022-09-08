@@ -216,6 +216,18 @@ def test_setup(  # pylint: disable=too-many-arguments
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "wait", "system", "seed.loaded"]
     )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "set", "system", "proxy.http=http://foo.bar:8080"]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.http"]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "set", "system", "proxy.https=http://foo.bar:8081"]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.https"]
+    )
 
     base_config.setup(executor=fake_executor)
 
@@ -719,7 +731,40 @@ def test_setup_resolved_restart_failure(
     )
 
 
-@pytest.mark.parametrize("fail_index", list(range(0, 7)))
+def test_setup_snapd_proxy(fake_executor, fake_process):
+    """Verify snapd proxy is set or unset."""
+    environment = dict(
+        http_proxy="http://foo.bar:8080",
+        https_proxy="http://foo.bar:8081",
+    )
+    base_config = buildd.BuilddBase(
+        alias=buildd.BuilddBaseAlias.FOCAL,
+        environment=environment,  # type: ignore
+    )
+    fake_process.keep_last_process(True)
+    fake_process.register([fake_process.any()])
+
+    base_config._setup_snapd(
+        executor=fake_executor,
+        deadline=None,
+    )
+    assert [
+        *DEFAULT_FAKE_CMD,
+        "snap",
+        "set",
+        "system",
+        "proxy.http=http://foo.bar:8080",
+    ] in fake_process.calls
+    assert [
+        *DEFAULT_FAKE_CMD,
+        "snap",
+        "set",
+        "system",
+        "proxy.https=http://foo.bar:8081",
+    ] in fake_process.calls
+
+
+@pytest.mark.parametrize("fail_index", list(range(0, 9)))
 def test_setup_snapd_failures(
     fake_process,
     fake_executor,
@@ -727,7 +772,7 @@ def test_setup_snapd_failures(
 ):
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
 
-    return_codes = [0, 0, 0, 0, 0, 0, 0]
+    return_codes = [0, 0, 0, 0, 0, 0, 0, 0, 0]
     return_codes[fail_index] = 1
 
     fake_process.register_subprocess(
@@ -757,6 +802,14 @@ def test_setup_snapd_failures(
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "wait", "system", "seed.loaded"],
         returncode=return_codes[6],
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.http"],
+        returncode=return_codes[7],
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.https"],
+        returncode=return_codes[8],
     )
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
