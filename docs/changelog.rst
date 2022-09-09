@@ -2,6 +2,11 @@
 Changelog
 *********
 
+1.4.2 (2022-09-09)
+------------------
+- Set snapd http-proxy and https-proxy
+- Pass on snapd no-CDN configuration
+
 1.4.1 (2022-08-30)
 ------------------
 - Fix bug in BuilddBase where hostnames longer than 64 characters may
