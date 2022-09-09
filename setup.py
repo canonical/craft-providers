@@ -51,6 +51,7 @@ test_requires = [
     "mypy",
     "logassert",
     "pydocstyle",
+    "pyfakefs",
     "pylint",
     "pylint-fixme-info",
     "pylint-pytest",

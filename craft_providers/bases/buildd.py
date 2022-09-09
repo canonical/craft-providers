@@ -728,6 +728,22 @@ class BuilddBase(Base):
                 check=True,
             )
 
+            # This file is created by launchpad-buildd to stop snapd from
+            # using the snap store's CDN when running in Canonical's
+            # production build farm, since internet access restrictions may
+            # prevent it from doing so but will allow the non-CDN storage
+            # endpoint.  If this is in place, then we need to propagate it
+            # to containers we create.
+            no_cdn = pathlib.Path("/etc/systemd/system/snapd.service.d/no-cdn.conf")
+            if no_cdn.exists():
+                _check_deadline(deadline)
+                executor.execute_run(
+                    ["mkdir", "-p", no_cdn.parent.as_posix()], check=True
+                )
+
+                _check_deadline(deadline)
+                executor.push_file(source=no_cdn, destination=no_cdn)
+
             _check_deadline(deadline)
             executor.execute_run(
                 ["apt-get", "install", "-y", "snapd"],
