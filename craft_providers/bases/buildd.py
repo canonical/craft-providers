@@ -350,6 +350,7 @@ class BuilddBase(Base):
         )
         self._setup_apt(executor=executor, deadline=deadline)
         self._setup_snapd(executor=executor, deadline=deadline)
+        self._setup_snapd_proxy(executor=executor, deadline=deadline)
         self._install_snaps(executor=executor, deadline=deadline)
 
     def warmup(
@@ -390,6 +391,7 @@ class BuilddBase(Base):
         self._setup_wait_for_network(
             executor=executor, deadline=deadline, retry_wait=retry_wait
         )
+        self._setup_snapd_proxy(executor=executor, deadline=deadline)
         self._install_snaps(executor=executor, deadline=deadline)
 
     def _disable_automatic_apt(
@@ -755,9 +757,41 @@ class BuilddBase(Base):
                 capture_output=True,
                 check=True,
             )
+
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to setup snapd.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
+    def _setup_snapd_proxy(
+        self, *, executor: Executor, deadline: Optional[float] = None
+    ) -> None:
+        """Configure the snapd proxy.
+
+        :param executor: Executor for target container.
+        :param deadline: Optional time.time() deadline.
+        """
+        try:
+            _check_deadline(deadline)
+            http_proxy = self.environment.get("http_proxy")
+            if http_proxy:
+                command = ["snap", "set", "system", f"proxy.http={http_proxy}"]
+            else:
+                command = ["snap", "unset", "system", "proxy.http"]
+            executor.execute_run(command, capture_output=True, check=True)
+
+            _check_deadline(deadline)
+            https_proxy = self.environment.get("https_proxy")
+            if https_proxy:
+                command = ["snap", "set", "system", f"proxy.https={https_proxy}"]
+            else:
+                command = ["snap", "unset", "system", "proxy.https"]
+            executor.execute_run(command, capture_output=True, check=True)
+
+        except subprocess.CalledProcessError as error:
+            raise BaseConfigurationError(
+                brief="Failed to set the snapd proxy.",
                 details=errors.details_from_called_process_error(error),
             ) from error
 
