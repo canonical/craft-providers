@@ -744,7 +744,7 @@ def test_setup_snapd_proxy(fake_executor, fake_process):
     fake_process.keep_last_process(True)
     fake_process.register([fake_process.any()])
 
-    base_config._setup_snapd(
+    base_config._setup_snapd_proxy(
         executor=fake_executor,
         deadline=None,
     )
@@ -764,15 +764,41 @@ def test_setup_snapd_proxy(fake_executor, fake_process):
     ] in fake_process.calls
 
 
-@pytest.mark.parametrize("fail_index", list(range(0, 9)))
-def test_setup_snapd_failures(
-    fake_process,
-    fake_executor,
-    fail_index,
-):
+@pytest.mark.parametrize("fail_index", list(range(0, 1)))
+def test_setup_snapd_proxy_failures(fake_process, fake_executor, fail_index):
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
 
-    return_codes = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    return_codes = [0, 0]
+    return_codes[fail_index] = 1
+
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.http"],
+        returncode=return_codes[0],
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.https"],
+        returncode=return_codes[1],
+    )
+
+    with pytest.raises(errors.BaseConfigurationError) as exc_info:
+        base_config._setup_snapd_proxy(  # pylint: disable=protected-access
+            executor=fake_executor,
+            deadline=None,
+        )
+
+    assert exc_info.value == errors.BaseConfigurationError(
+        brief="Failed to set the snapd proxy.",
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
+    )
+
+
+@pytest.mark.parametrize("fail_index", list(range(0, 7)))
+def test_setup_snapd_failures(fake_process, fake_executor, fail_index):
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
+
+    return_codes = [0, 0, 0, 0, 0, 0, 0]
     return_codes[fail_index] = 1
 
     fake_process.register_subprocess(
@@ -802,14 +828,6 @@ def test_setup_snapd_failures(
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "wait", "system", "seed.loaded"],
         returncode=return_codes[6],
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.http"],
-        returncode=return_codes[7],
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.https"],
-        returncode=return_codes[8],
     )
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
@@ -998,12 +1016,23 @@ def test_ensure_config_compatible_empty_config_returns_none(fake_executor):
     )
 
 
-def test_warmup_overall(fake_process, fake_executor, mock_load):
+@pytest.mark.parametrize(
+    "environment",
+    [
+        None,
+        dict(
+            https_proxy="http://foo.bar:8081",
+            http_proxy="http://foo.bar:8080",
+        ),
+    ],
+)
+def test_warmup_overall(environment, fake_process, fake_executor, mock_load):
     alias = buildd.BuilddBaseAlias.JAMMY
-    base_config = buildd.BuilddBase(
-        alias=alias,
-        environment=buildd.default_command_environment(),
-    )
+
+    if environment is None:
+        environment = buildd.default_command_environment()
+
+    base_config = buildd.BuilddBase(alias=alias, environment=environment)
 
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
@@ -1021,6 +1050,18 @@ def test_warmup_overall(fake_process, fake_executor, mock_load):
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "getent", "hosts", "snapcraft.io"]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "set", "system", "proxy.http=http://foo.bar:8080"]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.http"]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "set", "system", "proxy.https=http://foo.bar:8081"]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.https"]
     )
 
     base_config.warmup(executor=fake_executor)
