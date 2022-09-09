@@ -77,7 +77,7 @@ def _publish_snapshot(
 
     lxc.publish(
         alias=snapshot_name,
-        instance_name=instance.name,
+        instance_name=instance.instance_name,
         force=True,
         project=instance.project,
         remote=instance.remote,

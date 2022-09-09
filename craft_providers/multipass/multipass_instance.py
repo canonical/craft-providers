@@ -81,7 +81,7 @@ class MultipassInstance(Executor):
     def push_file_io(
         self,
         *,
-        destination: pathlib.Path,
+        destination: pathlib.PurePath,
         content: io.BytesIO,
         file_mode: str,
         group: str = "root",
@@ -233,7 +233,9 @@ class MultipassInstance(Executor):
 
         return info_data[self.name]
 
-    def is_mounted(self, *, host_source: pathlib.Path, target: pathlib.Path) -> bool:
+    def is_mounted(
+        self, *, host_source: pathlib.Path, target: pathlib.PurePath
+    ) -> bool:
         """Check if path is mounted at target.
 
         :param host_source: Host path to check.
@@ -299,7 +301,7 @@ class MultipassInstance(Executor):
         self,
         *,
         host_source: pathlib.Path,
-        target: pathlib.Path,
+        target: pathlib.PurePath,
     ) -> None:
         """Mount host host_source directory to target mount point.
 
@@ -318,7 +320,7 @@ class MultipassInstance(Executor):
             target=f"{self.name}:{target.as_posix()}",
         )
 
-    def pull_file(self, *, source: pathlib.Path, destination: pathlib.Path) -> None:
+    def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:
         """Copy a file from the environment to host.
 
         :param source: Environment file to copy.
@@ -340,7 +342,7 @@ class MultipassInstance(Executor):
             source=f"{self.name}:{source.as_posix()}", destination=str(destination)
         )
 
-    def push_file(self, *, source: pathlib.Path, destination: pathlib.Path) -> None:
+    def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:
         """Copy a file from the host into the environment.
 
         :param source: Host file to copy.

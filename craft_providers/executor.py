@@ -16,12 +16,15 @@
 #
 
 """Executor module."""
+
+import contextlib
 import io
 import logging
 import pathlib
 import subprocess
+import tempfile
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional
+from typing import Dict, Generator, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +80,7 @@ class Executor(ABC):
         """
 
     @abstractmethod
-    def pull_file(self, *, source: pathlib.Path, destination: pathlib.Path) -> None:
+    def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:
         """Copy a file from the environment to host.
 
         :param source: Environment file to copy.
@@ -89,8 +92,47 @@ class Executor(ABC):
         :raises ProviderError: On error copying file.
         """
 
+    @contextlib.contextmanager
+    def temporarily_pull_file(
+        self, *, source: pathlib.Path, missing_ok: bool = False
+    ) -> Generator[Optional[pathlib.Path], None, None]:
+        """Copy a file from the environment to a temporary file in the host.
+
+        This is mainly a layer above `pull_file` that pulls the file into a
+        temporary path which is cleaned later.
+
+        Works as a context manager, provides the file path in the host as target.
+
+        :param source: Environment file to copy.
+        :param missing_ok: Do not raise an error if the file does not exist in the
+            environment; in this case the target will be None.
+
+        :raises FileNotFoundError: If source file or destination's parent
+            directory does not exist (and `missing_ok` is False).
+        :raises ProviderError: On error copying file content.
+        """
+        # Get a temporary file path (placing it in current directory as it's the
+        # most predictable place where a potential strictly-snapped app could write)
+        tmp_file = tempfile.NamedTemporaryFile(
+            delete=False, prefix="craft-providers-", suffix=".temp", dir="."
+        )
+        tmp_file.close()
+
+        local_filepath = pathlib.Path(tmp_file.name)
+        try:
+            self.pull_file(source=source, destination=local_filepath)
+        except FileNotFoundError:
+            if missing_ok:
+                yield None
+            else:
+                raise
+        else:
+            yield local_filepath
+        finally:
+            local_filepath.unlink()
+
     @abstractmethod
-    def push_file(self, *, source: pathlib.Path, destination: pathlib.Path) -> None:
+    def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:
         """Copy a file from the host into the environment.
 
         :param source: Host file to copy.
@@ -106,7 +148,7 @@ class Executor(ABC):
     def push_file_io(
         self,
         *,
-        destination: pathlib.Path,
+        destination: pathlib.PurePath,
         content: io.BytesIO,
         file_mode: str,
         group: str = "root",
@@ -119,4 +161,15 @@ class Executor(ABC):
         :param file_mode: File mode string (e.g. '0644').
         :param group: File owner group.
         :param user: File owner user.
+        """
+
+    @abstractmethod
+    def delete(self) -> None:
+        """Delete instance."""
+
+    @abstractmethod
+    def exists(self) -> bool:
+        """Check if instance exists.
+
+        :returns: True if instance exists.
         """

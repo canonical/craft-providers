@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2022 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -14,6 +14,8 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
+
+import hashlib
 import io
 import os
 import pathlib
@@ -24,9 +26,28 @@ import tempfile
 from unittest import mock
 
 import pytest
+from logassert import Exact  # type: ignore
 
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, LXDInstance
+
+# These names include invalid characters so a lxd-compatible instance_name
+# is generated. This ensures an Instance's `name` and `instance_name` are
+# differentiated when testing.
+_TEST_INSTANCE = {
+    "name": "test-instance-$",
+    "instance-name": "test-instance-fa2d407652a1c51f6019",
+}
+
+_STOPPED_INSTANCE = {
+    "name": "stopped-instance-$",
+    "instance-name": "stopped-instance-b4598eebe37eb50c4612",
+}
+
+_INVALID_INSTANCE = {
+    "name": "invalid-instance-$",
+    "instance-name": "invalid-instance-86be3150e96a80a04e31",
+}
 
 
 @pytest.fixture
@@ -40,8 +61,8 @@ def project_path(tmp_path):
 def mock_lxc(project_path):
     with mock.patch("craft_providers.lxd.lxd_instance.LXC", spec=LXC) as lxc:
         lxc.list.return_value = [
-            {"name": "test-instance", "status": "Running"},
-            {"name": "stopped-instance", "status": "Stopped"},
+            {"name": _TEST_INSTANCE["instance-name"], "status": "Running"},
+            {"name": _STOPPED_INSTANCE["instance-name"], "status": "Stopped"},
         ]
         lxc.config_device_show.return_value = {
             "test_mount": {
@@ -85,7 +106,7 @@ def mock_os_unlink():
 
 @pytest.fixture
 def instance(mock_lxc):
-    yield LXDInstance(name="test-instance", lxc=mock_lxc)
+    yield LXDInstance(name=_TEST_INSTANCE["name"], lxc=mock_lxc)
 
 
 def test_push_file_io(
@@ -110,7 +131,7 @@ def test_push_file_io(
 
     assert mock_lxc.mock_calls == [
         mock.call.file_push(
-            instance_name="test-instance",
+            instance_name=instance.instance_name,
             source=pathlib.Path("test-tmp-file"),
             destination=pathlib.Path("/etc/test.conf"),
             mode="0644",
@@ -118,7 +139,7 @@ def test_push_file_io(
             remote=instance.remote,
         ),
         mock.call.exec(
-            instance_name="test-instance",
+            instance_name=instance.instance_name,
             command=[
                 "chown",
                 "root:root",
@@ -158,7 +179,10 @@ def test_push_file_io_error(mock_lxc, instance):
         )
 
     assert exc_info.value == LXDError(
-        brief="Failed to create file '/etc/test.conf' in instance 'test-instance'.",
+        brief=(
+            "Failed to create file '/etc/test.conf' "
+            f"in instance '{_TEST_INSTANCE['instance-name']}'."
+        ),
         details=errors.details_from_called_process_error(error),
     )
 
@@ -168,7 +192,7 @@ def test_delete(mock_lxc, instance):
 
     assert mock_lxc.mock_calls == [
         mock.call.delete(
-            instance_name="test-instance",
+            instance_name=instance.instance_name,
             project=instance.project,
             remote=instance.remote,
             force=True,
@@ -181,7 +205,7 @@ def test_execute_popen(mock_lxc, instance):
 
     assert mock_lxc.mock_calls == [
         mock.call.exec(
-            instance_name="test-instance",
+            instance_name=instance.instance_name,
             command=["test-command", "flags"],
             cwd=None,
             project=instance.project,
@@ -199,7 +223,7 @@ def test_execute_popen_with_cwd(mock_lxc, instance):
 
     assert mock_lxc.mock_calls == [
         mock.call.exec(
-            instance_name="test-instance",
+            instance_name=instance.instance_name,
             command=["test-command", "flags"],
             cwd="/tmp",
             project=instance.project,
@@ -215,7 +239,7 @@ def test_execute_popen_with_env(mock_lxc, instance):
 
     assert mock_lxc.mock_calls == [
         mock.call.exec(
-            instance_name="test-instance",
+            instance_name=instance.instance_name,
             command=["env", "foo=bar", "test-command", "flags"],
             cwd=None,
             project=instance.project,
@@ -230,7 +254,7 @@ def test_execute_run(mock_lxc, instance):
 
     assert mock_lxc.mock_calls == [
         mock.call.exec(
-            instance_name="test-instance",
+            instance_name=instance.instance_name,
             command=["test-command", "flags"],
             cwd=None,
             project=instance.project,
@@ -248,7 +272,7 @@ def test_execute_run_with_cwd(mock_lxc, instance):
 
     assert mock_lxc.mock_calls == [
         mock.call.exec(
-            instance_name="test-instance",
+            instance_name=instance.instance_name,
             command=["test-command", "flags"],
             cwd="/tmp",
             project=instance.project,
@@ -261,7 +285,7 @@ def test_execute_run_with_cwd(mock_lxc, instance):
 
 def test_execute_run_with_default_command_env(mock_lxc):
     instance = LXDInstance(
-        name="test-instance",
+        name=_TEST_INSTANCE["name"],
         default_command_environment={"env_key": "some-value"},
         lxc=mock_lxc,
     )
@@ -270,7 +294,7 @@ def test_execute_run_with_default_command_env(mock_lxc):
 
     assert mock_lxc.mock_calls == [
         mock.call.exec(
-            instance_name="test-instance",
+            instance_name=instance.instance_name,
             command=["env", "env_key=some-value", "foo=bar", "test-command", "flags"],
             cwd=None,
             project=instance.project,
@@ -282,7 +306,7 @@ def test_execute_run_with_default_command_env(mock_lxc):
 
 def test_execute_run_with_default_command_env_unset(mock_lxc):
     instance = LXDInstance(
-        name="test-instance",
+        name=_TEST_INSTANCE["name"],
         default_command_environment={"env_key": "some-value"},
         lxc=mock_lxc,
     )
@@ -293,7 +317,7 @@ def test_execute_run_with_default_command_env_unset(mock_lxc):
 
     assert mock_lxc.mock_calls == [
         mock.call.exec(
-            instance_name="test-instance",
+            instance_name=instance.instance_name,
             command=["env", "-u", "env_key", "foo=bar", "test-command", "flags"],
             cwd=None,
             project=instance.project,
@@ -308,7 +332,7 @@ def test_execute_run_with_env(mock_lxc, instance):
 
     assert mock_lxc.mock_calls == [
         mock.call.exec(
-            instance_name="test-instance",
+            instance_name=instance.instance_name,
             command=["env", "foo=bar", "test-command", "flags"],
             cwd=None,
             project=instance.project,
@@ -325,7 +349,7 @@ def test_execute_run_with_env_unset(mock_lxc, instance):
 
     assert mock_lxc.mock_calls == [
         mock.call.exec(
-            instance_name="test-instance",
+            instance_name=instance.instance_name,
             command=[
                 "env",
                 "foo=bar",
@@ -411,7 +435,7 @@ def test_is_mounted_false(mock_lxc, instance):
 
     assert mock_lxc.mock_calls == [
         mock.call.config_device_show(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             project=instance.project,
             remote=instance.remote,
         )
@@ -429,7 +453,7 @@ def test_is_mounted_true(mock_lxc, instance, project_path):
 
     assert mock_lxc.mock_calls == [
         mock.call.config_device_show(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             project=instance.project,
             remote=instance.remote,
         )
@@ -437,7 +461,7 @@ def test_is_mounted_true(mock_lxc, instance, project_path):
 
 
 def test_is_running_false(mock_lxc):
-    instance = LXDInstance(name="stopped-instance", lxc=mock_lxc)
+    instance = LXDInstance(name=_STOPPED_INSTANCE["name"], lxc=mock_lxc)
 
     assert instance.is_running() is False
 
@@ -455,13 +479,13 @@ def test_is_running_true(mock_lxc, instance):
 
 
 def test_is_running_error(mock_lxc):
-    instance = LXDInstance(name="invalid-instance", lxc=mock_lxc)
+    instance = LXDInstance(name=_INVALID_INSTANCE["name"], lxc=mock_lxc)
 
     with pytest.raises(LXDError) as exc_info:
         instance.is_running()
 
     assert exc_info.value == LXDError(
-        brief="Instance 'invalid-instance' does not exist.",
+        brief=f"Instance '{_INVALID_INSTANCE['instance-name']}' does not exist.",
     )
 
 
@@ -476,7 +500,7 @@ def test_launch(mock_lxc, instance):
         mock.call.launch(
             config_keys={},
             ephemeral=False,
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             image="20.04",
             image_remote="ubuntu",
             project=instance.project,
@@ -500,7 +524,7 @@ def test_launch_all_opts(mock_lxc, instance):
         mock.call.launch(
             config_keys={"raw.idmap": f"both {uid} 0"},
             ephemeral=True,
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             image="20.04",
             image_remote="ubuntu",
             project=instance.project,
@@ -526,7 +550,7 @@ def test_launch_with_mknod(mock_lxc, instance):
                 "security.syscalls.intercept.mknod": "true",
             },
             ephemeral=False,
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             image="20.04",
             image_remote="ubuntu",
             project=instance.project,
@@ -540,12 +564,12 @@ def test_mount(mock_lxc, tmp_path, instance):
 
     assert mock_lxc.mock_calls == [
         mock.call.config_device_show(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             project=instance.project,
             remote=instance.remote,
         ),
         mock.call.config_device_add_disk(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             source=tmp_path,
             path=pathlib.Path("/mnt/foo"),
             device="disk-/mnt/foo",
@@ -562,12 +586,12 @@ def test_mount_all_opts(mock_lxc, tmp_path, instance):
 
     assert mock_lxc.mock_calls == [
         mock.call.config_device_show(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             project=instance.project,
             remote=instance.remote,
         ),
         mock.call.config_device_add_disk(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             source=tmp_path,
             path=pathlib.Path("/mnt/foo"),
             device="disk-xfoo",
@@ -585,7 +609,7 @@ def test_mount_already_mounted(mock_lxc, instance, project_path):
 
     assert mock_lxc.mock_calls == [
         mock.call.config_device_show(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             project=instance.project,
             remote=instance.remote,
         )
@@ -605,7 +629,7 @@ def test_pull_file(mock_lxc, instance, tmp_path):
 
     assert mock_lxc.mock_calls == [
         mock.call.exec(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             command=["test", "-f", "/tmp/src.txt"],
             cwd=None,
             project=instance.project,
@@ -614,7 +638,7 @@ def test_pull_file(mock_lxc, instance, tmp_path):
             check=False,
         ),
         mock.call.file_pull(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             source=source,
             destination=destination,
             project=instance.project,
@@ -637,7 +661,7 @@ def test_pull_file_no_source(mock_lxc, instance, tmp_path):
 
     assert mock_lxc.mock_calls == [
         mock.call.exec(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             command=["test", "-f", "/tmp/src.txt"],
             cwd=None,
             project=instance.project,
@@ -663,7 +687,7 @@ def test_pull_file_no_parent_directory(mock_lxc, instance, tmp_path):
 
     assert mock_lxc.mock_calls == [
         mock.call.exec(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             command=["test", "-f", "/tmp/src.txt"],
             cwd=None,
             project=instance.project,
@@ -689,7 +713,7 @@ def test_push_file(mock_lxc, instance, tmp_path):
 
     assert mock_lxc.mock_calls == [
         mock.call.exec(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             command=["test", "-d", "/tmp"],
             cwd=None,
             project=instance.project,
@@ -698,7 +722,7 @@ def test_push_file(mock_lxc, instance, tmp_path):
             check=False,
         ),
         mock.call.file_push(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             source=source,
             destination=destination,
             project=instance.project,
@@ -738,7 +762,7 @@ def test_push_file_no_parent_directory(mock_lxc, instance, tmp_path):
 
     assert mock_lxc.mock_calls == [
         mock.call.exec(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             command=["test", "-d", "/tmp"],
             cwd=None,
             project=instance.project,
@@ -755,7 +779,7 @@ def test_start(mock_lxc, instance):
 
     assert mock_lxc.mock_calls == [
         mock.call.start(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             project=instance.project,
             remote=instance.remote,
         )
@@ -767,7 +791,7 @@ def test_stop(mock_lxc, instance):
 
     assert mock_lxc.mock_calls == [
         mock.call.stop(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             project=instance.project,
             remote=instance.remote,
         )
@@ -789,12 +813,12 @@ def test_unmount(mock_lxc, instance):
 
     assert mock_lxc.mock_calls == [
         mock.call.config_device_show(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             project=instance.project,
             remote=instance.remote,
         ),
         mock.call.config_device_remove(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             device="test_mount",
             project=instance.project,
             remote=instance.remote,
@@ -807,18 +831,18 @@ def test_unmount_all(mock_lxc, instance):
 
     assert mock_lxc.mock_calls == [
         mock.call.config_device_show(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             project=instance.project,
             remote=instance.remote,
         ),
         mock.call.config_device_remove(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             device="test_mount",
             project=instance.project,
             remote=instance.remote,
         ),
         mock.call.config_device_remove(
-            instance_name=instance.name,
+            instance_name=instance.instance_name,
             device="disk-/target",
             project=instance.project,
             remote=instance.remote,
@@ -841,10 +865,114 @@ def test_unmount_error(mock_lxc, instance):
     assert exc_info.value == LXDError(
         brief=(
             "Failed to unmount 'not-mounted'"
-            " in instance 'test-instance' - no such disk."
+            f" in instance '{_TEST_INSTANCE['instance-name']}' - no such disk."
         ),
         details=(
             "* Disk device configuration: {'disk-/target':"
             " {'path': '/target', 'source': '/source', 'type': 'disk'}}"
         ),
+    )
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "t",
+        "test",
+        "test1",
+        "test-1",
+        "this-is-40-characters-xxxxxxxxxxxxxxxxxx",
+        "this-is-63-characters-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    ],
+)
+def test_set_instance_name_unchanged(logs, mock_lxc, name):
+    """Verify names that are already compliant are not changed."""
+    instance = LXDInstance(
+        name=name,
+        lxc=mock_lxc,
+    )
+
+    assert instance.instance_name == name
+    assert Exact(f"Set LXD instance name to {name!r}") in logs.debug
+
+
+@pytest.mark.parametrize(
+    "name, expected_name",
+    [
+        # trim away invalid beginning characters
+        ("1test", "test"),
+        ("123test", "test"),
+        ("-test", "test"),
+        ("1-2-3-test", "test"),
+        # trim away invalid ending characters
+        ("test-", "test"),
+        ("test--", "test"),
+        ("test1-", "test1"),
+        # trim away invalid characters
+        ("test$", "test"),
+        ("test-!@#$%^&*()test", "test-test"),
+        ("$1test", "test"),
+        ("test-$", "test"),
+        # this name contains invalid characters so it gets converted, even
+        # though it is 63 characters
+        (
+            "this-is-63-characters-with-invalid-characters-$$$xxxxxxxxxxxxxX",
+            "this-is-63-characters-with-invalid-chara",
+        ),
+        # this name is longer than 63 characters, so it gets converted
+        (
+            "this-is-70-characters-and-valid-xxxxxxxXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "this-is-70-characters-and-valid-xxxxxxxX",
+        ),
+    ],
+)
+def test_set_instance_name(logs, mock_lxc, name, expected_name):
+    """Verify name is compliant with LXD naming conventions."""
+    instance = LXDInstance(
+        name=name,
+        lxc=mock_lxc,
+    )
+
+    # compute hash
+    hashed_name = hashlib.sha1(name.encode()).hexdigest()[:20]
+
+    assert instance.instance_name == f"{expected_name}-{hashed_name}"
+    assert len(instance.instance_name) <= 63
+    assert Exact(f"Set LXD instance name to {instance.instance_name!r}") in logs.debug
+
+
+def test_set_instance_name_hash_value(mock_lxc):
+    """Verify hash is formatted as expected.
+
+    The first 20 characters of the SHA-1 hash of
+    "hello-world$" is 'b993dc52118c0f489570'
+
+    The name "hello-world$" should be hashed, not the trimmed name "hello-world".
+    """
+    instance = LXDInstance(
+        name="hello-world$",
+        lxc=mock_lxc,
+    )
+
+    assert instance.instance_name == "hello-world-b993dc52118c0f489570"
+    assert len(instance.instance_name) <= 63
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "",
+        "-",
+        "$$$",
+        "-$-$-",
+    ],
+)
+def test_set_instance_name_invalid(mock_lxc, name):
+    """Verify invalid names raise an error."""
+    with pytest.raises(LXDError) as error:
+        LXDInstance(name=name, lxc=mock_lxc)
+
+    assert error.value == LXDError(
+        brief=f"failed to create LXD instance with name {name!r}.",
+        details="name must contain at least one alphanumeric character",
     )

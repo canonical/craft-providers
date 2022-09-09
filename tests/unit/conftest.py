@@ -45,7 +45,7 @@ class FakeExecutor(Executor):
     def push_file_io(
         self,
         *,
-        destination: pathlib.Path,
+        destination: pathlib.PurePath,
         content: io.BytesIO,
         file_mode: str,
         group: str = "root",
@@ -97,7 +97,7 @@ class FakeExecutor(Executor):
             final_cmd, **kwargs
         )
 
-    def pull_file(self, *, source: pathlib.Path, destination: pathlib.Path) -> None:
+    def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:
         self.records_of_pull_file.append(
             dict(
                 source=source,
@@ -105,13 +105,19 @@ class FakeExecutor(Executor):
             )
         )
 
-    def push_file(self, *, source: pathlib.Path, destination: pathlib.Path) -> None:
+    def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:
         self.records_of_push_file.append(
             dict(
                 source=source,
                 destination=destination,
             )
         )
+
+    def delete(self) -> None:
+        return
+
+    def exists(self) -> bool:
+        return True
 
 
 @pytest.fixture
