@@ -207,26 +207,20 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
         return
 
     target_snap_path = pathlib.Path(f"/tmp/{snap_name}.snap")
+
+    with _get_host_snap(snap_name) as host_snap_path:
+        try:
+            executor.push_file(
+                source=host_snap_path,
+                destination=target_snap_path,
+            )
+        except ProviderError as error:
+            raise SnapInstallationError(
+                brief=f"failed to copy snap file for snap {snap_name!r}",
+                details="error copying snap file into target environment",
+            ) from error
+
     try:
-        # Clean outdated snap, if exists.
-        executor.execute_run(
-            ["rm", "-f", target_snap_path.as_posix()],
-            check=True,
-            capture_output=True,
-        )
-
-        with _get_host_snap(snap_name) as host_snap_path:
-            try:
-                executor.push_file(
-                    source=host_snap_path,
-                    destination=target_snap_path,
-                )
-            except ProviderError as error:
-                raise SnapInstallationError(
-                    brief=f"Failed to inject snap {snap_name!r}.",
-                    details="Error copying snap into target environment.",
-                ) from error
-
         executor.execute_run(
             snap_cmd.formulate_local_install_command(
                 classic=classic, dangerous=True, snap_path=target_snap_path
