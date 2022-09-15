@@ -345,6 +345,8 @@ class MultipassInstance(Executor):
     def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:
         """Copy a file from the host into the environment.
 
+        The destination file is overwritten if it exists.
+
         :param source: Host file to copy.
         :param destination: Target environment file path to copy to.  Parent
             directory (destination.parent) must exist.
