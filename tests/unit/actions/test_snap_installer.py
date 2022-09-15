@@ -74,13 +74,13 @@ def config_fixture(request, tmp_path, mocker):
     )
 
 
-@pytest.fixture(params=["2"])
-def mock_get_host_snap_revision(request, mocker):
+@pytest.fixture(params=[{"revision": "2"}])
+def mock_get_host_snap_info(request, mocker):
     """Mocks the get_host_snap_revision() function
 
     :param request: The revision of the host's snap. Default revision = 2.
     """
-    mockee = "craft_providers.actions.snap_installer._get_host_snap_revision"
+    mockee = "craft_providers.actions.snap_installer.get_host_snap_info"
     if isinstance(request.param, Exception):
         mocker.patch(mockee, side_effect=request.param)
     else:
@@ -113,7 +113,7 @@ def mock_get_target_snap_revision_from_snapd(request, mocker):
 
 def test_inject_from_host_classic(
     config_fixture,
-    mock_get_host_snap_revision,
+    mock_get_host_snap_info,
     mock_requests,
     fake_executor,
     fake_process,
@@ -162,7 +162,7 @@ def test_inject_from_host_classic(
 
 def test_inject_from_host_strict(
     config_fixture,
-    mock_get_host_snap_revision,
+    mock_get_host_snap_info,
     mock_requests,
     fake_executor,
     fake_process,
@@ -209,10 +209,10 @@ def test_inject_from_host_strict(
 
 
 @pytest.mark.parametrize("config_fixture", ["10"], indirect=True)
-@pytest.mark.parametrize("mock_get_host_snap_revision", ["10"], indirect=True)
+@pytest.mark.parametrize("mock_get_host_snap_info", [{"revision": "10"}], indirect=True)
 def test_inject_from_host_matching_revision_no_op(
     config_fixture,
-    mock_get_host_snap_revision,
+    mock_get_host_snap_info,
     mock_requests,
     fake_executor,
     fake_process,
@@ -232,11 +232,11 @@ def test_inject_from_host_matching_revision_no_op(
 
 
 @pytest.mark.parametrize(
-    "mock_get_host_snap_revision",
+    "mock_get_host_snap_info",
     [snap_installer.SnapInstallationError("msg")],
     indirect=True,
 )
-def test_inject_from_host_no_snapd(mock_get_host_snap_revision, fake_executor):
+def test_inject_from_host_no_snapd(mock_get_host_snap_info, fake_executor):
     """The host does not have snapd at all."""
     with pytest.raises(snap_installer.SnapInstallationError):
         snap_installer.inject_from_host(
@@ -264,7 +264,7 @@ def test_inject_from_host_push_error(
 
 def test_inject_from_host_snapd_connection_error_using_pack_fallback(
     config_fixture,
-    mock_get_host_snap_revision,
+    mock_get_host_snap_info,
     mock_requests,
     fake_executor,
     fake_process,
@@ -302,7 +302,7 @@ def test_inject_from_host_snapd_connection_error_using_pack_fallback(
 
 def test_inject_from_host_snapd_http_error_using_pack_fallback(
     config_fixture,
-    mock_get_host_snap_revision,
+    mock_get_host_snap_info,
     mock_requests,
     fake_executor,
     fake_process,
@@ -361,7 +361,7 @@ def test_inject_from_host_install_failure(
         )
 
     assert exc_info.value == snap_installer.SnapInstallationError(
-        brief="Failed to inject snap 'test-name'.",
+        brief="failed to install snap 'test-name'",
         details=details_from_called_process_error(
             exc_info.value.__cause__  # type: ignore
         ),
@@ -547,7 +547,7 @@ def test_install_from_store_failure(
 # -- tests for the helping functions
 
 
-def test_get_host_snap_revision_ok(responses):
+def test_get_host_snap_info_ok(responses):
     """Revision retrieved ok."""
     snap_info = {"result": {"revision": "15"}}
     responses.add(
@@ -555,18 +555,18 @@ def test_get_host_snap_revision_ok(responses):
         "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-snap",
         json=snap_info,
     )
-    result = snap_installer._get_host_snap_revision("test-snap")
+    result = snap_installer.get_host_snap_info("test-snap")["revision"]
     assert result == "15"
 
 
-def test_get_host_snap_revision_connection_error(responses):
+def test_get_host_snap_info_connection_error(responses):
     """Error when connecting to snapd.
 
     Note that nothing is added to responses, so ConnectionError will be raised when
     trying to connect, which is the effect we want.
     """
     with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
-        snap_installer._get_host_snap_revision("test-snap")
+        snap_installer.get_host_snap_info("test-snap")
     assert exc_info.value == snap_installer.SnapInstallationError(
         brief="Unable to connect to snapd service."
     )

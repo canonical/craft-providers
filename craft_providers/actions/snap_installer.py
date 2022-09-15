@@ -24,7 +24,7 @@ import pathlib
 import shlex
 import subprocess
 import urllib.parse
-from typing import Iterator, Optional
+from typing import Dict, Iterator, Optional
 
 import requests
 import requests_unixsocket  # type: ignore
@@ -74,23 +74,18 @@ def _download_host_snap(
 
 def _pack_host_snap(*, snap_name: str, output: pathlib.Path) -> None:
     """Pack the current host snap."""
-    cmd = [
-        "snap",
-        "pack",
-        f"/snap/{snap_name}/current/",
-        f"--filename={output}",
-    ]
+    command = snap_cmd.formulate_pack_command(snap_name, output)
 
-    logger.debug("Executing command on host: %s", shlex.join(cmd))
+    logger.debug("Executing command on host: %s", shlex.join(command))
     subprocess.run(
-        cmd,
+        command,
         capture_output=True,
         check=True,
     )
 
 
-def _get_host_snap_revision(snap_name: str) -> str:
-    """Get the revision of the snap on the host."""
+def get_host_snap_info(snap_name: str) -> Dict[str, str]:
+    """Get info about a snap installed on the host."""
     quoted_name = urllib.parse.quote(snap_name, safe="")
     url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}"
     try:
@@ -100,7 +95,7 @@ def _get_host_snap_revision(snap_name: str) -> str:
             brief="Unable to connect to snapd service."
         ) from error
     snap_info.raise_for_status()
-    return snap_info.json()["result"]["revision"]
+    return snap_info.json()["result"]
 
 
 def _get_target_snap_revision_from_snapd(
@@ -187,11 +182,14 @@ def _get_host_snap(snap_name: str) -> Iterator[pathlib.Path]:
 def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> None:
     """Inject snap from host snap.
 
-    :raises SnapInstallationError: on unexpected error.
+    :param executor: Executor for target
+    :param snap_name: Name of snap to inject
+    :param classic: Install in classic mode
+    :raises SnapInstallationError: on failure to inject snap
     """
     logger.debug("Installing snap %r from host (classic=%s)", snap_name, classic)
 
-    host_revision = _get_host_snap_revision(snap_name=snap_name)
+    host_revision = get_host_snap_info(snap_name)["revision"]
     target_revision = _get_snap_revision_ensuring_source(
         snap_name=snap_name,
         source=SNAP_SRC_HOST,
@@ -230,7 +228,7 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
         )
     except subprocess.CalledProcessError as error:
         raise SnapInstallationError(
-            brief=f"Failed to inject snap {snap_name!r}.",
+            brief=f"failed to install snap {snap_name!r}",
             details=details_from_called_process_error(error),
         ) from error
 
