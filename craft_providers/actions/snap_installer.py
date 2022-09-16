@@ -95,6 +95,7 @@ def get_host_snap_info(snap_name: str) -> Dict[str, str]:
             brief="Unable to connect to snapd service."
         ) from error
     snap_info.raise_for_status()
+    # TODO: represent snap info in a dataclass
     return snap_info.json()["result"]
 
 
