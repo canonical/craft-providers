@@ -43,6 +43,13 @@ def test_local_install_all_opts(tmp_path):
     ) == ["snap", "install", tmp_path.as_posix(), "--classic", "--dangerous"]
 
 
+def test_pack():
+    command = snap_cmd.formulate_pack_command(
+        snap_name="testsnap", output_file_path="testpath"
+    )
+    assert command == ["snap", "pack", "/snap/testsnap/current/", "--filename=testpath"]
+
+
 def test_remote_install_strict():
     snap_name, channel = "testsnap", "edge"
     cmd = snap_cmd.formulate_remote_install_command(snap_name, channel, classic=False)

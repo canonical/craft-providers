@@ -42,6 +42,22 @@ def formulate_local_install_command(
     return install_cmd
 
 
+def formulate_pack_command(snap_name: str, output_file_path) -> List[str]:
+    """Formulate the command to pack a snap from a directory.
+
+    :param snap_name: The name of the channel.
+    :param output_file_path: File path to the packed snap.
+
+    :returns: List of command parts.
+    """
+    return [
+        "snap",
+        "pack",
+        f"/snap/{snap_name}/current/",
+        f"--filename={output_file_path}",
+    ]
+
+
 def formulate_remote_install_command(
     snap_name: str, channel: str, classic: bool
 ) -> List[str]:
@@ -70,8 +86,7 @@ def formulate_refresh_command(snap_name: str, channel: str) -> List[str]:
 
     :returns: List of command parts.
     """
-    install_cmd = ["snap", "refresh", snap_name, "--channel", channel]
-    return install_cmd
+    return ["snap", "refresh", snap_name, "--channel", channel]
 
 
 def formulate_remove_command(snap_name: str) -> List[str]:
@@ -81,5 +96,4 @@ def formulate_remove_command(snap_name: str) -> List[str]:
 
     :returns: List of command parts.
     """
-    install_cmd = ["snap", "remove", snap_name]
-    return install_cmd
+    return ["snap", "remove", snap_name]
