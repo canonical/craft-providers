@@ -24,7 +24,7 @@ import pathlib
 import shlex
 import subprocess
 import urllib.parse
-from typing import Dict, Iterator, Optional
+from typing import Dict, Iterator, List, Optional
 
 import requests
 import requests_unixsocket  # type: ignore
@@ -180,6 +180,94 @@ def _get_host_snap(snap_name: str) -> Iterator[pathlib.Path]:
         yield snap_path
 
 
+def _get_assertion(query: List[str]) -> bytes:
+    """Get an assertion from snapd.
+
+    :param query: assertion query to pass to `snap known`
+    :returns: assertion data
+    :raises SnapInstallationError: if 'snap known' call fails
+    """
+    command = snap_cmd.formulate_known_command(query=query)
+    logger.debug("Executing command on host: %s", shlex.join(command))
+    try:
+        return subprocess.run(command, capture_output=True, check=True).stdout
+    except subprocess.CalledProcessError as error:
+        raise SnapInstallationError(
+            brief="failed to get assertions for snap",
+            details=details_from_called_process_error(error),
+        ) from error
+
+
+@contextlib.contextmanager
+def _get_assertions_file(
+    snap_name: str, snap_id: str, snap_revision: str
+) -> Iterator[pathlib.Path]:
+    """Get an assertion file for a snap.
+
+    :param snap_name: Name of snap to inject
+    :param snap_id: ID of the snap
+    :param snap_revision: Revision of the snap
+
+    :yields: path to temporary assertion file
+    """
+    logger.debug("Creating an assert file for snap %r", snap_name)
+    assertion_queries = [
+        [
+            "account-key",
+            "public-key-sha3-384=BWDEoaqyr25nF5SNCvEv2v"
+            "7QnM9QsfCc0PBMYD_i2NGSQ32EF2d4D0hqUel3m8ul",
+        ],
+        ["snap-declaration", f"snap-name={snap_name}"],
+        ["snap-revision", f"snap-revision={snap_revision}", f"snap-id={snap_id}"],
+    ]
+
+    with temp_paths.home_temporary_file() as assert_file_path:
+        assert_file = open(assert_file_path, "wb")
+        for query in assertion_queries:
+            assert_file.write(_get_assertion(query))
+            assert_file.write(b"\n")
+        assert_file.flush()
+        yield assert_file_path
+
+
+def _add_assertions_from_host(executor: Executor, snap_name: str) -> None:
+    """Add assertions from the host into the target for a snap.
+
+    :param executor: Executor for target
+    :param snap_name: Name of snap to inject
+    """
+    target_assert_path = pathlib.Path(f"/tmp/{snap_name}.assert")
+    snap_info = get_host_snap_info(snap_name)
+
+    try:
+        with _get_assertions_file(
+            snap_name=snap_name,
+            snap_id=snap_info["id"],
+            snap_revision=snap_info["revision"],
+        ) as host_assert_path:
+            executor.push_file(
+                source=host_assert_path,
+                destination=target_assert_path,
+            )
+    except ProviderError as error:
+        raise SnapInstallationError(
+            brief=f"failed to copy assert file for snap {snap_name!r}",
+            details="error copying snap assert file into target environment",
+        ) from error
+
+    try:
+        executor.execute_run(
+            snap_cmd.formulate_ack_command(snap_assert_path=target_assert_path),
+            check=True,
+            capture_output=True,
+        )
+    except subprocess.CalledProcessError as error:
+        raise SnapInstallationError(
+            brief=f"failed to add assertions for snap {snap_name!r}",
+            details=details_from_called_process_error(error),
+        ) from error
+
+
 def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> None:
     """Inject snap from host snap.
 
@@ -206,6 +294,10 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
         return
 
     target_snap_path = pathlib.Path(f"/tmp/{snap_name}.snap")
+    is_dangerous = host_revision.startswith("x")
+
+    if not is_dangerous:
+        _add_assertions_from_host(executor=executor, snap_name=snap_name)
 
     with _get_host_snap(snap_name) as host_snap_path:
         try:
@@ -222,7 +314,7 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
     try:
         executor.execute_run(
             snap_cmd.formulate_local_install_command(
-                classic=classic, dangerous=True, snap_path=target_snap_path
+                classic=classic, dangerous=is_dangerous, snap_path=target_snap_path
             ),
             check=True,
             capture_output=True,
