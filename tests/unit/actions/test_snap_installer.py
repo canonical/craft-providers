@@ -760,11 +760,15 @@ def test_get_assertion_connection_error(mocker):
 
 
 def test_add_assertions_from_host_error_on_push(
-    fake_executor, fake_process, mock_requests
+    fake_executor, fake_process, mock_requests, mocker, tmpdir
 ):
     """Raise SnapInstallationError when assert file cannot be pushed."""
     mock_executor = mock.Mock(spec=fake_executor, wraps=fake_executor)
     mock_executor.push_file.side_effect = ProviderError(brief="foo")
+    mocker.patch(
+        "craft_providers.bases.instance_config.temp_paths.home_temporary_file",
+        return_value=pathlib.Path(tmpdir) / "temp-file",
+    )
 
     # register 'snap known' calls
     for _ in range(3):
@@ -784,12 +788,16 @@ def test_add_assertions_from_host_error_on_push(
 
 
 def test_add_assertions_from_host_error_on_ack(
-    fake_executor, fake_process, mock_requests
+    fake_executor, fake_process, mock_requests, mocker, tmpdir
 ):
     """Raise SnapInstallationError when 'snap ack' fails."""
     fake_process.register_subprocess(
         ["fake-executor", "snap", "ack", "/tmp/test-name.assert"],
         returncode=1,
+    )
+    mocker.patch(
+        "craft_providers.bases.instance_config.temp_paths.home_temporary_file",
+        return_value=pathlib.Path(tmpdir) / "temp-file",
     )
 
     # register 'snap known' calls
