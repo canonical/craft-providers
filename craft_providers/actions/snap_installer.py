@@ -164,7 +164,8 @@ def _get_host_snap(snap_name: str) -> Iterator[pathlib.Path]:
     If the snap is installed using `snap try`, it may fail to download. In
     that case, attempt to construct the snap by packing it ourselves.
 
-    :yields: Path to snap which will be cleaned up afterwards.
+    :yields: context manager that sets the temporary snap installation file
+      as the target
     """
     with temp_paths.home_temporary_directory() as tmp_dir:
         snap_path = tmp_dir / f"{snap_name}.snap"
@@ -208,7 +209,8 @@ def _get_assertions_file(
     :param snap_id: ID of the snap
     :param snap_revision: Revision of the snap
 
-    :yields: path to temporary assertion file
+    :yields: context manager that will set the temporary snap assertion file
+      as the target
     """
     logger.debug("Creating an assert file for snap %r", snap_name)
     assertion_queries = [
@@ -222,12 +224,12 @@ def _get_assertions_file(
     ]
 
     with temp_paths.home_temporary_file() as assert_file_path:
-        assert_file = open(assert_file_path, "wb")
-        for query in assertion_queries:
-            assert_file.write(_get_assertion(query))
-            assert_file.write(b"\n")
-        assert_file.flush()
-        yield assert_file_path
+        with open(assert_file_path, "wb") as assert_file:
+            for query in assertion_queries:
+                assert_file.write(_get_assertion(query))
+                assert_file.write(b"\n")
+            assert_file.flush()
+            yield assert_file_path
 
 
 def _add_assertions_from_host(executor: Executor, snap_name: str) -> None:

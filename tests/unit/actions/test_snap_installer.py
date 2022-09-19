@@ -146,12 +146,9 @@ def test_inject_from_host_classic(
         executor=fake_executor, snap_name="test-name", classic=True
     )
 
-    assert mock_requests.mock_calls == [
-        mock.call.get("http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name/file"),
-        mock.call.get().raise_for_status(),
-        mock.call.get().iter_content(65536),
-        mock.call.get().iter_content().__iter__(),
-    ]
+    mock_requests.get.assert_called_with(
+        "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name/file"
+    )
 
     assert len(fake_process.calls) == 5
     assert Exact("Installing snap 'test-name' from host (classic=True)") in logs.debug
@@ -204,12 +201,9 @@ def test_inject_from_host_strict(
         executor=fake_executor, snap_name="test-name", classic=False
     )
 
-    assert mock_requests.mock_calls == [
-        mock.call.get("http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name/file"),
-        mock.call.get().raise_for_status(),
-        mock.call.get().iter_content(65536),
-        mock.call.get().iter_content().__iter__(),
-    ]
+    mock_requests.get.assert_called_with(
+        "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name/file"
+    )
 
     assert len(fake_process.calls) == 5
     assert Exact("Installing snap 'test-name' from host (classic=False)") in logs.debug
@@ -253,12 +247,9 @@ def test_inject_from_host_dangerous(
         executor=fake_executor, snap_name="test-name", classic=False
     )
 
-    assert mock_requests.mock_calls == [
-        mock.call.get("http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name/file"),
-        mock.call.get().raise_for_status(),
-        mock.call.get().iter_content(65536),
-        mock.call.get().iter_content().__iter__(),
-    ]
+    mock_requests.get.assert_called_with(
+        "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name/file"
+    )
 
     assert len(fake_process.calls) == 1
     assert Exact("Installing snap 'test-name' from host (classic=False)") in logs.debug
@@ -334,12 +325,9 @@ def test_inject_from_host_not_dangerous(
         executor=fake_executor, snap_name="test-name", classic=False
     )
 
-    assert mock_requests.mock_calls == [
-        mock.call.get("http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name/file"),
-        mock.call.get().raise_for_status(),
-        mock.call.get().iter_content(65536),
-        mock.call.get().iter_content().__iter__(),
-    ]
+    mock_requests.get.assert_called_with(
+        "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name/file"
+    )
 
     assert len(fake_process.calls) == 5
     assert Exact("Installing snap 'test-name' from host (classic=False)") in logs.debug
