@@ -189,7 +189,7 @@ def _get_assertion(query: List[str]) -> bytes:
     :raises SnapInstallationError: if 'snap known' call fails
     """
     command = snap_cmd.formulate_known_command(query=query)
-    logger.debug("Executing command on host: %s", shlex.join(command))
+    logger.debug("Executing command on host: %s", command)
     try:
         return subprocess.run(command, capture_output=True, check=True).stdout
     except subprocess.CalledProcessError as error:
