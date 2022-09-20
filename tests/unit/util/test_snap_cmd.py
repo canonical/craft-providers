@@ -19,6 +19,16 @@
 from craft_providers.util import snap_cmd
 
 
+def test_ack(tmp_path):
+    command = snap_cmd.formulate_ack_command(snap_assert_path=tmp_path)
+    assert command == ["snap", "ack", tmp_path.as_posix()]
+
+
+def test_known(tmp_path):
+    command = snap_cmd.formulate_known_command(query=["test1", "test2"])
+    assert command == ["snap", "known", "test1", "test2"]
+
+
 def test_local_install_strict(tmp_path):
     assert snap_cmd.formulate_local_install_command(
         classic=False, dangerous=False, snap_path=tmp_path

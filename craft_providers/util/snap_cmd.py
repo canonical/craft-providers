@@ -15,10 +15,26 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
-"""Helper(s) for snap command."""
+"""Helpers for snap command."""
 
 import pathlib
 from typing import List
+
+
+def formulate_ack_command(snap_assert_path: pathlib.Path) -> List[str]:
+    """Formulate snap ack command to add assertions.
+
+    :returns: List of ack command parts.
+    """
+    return ["snap", "ack", snap_assert_path.as_posix()]
+
+
+def formulate_known_command(query: List[str]) -> List[str]:
+    """Formulate snap known command to retrieve assertions.
+
+    :returns: List of ack command parts.
+    """
+    return ["snap", "known", *query]
 
 
 def formulate_local_install_command(
