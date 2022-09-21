@@ -419,9 +419,31 @@ class LXDInstance(Executor):
         *,
         host_source: pathlib.Path,
         target: pathlib.PurePath,
-        device_name: Optional[str] = None,
     ) -> None:
         """Mount host source directory to target mount point.
+
+        Checks first to see if already mounted.
+        The source will be mounted as a disk named "disk-{target.as_posix()}".
+
+        :param host_source: Host path to mount.
+        :param target: Instance path to mount to.
+
+        :raises LXDError: On unexpected error.
+        """
+        self.mount_with_device_name(
+            host_source=host_source,
+            target=target,
+            device_name=None,
+        )
+
+    def mount_with_device_name(
+        self,
+        *,
+        host_source: pathlib.Path,
+        target: pathlib.PurePath,
+        device_name: Optional[str] = None,
+    ) -> None:
+        """Mount host source directory to target mount point with a specific name.
 
         Checks first to see if already mounted.  If no device name is given, it
         will be generated with the format "disk-{target.as_posix()}".

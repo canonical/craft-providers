@@ -119,6 +119,9 @@ class FakeExecutor(Executor):
     def exists(self) -> bool:
         return True
 
+    def mount(self, *, host_source: pathlib.Path, target: pathlib.Path) -> None:
+        return
+
 
 @pytest.fixture
 def fake_executor():

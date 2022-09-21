@@ -559,8 +559,28 @@ def test_launch_with_mknod(mock_lxc, instance):
     ]
 
 
-def test_mount(mock_lxc, tmp_path, instance):
+def test_mount(mocker, tmp_path, instance):
+    """Verify `mount()` calls `mount_with_device_name()`."""
+    mock_mount_with_device_name = mocker.patch(
+        "craft_providers.lxd.lxd_instance.LXDInstance.mount_with_device_name"
+    )
+
     instance.mount(host_source=tmp_path, target=pathlib.Path("/mnt/foo"))
+
+    assert mock_mount_with_device_name.mock_calls == [
+        mock.call(
+            host_source=tmp_path,
+            target=pathlib.Path("/mnt/foo"),
+            device_name=None,
+        )
+    ]
+
+
+def test_mount_with_device_name(mock_lxc, tmp_path, instance):
+    """Verify calls to mount a directory."""
+    instance.mount_with_device_name(
+        host_source=tmp_path, target=pathlib.Path("/mnt/foo")
+    )
 
     assert mock_lxc.mock_calls == [
         mock.call.config_device_show(
@@ -579,8 +599,9 @@ def test_mount(mock_lxc, tmp_path, instance):
     ]
 
 
-def test_mount_all_opts(mock_lxc, tmp_path, instance):
-    instance.mount(
+def test_mount_with_device_name_specified(mock_lxc, tmp_path, instance):
+    """Parse the `device_name` argument when it is specified."""
+    instance.mount_with_device_name(
         host_source=tmp_path, target=pathlib.Path("/mnt/foo"), device_name="disk-xfoo"
     )
 
@@ -601,8 +622,9 @@ def test_mount_all_opts(mock_lxc, tmp_path, instance):
     ]
 
 
-def test_mount_already_mounted(mock_lxc, instance, project_path):
-    instance.mount(
+def test_mount_with_device_name_already_mounted(mock_lxc, instance, project_path):
+    """Do not mount if directory is already mounted."""
+    instance.mount_with_device_name(
         host_source=project_path,
         target=pathlib.Path("/root/project"),
     )
