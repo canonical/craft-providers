@@ -414,12 +414,7 @@ class LXDInstance(Executor):
             remote=self.remote,
         )
 
-    def mount(
-        self,
-        *,
-        host_source: pathlib.Path,
-        target: pathlib.PurePath,
-    ) -> None:
+    def mount(self, *, host_source: pathlib.Path, target: pathlib.PurePath) -> None:
         """Mount host source directory to target mount point.
 
         Checks first to see if already mounted.
@@ -438,39 +433,6 @@ class LXDInstance(Executor):
             source=host_source,
             path=target,
             device=f"disk-{target.as_posix()}",
-            project=self.project,
-            remote=self.remote,
-        )
-
-    def mount_with_device_name(
-        self,
-        *,
-        host_source: pathlib.Path,
-        target: pathlib.PurePath,
-        device_name: Optional[str] = None,
-    ) -> None:
-        """Mount host source directory to target mount point with a specific name.
-
-        Checks first to see if already mounted.  If no device name is given, it
-        will be generated with the format "disk-{target.as_posix()}".
-
-        :param host_source: Host path to mount.
-        :param target: Instance path to mount to.
-        :param device_name: Name for disk device.
-
-        :raises LXDError: On unexpected error.
-        """
-        if self.is_mounted(host_source=host_source, target=target):
-            return
-
-        if device_name is None:
-            device_name = "disk-" + target.as_posix()
-
-        self.lxc.config_device_add_disk(
-            instance_name=self.instance_name,
-            source=host_source,
-            path=target,
-            device=device_name,
             project=self.project,
             remote=self.remote,
         )

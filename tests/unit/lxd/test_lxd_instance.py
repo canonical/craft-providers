@@ -31,8 +31,6 @@ from logassert import Exact  # type: ignore
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, LXDInstance
 
-# pylint: disable=too-many-lines
-
 # These names include invalid characters so a lxd-compatible instance_name
 # is generated. This ensures an Instance's `name` and `instance_name` are
 # differentiated when testing.
@@ -562,7 +560,7 @@ def test_launch_with_mknod(mock_lxc, instance):
 
 
 def test_mount(mock_lxc, tmp_path, instance):
-    """Verify `mount()` calls `mount_with_device_name()`."""
+    """Verify calls to mount a directory."""
     instance.mount(host_source=tmp_path, target=pathlib.Path("/mnt/foo"))
 
     assert mock_lxc.mock_calls == [
@@ -582,58 +580,9 @@ def test_mount(mock_lxc, tmp_path, instance):
     ]
 
 
-def test_mount_with_device_name(mock_lxc, tmp_path, instance):
-    """Verify calls to mount a directory."""
-    instance.mount_with_device_name(
-        host_source=tmp_path, target=pathlib.Path("/mnt/foo")
-    )
-
-    assert mock_lxc.mock_calls == [
-        mock.call.config_device_show(
-            instance_name=instance.instance_name,
-            project=instance.project,
-            remote=instance.remote,
-        ),
-        mock.call.config_device_add_disk(
-            instance_name=instance.instance_name,
-            source=tmp_path,
-            path=pathlib.Path("/mnt/foo"),
-            device="disk-/mnt/foo",
-            project=instance.project,
-            remote=instance.remote,
-        ),
-    ]
-
-
-def test_mount_with_device_name_specified(mock_lxc, tmp_path, instance):
-    """Parse the `device_name` argument when it is specified."""
-    instance.mount_with_device_name(
-        host_source=tmp_path, target=pathlib.Path("/mnt/foo"), device_name="disk-xfoo"
-    )
-
-    assert mock_lxc.mock_calls == [
-        mock.call.config_device_show(
-            instance_name=instance.instance_name,
-            project=instance.project,
-            remote=instance.remote,
-        ),
-        mock.call.config_device_add_disk(
-            instance_name=instance.instance_name,
-            source=tmp_path,
-            path=pathlib.Path("/mnt/foo"),
-            device="disk-xfoo",
-            project=instance.project,
-            remote=instance.remote,
-        ),
-    ]
-
-
-def test_mount_with_device_name_already_mounted(mock_lxc, instance, project_path):
+def test_mount_already_mounted(mock_lxc, instance, project_path):
     """Do not mount if directory is already mounted."""
-    instance.mount_with_device_name(
-        host_source=project_path,
-        target=pathlib.Path("/root/project"),
-    )
+    instance.mount(host_source=project_path, target=pathlib.Path("/root/project"))
 
     assert mock_lxc.mock_calls == [
         mock.call.config_device_show(

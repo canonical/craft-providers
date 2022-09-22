@@ -216,39 +216,6 @@ def test_mount_unmount(reusable_instance, tmp_path):
     assert reusable_instance.is_mounted(host_source=host_source, target=target) is False
 
 
-def test_mount_with_device_name_unmount(reusable_instance, tmp_path):
-    tmp_path.chmod(0o755)
-
-    host_source = tmp_path
-    target = pathlib.Path("/tmp/mnt")
-    device_name = "test-device-name"
-
-    test_file = host_source / "test.txt"
-    test_file.write_text("this is a test")
-
-    assert reusable_instance.is_mounted(host_source=host_source, target=target) is False
-
-    reusable_instance.mount_with_device_name(
-        host_source=host_source, target=target, device_name=device_name
-    )
-
-    assert reusable_instance.is_mounted(host_source=host_source, target=target) is True
-
-    # pylint: disable-next=protected-access
-    assert "test-device-name" in reusable_instance._get_disk_devices()
-
-    proc = reusable_instance.execute_run(
-        command=["cat", "/tmp/mnt/test.txt"],
-        capture_output=True,
-    )
-
-    assert proc.stdout == test_file.read_bytes()
-
-    reusable_instance.unmount(target=target)
-
-    assert reusable_instance.is_mounted(host_source=host_source, target=target) is False
-
-
 def test_mount_unmount_all(reusable_instance, tmp_path):
     tmp_path.chmod(0o755)
 
