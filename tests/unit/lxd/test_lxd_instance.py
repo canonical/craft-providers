@@ -31,6 +31,8 @@ from logassert import Exact  # type: ignore
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, LXDInstance
 
+# pylint: disable=too-many-lines
+
 # These names include invalid characters so a lxd-compatible instance_name
 # is generated. This ensures an Instance's `name` and `instance_name` are
 # differentiated when testing.
@@ -559,20 +561,24 @@ def test_launch_with_mknod(mock_lxc, instance):
     ]
 
 
-def test_mount(mocker, tmp_path, instance):
+def test_mount(mock_lxc, tmp_path, instance):
     """Verify `mount()` calls `mount_with_device_name()`."""
-    mock_mount_with_device_name = mocker.patch(
-        "craft_providers.lxd.lxd_instance.LXDInstance.mount_with_device_name"
-    )
-
     instance.mount(host_source=tmp_path, target=pathlib.Path("/mnt/foo"))
 
-    assert mock_mount_with_device_name.mock_calls == [
-        mock.call(
-            host_source=tmp_path,
-            target=pathlib.Path("/mnt/foo"),
-            device_name=None,
-        )
+    assert mock_lxc.mock_calls == [
+        mock.call.config_device_show(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+        ),
+        mock.call.config_device_add_disk(
+            instance_name=instance.instance_name,
+            source=tmp_path,
+            path=pathlib.Path("/mnt/foo"),
+            device="disk-/mnt/foo",
+            project=instance.project,
+            remote=instance.remote,
+        ),
     ]
 
 

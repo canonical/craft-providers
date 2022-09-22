@@ -33,14 +33,17 @@ class FakeExecutor(Executor):
     Provides a fake execution environment meant to be paired with the
     fake_subprocess fixture for complete control over execution behaviors.
 
-    This records push_file_io(), pull_file(), and push_file() in
-    records_of_<name> for introspection, similar to mock_calls.
+    Calls to each method are recorded in `records_of_<method_name>` for introspection,
+    similar to mock_calls.
     """
 
     def __init__(self) -> None:
         self.records_of_push_file_io: List[Dict[str, Any]] = []
         self.records_of_pull_file: List[Dict[str, Any]] = []
         self.records_of_push_file: List[Dict[str, Any]] = []
+        self.records_of_delete: List[Dict[str, Any]] = []
+        self.records_of_exists: List[Dict[str, Any]] = []
+        self.records_of_mount: List[Dict[str, Any]] = []
 
     def push_file_io(
         self,
@@ -114,13 +117,14 @@ class FakeExecutor(Executor):
         )
 
     def delete(self) -> None:
-        return
+        self.records_of_delete.append({})
 
     def exists(self) -> bool:
+        self.records_of_exists.append({})
         return True
 
     def mount(self, *, host_source: pathlib.Path, target: pathlib.Path) -> None:
-        return
+        self.records_of_mount.append(dict(host_source=host_source, target=target))
 
 
 @pytest.fixture

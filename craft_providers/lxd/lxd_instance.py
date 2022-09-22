@@ -430,10 +430,16 @@ class LXDInstance(Executor):
 
         :raises LXDError: On unexpected error.
         """
-        self.mount_with_device_name(
-            host_source=host_source,
-            target=target,
-            device_name=None,
+        if self.is_mounted(host_source=host_source, target=target):
+            return
+
+        self.lxc.config_device_add_disk(
+            instance_name=self.instance_name,
+            source=host_source,
+            path=target,
+            device=f"disk-{target.as_posix()}",
+            project=self.project,
+            remote=self.remote,
         )
 
     def mount_with_device_name(
