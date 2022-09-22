@@ -175,3 +175,7 @@ class Executor(ABC):
 
         :returns: True if instance exists.
         """
+
+    @abstractmethod
+    def mount(self, *, host_source: pathlib.Path, target: pathlib.Path) -> None:
+        """Mount host source directory to target mount point."""
