@@ -2,6 +2,13 @@
 Changelog
 *********
 
+1.5.0 (2022-09-23)
+------------------
+- Add mount method to Executor base class
+- LXDInstance's mount method signature has changed - The optional parameter `device_name` has been deprecated. It now matches MultipassInstance's signature of `mount(host_source, target)`
+- Signed snaps injected into a provider are asserted
+- Existing .snap files are not removed before overwriting with a new .snap file
+
 1.4.2 (2022-09-09)
 ------------------
 - Set snapd http-proxy and https-proxy
