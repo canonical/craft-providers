@@ -135,6 +135,8 @@ class Executor(ABC):
     def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:
         """Copy a file from the host into the environment.
 
+        The destination file is overwritten if it exists.
+
         :param source: Host file to copy.
         :param destination: Target environment file path to copy to.  Parent
             directory (destination.parent) must exist.
@@ -173,3 +175,7 @@ class Executor(ABC):
 
         :returns: True if instance exists.
         """
+
+    @abstractmethod
+    def mount(self, *, host_source: pathlib.Path, target: pathlib.Path) -> None:
+        """Mount host source directory to target mount point."""

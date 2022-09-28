@@ -15,10 +15,26 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
-"""Helper(s) for snap command."""
+"""Helpers for snap command."""
 
 import pathlib
 from typing import List
+
+
+def formulate_ack_command(snap_assert_path: pathlib.Path) -> List[str]:
+    """Formulate snap ack command to add assertions.
+
+    :returns: List of ack command parts.
+    """
+    return ["snap", "ack", snap_assert_path.as_posix()]
+
+
+def formulate_known_command(query: List[str]) -> List[str]:
+    """Formulate snap known command to retrieve assertions.
+
+    :returns: List of ack command parts.
+    """
+    return ["snap", "known", *query]
 
 
 def formulate_local_install_command(
@@ -40,6 +56,22 @@ def formulate_local_install_command(
         install_cmd.append("--dangerous")
 
     return install_cmd
+
+
+def formulate_pack_command(snap_name: str, output_file_path) -> List[str]:
+    """Formulate the command to pack a snap from a directory.
+
+    :param snap_name: The name of the channel.
+    :param output_file_path: File path to the packed snap.
+
+    :returns: List of command parts.
+    """
+    return [
+        "snap",
+        "pack",
+        f"/snap/{snap_name}/current/",
+        f"--filename={output_file_path}",
+    ]
 
 
 def formulate_remote_install_command(
@@ -70,8 +102,7 @@ def formulate_refresh_command(snap_name: str, channel: str) -> List[str]:
 
     :returns: List of command parts.
     """
-    install_cmd = ["snap", "refresh", snap_name, "--channel", channel]
-    return install_cmd
+    return ["snap", "refresh", snap_name, "--channel", channel]
 
 
 def formulate_remove_command(snap_name: str) -> List[str]:
@@ -81,5 +112,4 @@ def formulate_remove_command(snap_name: str) -> List[str]:
 
     :returns: List of command parts.
     """
-    install_cmd = ["snap", "remove", snap_name]
-    return install_cmd
+    return ["snap", "remove", snap_name]

@@ -51,6 +51,7 @@ test_requires = [
     "mypy",
     "logassert",
     "pydocstyle",
+    "pyfakefs",
     "pylint",
     "pylint-fixme-info",
     "pylint-pytest",
@@ -71,7 +72,7 @@ extras_requires = {
 
 setup(
     name="craft-providers",
-    version="1.4.1",
+    version="1.5.0",
     description="Craft provider tooling",
     long_description=readme,
     long_description_content_type="text/markdown",

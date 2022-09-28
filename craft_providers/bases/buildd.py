@@ -350,6 +350,7 @@ class BuilddBase(Base):
         )
         self._setup_apt(executor=executor, deadline=deadline)
         self._setup_snapd(executor=executor, deadline=deadline)
+        self._setup_snapd_proxy(executor=executor, deadline=deadline)
         self._install_snaps(executor=executor, deadline=deadline)
 
     def warmup(
@@ -390,6 +391,7 @@ class BuilddBase(Base):
         self._setup_wait_for_network(
             executor=executor, deadline=deadline, retry_wait=retry_wait
         )
+        self._setup_snapd_proxy(executor=executor, deadline=deadline)
         self._install_snaps(executor=executor, deadline=deadline)
 
     def _disable_automatic_apt(
@@ -726,6 +728,22 @@ class BuilddBase(Base):
                 check=True,
             )
 
+            # This file is created by launchpad-buildd to stop snapd from
+            # using the snap store's CDN when running in Canonical's
+            # production build farm, since internet access restrictions may
+            # prevent it from doing so but will allow the non-CDN storage
+            # endpoint.  If this is in place, then we need to propagate it
+            # to containers we create.
+            no_cdn = pathlib.Path("/etc/systemd/system/snapd.service.d/no-cdn.conf")
+            if no_cdn.exists():
+                _check_deadline(deadline)
+                executor.execute_run(
+                    ["mkdir", "-p", no_cdn.parent.as_posix()], check=True
+                )
+
+                _check_deadline(deadline)
+                executor.push_file(source=no_cdn, destination=no_cdn)
+
             _check_deadline(deadline)
             executor.execute_run(
                 ["apt-get", "install", "-y", "snapd"],
@@ -755,9 +773,41 @@ class BuilddBase(Base):
                 capture_output=True,
                 check=True,
             )
+
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to setup snapd.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
+    def _setup_snapd_proxy(
+        self, *, executor: Executor, deadline: Optional[float] = None
+    ) -> None:
+        """Configure the snapd proxy.
+
+        :param executor: Executor for target container.
+        :param deadline: Optional time.time() deadline.
+        """
+        try:
+            _check_deadline(deadline)
+            http_proxy = self.environment.get("http_proxy")
+            if http_proxy:
+                command = ["snap", "set", "system", f"proxy.http={http_proxy}"]
+            else:
+                command = ["snap", "unset", "system", "proxy.http"]
+            executor.execute_run(command, capture_output=True, check=True)
+
+            _check_deadline(deadline)
+            https_proxy = self.environment.get("https_proxy")
+            if https_proxy:
+                command = ["snap", "set", "system", f"proxy.https={https_proxy}"]
+            else:
+                command = ["snap", "unset", "system", "proxy.https"]
+            executor.execute_run(command, capture_output=True, check=True)
+
+        except subprocess.CalledProcessError as error:
+            raise BaseConfigurationError(
+                brief="Failed to set the snapd proxy.",
                 details=errors.details_from_called_process_error(error),
             ) from error
 

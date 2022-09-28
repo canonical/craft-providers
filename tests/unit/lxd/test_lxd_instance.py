@@ -560,6 +560,7 @@ def test_launch_with_mknod(mock_lxc, instance):
 
 
 def test_mount(mock_lxc, tmp_path, instance):
+    """Verify calls to mount a directory."""
     instance.mount(host_source=tmp_path, target=pathlib.Path("/mnt/foo"))
 
     assert mock_lxc.mock_calls == [
@@ -579,33 +580,9 @@ def test_mount(mock_lxc, tmp_path, instance):
     ]
 
 
-def test_mount_all_opts(mock_lxc, tmp_path, instance):
-    instance.mount(
-        host_source=tmp_path, target=pathlib.Path("/mnt/foo"), device_name="disk-xfoo"
-    )
-
-    assert mock_lxc.mock_calls == [
-        mock.call.config_device_show(
-            instance_name=instance.instance_name,
-            project=instance.project,
-            remote=instance.remote,
-        ),
-        mock.call.config_device_add_disk(
-            instance_name=instance.instance_name,
-            source=tmp_path,
-            path=pathlib.Path("/mnt/foo"),
-            device="disk-xfoo",
-            project=instance.project,
-            remote=instance.remote,
-        ),
-    ]
-
-
 def test_mount_already_mounted(mock_lxc, instance, project_path):
-    instance.mount(
-        host_source=project_path,
-        target=pathlib.Path("/root/project"),
-    )
+    """Do not mount if directory is already mounted."""
+    instance.mount(host_source=project_path, target=pathlib.Path("/root/project"))
 
     assert mock_lxc.mock_calls == [
         mock.call.config_device_show(

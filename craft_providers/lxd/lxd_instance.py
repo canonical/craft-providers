@@ -414,35 +414,25 @@ class LXDInstance(Executor):
             remote=self.remote,
         )
 
-    def mount(
-        self,
-        *,
-        host_source: pathlib.Path,
-        target: pathlib.PurePath,
-        device_name: Optional[str] = None,
-    ) -> None:
+    def mount(self, *, host_source: pathlib.Path, target: pathlib.PurePath) -> None:
         """Mount host source directory to target mount point.
 
-        Checks first to see if already mounted.  If no device name is given, it
-        will be generated with the format "disk-{target.as_posix()}".
+        Checks first to see if already mounted.
+        The source will be mounted as a disk named "disk-{target.as_posix()}".
 
         :param host_source: Host path to mount.
         :param target: Instance path to mount to.
-        :param device_name: Name for disk device.
 
         :raises LXDError: On unexpected error.
         """
         if self.is_mounted(host_source=host_source, target=target):
             return
 
-        if device_name is None:
-            device_name = "disk-" + target.as_posix()
-
         self.lxc.config_device_add_disk(
             instance_name=self.instance_name,
             source=host_source,
             path=target,
-            device=device_name,
+            device=f"disk-{target.as_posix()}",
             project=self.project,
             remote=self.remote,
         )
@@ -491,6 +481,8 @@ class LXDInstance(Executor):
 
     def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:
         """Copy a file from the host into the environment.
+
+        The destination file is overwritten if it exists.
 
         :param source: Host file to copy.
         :param destination: Target environment file path to copy to.  Parent
