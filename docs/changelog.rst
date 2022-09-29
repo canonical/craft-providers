@@ -2,6 +2,11 @@
 Changelog
 *********
 
+1.5.1 (2022-09-29)
+------------------
+- When injecting a snap, assert the snap's publisher's account
+- Avoid race condition when multiple processes add a LXD remote at the same time
+
 1.5.0 (2022-09-23)
 ------------------
 - Add mount method to Executor base class
