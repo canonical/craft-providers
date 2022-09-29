@@ -24,7 +24,7 @@ import pathlib
 import shlex
 import subprocess
 import urllib.parse
-from typing import Dict, Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 import requests
 import requests_unixsocket  # type: ignore
@@ -84,7 +84,7 @@ def _pack_host_snap(*, snap_name: str, output: pathlib.Path) -> None:
     )
 
 
-def get_host_snap_info(snap_name: str) -> Dict[str, str]:
+def get_host_snap_info(snap_name: str) -> Dict[str, Any]:
     """Get info about a snap installed on the host."""
     quoted_name = urllib.parse.quote(snap_name, safe="")
     url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}"
@@ -201,13 +201,14 @@ def _get_assertion(query: List[str]) -> bytes:
 
 @contextlib.contextmanager
 def _get_assertions_file(
-    snap_name: str, snap_id: str, snap_revision: str
+    snap_name: str, snap_id: str, snap_revision: str, snap_publisher_id: str
 ) -> Iterator[pathlib.Path]:
     """Get an assertion file for a snap.
 
     :param snap_name: Name of snap to inject
     :param snap_id: ID of the snap
     :param snap_revision: Revision of the snap
+    :param snap_publisher_id: The ID of the snap's publisher's account
 
     :yields: context manager that will set the temporary snap assertion file
       as the target
@@ -221,6 +222,7 @@ def _get_assertions_file(
         ],
         ["snap-declaration", f"snap-name={snap_name}"],
         ["snap-revision", f"snap-revision={snap_revision}", f"snap-id={snap_id}"],
+        ["account", f"account-id={snap_publisher_id}"],
     ]
 
     with temp_paths.home_temporary_file() as assert_file_path:
@@ -246,6 +248,7 @@ def _add_assertions_from_host(executor: Executor, snap_name: str) -> None:
             snap_name=snap_name,
             snap_id=snap_info["id"],
             snap_revision=snap_info["revision"],
+            snap_publisher_id=snap_info["publisher"]["id"],
         ) as host_assert_path:
             executor.push_file(
                 source=host_assert_path,
