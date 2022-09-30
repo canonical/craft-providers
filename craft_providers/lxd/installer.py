@@ -59,7 +59,7 @@ def install(sudo: bool = True) -> str:
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as error:
         raise errors.LXDInstallationError(
-            "Failed to init LXD.",
+            reason="failed to init LXD",
             details=details_from_called_process_error(error),
         ) from error
 
@@ -114,8 +114,7 @@ def ensure_lxd_is_ready(
     if not is_installed():
         raise errors.LXDError(
             brief="LXD is required, but not installed.",
-            resolution="Visit https://snapcraft.io/lxd for instructions "
-            "on how to install the LXD snap for your distribution.",
+            resolution=errors.LXD_INSTALL_HELP,
         )
 
     if not lxd.is_supported_version():
@@ -126,18 +125,23 @@ def ensure_lxd_is_ready(
                 f"LXD {version!r} does not meet the"
                 f" minimum required version {min_version!r}."
             ),
-            resolution="Visit https://snapcraft.io/lxd for instructions "
-            "on how to install the LXD snap for your distribution.",
+            resolution=errors.LXD_INSTALL_HELP,
         )
 
     if not is_user_permitted():
         raise errors.LXDError(
             brief="LXD requires additional permissions.",
-            resolution="Ensure that the user is in the 'lxd' group.",
+            resolution=(
+                "Ensure that the user is in the 'lxd' group.\n"
+                + errors.LXD_INSTALL_HELP
+            ),
         )
 
     if not is_initialized(lxc=lxc, remote=remote):
         raise errors.LXDError(
             brief="LXD has not been properly initialized.",
-            resolution="Execute 'lxd init --auto' to initialize LXD.",
+            resolution=(
+                "Execute 'lxd init --auto' to initialize LXD.\n"
+                + errors.LXD_INSTALL_HELP
+            ),
         )
