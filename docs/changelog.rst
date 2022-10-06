@@ -2,6 +2,18 @@
 Changelog
 *********
 
+1.6.0 (2022-10-06)
+------------------
+- Add is_running method to to base Executor class
+- Add new classes Provider, LXDProvider, and MultipassProvider
+
+Note: The new Provider classes are used to encapsulate LXD and Multipass,
+      from installing the provider to creating and managing instances. The code
+      was leveraged from the craft applications (snapcraft, charmcraft, rockcraft,
+      lpcraft), which implemented similar variations of these Provider classes.
+      These classes are not stable and are likely to change. They will be stable and
+      recommended for use in the release of craft-providers 2.0.
+
 1.5.1 (2022-09-29)
 ------------------
 - When injecting a snap, assert the snap's publisher's account
