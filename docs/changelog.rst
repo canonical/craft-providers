@@ -4,7 +4,7 @@ Changelog
 
 1.6.0 (2022-10-06)
 ------------------
-- Add is_running method to to base Executor class
+- Add is_running method to base Executor class
 - Add new classes Provider, LXDProvider, and MultipassProvider
 
 Note: The new Provider classes are used to encapsulate LXD and Multipass,
