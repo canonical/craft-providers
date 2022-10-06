@@ -44,6 +44,7 @@ class FakeExecutor(Executor):
         self.records_of_delete: List[Dict[str, Any]] = []
         self.records_of_exists: List[Dict[str, Any]] = []
         self.records_of_mount: List[Dict[str, Any]] = []
+        self.records_of_is_running: List[Dict[str, Any]] = []
 
     def push_file_io(
         self,
@@ -125,6 +126,10 @@ class FakeExecutor(Executor):
 
     def mount(self, *, host_source: pathlib.Path, target: pathlib.Path) -> None:
         self.records_of_mount.append(dict(host_source=host_source, target=target))
+
+    def is_running(self) -> bool:
+        self.records_of_is_running.append({})
+        return True
 
 
 @pytest.fixture
