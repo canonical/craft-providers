@@ -179,3 +179,10 @@ class Executor(ABC):
     @abstractmethod
     def mount(self, *, host_source: pathlib.Path, target: pathlib.Path) -> None:
         """Mount host source directory to target mount point."""
+
+    @abstractmethod
+    def is_running(self) -> bool:
+        """Check if instance is running.
+
+        :returns: True if instance is running.
+        """
