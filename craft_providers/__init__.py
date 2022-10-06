@@ -22,9 +22,11 @@ __version__ = "1.5.1"  # noqa: F401
 from .base import Base  # noqa: F401
 from .errors import ProviderError  # noqa: F401
 from .executor import Executor  # noqa: F401
+from .provider import Provider  # noqa: f401
 
 __all__ = [
     "Base",
     "Executor",
     "ProviderError",
+    "Provider",
 ]
