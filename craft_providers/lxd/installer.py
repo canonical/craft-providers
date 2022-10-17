@@ -97,7 +97,7 @@ def is_installed() -> bool:
 
 
 def is_user_permitted() -> bool:
-    """Check if user has permisisons to connect to LXD.
+    """Check if user has permissions to connect to LXD.
 
     :returns: True if user has correct permissions.
     """
