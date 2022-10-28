@@ -27,8 +27,7 @@ from typing import Iterator
 def home_temporary_directory() -> Iterator[pathlib.Path]:
     """Create temporary directory in home directory where Multipass has access."""
     with tempfile.TemporaryDirectory(
-        suffix=".tmp-craft",
-        dir=pathlib.Path.home(),
+        suffix=".tmp-craft", dir=pathlib.Path.home()
     ) as tmp_dir:
         yield pathlib.Path(tmp_dir)
 
