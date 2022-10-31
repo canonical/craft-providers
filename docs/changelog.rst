@@ -2,6 +2,11 @@
 Changelog
 *********
 
+1.6.1 (2022-10-31)
+------------------
+- Store temporary files in the home directory
+- Fix typos
+
 1.6.0 (2022-10-06)
 ------------------
 - Add is_running method to base Executor class
