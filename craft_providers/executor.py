@@ -22,9 +22,10 @@ import io
 import logging
 import pathlib
 import subprocess
-import tempfile
 from abc import ABC, abstractmethod
 from typing import Dict, Generator, List, Optional
+
+from .util import temp_paths
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,8 @@ class Executor(ABC):
 
         Works as a context manager, provides the file path in the host as target.
 
+        The temporary file is stored in the home directory where Multipass has access.
+
         :param source: Environment file to copy.
         :param missing_ok: Do not raise an error if the file does not exist in the
             environment; in this case the target will be None.
@@ -111,25 +114,16 @@ class Executor(ABC):
             directory does not exist (and `missing_ok` is False).
         :raises ProviderError: On error copying file content.
         """
-        # Get a temporary file path (placing it in current directory as it's the
-        # most predictable place where a potential strictly-snapped app could write)
-        tmp_file = tempfile.NamedTemporaryFile(
-            delete=False, prefix="craft-providers-", suffix=".temp", dir="."
-        )
-        tmp_file.close()
-
-        local_filepath = pathlib.Path(tmp_file.name)
-        try:
-            self.pull_file(source=source, destination=local_filepath)
-        except FileNotFoundError:
-            if missing_ok:
-                yield None
+        with temp_paths.home_temporary_file() as tmp_file:
+            try:
+                self.pull_file(source=source, destination=tmp_file)
+            except FileNotFoundError:
+                if missing_ok:
+                    yield None
+                else:
+                    raise
             else:
-                raise
-        else:
-            yield local_filepath
-        finally:
-            local_filepath.unlink()
+                yield tmp_file
 
     @abstractmethod
     def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:

@@ -15,7 +15,9 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
+import contextlib
 import shutil
+from pathlib import Path
 
 import pytest
 
@@ -31,30 +33,43 @@ def fake_executor_local_pull(fake_executor):
     return fake_executor
 
 
-def test_temporarypull_ok(monkeypatch, tmp_path, fake_executor_local_pull):
-    """Successful case."""
-    # change dir so the temp file is created in a temp dir
-    monkeypatch.chdir(tmp_path)
+@pytest.fixture
+def mock_home_temp_file(mocker, tmp_path):
+    """Mock `home_temporary_file()`."""
 
+    @contextlib.contextmanager
+    def _mock_home_temp_file():
+        tmp_file = Path(tmp_path / "fake-temp-file.txt")
+        try:
+            yield tmp_file
+        finally:
+            tmp_file.unlink()
+
+    yield mocker.patch(
+        "craft_providers.executor.temp_paths.home_temporary_file",
+        wraps=_mock_home_temp_file,
+    )
+
+
+def test_temporarypull_ok(
+    mock_home_temp_file, mocker, tmp_path, fake_executor_local_pull
+):
+    """Successful case."""
     source = tmp_path / "source.txt"
     source.write_text("test content")
 
     with fake_executor_local_pull.temporarily_pull_file(source=source) as localfilepath:
-        # temp file located "here" and with proper naming
-        assert localfilepath.parent == tmp_path
-        assert localfilepath.name.startswith("craft-providers-")
-        assert localfilepath.name.endswith(".temp")
-
         # content copied and accessible
         assert localfilepath.read_text() == "test content"
 
     # file is removed afterwards
     assert not localfilepath.exists()
 
+    # temp_paths.home_temporary_file() is used for the local file
+    mock_home_temp_file.assert_called_once()
 
-def test_temporarypull_missing_file_error(
-    monkeypatch, tmp_path, fake_executor_local_pull
-):
+
+def test_temporarypull_missing_file_error(tmp_path, fake_executor_local_pull):
     """The source is missing, by default it's an error."""
     source = tmp_path / "source.txt"  # note we're not creating it in disk
 
@@ -63,11 +78,8 @@ def test_temporarypull_missing_file_error(
             pass
 
 
-def test_temporarypull_missing_file_ok(monkeypatch, tmp_path, fake_executor_local_pull):
+def test_temporarypull_missing_file_ok(tmp_path, fake_executor_local_pull):
     """The source is missing, but it's ok."""
-    # change dir so the temp file is created in a temp dir
-    monkeypatch.chdir(tmp_path)
-
     source = tmp_path / "source.txt"  # note we're not creating it in disk
 
     with fake_executor_local_pull.temporarily_pull_file(
@@ -77,12 +89,9 @@ def test_temporarypull_missing_file_ok(monkeypatch, tmp_path, fake_executor_loca
 
 
 def test_temporarypull_temp_file_cleaned(
-    monkeypatch, tmp_path, fake_executor_local_pull
+    mock_home_temp_file, tmp_path, fake_executor_local_pull
 ):
     """The temp file is cleaned after usage."""
-    # change dir so the temp file is created in a temp dir
-    monkeypatch.chdir(tmp_path)
-
     source = tmp_path / "source.txt"
     source.write_text("test content")
 
