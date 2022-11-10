@@ -514,7 +514,6 @@ class BuilddBase(Base):
             _check_deadline(deadline)
             executor.execute_run(
                 ["apt-get", "update"],
-                capture_output=True,
                 check=True,
             )
         except subprocess.CalledProcessError as error:
@@ -532,7 +531,6 @@ class BuilddBase(Base):
             _check_deadline(deadline)
             executor.execute_run(
                 ["apt-get", "install", "-y"] + packages_to_install,
-                capture_output=True,
                 check=True,
             )
         except subprocess.CalledProcessError as error:
@@ -585,7 +583,6 @@ class BuilddBase(Base):
             _check_deadline(deadline)
             executor.execute_run(
                 ["hostname", "-F", "/etc/hostname"],
-                capture_output=True,
                 check=True,
             )
         except subprocess.CalledProcessError as error:
@@ -638,7 +635,6 @@ class BuilddBase(Base):
             _check_deadline(deadline)
             executor.execute_run(
                 ["systemctl", "enable", "systemd-networkd"],
-                capture_output=True,
                 check=True,
             )
 
@@ -646,7 +642,6 @@ class BuilddBase(Base):
             executor.execute_run(
                 ["systemctl", "restart", "systemd-networkd"],
                 check=True,
-                capture_output=True,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -670,21 +665,18 @@ class BuilddBase(Base):
                     "/etc/resolv.conf",
                 ],
                 check=True,
-                capture_output=True,
             )
 
             _check_deadline(deadline)
             executor.execute_run(
                 ["systemctl", "enable", "systemd-resolved"],
                 check=True,
-                capture_output=True,
             )
 
             _check_deadline(deadline)
             executor.execute_run(
                 ["systemctl", "restart", "systemd-resolved"],
                 check=True,
-                capture_output=True,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -711,20 +703,17 @@ class BuilddBase(Base):
                     "udev",
                 ],
                 check=True,
-                capture_output=True,
             )
 
             _check_deadline(deadline)
             executor.execute_run(
                 ["systemctl", "enable", "systemd-udevd"],
-                capture_output=True,
                 check=True,
             )
 
             _check_deadline(deadline)
             executor.execute_run(
                 ["systemctl", "start", "systemd-udevd"],
-                capture_output=True,
                 check=True,
             )
 
@@ -747,14 +736,12 @@ class BuilddBase(Base):
             _check_deadline(deadline)
             executor.execute_run(
                 ["apt-get", "install", "-y", "snapd"],
-                capture_output=True,
                 check=True,
             )
 
             _check_deadline(deadline)
             executor.execute_run(
                 ["systemctl", "start", "snapd.socket"],
-                capture_output=True,
                 check=True,
             )
 
@@ -763,14 +750,12 @@ class BuilddBase(Base):
             _check_deadline(deadline)
             executor.execute_run(
                 ["systemctl", "restart", "snapd.service"],
-                capture_output=True,
                 check=True,
             )
 
             _check_deadline(deadline)
             executor.execute_run(
                 ["snap", "wait", "system", "seed.loaded"],
-                capture_output=True,
                 check=True,
             )
 
@@ -795,7 +780,7 @@ class BuilddBase(Base):
                 command = ["snap", "set", "system", f"proxy.http={http_proxy}"]
             else:
                 command = ["snap", "unset", "system", "proxy.http"]
-            executor.execute_run(command, capture_output=True, check=True)
+            executor.execute_run(command, check=True)
 
             _check_deadline(deadline)
             https_proxy = self.environment.get("https_proxy")
@@ -803,7 +788,7 @@ class BuilddBase(Base):
                 command = ["snap", "set", "system", f"proxy.https={https_proxy}"]
             else:
                 command = ["snap", "unset", "system", "proxy.https"]
-            executor.execute_run(command, capture_output=True, check=True)
+            executor.execute_run(command, check=True)
 
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -820,6 +805,9 @@ class BuilddBase(Base):
     ) -> None:
         """Wait until networking is ready.
 
+        This verification is done using `getent` with a timeout when calling the
+        process as we seen too many times that it "hangs".
+
         :param executor: Executor for target container.
         :param retry_wait: Duration to sleep() between status checks.
         :param deadline: Optional time.time() deadline.
@@ -828,13 +816,19 @@ class BuilddBase(Base):
 
         _check_deadline(deadline)
         while True:
-            proc = executor.execute_run(
-                ["getent", "hosts", "snapcraft.io"],
-                capture_output=True,
-                check=False,
-            )
-            if proc.returncode == 0:
-                return
+            try:
+                proc = executor.execute_run(
+                    ["getent", "hosts", "snapcraft.io"],
+                    check=False,
+                    timeout=1,
+                )
+            except subprocess.TimeoutExpired:
+                # consume this exception as the idea is to fail with timeout
+                # after (if) the deadline is hit
+                pass
+            else:
+                if proc.returncode == 0:
+                    return
 
             _check_deadline(
                 deadline, message="Timed out waiting for networking to be ready."

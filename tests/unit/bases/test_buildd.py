@@ -1300,3 +1300,22 @@ def test_set_hostname_invalid(hostname):
         brief=f"failed to create base with hostname {hostname!r}.",
         details="hostname must contain at least one alphanumeric character",
     )
+
+
+@patch("time.time", side_effect=[1, 2, 3])
+def test_wait_for_networt_dont_hang(fake_executor):
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+
+    side_effects = [subprocess.TimeoutExpired("cmd", 3)] * 3
+    with patch.object(fake_executor, "execute_run", side_effect=side_effects) as mock:
+        with pytest.raises(errors.BaseConfigurationError) as exc_info:
+            base_config._setup_wait_for_network(
+                executor=fake_executor,
+                retry_wait=0,
+                deadline=3,  # will run the command twice, then deadline will be hit
+            )
+
+    assert exc_info.value == errors.BaseConfigurationError(
+        brief="Timed out waiting for networking to be ready."
+    )
+    assert mock.call_count == 2
