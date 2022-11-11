@@ -39,3 +39,12 @@ class BaseCompatibilityError(ProviderError):
         resolution = "Clean incompatible instance and retry the requested operation."
 
         super().__init__(brief=brief, details=details, resolution=resolution)
+
+
+class NetworkError(ProviderError):
+    """Network error when configuring the base."""
+
+    def __init__(self) -> None:
+        brief = "A network related operation failed in a context of no network access."
+        resolution = "Verify that the environment has internet connectivity."
+        super().__init__(brief=brief, resolution=resolution)

@@ -502,7 +502,12 @@ def test_install_packages_install_error(mocker, fake_executor):
     error = subprocess.CalledProcessError(100, ["error"])
     base = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
 
-    mocker.patch.object(fake_executor, "execute_run", side_effect=[None, error])
+    side_effects = [
+        None,  # apt-get update, just pass
+        error,  # make apt-get install fail
+        subprocess.CompletedProcess("args", returncode=0),  # network connectivity check
+    ]
+    mocker.patch.object(fake_executor, "execute_run", side_effect=side_effects)
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
         base._setup_apt(executor=fake_executor, deadline=None)
@@ -836,6 +841,13 @@ def test_setup_snapd_failures(fake_process, fake_executor, fail_index):
 
     return_codes = [0, 0, 0, 0, 0, 0, 0]
     return_codes[fail_index] = 1
+
+    # some of the commands below are network related and will verify if internet
+    # is fine after failing; let't not make this a factor in this test
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/1.1.1.1/53"],
+        returncode=0,
+    )
 
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "fuse", "udev"],
@@ -1300,3 +1312,108 @@ def test_set_hostname_invalid(hostname):
         brief=f"failed to create base with hostname {hostname!r}.",
         details="hostname must contain at least one alphanumeric character",
     )
+
+
+def test_execute_run_default(fake_executor):
+    """Default _execute_run behaviour."""
+    command = ["the", "command"]
+    with patch.object(fake_executor, "execute_run") as mock:
+        buildd._execute_run(fake_executor, command)
+
+    mock.assert_called_with(command, check=True, capture_output=True, text=False)
+
+
+def test_execute_run_options_for_run(fake_executor):
+    """Different options to control how run is called."""
+    command = ["the", "command"]
+    with patch.object(fake_executor, "execute_run") as mock:
+        buildd._execute_run(
+            fake_executor, command, check=False, capture_output=False, text=True
+        )
+
+    mock.assert_called_with(command, check=False, capture_output=False, text=True)
+
+
+def test_execute_run_command_failed_no_verify_network(fake_process, fake_executor):
+    """The command failed but network verification was not asked."""
+    command = ["the", "command"]
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=1)
+
+    with pytest.raises(subprocess.CalledProcessError):
+        buildd._execute_run(fake_executor, command)
+
+
+def test_execute_run_verify_network_run_ok(fake_process, fake_executor):
+    """Indicated network verification but process completed ok."""
+    command = ["the", "command"]
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=0)
+
+    proc = buildd._execute_run(fake_executor, command, verify_network=True)
+    assert proc.returncode == 0
+
+
+def test_execute_run_verify_network_connectivity_ok(fake_process, fake_executor):
+    """Network verified after process failure, connectivity ok."""
+    command = ["the", "command"]
+
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/1.1.1.1/53"],
+        returncode=0,
+    )
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=1)
+
+    with pytest.raises(subprocess.CalledProcessError):
+        buildd._execute_run(fake_executor, command, verify_network=True)
+
+
+def test_execute_run_verify_network_connectivity_missing(fake_process, fake_executor):
+    """Network verified after process failure, no connectivity."""
+    command = ["the", "command"]
+
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/1.1.1.1/53"],
+        returncode=1,
+    )
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=1)
+
+    with pytest.raises(errors.NetworkError) as exc_info:
+        buildd._execute_run(fake_executor, command, verify_network=True)
+    assert isinstance(exc_info.value.__cause__, subprocess.CalledProcessError)
+
+
+def test_execute_run_bad_check_verifynetwork_combination(fake_executor):
+    """Cannot ask for network verification and avoid checking."""
+    with pytest.raises(RuntimeError):
+        buildd._execute_run(fake_executor, ["cmd"], check=False, verify_network=True)
+
+
+def test_network_connectivity_yes(fake_executor, fake_process):
+    """Connectivity is ok."""
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/1.1.1.1/53"],
+        returncode=0,
+    )
+    assert buildd._network_connected(fake_executor) is True
+
+
+def test_network_connectivity_no(fake_executor, fake_process):
+    """Connectivity missing."""
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/1.1.1.1/53"],
+        returncode=1,
+    )
+    assert buildd._network_connected(fake_executor) is False
+
+
+def test_network_connectivity_timeouts(fake_executor, fake_process):
+    """Process hangs waiting for connection.
+
+    Note that the command succeeds, finding internet "in the future", but the
+    verificaton will fail fast, being more representative.
+    """
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/1.1.1.1/53"],
+        returncode=0,
+        wait=2,
+    )
+    assert buildd._network_connected(fake_executor) is False
