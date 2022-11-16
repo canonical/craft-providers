@@ -1413,6 +1413,8 @@ def test_network_connectivity_timeouts(fake_executor, fake_process):
     """
     cmd = ["bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"]
     timeout_expired = subprocess.TimeoutExpired(cmd, timeout=5)
-    with patch.object(fake_executor, "execute_run", side_effect=timeout_expired) as mock:
+    with patch.object(
+        fake_executor, "execute_run", side_effect=timeout_expired
+    ) as mock:
         assert buildd._network_connected(fake_executor) is False
     mock.assert_called_with(cmd, check=False, capture_output=True, timeout=1)

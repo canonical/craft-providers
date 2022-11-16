@@ -81,7 +81,7 @@ def _check_deadline(
 def _network_connected(executor):
     """Check if the network is connected."""
     # check if the port is open using bash's built-in tcp-client, communicating with
-    # the to HTTPS port on our site
+    # the HTTPS port on our site
     command = ["bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"]
     try:
         # timeout quickly, so it's representative of current state (we don't
