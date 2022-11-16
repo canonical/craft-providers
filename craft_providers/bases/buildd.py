@@ -86,7 +86,7 @@ def _network_connected(executor):
     try:
         # timeout quickly, so it's representative of current state (we don't
         # want for it to hang a lot and then succeed 45 seconds later if network
-        # came back)
+        # came back); capture the output just for it to not pollute the terminal
         proc = executor.execute_run(
             command, check=False, timeout=1, capture_output=True
         )

@@ -1406,14 +1406,13 @@ def test_network_connectivity_no(fake_executor, fake_process):
 
 
 def test_network_connectivity_timeouts(fake_executor, fake_process):
-    """Process hangs waiting for connection.
+    """Check that timeout is used.
 
-    Note that the command succeeds, finding internet "in the future", but the
-    verificaton will fail fast, being more representative.
+    This test does not register the fake subprocess with a long wait because to make it
+    resilient to CIs it would need a too long waiting.
     """
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
-        returncode=0,
-        wait=2,
-    )
-    assert buildd._network_connected(fake_executor) is False
+    cmd = ["bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"]
+    timeout_expired = subprocess.TimeoutExpired(cmd, timeout=5)
+    with patch.object(fake_executor, "execute_run", side_effect=timeout_expired) as mock:
+        assert buildd._network_connected(fake_executor) is False
+    mock.assert_called_with(cmd, check=False, capture_output=True, timeout=1)
