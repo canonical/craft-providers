@@ -845,7 +845,7 @@ def test_setup_snapd_failures(fake_process, fake_executor, fail_index):
     # some of the commands below are network related and will verify if internet
     # is fine after failing; let't not make this a factor in this test
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/1.1.1.1/53"],
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
         returncode=0,
     )
 
@@ -1357,7 +1357,7 @@ def test_execute_run_verify_network_connectivity_ok(fake_process, fake_executor)
     command = ["the", "command"]
 
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/1.1.1.1/53"],
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
         returncode=0,
     )
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=1)
@@ -1371,7 +1371,7 @@ def test_execute_run_verify_network_connectivity_missing(fake_process, fake_exec
     command = ["the", "command"]
 
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/1.1.1.1/53"],
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
         returncode=1,
     )
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=1)
@@ -1390,7 +1390,7 @@ def test_execute_run_bad_check_verifynetwork_combination(fake_executor):
 def test_network_connectivity_yes(fake_executor, fake_process):
     """Connectivity is ok."""
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/1.1.1.1/53"],
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
         returncode=0,
     )
     assert buildd._network_connected(fake_executor) is True
@@ -1399,7 +1399,7 @@ def test_network_connectivity_yes(fake_executor, fake_process):
 def test_network_connectivity_no(fake_executor, fake_process):
     """Connectivity missing."""
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/1.1.1.1/53"],
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
         returncode=1,
     )
     assert buildd._network_connected(fake_executor) is False
@@ -1412,7 +1412,7 @@ def test_network_connectivity_timeouts(fake_executor, fake_process):
     verificaton will fail fast, being more representative.
     """
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/1.1.1.1/53"],
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
         returncode=0,
         wait=2,
     )
