@@ -358,6 +358,85 @@ def test_config_set_error(fake_process):
     )
 
 
+def test_copy(fake_process):
+    """Test `copy()` with default arguments."""
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "default",
+            "copy",
+            "local:test-source-instance-name",
+            "local:test-destination-instance-name",
+        ],
+    )
+
+    LXC().copy(
+        source_instance_name="test-source-instance-name",
+        destination_instance_name="test-destination-instance-name",
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_copy_all_opts(fake_process):
+    """Test `copy() with all arguments defined`."""
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "copy",
+            "test-source-remote:test-source-instance-name",
+            "test-destination-remote:test-destination-instance-name",
+        ],
+    )
+
+    LXC().copy(
+        source_remote="test-source-remote",
+        source_instance_name="test-source-instance-name",
+        destination_remote="test-destination-remote",
+        destination_instance_name="test-destination-instance-name",
+        project="test-project",
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_copy_error(fake_process):
+    """A LXDError should be raised when the copy command fails."""
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "copy",
+            "test-source-remote:test-source-instance-name",
+            "test-destination-remote:test-destination-instance-name",
+        ],
+        returncode=1,
+    )
+
+    with pytest.raises(LXDError) as exc_info:
+        LXC().copy(
+            source_remote="test-source-remote",
+            source_instance_name="test-source-instance-name",
+            destination_remote="test-destination-remote",
+            destination_instance_name="test-destination-instance-name",
+            project="test-project",
+        )
+
+    assert exc_info.value == LXDError(
+        brief=(
+            "Failed to copy instance 'test-source-remote:test-source-instance-name' "
+            "to 'test-destination-remote:test-destination-instance-name'."
+        ),
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
+    )
+
+
 def test_delete(fake_process):
     fake_process.register_subprocess(
         [
