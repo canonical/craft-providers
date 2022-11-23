@@ -46,7 +46,7 @@ def test_copy(instance, instance_name, lxc, project):
     """Test `copy()` with default arguments."""
     destination_instance_name = instance_name + "-destination"
 
-    # copy the instance to the a new instance
+    # copy the instance to a new instance
     lxc.copy(
         source_instance_name=instance,
         destination_instance_name=destination_instance_name,
@@ -58,20 +58,31 @@ def test_copy(instance, instance_name, lxc, project):
     # verify both instances exist
     assert instances == [instance, destination_instance_name]
 
-    # delete the destination instance (the source instance is created by the pytest
-    # fixture so it will be deleted when context is lost)
-    lxc.delete(instance_name=destination_instance_name, force=False, project=project)
-
 
 def test_copy_error(instance, instance_name, lxc, project):
     """Raise a LXDError when the copy command fails."""
     # the source and destination cannot be same, so LXC will fail to copy
-    with pytest.raises(LXDError):
+    with pytest.raises(LXDError) as raised:
         lxc.copy(
             source_instance_name=instance,
             destination_instance_name=instance,
             project=project,
         )
+
+    assert raised.value == LXDError(
+        brief=(
+            f"Failed to copy instance 'local:{instance_name}' to 'local:"
+            f"{instance_name}'."
+        ),
+        details=(
+            f"* Command that failed: 'lxc --project {project} copy local:"
+            f"{instance_name} local:{instance_name}'\n"
+            "* Command exit code: 1\n"
+            "* Command standard error output: b'Error: Failed creating instance "
+            'record: Add instance info to the database: This "instances" entry '
+            "already exists\\n'"
+        ),
+    )
 
 
 def test_delete(instance, lxc, project):

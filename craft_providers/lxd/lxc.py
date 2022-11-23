@@ -256,10 +256,10 @@ class LXC:  # pylint: disable=too-many-public-methods
     ) -> None:
         """Copy instances within or in between LXD servers.
 
-        Calls `lxc copy [<remote>:]<source>[/<snapshot>] [[<remote>:]<destination>]`
-        A running instance can be copied but the manpages state "This may cause data
-        corruption or data loss depending on the used filesystem and applications.
-        Use with care."
+        Calls `lxc copy <source_remote>:<source_instance_name> <destination_remote>:
+        destination_instance_name>`. A running instance can be copied but the manpages
+        state "This may cause data corruption or data loss depending on the used
+        filesystem and applications. Use with care."
 
         # TODO: add parameter `snapshot: Optional[str]` to copy from an instance's
         snapshot (CRAFT-1340)
