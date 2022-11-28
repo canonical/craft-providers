@@ -27,10 +27,7 @@ from . import conftest
 
 @pytest.fixture()
 def instance(instance_name, project):
-    with conftest.tmp_instance(
-        name=instance_name,
-        project=project,
-    ) as tmp_instance:
+    with conftest.tmp_instance(name=instance_name, project=project) as tmp_instance:
         yield tmp_instance
 
 
@@ -43,6 +40,49 @@ def test_exec(instance, lxc, project):
     )
 
     assert proc.stdout == b"this is a test\n"
+
+
+def test_copy(instance, instance_name, lxc, project):
+    """Test `copy()` with default arguments."""
+    destination_instance_name = instance_name + "-destination"
+
+    # copy the instance to a new instance
+    lxc.copy(
+        source_instance_name=instance,
+        destination_instance_name=destination_instance_name,
+        project=project,
+    )
+
+    instances = lxc.list_names(project=project)
+
+    # verify both instances exist
+    assert instances == [instance, destination_instance_name]
+
+
+def test_copy_error(instance, instance_name, lxc, project):
+    """Raise a LXDError when the copy command fails."""
+    # the source and destination cannot be same, so LXC will fail to copy
+    with pytest.raises(LXDError) as raised:
+        lxc.copy(
+            source_instance_name=instance,
+            destination_instance_name=instance,
+            project=project,
+        )
+
+    assert raised.value == LXDError(
+        brief=(
+            f"Failed to copy instance 'local:{instance_name}' to 'local:"
+            f"{instance_name}'."
+        ),
+        details=(
+            f"* Command that failed: 'lxc --project {project} copy local:"
+            f"{instance_name} local:{instance_name}'\n"
+            "* Command exit code: 1\n"
+            "* Command standard error output: b'Error: Failed creating instance "
+            'record: Add instance info to the database: This "instances" entry '
+            "already exists\\n'"
+        ),
+    )
 
 
 def test_delete(instance, lxc, project):

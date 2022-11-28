@@ -245,6 +245,51 @@ class LXC:  # pylint: disable=too-many-public-methods
                 details=errors.details_from_called_process_error(error),
             ) from error
 
+    def copy(
+        self,
+        *,
+        source_remote: str = "local",
+        source_instance_name: str,
+        destination_remote: str = "local",
+        destination_instance_name: str,
+        project: str = "default",
+    ) -> None:
+        """Copy instances within or in between LXD servers.
+
+        Calls `lxc copy <source_remote>:<source_instance_name> <destination_remote>:
+        destination_instance_name>`. A running instance can be copied but the manpages
+        state "This may cause data corruption or data loss depending on the used
+        filesystem and applications. Use with care."
+
+        # TODO: add parameter `snapshot: Optional[str]` to copy from an instance's
+        snapshot (CRAFT-1340)
+
+        :param source_remote: Name of source LXD remote.
+        :param source_instance_name: Name of instance to copy from.
+        :param destination_remote: Name of remote LXD destination.
+        :param destination_instance_name: Name of instance to copy to.
+        :param project: Name of LXD project.
+
+        :raises LXDError: on unexpected error.
+        """
+        source = f"{source_remote}:{source_instance_name}"
+        destination = f"{destination_remote}:{destination_instance_name}"
+
+        command = ["copy", source, destination]
+
+        try:
+            self._run_lxc(
+                command,
+                capture_output=True,
+                check=True,
+                project=project,
+            )
+        except subprocess.CalledProcessError as error:
+            raise LXDError(
+                brief=(f"Failed to copy instance {source!r} to {destination!r}."),
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
     def delete(
         self,
         *,
