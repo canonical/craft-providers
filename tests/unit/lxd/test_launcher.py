@@ -16,7 +16,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import MagicMock, Mock, call
 
 import pytest
 
@@ -32,13 +32,10 @@ def mock_base_configuration():
 
 
 @pytest.fixture
-def mock_lxc():
-    with patch(
-        "craft_providers.lxd.launcher.LXC",
-        spec=lxd.LXC,
-    ) as mock_lxc:
-        mock_lxc.return_value.project_list.return_value = ["default", "test-project"]
-        yield mock_lxc.return_value
+def mock_lxc(mocker):
+    _mock_lxc = mocker.patch("craft_providers.lxd.launcher.LXC", spec=lxd.LXC)
+    _mock_lxc.return_value.project_list.return_value = ["default", "test-project"]
+    yield _mock_lxc.return_value
 
 
 @pytest.fixture
@@ -62,7 +59,7 @@ def mock_lxd_instance(fake_instance, mocker):
     yield mocker.patch(
         "craft_providers.lxd.launcher.LXDInstance",
         spec=lxd.LXDInstance,
-        # single element list appears accidental but side_effect must be an interable.
+        # single element list appears accidental but side_effect must be an iterable.
         # it will look more normal for CRAFT-1339:
         # side_effect=[fake_instance, fake_base_instance]
         side_effect=[fake_instance],
