@@ -17,6 +17,7 @@
 
 """Fixtures for Multipass integration tests."""
 import subprocess
+import sys
 import time
 from contextlib import contextmanager
 
@@ -83,3 +84,16 @@ def tmp_instance(
         capture_output=True,
         check=False,
     )
+
+
+@pytest.fixture(autouse=True)
+def slow_down_tests():
+    """Workaround for MacOS 11 and 12.
+
+    When repeatedly launching, using, and deleting the same instance, the network
+    may be ready immediately. Because there is no API call to check if the network is
+    ready, a time delay is used.
+    """
+    yield
+    if sys.platform == "darwin":
+        time.sleep(30)
