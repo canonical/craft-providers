@@ -261,9 +261,6 @@ class LXC:  # pylint: disable=too-many-public-methods
         state "This may cause data corruption or data loss depending on the used
         filesystem and applications. Use with care."
 
-        # TODO: add parameter `snapshot: Optional[str]` to copy from an instance's
-        snapshot (CRAFT-1340)
-
         :param source_remote: Name of source LXD remote.
         :param source_instance_name: Name of instance to copy from.
         :param destination_remote: Name of remote LXD destination.
