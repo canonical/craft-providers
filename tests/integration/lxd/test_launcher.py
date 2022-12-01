@@ -47,14 +47,10 @@ def core20_instance(instance_name):
 @pytest.mark.parametrize(
     "alias,image_name",
     [
-        pytest.param(
-            bases.BuilddBaseAlias.XENIAL,
-            "16.04",
-        ),
+        (bases.BuilddBaseAlias.XENIAL, "16.04"),
         (bases.BuilddBaseAlias.BIONIC, "18.04"),
         (bases.BuilddBaseAlias.FOCAL, "20.04"),
-        # FIXME: enable after image is available
-        # (bases.BuilddBaseAlias.JAMMY, "22.04"),
+        (bases.BuilddBaseAlias.JAMMY, "22.04"),
     ],
 )
 def test_launch_and_run(instance_name, alias, image_name):
