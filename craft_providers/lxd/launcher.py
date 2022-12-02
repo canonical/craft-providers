@@ -158,8 +158,9 @@ def _launch_existing_instance(
     :param instance: LXD instance to launch
     :param auto_clean: If true, clean incompatible instances.
     :param base_configuration: Base configuration to apply to the instance.
-    :param ephemeral: If the instance already exists, delete it. After the instance
-    is stopped, delete it.
+    :param ephemeral: After the instance is stopped, delete it. Non-ephemeral instances
+    cannot be converted to ephemeral instances, so if the instance already exists, it
+    will be deleted.
 
     :returns: True if the instance was started and warmed up.
 

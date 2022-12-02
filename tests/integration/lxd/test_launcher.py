@@ -87,8 +87,8 @@ def test_launch_and_run(instance_name, alias, image_name):
 
     try:
         assert isinstance(instance, lxd.LXDInstance)
-        assert instance.exists() is True
-        assert instance.is_running() is True
+        assert instance.exists()
+        assert instance.is_running()
 
         proc = instance.execute_run(["echo", "hi"], check=True, stdout=subprocess.PIPE)
 
@@ -124,12 +124,12 @@ def test_launch_use_base_instance(get_base_instance, launch_args, instance_name)
 
     try:
         # the instance and base instance should both exist
-        assert instance.exists() is True
-        assert base_instance.exists() is True
+        assert instance.exists()
+        assert base_instance.exists()
 
         # only the instance should be running
-        assert instance.is_running() is True
-        assert base_instance.is_running() is False
+        assert instance.is_running()
+        assert not base_instance.is_running()
 
         # delete the instance so a new instance is created from the base instance
         instance.delete()
@@ -141,8 +141,8 @@ def test_launch_use_base_instance(get_base_instance, launch_args, instance_name)
             use_base_instance=True,
         )
 
-        assert instance.exists() is True
-        assert instance.is_running() is True
+        assert instance.exists()
+        assert instance.is_running()
 
         # relaunch the existing instance
         instance = lxd.launch(
@@ -153,8 +153,8 @@ def test_launch_use_base_instance(get_base_instance, launch_args, instance_name)
             use_base_instance=True,
         )
 
-        assert instance.exists() is True
-        assert instance.is_running() is True
+        assert instance.exists()
+        assert instance.is_running()
     finally:
         if instance.exists():
             instance.delete()
@@ -206,12 +206,12 @@ def test_launch_with_project_and_use_base_instance(
 
     try:
         # the instance and base instance should both exist
-        assert instance.exists() is True
-        assert base_instance.exists() is True
+        assert instance.exists()
+        assert base_instance.exists()
 
         # only the instance should be running
-        assert instance.is_running() is True
-        assert base_instance.is_running() is False
+        assert instance.is_running()
+        assert not base_instance.is_running()
 
         # delete the instance so a new instance is created from the base instance
         instance.delete()
@@ -225,8 +225,8 @@ def test_launch_with_project_and_use_base_instance(
             remote="local",
         )
 
-        assert instance.exists() is True
-        assert instance.is_running() is True
+        assert instance.exists()
+        assert instance.is_running()
 
         # relaunch the existing instance
         instance = lxd.launch(
@@ -239,8 +239,8 @@ def test_launch_with_project_and_use_base_instance(
             remote="local",
         )
 
-        assert instance.exists() is True
-        assert instance.is_running() is True
+        assert instance.exists()
+        assert instance.is_running()
     finally:
         if instance.exists():
             instance.delete()
@@ -264,7 +264,7 @@ def test_launch_ephemeral(instance_name):
         # lxd will delete the instance when it is stopped
         instance.stop()
 
-        assert instance.exists() is False
+        assert not instance.exists()
     finally:
         if instance.exists():
             instance.delete()
@@ -284,8 +284,8 @@ def test_launch_ephemeral_existing(instance_name):
     )
 
     try:
-        assert instance.exists() is True
-        assert instance.is_running() is True
+        assert instance.exists()
+        assert instance.is_running()
 
         # relaunching as an ephemeral instance will delete the existing instance
         instance = lxd.launch(
@@ -296,12 +296,12 @@ def test_launch_ephemeral_existing(instance_name):
             ephemeral=True,
         )
 
-        assert instance.exists() is True
+        assert instance.exists()
 
         # lxd will delete the instance when it is stopped
         instance.stop()
 
-        assert instance.exists() is False
+        assert not instance.exists()
     finally:
         if instance.exists():
             instance.delete()
@@ -392,8 +392,8 @@ def test_launch_existing_instance(core20_instance):
         image_remote="ubuntu",
     )
 
-    assert instance.exists() is True
-    assert instance.is_running() is True
+    assert instance.exists()
+    assert instance.is_running()
 
     proc = instance.execute_run(["echo", "hi"], check=True, stdout=subprocess.PIPE)
 
@@ -435,8 +435,8 @@ def test_launch_os_incompatible(core20_instance):
         auto_clean=True,
     )
 
-    assert core20_instance.exists() is True
-    assert core20_instance.is_running() is True
+    assert core20_instance.exists()
+    assert core20_instance.is_running()
 
 
 def test_launch_instance_config_incompatible(core20_instance):
@@ -474,5 +474,5 @@ def test_launch_instance_config_incompatible(core20_instance):
         auto_clean=True,
     )
 
-    assert core20_instance.exists() is True
-    assert core20_instance.is_running() is True
+    assert core20_instance.exists()
+    assert core20_instance.is_running()
