@@ -158,11 +158,10 @@ def _launch_existing_instance(
     :param instance: LXD instance to launch
     :param auto_clean: If true, clean incompatible instances.
     :param base_configuration: Base configuration to apply to the instance.
-    :param ephemeral: After the instance is stopped, delete it. Non-ephemeral instances
-    cannot be converted to ephemeral instances, so if the instance already exists, it
-    will be deleted.
+    :param ephemeral: If the instance is ephemeral, it will not be launched.
+    Instead, the instance will be deleted and the function will return false.
 
-    :returns: True if the instance was started and warmed up.
+    :returns: True if the instance was started and warmed up. False otherwise.
 
     :raises BaseCompatibilityError: If the instance is incompatible.
     """
@@ -237,8 +236,9 @@ def launch(
     instance will be deleted and rebuilt. If false and the existing instance is
     incompatible, then a BaseCompatibilityError is raised.
     :param auto_create_project: Automatically create LXD project, if needed.
-    :param ephemeral: If the instance already exists, delete it. After the instance
-    is stopped, delete it.
+    :param ephemeral: After the instance is stopped, delete it. Non-ephemeral instances
+    cannot be converted to ephemeral instances, so if the instance already exists, it
+    will be deleted, then recreated as an ephemeral instance.
     :param map_user_uid: Map host uid/gid to instance's root uid/gid.
     :param uid: The uid to be mapped, if ``map_user_id`` is enabled.
     :param use_base_instance: Use the base instance mechanisms to reduce setup time.
