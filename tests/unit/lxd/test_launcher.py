@@ -19,8 +19,9 @@
 from unittest.mock import MagicMock, Mock, call
 
 import pytest
+from logassert import Exact  # type: ignore
 
-from craft_providers import Base, bases, lxd
+from craft_providers import Base, ProviderError, bases, lxd
 
 
 @pytest.fixture
@@ -54,32 +55,47 @@ def fake_instance():
 
 
 @pytest.fixture
-def mock_lxd_instance(fake_instance, mocker):
-    """Mock LXDInstance and return a fake instance."""
+def fake_base_instance():
+    """Returns a fake base LXD Instance"""
+    base_instance = MagicMock()
+    # the name has an invalid character to ensure the instance_name will be different,
+    # so the two are not conflated in the unit tests
+    base_instance.name = "test-base-instance-$"
+    base_instance.instance_name = "test-base-instance-e14661a426076717fa04"
+    base_instance.project = "test-project"
+    base_instance.remote = "test-remote"
+    base_instance.exists.return_value = False
+    base_instance.is_running.return_value = False
+    return base_instance
+
+
+@pytest.fixture
+def mock_lxd_instance(fake_instance, fake_base_instance, mocker):
+    """Mock LXD instance to return fake_instance then fake_base_instance."""
     yield mocker.patch(
         "craft_providers.lxd.launcher.LXDInstance",
         spec=lxd.LXDInstance,
-        # single element list appears accidental but side_effect must be an iterable.
-        # it will look more normal for CRAFT-1339:
-        # side_effect=[fake_instance, fake_base_instance]
-        side_effect=[fake_instance],
+        side_effect=[fake_instance, fake_base_instance],
     )
 
 
-def test_launch(fake_instance, mock_base_configuration, mock_lxc, mock_lxd_instance):
+def test_launch_no_base_instance(
+    fake_instance, mock_base_configuration, mock_lxc, mock_lxd_instance
+):
     """Create an instance from an image and do not save a copy as the base instance."""
     lxd.launch(
-        "test-instance",
+        name=fake_instance.name,
         base_configuration=mock_base_configuration,
         image_name="image-name",
         image_remote="image-remote",
+        use_base_instance=False,
         lxc=mock_lxc,
     )
 
     assert mock_lxc.mock_calls == [call.project_list("local")]
     assert mock_lxd_instance.mock_calls == [
         call(
-            name="test-instance",
+            name=fake_instance.name,
             project="default",
             remote="local",
             default_command_environment={"foo": "bar"},
@@ -101,18 +117,20 @@ def test_launch(fake_instance, mock_base_configuration, mock_lxc, mock_lxd_insta
     ]
 
 
-def test_launch_making_initial_snapshot(
-    fake_instance, mock_base_configuration, mock_lxc, mock_lxd_instance
+def test_launch_use_base_instance(
+    fake_instance,
+    fake_base_instance,
+    mock_base_configuration,
+    mock_lxc,
+    mock_lxd_instance,
 ):
     """Launch an instance from an image and save a copy as the base instance."""
-    mock_lxc.has_image.return_value = False
-
     lxd.launch(
-        "test-instance",
+        name=fake_instance.name,
         base_configuration=mock_base_configuration,
         image_name="image-name",
         image_remote="image-remote",
-        use_snapshots=True,
+        use_base_instance=True,
         project="test-project",
         remote="test-remote",
         lxc=mock_lxc,
@@ -120,22 +138,23 @@ def test_launch_making_initial_snapshot(
 
     assert mock_lxc.mock_calls == [
         call.project_list("test-remote"),
-        call.has_image(
-            image_name="snapshot-image-remote-image-name-mock-compat-tag-v100",
+        call.copy(
+            source_remote="test-remote",
+            source_instance_name=fake_instance.instance_name,
+            destination_remote="test-remote",
+            destination_instance_name=fake_base_instance.instance_name,
             project="test-project",
-            remote="test-remote",
-        ),
-        call.publish(
-            alias="snapshot-image-remote-image-name-mock-compat-tag-v100",
-            instance_name="test-instance-fa2d407652a1c51f6019",
-            force=True,
-            project="test-project",
-            remote="test-remote",
         ),
     ]
     assert mock_lxd_instance.mock_calls == [
         call(
-            name="test-instance",
+            name=fake_instance.name,
+            project="test-project",
+            remote="test-remote",
+            default_command_environment={"foo": "bar"},
+        ),
+        call(
+            name="base-instance-mock-compat-tag-v100-image-remote-image-name",
             project="test-project",
             remote="test-remote",
             default_command_environment={"foo": "bar"},
@@ -153,25 +172,31 @@ def test_launch_making_initial_snapshot(
         call.stop(),
         call.start(),
     ]
+    assert fake_base_instance.mock_calls == [call.exists()]
     assert mock_base_configuration.mock_calls == [
+        call.get_command_environment(),
         call.get_command_environment(),
         call.setup(executor=fake_instance),
         call.wait_until_ready(executor=fake_instance),
     ]
 
 
-def test_launch_using_existing_snapshot(
-    fake_instance, mock_base_configuration, mock_lxc, mock_lxd_instance
+def test_launch_use_existing_base_instance(
+    fake_instance,
+    fake_base_instance,
+    mock_base_configuration,
+    mock_lxc,
+    mock_lxd_instance,
 ):
     """Create instance from an existing base instance."""
-    mock_lxc.has_image.return_value = True
+    fake_base_instance.exists.return_value = True
 
     lxd.launch(
-        "test-instance",
+        name=fake_instance.name,
         base_configuration=mock_base_configuration,
         image_name="image-name",
         image_remote="image-remote",
-        use_snapshots=True,
+        use_base_instance=True,
         project="test-project",
         remote="test-remote",
         lxc=mock_lxc,
@@ -179,23 +204,102 @@ def test_launch_using_existing_snapshot(
 
     assert mock_lxc.mock_calls == [
         call.project_list("test-remote"),
-        call.has_image(
-            image_name="snapshot-image-remote-image-name-mock-compat-tag-v100",
+        call.copy(
+            source_remote="test-remote",
+            source_instance_name=fake_base_instance.instance_name,
+            destination_remote="test-remote",
+            destination_instance_name=fake_instance.instance_name,
             project="test-project",
-            remote="test-remote",
         ),
     ]
     assert mock_lxd_instance.mock_calls == [
         call(
-            name="test-instance",
+            name=fake_instance.name,
+            project="test-project",
+            remote="test-remote",
+            default_command_environment={"foo": "bar"},
+        ),
+        call(
+            name="base-instance-mock-compat-tag-v100-image-remote-image-name",
             project="test-project",
             remote="test-remote",
             default_command_environment={"foo": "bar"},
         ),
     ]
+    assert fake_instance.mock_calls == [call.exists(), call.is_running(), call.start()]
+    assert fake_base_instance.mock_calls == [call.exists(), call.is_running()]
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
+        call.get_command_environment(),
+        call.warmup(executor=fake_instance),
+    ]
+
+
+def test_launch_existing_base_instance_invalid(
+    fake_instance,
+    fake_base_instance,
+    mock_base_configuration,
+    mock_lxc,
+    mock_lxd_instance,
+    mocker,
+):
+    """If the existing base instance is invalid, delete it and create a new instance."""
+    fake_base_instance.exists.return_value = True
+    mocker.patch("craft_providers.lxd.launcher._is_valid", return_value=False)
+
+    lxd.launch(
+        name=fake_instance.name,
+        base_configuration=mock_base_configuration,
+        image_name="image-name",
+        image_remote="image-remote",
+        use_base_instance=True,
+        project="test-project",
+        remote="test-remote",
+        lxc=mock_lxc,
+    )
+
+    assert mock_lxc.mock_calls == [
+        call.project_list("test-remote"),
+        call.copy(
+            source_remote="test-remote",
+            source_instance_name=fake_instance.instance_name,
+            destination_remote="test-remote",
+            destination_instance_name=fake_base_instance.instance_name,
+            project="test-project",
+        ),
+    ]
+    assert mock_lxd_instance.mock_calls == [
+        call(
+            name=fake_instance.name,
+            project="test-project",
+            remote="test-remote",
+            default_command_environment={"foo": "bar"},
+        ),
+        call(
+            name="base-instance-mock-compat-tag-v100-image-remote-image-name",
+            project="test-project",
+            remote="test-remote",
+            default_command_environment={"foo": "bar"},
+        ),
+    ]
+    assert fake_instance.mock_calls == [
+        call.exists(),
+        call.launch(
+            image="image-name",
+            image_remote="image-remote",
+            ephemeral=False,
+            map_user_uid=False,
+            uid=None,
+        ),
+        call.stop(),
+        call.start(),
+    ]
+    assert fake_base_instance.mock_calls == [call.exists(), call.delete()]
+    assert mock_base_configuration.mock_calls == [
+        call.get_command_environment(),
+        call.get_command_environment(),
         call.setup(executor=fake_instance),
+        call.wait_until_ready(executor=fake_instance),
     ]
 
 
@@ -204,7 +308,7 @@ def test_launch_all_opts(
 ):
     """Parse all parameters."""
     lxd.launch(
-        "test-instance",
+        name=fake_instance.name,
         base_configuration=mock_base_configuration,
         image_name="image-name",
         image_remote="image-remote",
@@ -221,7 +325,7 @@ def test_launch_all_opts(
     assert mock_lxc.mock_calls == [call.project_list("test-remote")]
     assert mock_lxd_instance.mock_calls == [
         call(
-            name="test-instance",
+            name=fake_instance.name,
             project="test-project",
             remote="test-remote",
             default_command_environment={"foo": "bar"},
@@ -249,7 +353,7 @@ def test_launch_missing_project(
     """Raise an error if project does not exist and auto_create_project if false."""
     with pytest.raises(lxd.LXDError) as exc_info:
         lxd.launch(
-            "test-instance",
+            name=fake_instance.name,
             base_configuration=mock_base_configuration,
             image_name="image-name",
             image_remote="image-remote",
@@ -271,7 +375,7 @@ def test_launch_create_project(
 ):
     """Create a project if it does not exist and auto_create_project is true."""
     lxd.launch(
-        "test-instance",
+        name=fake_instance.name,
         base_configuration=mock_base_configuration,
         image_name="image-name",
         image_remote="image-remote",
@@ -294,7 +398,7 @@ def test_launch_create_project(
     ]
     assert mock_lxd_instance.mock_calls == [
         call(
-            name="test-instance",
+            name=fake_instance.name,
             project="project-to-create",
             remote="test-remote",
             default_command_environment={"foo": "bar"},
@@ -323,7 +427,7 @@ def test_launch_with_existing_instance_not_running(
     fake_instance.exists.return_value = True
 
     lxd.launch(
-        "test-instance",
+        name=fake_instance.name,
         base_configuration=mock_base_configuration,
         image_name="image-name",
         image_remote="image-remote",
@@ -333,17 +437,13 @@ def test_launch_with_existing_instance_not_running(
     assert mock_lxc.mock_calls == [call.project_list("local")]
     assert mock_lxd_instance.mock_calls == [
         call(
-            name="test-instance",
+            name=fake_instance.name,
             project="default",
             remote="local",
             default_command_environment={"foo": "bar"},
         ),
     ]
-    assert fake_instance.mock_calls == [
-        call.exists(),
-        call.is_running(),
-        call.start(),
-    ]
+    assert fake_instance.mock_calls == [call.exists(), call.is_running(), call.start()]
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.warmup(executor=fake_instance),
@@ -353,12 +453,12 @@ def test_launch_with_existing_instance_not_running(
 def test_launch_with_existing_instance_running(
     fake_instance, mock_base_configuration, mock_lxc, mock_lxd_instance
 ):
-    """If the existing instance is not running, do not start it."""
+    """If the existing instance is running, do not start it."""
     fake_instance.exists.return_value = True
     fake_instance.is_running.return_value = True
 
     lxd.launch(
-        "test-instance",
+        name=fake_instance.name,
         base_configuration=mock_base_configuration,
         image_name="image-name",
         image_remote="image-remote",
@@ -368,16 +468,13 @@ def test_launch_with_existing_instance_running(
     assert mock_lxc.mock_calls == [call.project_list("local")]
     assert mock_lxd_instance.mock_calls == [
         call(
-            name="test-instance",
+            name=fake_instance.name,
             project="default",
             remote="local",
             default_command_environment={"foo": "bar"},
         ),
     ]
-    assert fake_instance.mock_calls == [
-        call.exists(),
-        call.is_running(),
-    ]
+    assert fake_instance.mock_calls == [call.exists(), call.is_running()]
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.warmup(executor=fake_instance),
@@ -397,7 +494,7 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
     ]
 
     lxd.launch(
-        "test-instance",
+        name=fake_instance.name,
         base_configuration=mock_base_configuration,
         image_name="image-name",
         image_remote="image-remote",
@@ -408,7 +505,7 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
     assert mock_lxc.mock_calls == [call.project_list("local")]
     assert mock_lxd_instance.mock_calls == [
         call(
-            name="test-instance",
+            name=fake_instance.name,
             project="default",
             remote="local",
             default_command_environment={"foo": "bar"},
@@ -434,19 +531,18 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
     ]
 
 
-def test_launch_with_existing_instance_incompatible_without_auto_clean(
+def test_launch_with_existing_instance_incompatible_without_auto_clean_error(
     fake_instance, mock_base_configuration, mock_lxc, mock_lxd_instance
 ):
-    """If instance is incompatible and auto_clean is False, use the instance."""
-    # XXX: should this raise the BaseCompatibilityError? (CRAFT-1339)
+    """If instance is incompatible and auto_clean is False, raise an error."""
     fake_instance.exists.return_value = True
     mock_base_configuration.warmup.side_effect = [
         bases.BaseCompatibilityError(reason="foo")
     ]
 
-    with pytest.raises(bases.BaseCompatibilityError):
+    with pytest.raises(bases.BaseCompatibilityError) as raised:
         lxd.launch(
-            "test-instance",
+            name=fake_instance.name,
             base_configuration=mock_base_configuration,
             image_name="image-name",
             image_remote="image-remote",
@@ -454,10 +550,32 @@ def test_launch_with_existing_instance_incompatible_without_auto_clean(
             lxc=mock_lxc,
         )
 
+    assert raised.value.brief == "Incompatible base detected: foo."
+    assert raised.value.resolution == (
+        "Clean incompatible instance and retry the requested operation."
+    )
+
+
+def test_launch_with_existing_ephemeral_instance(
+    fake_instance, mock_base_configuration, mock_lxc, mock_lxd_instance
+):
+    """Delete and recreate existing ephemeral instances."""
+    fake_instance.exists.return_value = True
+
+    lxd.launch(
+        name=fake_instance.name,
+        base_configuration=mock_base_configuration,
+        image_name="image-name",
+        image_remote="image-remote",
+        ephemeral=True,
+        use_base_instance=False,
+        lxc=mock_lxc,
+    )
+
     assert mock_lxc.mock_calls == [call.project_list("local")]
     assert mock_lxd_instance.mock_calls == [
         call(
-            name="test-instance",
+            name=fake_instance.name,
             project="default",
             remote="local",
             default_command_environment={"foo": "bar"},
@@ -465,10 +583,117 @@ def test_launch_with_existing_instance_incompatible_without_auto_clean(
     ]
     assert fake_instance.mock_calls == [
         call.exists(),
-        call.is_running(),
-        call.start(),
+        call.delete(),
+        call.launch(
+            image="image-name",
+            image_remote="image-remote",
+            ephemeral=True,
+            map_user_uid=False,
+            uid=None,
+        ),
     ]
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
-        call.warmup(executor=fake_instance),
+        call.setup(executor=fake_instance),
+    ]
+
+
+def test_name_matches_base_name(
+    fake_instance,
+    fake_base_instance,
+    mock_base_configuration,
+    mock_lxc,
+    mock_lxd_instance,
+):
+    """Raise an error if the instance name matches the base instance name."""
+    # force the names to be equal
+    fake_instance.instance_name = fake_base_instance.instance_name
+
+    with pytest.raises(ProviderError) as raised:
+        lxd.launch(
+            name=fake_instance.name,
+            base_configuration=mock_base_configuration,
+            image_name="image-name",
+            image_remote="image-remote",
+            use_base_instance=True,
+            lxc=mock_lxc,
+        )
+
+    assert raised.value.brief == (
+        f"instance name cannot match the base instance name: "
+        f"{fake_base_instance.instance_name!r}"
+    )
+    assert raised.value.resolution == "change name of instance"
+
+
+def test_use_snapshots_deprecated(
+    fake_instance,
+    fake_base_instance,
+    logs,
+    mock_base_configuration,
+    mock_lxc,
+    mock_lxd_instance,
+):
+    """Log deprecation warning for `use_snapshots` and continue to launch."""
+    lxd.launch(
+        name=fake_instance.name,
+        base_configuration=mock_base_configuration,
+        image_name="image-name",
+        image_remote="image-remote",
+        use_snapshots=True,
+        project="test-project",
+        remote="test-remote",
+        lxc=mock_lxc,
+    )
+
+    assert (
+        Exact(
+            "Deprecated: Parameter 'use_snapshots' is deprecated. "
+            "Use parameter 'use_base_instance' instead."
+        )
+        in logs.warning
+    )
+
+    assert mock_lxc.mock_calls == [
+        call.project_list("test-remote"),
+        call.copy(
+            source_remote="test-remote",
+            source_instance_name=fake_instance.instance_name,
+            destination_remote="test-remote",
+            destination_instance_name=fake_base_instance.instance_name,
+            project="test-project",
+        ),
+    ]
+    assert mock_lxd_instance.mock_calls == [
+        call(
+            name=fake_instance.name,
+            project="test-project",
+            remote="test-remote",
+            default_command_environment={"foo": "bar"},
+        ),
+        call(
+            name="base-instance-mock-compat-tag-v100-image-remote-image-name",
+            project="test-project",
+            remote="test-remote",
+            default_command_environment={"foo": "bar"},
+        ),
+    ]
+    assert fake_instance.mock_calls == [
+        call.exists(),
+        call.launch(
+            image="image-name",
+            image_remote="image-remote",
+            ephemeral=False,
+            map_user_uid=False,
+            uid=None,
+        ),
+        call.stop(),
+        call.start(),
+    ]
+    assert fake_base_instance.mock_calls == [call.exists()]
+    assert mock_base_configuration.mock_calls == [
+        call.get_command_environment(),
+        call.get_command_environment(),
+        call.setup(executor=fake_instance),
+        call.wait_until_ready(executor=fake_instance),
     ]
