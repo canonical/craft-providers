@@ -19,6 +19,7 @@
 from unittest.mock import MagicMock, Mock, call
 
 import pytest
+from freezegun import freeze_time
 from logassert import Exact  # type: ignore
 
 from craft_providers import Base, ProviderError, bases, lxd
@@ -705,3 +706,93 @@ def test_use_snapshots_deprecated(
         call.setup(executor=fake_instance),
         call.wait_until_ready(executor=fake_instance),
     ]
+
+
+@freeze_time("2022/12/07 11:05:00 UTC")
+@pytest.mark.parametrize(
+    "creation_date",
+    [
+        "2022/09/08 11:05 UTC",  # 90 days old
+        "2022/12/06 11:05 UTC",  # 1 day old
+        "2022/12/08 11:05 UTC",  # 1 day in the future (improbable but valid)
+    ],
+)
+def test_is_valid(creation_date, mocker, mock_lxc):
+    """Instances created within the last 90 days (inclusive) are valid."""
+    mock_lxc.info.return_value = {"Created": creation_date}
+
+    is_valid = lxd.launcher._is_valid(
+        instance_name="test-name",
+        project="test-project",
+        remote="test-remote",
+        lxc=mock_lxc,
+    )
+
+    assert is_valid
+
+
+@freeze_time("2022/12/07 11:05:00 UTC")
+def test_is_valid_expired(mocker, mock_lxc):
+    """Instances created more than 90 days ago are not valid."""
+    # 91 days old
+    mock_lxc.info.return_value = {"Created": "2022/09/07 11:05 UTC"}
+
+    is_valid = lxd.launcher._is_valid(
+        instance_name="test-name",
+        project="test-project",
+        remote="test-remote",
+        lxc=mock_lxc,
+    )
+
+    assert not is_valid
+
+
+def test_is_valid_lxd_error(logs, mocker, mock_lxc):
+    """Warn if the instance's info cannot be retrieved."""
+    mock_lxc.info.side_effect = lxd.LXDError("test error")
+
+    is_valid = lxd.launcher._is_valid(
+        instance_name="test-name",
+        project="test-project",
+        remote="test-remote",
+        lxc=mock_lxc,
+    )
+
+    assert not is_valid
+    assert Exact("Could not get instance info with error: test error") in logs.warning
+
+
+def test_is_valid_key_error(logs, mocker, mock_lxc):
+    """Warn if the instance does not have a creation date."""
+    mock_lxc.info.return_value = {}
+
+    is_valid = lxd.launcher._is_valid(
+        instance_name="test-name",
+        project="test-project",
+        remote="test-remote",
+        lxc=mock_lxc,
+    )
+
+    assert not is_valid
+    assert Exact("Instance does not have a 'Created' date.") in logs.warning
+
+
+def test_is_valid_value_error(logs, mocker, mock_lxc):
+    """Warn if the instance's creation date cannot be parsed."""
+    mock_lxc.info.return_value = {"Created": "bad-datetime-value"}
+
+    is_valid = lxd.launcher._is_valid(
+        instance_name="test-name",
+        project="test-project",
+        remote="test-remote",
+        lxc=mock_lxc,
+    )
+
+    assert not is_valid
+    assert (
+        Exact(
+            "Could not parse instance's 'Created' date with error: "
+            "time data 'bad-datetime-value' does not match format '%Y/%m/%d %H:%M %Z'"
+        )
+        in logs.warning
+    )
