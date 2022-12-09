@@ -211,3 +211,10 @@ def test_disk_add_remove(instance, lxc, tmp_path, project):
             instance_name=instance,
             check=True,
         )
+
+
+def test_info(instance, lxc, project):
+    """Test `info()` method works as expected."""
+    data = lxc.info(instance_name=instance, project=project)
+
+    assert data["Name"] == instance
