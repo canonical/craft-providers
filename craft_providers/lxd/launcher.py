@@ -357,7 +357,7 @@ def launch(
     # instance and base instance
     if not _is_valid(base_instance):
         logger.warning(
-            "Base instance %r is expired. Deleting base instance.",
+            "Base instance %r is not valid. Deleting base instance.",
             base_instance.instance_name,
         )
         base_instance.delete()

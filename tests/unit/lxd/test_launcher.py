@@ -79,6 +79,11 @@ def mock_lxd_instance(fake_instance, fake_base_instance, mocker):
     )
 
 
+@pytest.fixture
+def mock_is_valid(mocker):
+    yield mocker.patch("craft_providers.lxd.launcher._is_valid", return_value=True)
+
+
 def test_launch_no_base_instance(
     fake_instance, mock_base_configuration, mock_lxc, mock_lxd_instance
 ):
@@ -121,6 +126,7 @@ def test_launch_use_base_instance(
     fake_instance,
     fake_base_instance,
     mock_base_configuration,
+    mock_is_valid,
     mock_lxc,
     mock_lxd_instance,
 ):
@@ -185,6 +191,7 @@ def test_launch_use_existing_base_instance(
     fake_instance,
     fake_base_instance,
     mock_base_configuration,
+    mock_is_valid,
     mock_lxc,
     mock_lxd_instance,
 ):
@@ -239,13 +246,13 @@ def test_launch_existing_base_instance_invalid(
     fake_instance,
     fake_base_instance,
     mock_base_configuration,
+    mock_is_valid,
     mock_lxc,
     mock_lxd_instance,
-    mocker,
 ):
     """If the existing base instance is invalid, delete it and create a new instance."""
     fake_base_instance.exists.return_value = True
-    mocker.patch("craft_providers.lxd.launcher._is_valid", return_value=False)
+    mock_is_valid.return_value = False
 
     lxd.launch(
         name=fake_instance.name,
@@ -630,6 +637,7 @@ def test_use_snapshots_deprecated(
     fake_instance,
     fake_base_instance,
     logs,
+    mock_is_valid,
     mock_base_configuration,
     mock_lxc,
     mock_lxd_instance,
