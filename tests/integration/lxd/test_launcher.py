@@ -131,6 +131,11 @@ def test_launch_use_base_instance(get_base_instance, launch_args, instance_name)
         assert instance.is_running()
         assert not base_instance.is_running()
 
+        # fingerprint the base instance
+        base_instance.start()
+        base_instance.execute_run(["touch", "/base-instance"])
+        base_instance.stop()
+
         # delete the instance so a new instance is created from the base instance
         instance.delete()
         instance = lxd.launch(
@@ -144,6 +149,12 @@ def test_launch_use_base_instance(get_base_instance, launch_args, instance_name)
         assert instance.exists()
         assert instance.is_running()
 
+        # confirm instance was created from the base instance by checking fingerprint
+        instance.execute_run(["stat", "/base-instance"], check=True)
+
+        # add a new fingerprint to the instance
+        instance.execute_run(["touch", "/instance"])
+
         # relaunch the existing instance
         instance = lxd.launch(
             name=instance_name,
@@ -155,6 +166,11 @@ def test_launch_use_base_instance(get_base_instance, launch_args, instance_name)
 
         assert instance.exists()
         assert instance.is_running()
+
+        # confirm the same instance was launched with both fingerprints
+        instance.execute_run(["stat", "/base-instance"], check=True)
+        instance.execute_run(["stat", "/instance"], check=True)
+
     finally:
         if instance.exists():
             instance.delete()
