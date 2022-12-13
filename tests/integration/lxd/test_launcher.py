@@ -67,6 +67,39 @@ def core20_instance(instance_name):
             instance.delete()
 
 
+@pytest.fixture()
+def get_instance_and_base_instance(get_base_instance, instance_name):
+    """Create and return an instance and base instance as a tuple.
+
+    Delete instances on fixture teardown.
+    """
+    base_instance = get_base_instance()
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+
+    # launch an instance from an image and create a base instance
+    instance = lxd.launch(
+        name=instance_name,
+        base_configuration=base_configuration,
+        image_name="20.04",
+        image_remote="ubuntu",
+        use_base_instance=True,
+    )
+    try:
+        # the instance and base instance should both exist
+        assert instance.exists()
+        assert base_instance.exists()
+
+        # only the instance should be running
+        assert instance.is_running()
+        assert not base_instance.is_running()
+        yield (instance, base_instance)
+    finally:
+        if instance.exists():
+            instance.delete()
+        if base_instance.exists():
+            base_instance.delete()
+
+
 @pytest.mark.parametrize(
     "alias,image_name",
     [
@@ -99,10 +132,30 @@ def test_launch_and_run(instance_name, alias, image_name):
         instance.delete()
 
 
-@pytest.mark.parametrize(
-    "launch_args", [{"use_base_instance": True}, {"use_snapshots": True}]
-)
-def test_launch_use_base_instance(get_base_instance, launch_args, instance_name):
+def test_launch_use_snapshots_deprecated(get_base_instance, instance_name):
+    """Launch an instance with the deprecated parameter `use_snapshots`."""
+    base_instance = get_base_instance()
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+
+    instance = lxd.launch(
+        name=instance_name,
+        base_configuration=base_configuration,
+        image_name="20.04",
+        image_remote="ubuntu",
+        use_snapshots=True,
+    )
+    try:
+        # verify the instance and base instance exist
+        assert instance.exists()
+        assert base_instance.exists()
+    finally:
+        if instance.exists():
+            instance.delete()
+        if base_instance.exists():
+            base_instance.delete()
+
+
+def test_launch_use_base_instance(get_instance_and_base_instance, instance_name):
     """Launch an instance using base instances.
 
     First, launch an instance from an image and create a base instance.
@@ -112,75 +165,54 @@ def test_launch_use_base_instance(get_base_instance, launch_args, instance_name)
     The parameter `use_base_instance` and the deprecated parameter `use_snapshots`
     should both result in the same behavior.
     """
-    base_instance = get_base_instance()
     base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    instance, base_instance = get_instance_and_base_instance
 
-    # launch an instance from an image and create a base instance
+    # fingerprint the base instance
+    base_instance.start()
+    base_instance.execute_run(["touch", "/base-instance"])
+    base_instance.stop()
+
+    # delete the instance so a new instance is created from the base instance
+    instance.delete()
     instance = lxd.launch(
         name=instance_name,
         base_configuration=base_configuration,
         image_name="20.04",
         image_remote="ubuntu",
-        **launch_args,
+        use_base_instance=True,
     )
 
-    try:
-        # the instance and base instance should both exist
-        assert instance.exists()
-        assert base_instance.exists()
+    assert instance.exists()
+    assert instance.is_running()
 
-        # only the instance should be running
-        assert instance.is_running()
-        assert not base_instance.is_running()
+    # confirm instance was created from the base instance by checking fingerprint
+    instance.execute_run(["stat", "/base-instance"], check=True)
 
-        # fingerprint the base instance
-        base_instance.start()
-        base_instance.execute_run(["touch", "/base-instance"])
-        base_instance.stop()
+    # fingerprint the instance
+    instance.execute_run(["touch", "/instance"])
 
-        # delete the instance so a new instance is created from the base instance
-        instance.delete()
-        instance = lxd.launch(
-            name=instance_name,
-            base_configuration=base_configuration,
-            image_name="20.04",
-            image_remote="ubuntu",
-            use_base_instance=True,
-        )
+    # relaunch the existing instance
+    instance = lxd.launch(
+        name=instance_name,
+        base_configuration=base_configuration,
+        image_name="20.04",
+        image_remote="ubuntu",
+        use_base_instance=True,
+    )
 
-        assert instance.exists()
-        assert instance.is_running()
+    # confirm the same instance was launched with both fingerprints
+    instance.execute_run(["stat", "/base-instance"], check=True)
+    instance.execute_run(["stat", "/instance"], check=True)
 
-        # confirm instance was created from the base instance by checking fingerprint
-        instance.execute_run(["stat", "/base-instance"], check=True)
-
-        # add a new fingerprint to the instance
-        instance.execute_run(["touch", "/instance"])
-
-        # relaunch the existing instance
-        instance = lxd.launch(
-            name=instance_name,
-            base_configuration=base_configuration,
-            image_name="20.04",
-            image_remote="ubuntu",
-            use_base_instance=True,
-        )
-
-        # confirm the same instance was launched with both fingerprints
-        instance.execute_run(["stat", "/base-instance"], check=True)
-        instance.execute_run(["stat", "/instance"], check=True)
-
-        assert instance.exists()
-        assert instance.is_running()
-    finally:
-        if instance.exists():
-            instance.delete()
-        if base_instance.exists():
-            base_instance.delete()
+    assert instance.exists()
+    assert instance.is_running()
 
 
 @freeze_time(datetime.now() + timedelta(days=91))
-def test_launch_use_base_instance_expired(get_base_instance, instance_name):
+def test_launch_use_base_instance_expired(
+    get_instance_and_base_instance, instance_name
+):
     """Launch an instance using an expired base instance.
 
     First, launch an instance from an image and create a base instance.
@@ -190,9 +222,16 @@ def test_launch_use_base_instance_expired(get_base_instance, instance_name):
     The LXD instance is created via subprocess, so the creation date the instance is
     out of freezegun's scope and can't be modified.
     """
-    base_instance = get_base_instance()
     base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    instance, base_instance = get_instance_and_base_instance
 
+    # fingerprint the expired base instance
+    base_instance.start()
+    base_instance.execute_run(["touch", "/base-instance"])
+    base_instance.stop()
+
+    # delete the instance so a new instance is created from the base instance
+    instance.delete()
     instance = lxd.launch(
         name=instance_name,
         base_configuration=base_configuration,
@@ -201,54 +240,23 @@ def test_launch_use_base_instance_expired(get_base_instance, instance_name):
         use_base_instance=True,
     )
 
-    try:
-        # the instance and base instance should both exist
-        assert instance.exists()
-        assert base_instance.exists()
+    assert instance.exists()
+    assert instance.is_running()
 
-        # only the instance should be running
-        assert instance.is_running()
-        assert not base_instance.is_running()
+    # confirm instance does not have the expired base instance's fingerprint
+    proc = instance.execute_run(
+        ["stat", "/base-instance"], capture_output=True, text=True
+    )
+    assert proc.returncode == 1
+    assert "'/base-instance': No such file or directory" in proc.stderr
 
-        # fingerprint the expired base instance
-        base_instance.start()
-        base_instance.execute_run(["touch", "/base-instance"])
-        base_instance.stop()
-
-        # delete the instance so a new instance is created from the base instance
-        instance.delete()
-        instance = lxd.launch(
-            name=instance_name,
-            base_configuration=base_configuration,
-            image_name="20.04",
-            image_remote="ubuntu",
-            use_base_instance=True,
-        )
-
-        assert instance.exists()
-        assert instance.is_running()
-
-        # confirm instance does not have the expired base instance's fingerprint
-        proc = instance.execute_run(
-            ["stat", "/base-instance"], capture_output=True, text=True
-        )
-        assert proc.returncode == 1
-        assert "'/base-instance': No such file or directory" in proc.stderr
-
-        # confirm new base instance does not have the expired base instance's
-        # fingerprint
-        base_instance.start()
-        proc = base_instance.execute_run(
-            ["stat", "/base-instance"], capture_output=True, text=True
-        )
-        assert proc.returncode == 1
-        assert "'/base-instance': No such file or directory" in proc.stderr
-
-    finally:
-        if instance.exists():
-            instance.delete()
-        if base_instance.exists():
-            base_instance.delete()
+    # confirm new base instance does not have the expired base instance's fingerprint
+    base_instance.start()
+    proc = base_instance.execute_run(
+        ["stat", "/base-instance"], capture_output=True, text=True
+    )
+    assert proc.returncode == 1
+    assert "'/base-instance': No such file or directory" in proc.stderr
 
 
 def test_launch_create_project(instance_name, project_name):
