@@ -1339,8 +1339,26 @@ def test_execute_run_command_failed_no_verify_network(fake_process, fake_executo
     command = ["the", "command"]
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=1)
 
+    # we know that network is not verified because otherwise we'll get
+    # a ProcessNotRegisteredError for the verification process
     with pytest.raises(subprocess.CalledProcessError):
         buildd._execute_run(fake_executor, command)
+
+
+@pytest.mark.parametrize("proxy_variable_name", ["HTTPS_PROXY", "https_proxy"])
+def test_execute_run_command_failed_verify_network_proxy(
+    fake_process, fake_executor, monkeypatch, proxy_variable_name
+):
+    """The command failed, network verification was asked, but there is a proxy."""
+    command = ["the", "command"]
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=1)
+
+    monkeypatch.setenv(proxy_variable_name, "https://someproxy.net:8080/")
+
+    # we know that network is not verified because otherwise we'll get
+    # a ProcessNotRegisteredError for the verification process
+    with pytest.raises(subprocess.CalledProcessError):
+        buildd._execute_run(fake_executor, command, verify_network=True)
 
 
 def test_execute_run_verify_network_run_ok(fake_process, fake_executor):
@@ -1348,6 +1366,8 @@ def test_execute_run_verify_network_run_ok(fake_process, fake_executor):
     command = ["the", "command"]
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=0)
 
+    # we know that network is not verified because otherwise we'll get
+    # a ProcessNotRegisteredError for the verification process
     proc = buildd._execute_run(fake_executor, command, verify_network=True)
     assert proc.returncode == 0
 

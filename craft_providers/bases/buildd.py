@@ -19,6 +19,7 @@
 import enum
 import io
 import logging
+import os
 import pathlib
 import re
 import subprocess
@@ -80,6 +81,12 @@ def _check_deadline(
 
 def _network_connected(executor):
     """Check if the network is connected."""
+    # bypass the network verification if there is a proxy set for HTTPS (because we're
+    # hitting port 443), as bash's TCP functionality will not use it (supporting
+    # both lowercase and uppercase names, which is what most applications do)
+    if os.getenv("HTTPS_PROXY") or os.getenv("https_proxy"):
+        return True
+
     # check if the port is open using bash's built-in tcp-client, communicating with
     # the HTTPS port on our site
     command = ["bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"]
