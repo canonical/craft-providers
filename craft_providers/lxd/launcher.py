@@ -20,7 +20,7 @@
 import logging
 from typing import Optional
 
-from craft_providers import Base, bases
+from craft_providers import Base, ProviderError, bases
 
 from .errors import LXDError
 from .lxc import LXC
@@ -30,72 +30,74 @@ from .project import create_with_default_profile
 logger = logging.getLogger(__name__)
 
 
-def _formulate_snapshot_image_name(
-    *, image_name: str, image_remote: str, compatibility_tag: str
-) -> str:
-    """Compute snapshot image's name.
-
-    It must take into account each of the following params list below.  Note
-    that the image_name should incorporate the architecture to ensure uniqueness
-    in case more than one arch is supported on the platform (e.g. LXD cluster).
-
-    :param image_remote: Name of source image's remote (e.g. ubuntu).
-    :param image_name: Name of source imag (e.g. 20.04)
-    :param compatibility_tag: Compatibility tag of base configuration applied to
-        image.
-
-    :returns: Name of (compatible) snapshot to use.
-    """
-    return "-".join(
-        [
-            "snapshot",
-            image_remote,
-            image_name,
-            compatibility_tag,
-        ]
-    )
-
-
-def _publish_snapshot(
+def _create_instance(
     *,
-    lxc: LXC,
-    snapshot_name: str,
     instance: LXDInstance,
+    base_instance: Optional[LXDInstance],
     base_configuration: Base,
-) -> None:
-    """Publish snapshot from instance.
-
-    Stop instance and publish its contents to an image with the specified alias.
-    Once published, restart instance and ensure it is ready for use.
-
-    :param lxc: LXC client.
-    :param snapshot_name: Alias to use for snapshot.
-    :param instance: LXD instance to snapshot from.
-    :param base_configuration: Base configuration for instance.
-    """
-    instance.stop()
-
-    lxc.publish(
-        alias=snapshot_name,
-        instance_name=instance.instance_name,
-        force=True,
-        project=instance.project,
-        remote=instance.remote,
-    )
-
-    # Restart container and ensure it is ready.
-    instance.start()
-    base_configuration.wait_until_ready(executor=instance)
-
-
-def _ensure_project_exists(
-    *,
-    create: bool,
+    image_name: str,
+    image_remote: str,
+    ephemeral: bool,
+    map_user_uid: bool,
+    uid: Optional[int],
     project: str,
     remote: str,
     lxc: LXC,
 ) -> None:
-    """Check if project exists, optionally creating it if needed.
+    """Launch and setup an instance from an image.
+
+    If a base instance is passed, copy the instance to the base instance.
+
+    Preconditions: The LXD project exists and the instance and base instance (if
+    defined) do not exist.
+
+    :param instance: LXD instance to launch and setup
+    :param base_instance: LXD instance to be created as a copy of the instance. If the
+    base_instance is None, a base instance will not be created.
+    :param base_configuration: Base configuration to apply to instance.
+    :param image_name: LXD image to use, e.g. "20.04".
+    :param image_remote: LXD image to use, e.g. "ubuntu".
+    :param ephemeral: After the instance is stopped, delete it.
+    :param map_user_uid: Map host uid/gid to instance's root uid/gid.
+    :param uid: The uid to be mapped, if ``map_user_id`` is enabled.
+    :param project: LXD project to create instance in.
+    :param remote: LXD remote to create instance on.
+    :param lxc: LXC client.
+    """
+    logger.warning(
+        "Creating new instance from image %r from remote %r.", image_name, image_remote
+    )
+    instance.launch(
+        image=image_name,
+        image_remote=image_remote,
+        ephemeral=ephemeral,
+        map_user_uid=map_user_uid,
+        uid=uid,
+    )
+    base_configuration.setup(executor=instance)
+
+    if base_instance is not None:
+        logger.warning(
+            "Creating new base instance %r from instance.", base_instance.instance_name
+        )
+        # stop the instance before copying, to ensure it is in a "good" state
+        instance.stop()
+        lxc.copy(
+            source_remote=remote,
+            source_instance_name=instance.instance_name,
+            destination_remote=remote,
+            destination_instance_name=base_instance.instance_name,
+            project=project,
+        )
+        # now restart and wait for the instance to be ready
+        instance.start()
+        base_configuration.wait_until_ready(executor=instance)
+
+
+def _ensure_project_exists(
+    *, create: bool, project: str, remote: str, lxc: LXC
+) -> None:
+    """Check if project exists and create it if it does not exist.
 
     :param create: Create project if not found.
     :param project: LXD project name to create.
@@ -117,6 +119,81 @@ def _ensure_project_exists(
         )
 
 
+def _formulate_base_instance_name(
+    *, image_name: str, image_remote: str, compatibility_tag: str
+) -> str:
+    """Compute the base instance name.
+
+    :param image_remote: Name of source image's remote (e.g. ubuntu).
+    :param image_name: Name of source image (e.g. 20.04). The image name should include
+    the architecture to ensure uniqueness amongst multiple architectures built on the
+    same platform.
+    :param compatibility_tag: Compatibility tag of base configuration applied to the
+    base instance.
+
+    :returns: Name of (compatible) base instance.
+    """
+    return "-".join(["base-instance", compatibility_tag, image_remote, image_name])
+
+
+# TODO: Implement this stubbed function (CRAFT-1341)
+# pylint: disable-next=unused-argument
+def _is_valid(instance: LXDInstance) -> bool:
+    """Check if a instance is valid (i.e. the base instance is not expired).
+
+    :returns: True if the instance is valid.
+    """
+    return True
+
+
+def _launch_existing_instance(
+    *,
+    instance: LXDInstance,
+    auto_clean: bool,
+    base_configuration: Base,
+    ephemeral: bool,
+) -> bool:
+    """Start and warmup an existing instance.
+
+    :param instance: LXD instance to launch
+    :param auto_clean: If true, clean incompatible instances.
+    :param base_configuration: Base configuration to apply to the instance.
+    :param ephemeral: If the instance is ephemeral, it will not be launched.
+    Instead, the instance will be deleted and the function will return false.
+
+    :returns: True if the instance was started and warmed up. False otherwise.
+
+    :raises BaseCompatibilityError: If the instance is incompatible.
+    """
+    # TODO: auto clean instance if map_user_uid is mismatched
+    if ephemeral:
+        logger.warning("Instance exists and is ephemeral. Cleaning instance.")
+        instance.delete()
+        return False
+
+    if instance.is_running():
+        logger.warning("Instance exists and is running.")
+    else:
+        logger.warning("Instance exists and is not running. Starting instance.")
+        instance.start()
+
+    try:
+        base_configuration.warmup(executor=instance)
+        return True
+    except bases.BaseCompatibilityError as error:
+        # delete the instance and continue on so a new instance can be created
+        if auto_clean:
+            logger.warning(
+                "Cleaning incompatible instance %r (reason: %s).",
+                instance.instance_name,
+                error.reason,
+            )
+            instance.delete()
+            return False
+        raise
+
+
+# pylint: disable-next=too-many-locals
 def launch(
     name: str,
     *,
@@ -128,26 +205,44 @@ def launch(
     ephemeral: bool = False,
     map_user_uid: bool = False,
     uid: Optional[int] = None,
-    use_snapshots: bool = False,
+    use_snapshots: Optional[bool] = None,
+    use_base_instance: Optional[bool] = False,
     project: str = "default",
     remote: str = "local",
     lxc: LXC = LXC(),
 ) -> LXDInstance:
-    """Create, start, and configure instance.
+    """Create, start, and configure an instance.
 
-    If auto_clean is enabled, automatically delete an existing instance that is
-    deemed to be incompatible, rebuilding it with the specified environment.
+    On the first run of an application, an instance will be launched from an image
+    (i.e. an image from  https://cloud-images.ubuntu.com). The instance is setup
+    according to the Base configuration passed to this function.
+
+    After setup, a copy of this instance is saved (or cached) as a 'base instance'.
+    This is done to reduce setup time on subsequent runs. When the application requests
+    a new instance on a subsequent run, the base instance will be copied to create the
+    new instance. This instance is run through a small subset of the setup, which is
+    referred to as 'warmup'.
+
+    TODO: Implement the expiration mechanism described below (CRAFT-1341).
+
+    To keep build environments clean, consistent, and up-to-date, any base instance
+    older than 3 months (90 days) is deleted and recreated.
 
     :param name: Name of instance.
-    :param base_configuration: Base configuration to apply to instance.
+    :param base_configuration: Base configuration to apply to the instance.
     :param image_name: LXD image to use, e.g. "20.04".
     :param image_remote: LXD image to use, e.g. "ubuntu".
-    :param auto_clean: Automatically clean instance, if incompatible.
+    :param auto_clean: If true and the existing instance is incompatible, then the
+    instance will be deleted and rebuilt. If false and the existing instance is
+    incompatible, then a BaseCompatibilityError is raised.
     :param auto_create_project: Automatically create LXD project, if needed.
-    :param ephemeral: Create ephemeral instance.
+    :param ephemeral: After the instance is stopped, delete it. Non-ephemeral instances
+    cannot be converted to ephemeral instances, so if the instance already exists, it
+    will be deleted, then recreated as an ephemeral instance.
     :param map_user_uid: Map host uid/gid to instance's root uid/gid.
     :param uid: The uid to be mapped, if ``map_user_id`` is enabled.
-    :param use_snapshots: Use LXD snapshots for bootstrapping images.
+    :param use_base_instance: Use the base instance mechanisms to reduce setup time.
+    :param use_snapshots: Deprecated parameter replaced by `use_base_instance`.
     :param project: LXD project to create instance in.
     :param remote: LXD remote to create instance on.
     :param lxc: LXC client.
@@ -155,8 +250,17 @@ def launch(
     :returns: LXD instance.
 
     :raises BaseConfigurationError: on unexpected error configuration base.
+    :raises BaseCompatibilityError: if instance is incompatible with the base.
     :raises LXDError: on unexpected LXD error.
+    :raises ProviderError: if name of instance collides with base instance name.
     """
+    if use_snapshots:
+        logger.warning(
+            "Deprecated: Parameter 'use_snapshots' is deprecated. "
+            "Use parameter 'use_base_instance' instead."
+        )
+        use_base_instance = use_snapshots
+
     _ensure_project_exists(
         create=auto_create_project, project=project, remote=remote, lxc=lxc
     )
@@ -166,62 +270,134 @@ def launch(
         remote=remote,
         default_command_environment=base_configuration.get_command_environment(),
     )
+    logger.warning(
+        "Checking for instance %r in project %r in remote %r",
+        instance.instance_name,
+        project,
+        remote,
+    )
 
     if instance.exists():
-        # TODO: warn (or auto clean) if ephemeral or map_user_uid is mismatched.
-        if not instance.is_running():
-            instance.start()
-
-        try:
-            base_configuration.warmup(executor=instance)
+        # if the existing instance could not be launched, then continue on so a new
+        # instance can be created (this can occur when `auto_clean` triggers the
+        # instance to be deleted or if the instance is supposed to be ephemeral)
+        if _launch_existing_instance(
+            instance=instance,
+            auto_clean=auto_clean,
+            base_configuration=base_configuration,
+            ephemeral=ephemeral,
+        ):
             return instance
-        except bases.BaseCompatibilityError as error:
-            if auto_clean:
-                logger.debug(
-                    "Cleaning incompatible container %r (reason: %s).",
-                    instance.name,
-                    error.reason,
-                )
-                instance.delete()
-            else:
-                raise
 
-    # Create from snapshot, if available.
-    snapshot_name = _formulate_snapshot_image_name(
+    logger.warning("Instance %r does not exist.", instance.instance_name)
+
+    if not use_base_instance:
+        logger.warning("Using base instances is disabled.")
+        _create_instance(
+            instance=instance,
+            base_instance=None,
+            base_configuration=base_configuration,
+            image_name=image_name,
+            image_remote=image_remote,
+            ephemeral=ephemeral,
+            map_user_uid=map_user_uid,
+            uid=uid,
+            project=project,
+            remote=remote,
+            lxc=lxc,
+        )
+        return instance
+
+    base_instance_name = _formulate_base_instance_name(
         image_name=image_name,
         image_remote=image_remote,
         compatibility_tag=base_configuration.compatibility_tag,
     )
-    if use_snapshots and lxc.has_image(
-        image_name=snapshot_name, project=project, remote=remote
-    ):
-        logger.debug("Using compatible snapshot %r.", snapshot_name)
-        image_name = snapshot_name
-        image_remote = remote
-
-        # Don't re-publish this snapshot later.
-        use_snapshots = False
-
-    instance.launch(
-        image=image_name,
-        image_remote=image_remote,
-        ephemeral=ephemeral,
-        map_user_uid=map_user_uid,
-        uid=uid,
+    base_instance = LXDInstance(
+        name=base_instance_name,
+        project=project,
+        remote=remote,
+        default_command_environment=base_configuration.get_command_environment(),
     )
-    base_configuration.setup(executor=instance)
+    logger.warning(
+        "Checking for base instance %r in project %r in remote %r",
+        base_instance.instance_name,
+        project,
+        remote,
+    )
 
-    # Publish snapshot if enabled and instance is not ephemeral.
-    if use_snapshots:
-        if ephemeral:
-            logger.debug("Refusing to publish snapshot for ephemeral instance.")
-        else:
-            logger.debug("Publishing snapshot from instance %r.", snapshot_name)
-            _publish_snapshot(
-                lxc=lxc,
-                snapshot_name=snapshot_name,
-                instance=instance,
-                base_configuration=base_configuration,
-            )
+    # an application could formulate an instance name that matches the base instance's
+    # name, which would break calls to `lxc.copy()`
+    if instance.instance_name == base_instance.instance_name:
+        raise ProviderError(
+            brief="instance name cannot match the base instance name: "
+            f"{instance.instance_name!r}",
+            resolution="change name of instance",
+        )
 
+    # the base instance does not exist, so create a new instance and base instance
+    if not base_instance.exists():
+        logger.warning("Base instance %r does not exist.", base_instance.instance_name)
+        _create_instance(
+            instance=instance,
+            base_instance=base_instance,
+            base_configuration=base_configuration,
+            image_name=image_name,
+            image_remote=image_remote,
+            ephemeral=ephemeral,
+            map_user_uid=map_user_uid,
+            uid=uid,
+            project=project,
+            remote=remote,
+            lxc=lxc,
+        )
+        return instance
+
+    # the base instance exists but is not valid, so delete it then create a new
+    # instance and base instance
+    if not _is_valid(base_instance):
+        logger.warning(
+            "Base instance %r is not valid. Deleting base instance.",
+            base_instance.instance_name,
+        )
+        base_instance.delete()
+        _create_instance(
+            instance=instance,
+            base_instance=base_instance,
+            base_configuration=base_configuration,
+            image_name=image_name,
+            image_remote=image_remote,
+            ephemeral=ephemeral,
+            map_user_uid=map_user_uid,
+            uid=uid,
+            project=project,
+            remote=remote,
+            lxc=lxc,
+        )
+        return instance
+
+    # at this point, there is a valid base instance to be copied to a new instance
+    logger.warning(
+        "Creating instance from base instance %r", base_instance.instance_name
+    )
+
+    # the base instance is not expected to be running but check for safety
+    if base_instance.is_running():
+        logger.warning("Stopping base instance.")
+
+    lxc.copy(
+        source_remote=remote,
+        source_instance_name=base_instance.instance_name,
+        destination_remote=remote,
+        destination_instance_name=instance.instance_name,
+        project=project,
+    )
+
+    # the newly copied instance should not be running, but check anyways
+    if instance.is_running():
+        logger.warning("Instance is already running.")
+    else:
+        logger.warning("Starting instance.")
+        instance.start()
+    base_configuration.warmup(executor=instance)
     return instance
