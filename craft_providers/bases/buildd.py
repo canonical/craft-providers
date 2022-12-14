@@ -19,6 +19,7 @@
 import enum
 import io
 import logging
+import os
 import pathlib
 import re
 import subprocess
@@ -35,7 +36,7 @@ from craft_providers import Base, Executor, errors
 from craft_providers.actions import snap_installer
 from craft_providers.util.os_release import parse_os_release
 
-from .errors import BaseCompatibilityError, BaseConfigurationError
+from .errors import BaseCompatibilityError, BaseConfigurationError, NetworkError
 from .instance_config import InstanceConfiguration
 
 logger = logging.getLogger(__name__)
@@ -76,6 +77,63 @@ def _check_deadline(
     """
     if deadline is not None and time.time() >= deadline:
         raise BaseConfigurationError(brief=message)
+
+
+def _network_connected(executor):
+    """Check if the network is connected."""
+    # bypass the network verification if there is a proxy set for HTTPS (because we're
+    # hitting port 443), as bash's TCP functionality will not use it (supporting
+    # both lowercase and uppercase names, which is what most applications do)
+    if os.getenv("HTTPS_PROXY") or os.getenv("https_proxy"):
+        return True
+
+    # check if the port is open using bash's built-in tcp-client, communicating with
+    # the HTTPS port on our site
+    command = ["bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"]
+    try:
+        # timeout quickly, so it's representative of current state (we don't
+        # want for it to hang a lot and then succeed 45 seconds later if network
+        # came back); capture the output just for it to not pollute the terminal
+        proc = executor.execute_run(
+            command, check=False, timeout=1, capture_output=True
+        )
+    except subprocess.TimeoutExpired:
+        return False
+    return proc.returncode == 0
+
+
+def _execute_run(
+    executor: Executor,
+    command: List[str],
+    *,
+    check: bool = True,
+    capture_output: bool = True,
+    text: bool = False,
+    verify_network=False,
+) -> subprocess.CompletedProcess:
+    """Run a command through the executor.
+
+    This is a helper to simplify most common calls and provide extra network
+    verification (if indicated) in a central place.
+
+    The default of capture_output is True because it's useful for error reports
+    (if the command failed) even if the output is not really wanted as a result
+    of the execution.
+    """
+    if not check and verify_network:
+        # if check is False, the caller needs the process result no matter what, it's
+        # wrong to also request to verify network, which may raise a different exception
+        raise RuntimeError("Invalid check and verify_network combination.")
+
+    try:
+        proc = executor.execute_run(
+            command, check=check, capture_output=capture_output, text=text
+        )
+    except subprocess.CalledProcessError as exc:
+        if verify_network and not _network_connected(executor):
+            raise NetworkError() from exc
+        raise
+    return proc
 
 
 class BuilddBaseAlias(enum.Enum):
@@ -512,11 +570,7 @@ class BuilddBase(Base):
 
         try:
             _check_deadline(deadline)
-            executor.execute_run(
-                ["apt-get", "update"],
-                capture_output=True,
-                check=True,
-            )
+            _execute_run(executor, ["apt-get", "update"], verify_network=True)
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to update apt cache.",
@@ -530,11 +584,8 @@ class BuilddBase(Base):
 
         try:
             _check_deadline(deadline)
-            executor.execute_run(
-                ["apt-get", "install", "-y"] + packages_to_install,
-                capture_output=True,
-                check=True,
-            )
+            command = ["apt-get", "install", "-y"] + packages_to_install
+            _execute_run(executor, command, verify_network=True)
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to install packages.",
@@ -583,11 +634,7 @@ class BuilddBase(Base):
 
         try:
             _check_deadline(deadline)
-            executor.execute_run(
-                ["hostname", "-F", "/etc/hostname"],
-                capture_output=True,
-                check=True,
-            )
+            _execute_run(executor, ["hostname", "-F", "/etc/hostname"])
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to set hostname.",
@@ -636,18 +683,10 @@ class BuilddBase(Base):
 
         try:
             _check_deadline(deadline)
-            executor.execute_run(
-                ["systemctl", "enable", "systemd-networkd"],
-                capture_output=True,
-                check=True,
-            )
+            _execute_run(executor, ["systemctl", "enable", "systemd-networkd"])
 
             _check_deadline(deadline)
-            executor.execute_run(
-                ["systemctl", "restart", "systemd-networkd"],
-                check=True,
-                capture_output=True,
-            )
+            _execute_run(executor, ["systemctl", "restart", "systemd-networkd"])
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to setup systemd-networkd.",
@@ -662,30 +701,19 @@ class BuilddBase(Base):
         """
         try:
             _check_deadline(deadline)
-            executor.execute_run(
-                [
-                    "ln",
-                    "-sf",
-                    "/run/systemd/resolve/resolv.conf",
-                    "/etc/resolv.conf",
-                ],
-                check=True,
-                capture_output=True,
-            )
+            command = [
+                "ln",
+                "-sf",
+                "/run/systemd/resolve/resolv.conf",
+                "/etc/resolv.conf",
+            ]
+            _execute_run(executor, command)
 
             _check_deadline(deadline)
-            executor.execute_run(
-                ["systemctl", "enable", "systemd-resolved"],
-                check=True,
-                capture_output=True,
-            )
+            _execute_run(executor, ["systemctl", "enable", "systemd-resolved"])
 
             _check_deadline(deadline)
-            executor.execute_run(
-                ["systemctl", "restart", "systemd-resolved"],
-                check=True,
-                capture_output=True,
-            )
+            _execute_run(executor, ["systemctl", "restart", "systemd-resolved"])
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to setup systemd-resolved.",
@@ -702,31 +730,13 @@ class BuilddBase(Base):
         """
         try:
             _check_deadline(deadline)
-            executor.execute_run(
-                [
-                    "apt-get",
-                    "install",
-                    "-y",
-                    "fuse",
-                    "udev",
-                ],
-                check=True,
-                capture_output=True,
-            )
+            command = ["apt-get", "install", "-y", "fuse", "udev"]
+            _execute_run(executor, command, verify_network=True)
 
             _check_deadline(deadline)
-            executor.execute_run(
-                ["systemctl", "enable", "systemd-udevd"],
-                capture_output=True,
-                check=True,
-            )
-
+            _execute_run(executor, ["systemctl", "enable", "systemd-udevd"])
             _check_deadline(deadline)
-            executor.execute_run(
-                ["systemctl", "start", "systemd-udevd"],
-                capture_output=True,
-                check=True,
-            )
+            _execute_run(executor, ["systemctl", "start", "systemd-udevd"])
 
             # This file is created by launchpad-buildd to stop snapd from
             # using the snap store's CDN when running in Canonical's
@@ -737,42 +747,26 @@ class BuilddBase(Base):
             no_cdn = pathlib.Path("/etc/systemd/system/snapd.service.d/no-cdn.conf")
             if no_cdn.exists():
                 _check_deadline(deadline)
-                executor.execute_run(
-                    ["mkdir", "-p", no_cdn.parent.as_posix()], check=True
-                )
+                _execute_run(executor, ["mkdir", "-p", no_cdn.parent.as_posix()])
 
                 _check_deadline(deadline)
                 executor.push_file(source=no_cdn, destination=no_cdn)
 
             _check_deadline(deadline)
-            executor.execute_run(
-                ["apt-get", "install", "-y", "snapd"],
-                capture_output=True,
-                check=True,
+            _execute_run(
+                executor, ["apt-get", "install", "-y", "snapd"], verify_network=True
             )
 
             _check_deadline(deadline)
-            executor.execute_run(
-                ["systemctl", "start", "snapd.socket"],
-                capture_output=True,
-                check=True,
-            )
+            _execute_run(executor, ["systemctl", "start", "snapd.socket"])
 
             # Restart, not start, the service in case the environment
             # has changed and the service is already running.
             _check_deadline(deadline)
-            executor.execute_run(
-                ["systemctl", "restart", "snapd.service"],
-                capture_output=True,
-                check=True,
-            )
+            _execute_run(executor, ["systemctl", "restart", "snapd.service"])
 
             _check_deadline(deadline)
-            executor.execute_run(
-                ["snap", "wait", "system", "seed.loaded"],
-                capture_output=True,
-                check=True,
-            )
+            _execute_run(executor, ["snap", "wait", "system", "seed.loaded"])
 
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -795,7 +789,7 @@ class BuilddBase(Base):
                 command = ["snap", "set", "system", f"proxy.http={http_proxy}"]
             else:
                 command = ["snap", "unset", "system", "proxy.http"]
-            executor.execute_run(command, capture_output=True, check=True)
+            _execute_run(executor, command)
 
             _check_deadline(deadline)
             https_proxy = self.environment.get("https_proxy")
@@ -803,7 +797,7 @@ class BuilddBase(Base):
                 command = ["snap", "set", "system", f"proxy.https={https_proxy}"]
             else:
                 command = ["snap", "unset", "system", "proxy.https"]
-            executor.execute_run(command, capture_output=True, check=True)
+            _execute_run(executor, command)
 
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -827,12 +821,9 @@ class BuilddBase(Base):
         logger.debug("Waiting for networking to be ready...")
 
         _check_deadline(deadline)
+        command = ["getent", "hosts", "snapcraft.io"]
         while True:
-            proc = executor.execute_run(
-                ["getent", "hosts", "snapcraft.io"],
-                capture_output=True,
-                check=False,
-            )
+            proc = _execute_run(executor, command, check=False)
             if proc.returncode == 0:
                 return
 
@@ -858,7 +849,8 @@ class BuilddBase(Base):
 
         _check_deadline(deadline)
         while True:
-            proc = executor.execute_run(
+            proc = _execute_run(
+                executor,
                 ["systemctl", "is-system-running"],
                 capture_output=True,
                 check=False,
