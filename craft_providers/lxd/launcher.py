@@ -18,6 +18,7 @@
 """LXD Instance Provider."""
 
 import logging
+from datetime import datetime, timedelta
 from typing import Optional
 
 from craft_providers import Base, ProviderError, bases
@@ -136,13 +137,58 @@ def _formulate_base_instance_name(
     return "-".join(["base-instance", compatibility_tag, image_remote, image_name])
 
 
-# TODO: Implement this stubbed function (CRAFT-1341)
-# pylint: disable-next=unused-argument
-def _is_valid(instance: LXDInstance) -> bool:
-    """Check if a instance is valid (i.e. the base instance is not expired).
+def _is_valid(*, instance_name: str, project: str, remote: str, lxc: LXC) -> bool:
+    """Check if an instance is valid.
 
-    :returns: True if the instance is valid.
+    Instances are valid for 3 months (90 days). After 3 months, they are considered
+    expired and invalid.
+
+    If errors occur during the validity check, the instance is assumed to be invalid.
+
+    :param instance: Name of instance to check the validity of.
+    :param project: LXD project name to create.
+    :param remote: LXD remote to create project on.
+    :param lxc: LXC client.
+
+    :returns: True if the instance is valid. False otherwise.
     """
+    logger.debug("Checking validity of instance %r.", instance_name)
+
+    # capture instance info
+    try:
+        info = lxc.info(instance_name=instance_name, project=project, remote=remote)
+    except LXDError as raised:
+        # if the base instance info can't be retrieved, consider it invalid
+        logger.warning("Could not get instance info with error: %s", raised)
+        return False
+
+    creation_date_raw = info.get("Created")
+
+    # if the base instance does not have a creation date, consider it invalid
+    if not creation_date_raw:
+        logger.warning("Instance does not have a 'Created' date.")
+        return False
+
+    # parse datetime
+    try:
+        creation_date = datetime.strptime(creation_date_raw, "%Y/%m/%d %H:%M %Z")
+    except ValueError as raised:
+        # if the date can't be parsed, consider it invalid
+        logger.warning(
+            "Could not parse instance's 'Created' date with error: %r", raised
+        )
+        return False
+
+    expiration_date = datetime.now() - timedelta(days=90)
+    if creation_date < expiration_date:
+        logger.warning(
+            "Instance is expired (Instance creation date: %s, expiration date: %s).",
+            creation_date,
+            expiration_date,
+        )
+        return False
+
+    logger.debug("Instance is valid.")
     return True
 
 
@@ -222,8 +268,6 @@ def launch(
     a new instance on a subsequent run, the base instance will be copied to create the
     new instance. This instance is run through a small subset of the setup, which is
     referred to as 'warmup'.
-
-    TODO: Implement the expiration mechanism described below (CRAFT-1341).
 
     To keep build environments clean, consistent, and up-to-date, any base instance
     older than 3 months (90 days) is deleted and recreated.
@@ -355,7 +399,12 @@ def launch(
 
     # the base instance exists but is not valid, so delete it then create a new
     # instance and base instance
-    if not _is_valid(base_instance):
+    if not _is_valid(
+        instance_name=base_instance.instance_name,
+        project=project,
+        remote=remote,
+        lxc=lxc,
+    ):
         logger.warning(
             "Base instance %r is not valid. Deleting base instance.",
             base_instance.instance_name,

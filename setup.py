@@ -47,6 +47,7 @@ test_requires = [
     "black",
     "codespell",
     "flake8",
+    "freezegun",
     "isort",
     "mypy",
     "logassert",
