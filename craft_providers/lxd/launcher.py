@@ -138,7 +138,7 @@ def _formulate_base_instance_name(
 
 
 def _is_valid(*, instance_name: str, project: str, remote: str, lxc: LXC) -> bool:
-    """Check if a instance is valid.
+    """Check if an instance is valid.
 
     Instances are valid for 3 months (90 days). After 3 months, they are considered
     expired and invalid.
@@ -175,7 +175,7 @@ def _is_valid(*, instance_name: str, project: str, remote: str, lxc: LXC) -> boo
     except ValueError as raised:
         # if the date can't be parsed, consider it invalid
         logger.warning(
-            "Could not parse instance's 'Created' date with error: %s", raised
+            "Could not parse instance's 'Created' date with error: %r", raised
         )
         return False
 

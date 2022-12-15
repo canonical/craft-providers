@@ -791,8 +791,8 @@ def test_is_valid_value_error(logs, mocker, mock_lxc):
     assert not is_valid
     assert (
         Exact(
-            "Could not parse instance's 'Created' date with error: "
-            "time data 'bad-datetime-value' does not match format '%Y/%m/%d %H:%M %Z'"
+            "Could not parse instance's 'Created' date with error: ValueError(\"time "
+            "data 'bad-datetime-value' does not match format '%Y/%m/%d %H:%M %Z'\")"
         )
         in logs.warning
     )
