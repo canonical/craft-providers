@@ -413,9 +413,7 @@ def test_install_snaps_install_from_store_error(fake_executor, mocker):
         "craft_providers.actions.snap_installer.install_from_store",
         side_effect=SnapInstallationError(brief="test error"),
     )
-    my_snaps = [
-        buildd.Snap(name="snap1", channel="candidate"),
-    ]
+    my_snaps = [buildd.Snap(name="snap1", channel="candidate")]
     base = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY, snaps=my_snaps)
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
@@ -436,9 +434,7 @@ def test_install_snaps_inject_from_host_error(fake_executor, mocker):
         "craft_providers.actions.snap_installer.inject_from_host",
         side_effect=SnapInstallationError(brief="test error"),
     )
-    my_snaps = [
-        buildd.Snap(name="snap1", channel=None),
-    ]
+    my_snaps = [buildd.Snap(name="snap1", channel=None)]
     base = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY, snaps=my_snaps)
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
@@ -518,10 +514,7 @@ def test_install_packages_install_error(mocker, fake_executor):
     )
 
 
-def test_ensure_image_version_compatible_failure(
-    fake_executor,
-    monkeypatch,
-):
+def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
     monkeypatch.setattr(
         instance_config.InstanceConfiguration,
@@ -532,9 +525,8 @@ def test_ensure_image_version_compatible_failure(
     )
 
     with pytest.raises(errors.BaseCompatibilityError) as exc_info:
-        base_config._ensure_instance_config_compatible(  # pylint: disable=protected-access
-            executor=fake_executor,
-            deadline=None,
+        base_config._ensure_instance_config_compatible(
+            executor=fake_executor, deadline=None
         )
 
     assert exc_info.value == errors.BaseCompatibilityError(
@@ -543,28 +535,19 @@ def test_ensure_image_version_compatible_failure(
 
 
 @patch("time.time", side_effect=[0.0, 1.0])
-def test_setup_timeout(  # pylint: disable=unused-argument
-    mock_time, fake_executor, fake_process, monkeypatch
-):
+def test_setup_timeout(fake_executor, fake_process, monkeypatch):
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
     fake_process.register_subprocess([fake_process.any()])
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
-        base_config.setup(
-            executor=fake_executor,
-            retry_wait=0.01,
-            timeout=0.0,
-        )
+        base_config.setup(executor=fake_executor, retry_wait=0.01, timeout=0.0)
 
     assert exc_info.value == errors.BaseConfigurationError(
         brief="Timed out configuring environment."
     )
 
 
-def test_ensure_os_compatible_name_failure(
-    fake_executor,
-    fake_process,
-):
+def test_ensure_os_compatible_name_failure(fake_executor, fake_process):
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
@@ -572,20 +555,14 @@ def test_ensure_os_compatible_name_failure(
     )
 
     with pytest.raises(errors.BaseCompatibilityError) as exc_info:
-        base_config._ensure_os_compatible(  # pylint: disable=protected-access
-            executor=fake_executor,
-            deadline=None,
-        )
+        base_config._ensure_os_compatible(executor=fake_executor, deadline=None)
 
     assert exc_info.value == errors.BaseCompatibilityError(
         "Expected OS 'Ubuntu', found 'Fedora'"
     )
 
 
-def test_ensure_os_compatible_version_failure(
-    fake_executor,
-    fake_process,
-):
+def test_ensure_os_compatible_version_failure(fake_executor, fake_process):
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
@@ -593,20 +570,14 @@ def test_ensure_os_compatible_version_failure(
     )
 
     with pytest.raises(errors.BaseCompatibilityError) as exc_info:
-        base_config._ensure_os_compatible(  # pylint: disable=protected-access
-            executor=fake_executor,
-            deadline=None,
-        )
+        base_config._ensure_os_compatible(executor=fake_executor, deadline=None)
 
     assert exc_info.value == errors.BaseCompatibilityError(
         "Expected OS version '20.04', found '12.04'"
     )
 
 
-def test_read_os_release_failure(
-    fake_process,
-    fake_executor,
-):
+def test_read_os_release_failure(fake_process, fake_executor):
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
@@ -614,10 +585,7 @@ def test_read_os_release_failure(
     )
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
-        base_config._ensure_os_compatible(  # pylint: disable=protected-access
-            executor=fake_executor,
-            deadline=None,
-        )
+        base_config._ensure_os_compatible(executor=fake_executor, deadline=None)
 
     assert exc_info.value.__cause__ is not None
     assert exc_info.value == errors.BaseConfigurationError(
@@ -628,10 +596,7 @@ def test_read_os_release_failure(
     )
 
 
-def test_setup_hostname_failure(
-    fake_process,
-    fake_executor,
-):
+def test_setup_hostname_failure(fake_process, fake_executor):
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "hostname", "-F", "/etc/hostname"],
@@ -639,10 +604,7 @@ def test_setup_hostname_failure(
     )
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
-        base_config._setup_hostname(  # pylint: disable=protected-access
-            executor=fake_executor,
-            deadline=None,
-        )
+        base_config._setup_hostname(executor=fake_executor, deadline=None)
 
     assert exc_info.value == errors.BaseConfigurationError(
         brief="Failed to set hostname.",
@@ -652,10 +614,7 @@ def test_setup_hostname_failure(
     )
 
 
-def test_setup_networkd_enable_failure(
-    fake_process,
-    fake_executor,
-):
+def test_setup_networkd_enable_failure(fake_process, fake_executor):
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "enable", "systemd-networkd"],
@@ -663,10 +622,7 @@ def test_setup_networkd_enable_failure(
     )
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
-        base_config._setup_networkd(  # pylint: disable=protected-access
-            executor=fake_executor,
-            deadline=None,
-        )
+        base_config._setup_networkd(executor=fake_executor, deadline=None)
 
     assert exc_info.value == errors.BaseConfigurationError(
         brief="Failed to setup systemd-networkd.",
@@ -676,10 +632,7 @@ def test_setup_networkd_enable_failure(
     )
 
 
-def test_setup_networkd_restart_failure(
-    fake_process,
-    fake_executor,
-):
+def test_setup_networkd_restart_failure(fake_process, fake_executor):
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "enable", "systemd-networkd"],
@@ -690,10 +643,7 @@ def test_setup_networkd_restart_failure(
     )
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
-        base_config._setup_networkd(  # pylint: disable=protected-access
-            executor=fake_executor,
-            deadline=None,
-        )
+        base_config._setup_networkd(executor=fake_executor, deadline=None)
 
     assert exc_info.value == errors.BaseConfigurationError(
         brief="Failed to setup systemd-networkd.",
@@ -703,10 +653,7 @@ def test_setup_networkd_restart_failure(
     )
 
 
-def test_setup_resolved_enable_failure(
-    fake_process,
-    fake_executor,
-):
+def test_setup_resolved_enable_failure(fake_process, fake_executor):
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
     fake_process.register_subprocess(
         [
@@ -723,10 +670,7 @@ def test_setup_resolved_enable_failure(
     )
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
-        base_config._setup_resolved(  # pylint: disable=protected-access
-            executor=fake_executor,
-            deadline=None,
-        )
+        base_config._setup_resolved(executor=fake_executor, deadline=None)
 
     assert exc_info.value == errors.BaseConfigurationError(
         brief="Failed to setup systemd-resolved.",
@@ -736,10 +680,7 @@ def test_setup_resolved_enable_failure(
     )
 
 
-def test_setup_resolved_restart_failure(
-    fake_process,
-    fake_executor,
-):
+def test_setup_resolved_restart_failure(fake_process, fake_executor):
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
     fake_process.register_subprocess(
         [
@@ -759,10 +700,7 @@ def test_setup_resolved_restart_failure(
     )
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
-        base_config._setup_resolved(  # pylint: disable=protected-access
-            executor=fake_executor,
-            deadline=None,
-        )
+        base_config._setup_resolved(executor=fake_executor, deadline=None)
 
     assert exc_info.value == errors.BaseConfigurationError(
         brief="Failed to setup systemd-resolved.",
@@ -785,10 +723,7 @@ def test_setup_snapd_proxy(fake_executor, fake_process):
     fake_process.keep_last_process(True)
     fake_process.register([fake_process.any()])
 
-    base_config._setup_snapd_proxy(
-        executor=fake_executor,
-        deadline=None,
-    )
+    base_config._setup_snapd_proxy(executor=fake_executor, deadline=None)
     assert [
         *DEFAULT_FAKE_CMD,
         "snap",
@@ -822,10 +757,7 @@ def test_setup_snapd_proxy_failures(fake_process, fake_executor, fail_index):
     )
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
-        base_config._setup_snapd_proxy(  # pylint: disable=protected-access
-            executor=fake_executor,
-            deadline=None,
-        )
+        base_config._setup_snapd_proxy(executor=fake_executor, deadline=None)
 
     assert exc_info.value == errors.BaseConfigurationError(
         brief="Failed to set the snapd proxy.",
@@ -879,10 +811,7 @@ def test_setup_snapd_failures(fake_process, fake_executor, fail_index):
     )
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
-        base_config._setup_snapd(  # pylint: disable=protected-access
-            executor=fake_executor,
-            deadline=None,
-        )
+        base_config._setup_snapd(executor=fake_executor, deadline=None)
 
     assert exc_info.value == errors.BaseConfigurationError(
         brief="Failed to setup snapd.",
@@ -973,9 +902,7 @@ def test_wait_for_system_ready(
         buildd.BuilddBaseAlias.JAMMY,
     ],
 )
-def test_wait_for_system_ready_timeout(  # pylint: disable=unused-argument
-    mock_time, fake_executor, fake_process, alias
-):
+def test_wait_for_system_ready_timeout(fake_executor, fake_process, alias):
     base_config = buildd.BuilddBase(
         alias=alias,
     )
@@ -1007,8 +934,8 @@ def test_wait_for_system_ready_timeout(  # pylint: disable=unused-argument
         buildd.BuilddBaseAlias.JAMMY,
     ],
 )
-def test_wait_for_system_ready_timeout_in_network(  # pylint: disable=unused-argument
-    mock_time, fake_executor, fake_process, alias, monkeypatch
+def test_wait_for_system_ready_timeout_in_network(
+    fake_executor, fake_process, alias, monkeypatch
 ):
     base_config = buildd.BuilddBase(alias=alias)
     monkeypatch.setattr(
