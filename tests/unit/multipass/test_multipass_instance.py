@@ -123,11 +123,25 @@ def test_push_file_io(mock_multipass, instance):
     assert mock_multipass.mock_calls == [
         mock.call.exec(
             instance_name="test-instance",
-            command=["mktemp"],
+            command=["sudo", "-H", "--", "mktemp"],
             runner=subprocess.run,
             capture_output=True,
             check=True,
             text=True,
+        ),
+        mock.call.exec(
+            instance_name="test-instance",
+            command=[
+                "sudo",
+                "-H",
+                "--",
+                "chown",
+                "ubuntu:ubuntu",
+                "/tmp/mktemp-result",
+            ],
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
         ),
         mock.call.transfer_source_io(
             source=mock.ANY, destination="test-instance:/tmp/mktemp-result"
@@ -183,7 +197,10 @@ def test_push_file_io_error(mock_multipass, instance):
         )
 
     assert exc_info.value == MultipassError(
-        brief="Failed to create file '/etc/test.conf' in 'test-instance' VM.",
+        brief=(
+            "Failed to create file '/etc/test.conf' in Multipass instance "
+            "'test-instance'."
+        ),
         details=errors.details_from_called_process_error(error),
     )
 

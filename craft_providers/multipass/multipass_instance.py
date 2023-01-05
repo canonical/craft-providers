@@ -100,20 +100,26 @@ class MultipassInstance(Executor):
         :param user: File user owner/id.
         """
         try:
-            tmp_file_path = self._multipass.exec(
-                instance_name=self.name,
+            tmp_file_path = self.execute_run(
                 command=["mktemp"],
-                runner=subprocess.run,
                 capture_output=True,
                 check=True,
                 text=True,
             ).stdout.strip()
 
-            self._multipass.transfer_source_io(
-                source=content,
-                destination=f"{self.name}:{tmp_file_path}",
+            # mktemp is executed as root, so the ownership of the temp file needs to be
+            # changed back to the default user `ubuntu` before transferring the file
+            self.execute_run(
+                ["chown", "ubuntu:ubuntu", tmp_file_path],
+                capture_output=True,
+                check=True,
             )
 
+            self._multipass.transfer_source_io(
+                source=content, destination=f"{self.name}:{tmp_file_path}"
+            )
+
+            # now that the file has been transferred, it's ownership can be set
             self.execute_run(
                 ["chown", f"{user}:{group}", tmp_file_path],
                 capture_output=True,
@@ -135,7 +141,7 @@ class MultipassInstance(Executor):
             raise MultipassError(
                 brief=(
                     f"Failed to create file {destination.as_posix()!r}"
-                    f" in {self.name!r} VM."
+                    f" in Multipass instance {self.name!r}."
                 ),
                 details=errors.details_from_called_process_error(error),
             ) from error
@@ -155,13 +161,19 @@ class MultipassInstance(Executor):
         env: Optional[Dict[str, Optional[str]]] = None,
         **kwargs,
     ) -> subprocess.Popen:
-        """Execute process in instance using subprocess.Popen().
+        """Execute a process in the instance using subprocess.Popen().
 
         The process' environment will inherit the execution environment's
         default environment (PATH, etc.), but can be additionally configured via
         env parameter.
 
+        The command is run as root via sudo. Running as root may be required even
+        when the command itself does not require root permissions, because the
+        instance's working directory may be a directory that the default `ubuntu` user
+        does not have access to.
+
         :param command: Command to execute.
+        :param cwd: working directory to execute the command
         :param env: Additional environment to set for process.
         :param kwargs: Additional keyword arguments for subprocess.Popen().
 
@@ -182,20 +194,25 @@ class MultipassInstance(Executor):
         env: Optional[Dict[str, Optional[str]]] = None,
         **kwargs,
     ) -> subprocess.CompletedProcess:
-        """Execute command using subprocess.run().
+        """Execute a command in the instance using subprocess.run().
 
         The process' environment will inherit the execution environment's
         default environment (PATH, etc.), but can be additionally configured via
         env parameter.
 
+        The command is run as root via sudo. Running as root may be required even
+        when the command itself does not require root permissions, because the
+        instance's working directory may be a directory that the default `ubuntu` user
+        does not have access to.
+
         :param command: Command to execute.
+        :param cwd: working directory to execute the command
         :param env: Additional environment to set for process.
         :param kwargs: Keyword args to pass to subprocess.run().
 
         :returns: Completed process.
 
-        :raises subprocess.CalledProcessError: if command fails and check is
-            True.
+        :raises subprocess.CalledProcessError: if command fails and check is True.
         """
         return self._multipass.exec(
             instance_name=self.name,
