@@ -119,7 +119,7 @@ class MultipassInstance(Executor):
                 source=content, destination=f"{self.name}:{tmp_file_path}"
             )
 
-            # now that the file has been transferred, it's ownership can be set
+            # now that the file has been transferred, its ownership can be set
             self.execute_run(
                 ["chown", f"{user}:{group}", tmp_file_path],
                 capture_output=True,
