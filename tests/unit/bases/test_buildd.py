@@ -16,6 +16,7 @@
 #
 
 import subprocess
+from datetime import datetime
 from pathlib import Path
 from textwrap import dedent
 from unittest.mock import ANY, call, patch
@@ -145,6 +146,11 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
         ),
     )
 
+    mock_datetime = mocker.patch("craft_providers.bases.buildd.datetime")
+    mock_datetime.now.return_value = datetime(2022, 1, 2, 3, 4, 5, 6)
+    # expected datetime will be 24 hours after the current time
+    expected_datetime = "2022-01-03T03:04:05.000006"
+
     if environment is None:
         environment = buildd.default_command_environment()
 
@@ -241,6 +247,18 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "wait", "system", "seed.loaded"]
+    )
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "snap",
+            "set",
+            "system",
+            f"refresh.hold={expected_datetime}Z",
+        ]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"]
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "set", "system", "proxy.http=http://foo.bar:8080"]
@@ -1074,7 +1092,12 @@ def test_ensure_config_compatible_empty_config_returns_none(fake_executor):
         ),
     ],
 )
-def test_warmup_overall(environment, fake_process, fake_executor, mock_load):
+def test_warmup_overall(environment, fake_process, fake_executor, mock_load, mocker):
+    mock_datetime = mocker.patch("craft_providers.bases.buildd.datetime")
+    mock_datetime.now.return_value = datetime(2022, 1, 2, 3, 4, 5, 6)
+    # expected datetime will be 24 hours after the current time
+    expected_datetime = "2022-01-03T03:04:05.000006"
+
     alias = buildd.BuilddBaseAlias.JAMMY
 
     if environment is None:
@@ -1098,6 +1121,18 @@ def test_warmup_overall(environment, fake_process, fake_executor, mock_load):
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "getent", "hosts", "snapcraft.io"]
+    )
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "snap",
+            "set",
+            "system",
+            f"refresh.hold={expected_datetime}Z",
+        ]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"]
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "set", "system", "proxy.http=http://foo.bar:8080"]
