@@ -2,10 +2,6 @@
 Changelog
 *********
 
-1.6.2 (2022-12-08)
-------------------
-- Disable automatic snap refreshes inside instances.
-
 1.6.1 (2022-10-31)
 ------------------
 - Store temporary files in the home directory

@@ -25,7 +25,6 @@ import re
 import subprocess
 import sys
 import time
-from datetime import datetime, timedelta
 from textwrap import dedent
 from time import sleep
 from typing import Dict, List, Optional, Type
@@ -409,7 +408,6 @@ class BuilddBase(Base):
         )
         self._setup_apt(executor=executor, deadline=deadline)
         self._setup_snapd(executor=executor, deadline=deadline)
-        self._disable_and_wait_for_snap_refresh(executor=executor, deadline=deadline)
         self._setup_snapd_proxy(executor=executor, deadline=deadline)
         self._install_snaps(executor=executor, deadline=deadline)
 
@@ -451,7 +449,6 @@ class BuilddBase(Base):
         self._setup_wait_for_network(
             executor=executor, deadline=deadline, retry_wait=retry_wait
         )
-        self._disable_and_wait_for_snap_refresh(executor=executor, deadline=deadline)
         self._setup_snapd_proxy(executor=executor, deadline=deadline)
         self._install_snaps(executor=executor, deadline=deadline)
 
@@ -480,33 +477,6 @@ class BuilddBase(Base):
             destination=pathlib.Path("/etc/apt/apt.conf.d/20auto-upgrades"),
             content=io.BytesIO(content),
             file_mode="0644",
-        )
-
-    def _disable_and_wait_for_snap_refresh(
-        self, *, executor: Executor, deadline: Optional[float]
-    ) -> None:
-        """Disable automatic snap refreshes and wait for refreshes to complete.
-
-        Craft-providers manages the installation and versions of snaps inside the
-        build environment, so automatic refreshes of snaps by snapd are disabled.
-        """
-        # disable refresh for 1 day
-        hold_time = datetime.now() + timedelta(days=1)
-        logger.debug("Holding refreshes for snaps.")
-
-        _check_deadline(deadline)
-        # TODO: run `snap refresh --hold` once during setup (`--hold` is not yet stable)
-        executor.execute_run(
-            ["snap", "set", "system", f"refresh.hold={hold_time.isoformat()}Z"],
-            capture_output=True,
-            check=True,
-        )
-
-        # a refresh may have started before the hold was set
-        logger.debug("Waiting for pending snap refreshes to complete.")
-        _check_deadline(deadline)
-        executor.execute_run(
-            ["snap", "watch", "--last=auto-refresh?"], capture_output=True, check=True
         )
 
     def _install_snaps(self, *, executor: Executor, deadline: Optional[float]) -> None:

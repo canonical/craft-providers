@@ -40,7 +40,7 @@ copyright = "2021, Canonical Ltd."
 author = "Canonical Ltd."
 
 # The full version, including alpha/beta/rc tags
-release = "1.6.2"
+release = "1.6.1"
 
 
 # -- General configuration ---------------------------------------------------
