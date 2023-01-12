@@ -496,18 +496,32 @@ class BuilddBase(Base):
 
         _check_deadline(deadline)
         # TODO: run `snap refresh --hold` once during setup (`--hold` is not yet stable)
-        executor.execute_run(
-            ["snap", "set", "system", f"refresh.hold={hold_time.isoformat()}Z"],
-            capture_output=True,
-            check=True,
-        )
+        try:
+            executor.execute_run(
+                ["snap", "set", "system", f"refresh.hold={hold_time.isoformat()}Z"],
+                capture_output=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as error:
+            raise BaseConfigurationError(
+                brief="Failed to hold snap refreshes.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
 
         # a refresh may have started before the hold was set
         logger.debug("Waiting for pending snap refreshes to complete.")
         _check_deadline(deadline)
-        executor.execute_run(
-            ["snap", "watch", "--last=auto-refresh?"], capture_output=True, check=True
-        )
+        try:
+            executor.execute_run(
+                ["snap", "watch", "--last=auto-refresh?"],
+                capture_output=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as error:
+            raise BaseConfigurationError(
+                brief="Failed to wait for snap refreshes to complete.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
 
     def _install_snaps(self, *, executor: Executor, deadline: Optional[float]) -> None:
         """Install snaps.
