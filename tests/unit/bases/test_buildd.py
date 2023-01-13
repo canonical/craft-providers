@@ -1473,3 +1473,52 @@ def test_network_connectivity_timeouts(fake_executor, fake_process):
     ) as mock:
         assert buildd._network_connected(fake_executor) is False
     mock.assert_called_with(cmd, check=False, capture_output=True, timeout=1)
+
+
+def test_disable_and_wait_for_snap_refresh_hold_error(fake_process, fake_executor):
+    """Raise BaseConfigurationError when the command to hold snap refreshes fails."""
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "set", "system", fake_process.any()],
+        returncode=-1,
+    )
+
+    with pytest.raises(errors.BaseConfigurationError) as exc_info:
+        # pylint: disable-next=protected-access
+        base_config._disable_and_wait_for_snap_refresh(
+            executor=fake_executor,
+            deadline=None,
+        )
+
+    assert exc_info.value == errors.BaseConfigurationError(
+        brief="Failed to hold snap refreshes.",
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
+    )
+
+
+def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executor):
+    """Raise BaseConfigurationError when the `snap watch` command fails."""
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "set", "system", fake_process.any()],
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
+        returncode=-1,
+    )
+
+    with pytest.raises(errors.BaseConfigurationError) as exc_info:
+        # pylint: disable-next=protected-access
+        base_config._disable_and_wait_for_snap_refresh(
+            executor=fake_executor,
+            deadline=None,
+        )
+
+    assert exc_info.value == errors.BaseConfigurationError(
+        brief="Failed to wait for snap refreshes to complete.",
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
+    )
