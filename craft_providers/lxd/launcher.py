@@ -18,6 +18,7 @@
 """LXD Instance Provider."""
 
 import logging
+import os
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -68,21 +69,20 @@ def _create_instance(
     logger.warning(
         "Creating new instance from image %r from remote %r.", image_name, image_remote
     )
-    instance.launch(
-        image=image_name,
-        image_remote=image_remote,
-        ephemeral=ephemeral,
-        map_user_uid=map_user_uid,
-        uid=uid,
-    )
+    instance.launch(image=image_name, image_remote=image_remote, ephemeral=ephemeral)
     base_configuration.setup(executor=instance)
 
-    if base_instance is not None:
+    # return early if base instances and user id mapping are not specified
+    if not base_instance and not map_user_uid:
+        return
+
+    # the instance needs to be stopped before copying or updating the id map
+    instance.stop()
+
+    if base_instance:
         logger.warning(
             "Creating new base instance %r from instance.", base_instance.instance_name
         )
-        # stop the instance before copying, to ensure it is in a "good" state
-        instance.stop()
         lxc.copy(
             source_remote=remote,
             source_instance_name=instance.instance_name,
@@ -90,9 +90,14 @@ def _create_instance(
             destination_instance_name=base_instance.instance_name,
             project=project,
         )
-        # now restart and wait for the instance to be ready
-        instance.start()
-        base_configuration.wait_until_ready(executor=instance)
+
+    # after creating the base instance, the id map can be set
+    if map_user_uid:
+        _set_id_map(instance=instance, lxc=lxc, project=project, remote=remote, uid=uid)
+
+    # now restart and wait for the instance to be ready
+    instance.start()
+    base_configuration.wait_until_ready(executor=instance)
 
 
 def _ensure_project_exists(
@@ -145,7 +150,7 @@ def _is_valid(*, instance_name: str, project: str, remote: str, lxc: LXC) -> boo
 
     If errors occur during the validity check, the instance is assumed to be invalid.
 
-    :param instance: Name of instance to check the validity of.
+    :param instance_name: Name of instance to check the validity of.
     :param project: LXD project name to create.
     :param remote: LXD remote to create project on.
     :param lxc: LXC client.
@@ -237,6 +242,39 @@ def _launch_existing_instance(
             instance.delete()
             return False
         raise
+
+
+def _set_id_map(
+    *,
+    instance: LXDInstance,
+    lxc: LXC = LXC(),
+    project: str = "default",
+    remote: str = "local",
+    uid: Optional[int] = None,
+) -> None:
+    """Configure the instance's id map.
+
+    By default, LXD creates unprivileged containers by using user namespaces to map
+    privileged uid/gids in the instance to unprivileged uid/gids in the host.
+    In order to mount a directory from the host in an LXD instance, the host user's ids
+    must be mapped before the instance is started.
+
+    The instance needs to be stopped or restarted for the id map to take effect.
+
+    :param instance: LXD instance to set the idmap of
+    :param lxc: LXC client.
+    :param project: LXD project to create instance in.
+    :param remote: LXD remote to create instance on.
+    :param uid: The uid to be mapped. If not supplied, the current user's uid is used.
+    """
+    uid = uid if uid else os.getuid()
+    lxc.config_set(
+        instance_name=instance.instance_name,
+        key="raw.idmap",
+        value=f"both {uid!s} 0",
+        project=project,
+        remote=remote,
+    )
 
 
 # pylint: disable-next=too-many-locals
@@ -445,8 +483,14 @@ def launch(
     # the newly copied instance should not be running, but check anyways
     if instance.is_running():
         logger.warning("Instance is already running.")
-    else:
-        logger.warning("Starting instance.")
-        instance.start()
+        instance.stop()
+
+    # set the id map while the instance is not running
+    if map_user_uid:
+        _set_id_map(instance=instance, lxc=lxc, project=project, remote=remote, uid=uid)
+
+    # instance is now ready to be started and warmed up
+    logger.warning("Starting instance.")
+    instance.start()
     base_configuration.warmup(executor=instance)
     return instance
