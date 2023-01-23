@@ -149,7 +149,7 @@ def test_launched_environment(
                 auto_create_project=True,
                 map_user_uid=True,
                 uid=tmp_path.stat().st_uid,
-                use_snapshots=True,
+                use_base_instance=True,
                 project="default",
                 remote="local",
             ),
