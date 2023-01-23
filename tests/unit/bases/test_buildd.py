@@ -16,6 +16,7 @@
 #
 
 import subprocess
+from datetime import datetime
 from pathlib import Path
 from textwrap import dedent
 from unittest.mock import ANY, call, patch
@@ -145,6 +146,11 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
         ),
     )
 
+    mock_datetime = mocker.patch("craft_providers.bases.buildd.datetime")
+    mock_datetime.now.return_value = datetime(2022, 1, 2, 3, 4, 5, 6)
+    # expected datetime will be 24 hours after the current time
+    expected_datetime = "2022-01-03T03:04:05.000006"
+
     if environment is None:
         environment = buildd.default_command_environment()
 
@@ -241,6 +247,18 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "wait", "system", "seed.loaded"]
+    )
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "snap",
+            "set",
+            "system",
+            f"refresh.hold={expected_datetime}Z",
+        ]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"]
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "set", "system", "proxy.http=http://foo.bar:8080"]
@@ -1001,7 +1019,12 @@ def test_ensure_config_compatible_empty_config_returns_none(fake_executor):
         ),
     ],
 )
-def test_warmup_overall(environment, fake_process, fake_executor, mock_load):
+def test_warmup_overall(environment, fake_process, fake_executor, mock_load, mocker):
+    mock_datetime = mocker.patch("craft_providers.bases.buildd.datetime")
+    mock_datetime.now.return_value = datetime(2022, 1, 2, 3, 4, 5, 6)
+    # expected datetime will be 24 hours after the current time
+    expected_datetime = "2022-01-03T03:04:05.000006"
+
     alias = buildd.BuilddBaseAlias.JAMMY
 
     if environment is None:
@@ -1025,6 +1048,18 @@ def test_warmup_overall(environment, fake_process, fake_executor, mock_load):
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "getent", "hosts", "snapcraft.io"]
+    )
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "snap",
+            "set",
+            "system",
+            f"refresh.hold={expected_datetime}Z",
+        ]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"]
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "set", "system", "proxy.http=http://foo.bar:8080"]
@@ -1365,3 +1400,52 @@ def test_network_connectivity_timeouts(fake_executor, fake_process):
     ) as mock:
         assert buildd._network_connected(fake_executor) is False
     mock.assert_called_with(cmd, check=False, capture_output=True, timeout=1)
+
+
+def test_disable_and_wait_for_snap_refresh_hold_error(fake_process, fake_executor):
+    """Raise BaseConfigurationError when the command to hold snap refreshes fails."""
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "set", "system", fake_process.any()],
+        returncode=-1,
+    )
+
+    with pytest.raises(errors.BaseConfigurationError) as exc_info:
+        # pylint: disable-next=protected-access
+        base_config._disable_and_wait_for_snap_refresh(
+            executor=fake_executor,
+            deadline=None,
+        )
+
+    assert exc_info.value == errors.BaseConfigurationError(
+        brief="Failed to hold snap refreshes.",
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
+    )
+
+
+def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executor):
+    """Raise BaseConfigurationError when the `snap watch` command fails."""
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "set", "system", fake_process.any()],
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
+        returncode=-1,
+    )
+
+    with pytest.raises(errors.BaseConfigurationError) as exc_info:
+        # pylint: disable-next=protected-access
+        base_config._disable_and_wait_for_snap_refresh(
+            executor=fake_executor,
+            deadline=None,
+        )
+
+    assert exc_info.value == errors.BaseConfigurationError(
+        brief="Failed to wait for snap refreshes to complete.",
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
+    )

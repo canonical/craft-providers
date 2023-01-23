@@ -2,6 +2,25 @@
 Changelog
 *********
 
+1.7.0 (2023-01-11)
+------------------
+- LXD instances launch from a cached base instance rather than a base image.
+  This reduces disk usage and launch time.
+- For the LXD launch function `launched_environment`, the parameter `use_snapshots`
+  has been replaced by `use_base_instance`. `use_snapshots` still works but logs
+  a deprecation notice.
+- Expire and recreate base instances older than 3 months (90 days)
+- Add `lxc.copy()` method to copy instances
+- Check for network connectivity after network-related commands fail
+- Add documentation for network connectivity issues inside instances
+- Enable testing for Ubuntu 22.04 images
+- Update `MultipassInstance.push_file_io()` to work regardless of the
+  host's working directory
+
+1.6.2 (2022-12-08)
+------------------
+- Disable automatic snap refreshes inside instances.
+
 1.6.1 (2022-10-31)
 ------------------
 - Store temporary files in the home directory

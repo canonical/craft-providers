@@ -387,8 +387,8 @@ class LXDInstance(Executor):
 
         :param image: Image name to launch.
         :param image_remote: Image remote name.
-        :param map_user_id: Whether id mapping should be used.
-        :param uid: If ``map_user_id`` is True,
+        :param map_user_uid: Whether id mapping should be used.
+        :param uid: If ``map_user_uid`` is True,
                     the host user ID to map to instance root.
         :param ephemeral: Flag to enable ephemeral instance.
 
