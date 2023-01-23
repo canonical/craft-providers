@@ -267,7 +267,9 @@ def _set_id_map(
     :param remote: LXD remote to create instance on.
     :param uid: The uid to be mapped. If not supplied, the current user's uid is used.
     """
-    uid = uid if uid else os.getuid()
+    if uid is None:
+        uid = os.getuid()
+
     lxc.config_set(
         instance_name=instance.instance_name,
         key="raw.idmap",
