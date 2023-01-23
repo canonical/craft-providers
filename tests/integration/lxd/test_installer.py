@@ -36,7 +36,7 @@ def test_is_installed():
     assert lxd.is_installed() is expected
 
 
-def test_install(uninstalled_lxd):  # pylint: disable=unused-argument
+def test_install(uninstalled_lxd):
     assert lxd.is_installed() is False
 
     lxd_version = lxd.install()

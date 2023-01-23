@@ -79,9 +79,7 @@ class FakeExecutor(Executor):
             env_args = env_cmd.formulate_command(env, chdir=cwd)
 
         final_cmd = ["fake-executor"] + env_args + command
-        return subprocess.Popen(  # pylint: disable=consider-using-with
-            final_cmd, **kwargs
-        )
+        return subprocess.Popen(final_cmd, **kwargs)
 
     def execute_run(
         self,
@@ -97,9 +95,9 @@ class FakeExecutor(Executor):
             env_args = env_cmd.formulate_command(env, chdir=cwd)
 
         final_cmd = ["fake-executor"] + env_args + command
-        return subprocess.run(  # pylint: disable=subprocess-run-check
-            final_cmd, **kwargs
-        )
+
+        # pylint: disable-next=subprocess-run-check
+        return subprocess.run(final_cmd, **kwargs)
 
     def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:
         self.records_of_pull_file.append(
