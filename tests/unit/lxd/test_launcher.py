@@ -16,6 +16,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
+import sys
 from unittest.mock import MagicMock, Mock, call
 
 import pytest
@@ -109,13 +110,7 @@ def test_launch_no_base_instance(
     ]
     assert fake_instance.mock_calls == [
         call.exists(),
-        call.launch(
-            image="image-name",
-            image_remote="image-remote",
-            ephemeral=False,
-            map_user_uid=False,
-            uid=None,
-        ),
+        call.launch(image="image-name", image_remote="image-remote", ephemeral=False),
     ]
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
@@ -169,17 +164,15 @@ def test_launch_use_base_instance(
     ]
     assert fake_instance.mock_calls == [
         call.exists(),
-        call.launch(
-            image="image-name",
-            image_remote="image-remote",
-            ephemeral=False,
-            map_user_uid=False,
-            uid=None,
-        ),
+        call.launch(image="image-name", image_remote="image-remote", ephemeral=False),
         call.stop(),
         call.start(),
     ]
-    assert fake_base_instance.mock_calls == [call.exists()]
+    assert fake_base_instance.mock_calls == [
+        call.exists(),
+        call.__bool__(),
+        call.__bool__(),
+    ]
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.get_command_environment(),
@@ -188,6 +181,7 @@ def test_launch_use_base_instance(
     ]
 
 
+@pytest.mark.parametrize("map_user_uid, uid", [(True, 1234), (False, None)])
 def test_launch_use_existing_base_instance(
     fake_instance,
     fake_base_instance,
@@ -195,6 +189,8 @@ def test_launch_use_existing_base_instance(
     mock_is_valid,
     mock_lxc,
     mock_lxd_instance,
+    map_user_uid,
+    uid,
 ):
     """Create instance from an existing base instance."""
     fake_base_instance.exists.return_value = True
@@ -204,13 +200,15 @@ def test_launch_use_existing_base_instance(
         base_configuration=mock_base_configuration,
         image_name="image-name",
         image_remote="image-remote",
+        map_user_uid=map_user_uid,
+        uid=uid,
         use_base_instance=True,
         project="test-project",
         remote="test-remote",
         lxc=mock_lxc,
     )
 
-    assert mock_lxc.mock_calls == [
+    expected_mock_lxc_calls = [
         call.project_list("test-remote"),
         call.copy(
             source_remote="test-remote",
@@ -220,6 +218,17 @@ def test_launch_use_existing_base_instance(
             project="test-project",
         ),
     ]
+    if map_user_uid:
+        expected_mock_lxc_calls.append(
+            call.config_set(
+                instance_name=fake_instance.instance_name,
+                key="raw.idmap",
+                value="both 1234 0",
+                project="test-project",
+                remote="test-remote",
+            ),
+        )
+    assert mock_lxc.mock_calls == expected_mock_lxc_calls
     assert mock_lxd_instance.mock_calls == [
         call(
             name=fake_instance.name,
@@ -292,17 +301,16 @@ def test_launch_existing_base_instance_invalid(
     ]
     assert fake_instance.mock_calls == [
         call.exists(),
-        call.launch(
-            image="image-name",
-            image_remote="image-remote",
-            ephemeral=False,
-            map_user_uid=False,
-            uid=None,
-        ),
+        call.launch(image="image-name", image_remote="image-remote", ephemeral=False),
         call.stop(),
         call.start(),
     ]
-    assert fake_base_instance.mock_calls == [call.exists(), call.delete()]
+    assert fake_base_instance.mock_calls == [
+        call.exists(),
+        call.delete(),
+        call.__bool__(),
+        call.__bool__(),
+    ]
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.get_command_environment(),
@@ -330,7 +338,16 @@ def test_launch_all_opts(
         lxc=mock_lxc,
     )
 
-    assert mock_lxc.mock_calls == [call.project_list("test-remote")]
+    assert mock_lxc.mock_calls == [
+        call.project_list("test-remote"),
+        call.config_set(
+            instance_name=fake_instance.instance_name,
+            key="raw.idmap",
+            value="both 1234 0",
+            project="test-project",
+            remote="test-remote",
+        ),
+    ]
     assert mock_lxd_instance.mock_calls == [
         call(
             name=fake_instance.name,
@@ -341,17 +358,14 @@ def test_launch_all_opts(
     ]
     assert fake_instance.mock_calls == [
         call.exists(),
-        call.launch(
-            image="image-name",
-            image_remote="image-remote",
-            ephemeral=True,
-            map_user_uid=True,
-            uid=1234,
-        ),
+        call.launch(image="image-name", image_remote="image-remote", ephemeral=True),
+        call.stop(),
+        call.start(),
     ]
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.setup(executor=fake_instance),
+        call.wait_until_ready(executor=fake_instance),
     ]
 
 
@@ -414,13 +428,7 @@ def test_launch_create_project(
     ]
     assert fake_instance.mock_calls == [
         call.exists(),
-        call.launch(
-            image="image-name",
-            image_remote="image-remote",
-            ephemeral=False,
-            map_user_uid=False,
-            uid=None,
-        ),
+        call.launch(image="image-name", image_remote="image-remote", ephemeral=False),
     ]
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
@@ -524,13 +532,7 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
         call.is_running(),
         call.start(),
         call.delete(),
-        call.launch(
-            image="image-name",
-            image_remote="image-remote",
-            ephemeral=False,
-            map_user_uid=False,
-            uid=None,
-        ),
+        call.launch(image="image-name", image_remote="image-remote", ephemeral=False),
     ]
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
@@ -592,13 +594,7 @@ def test_launch_with_existing_ephemeral_instance(
     assert fake_instance.mock_calls == [
         call.exists(),
         call.delete(),
-        call.launch(
-            image="image-name",
-            image_remote="image-remote",
-            ephemeral=True,
-            map_user_uid=False,
-            uid=None,
-        ),
+        call.launch(image="image-name", image_remote="image-remote", ephemeral=True),
     ]
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
@@ -689,17 +685,15 @@ def test_use_snapshots_deprecated(
     ]
     assert fake_instance.mock_calls == [
         call.exists(),
-        call.launch(
-            image="image-name",
-            image_remote="image-remote",
-            ephemeral=False,
-            map_user_uid=False,
-            uid=None,
-        ),
+        call.launch(image="image-name", image_remote="image-remote", ephemeral=False),
         call.stop(),
         call.start(),
     ]
-    assert fake_base_instance.mock_calls == [call.exists()]
+    assert fake_base_instance.mock_calls == [
+        call.exists(),
+        call.__bool__(),
+        call.__bool__(),
+    ]
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.get_command_environment(),
@@ -796,3 +790,45 @@ def test_is_valid_value_error(logs, mocker, mock_lxc):
         )
         in logs.warning
     )
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="unsupported on windows")
+def test_set_id_map_default(fake_base_instance, mock_lxc, mocker):
+    """Verify `_set_id_map()` sets the id map with default arguments."""
+    mocker.patch("craft_providers.lxd.launcher.os.getuid", return_value=101)
+
+    lxd.launcher._set_id_map(instance=fake_base_instance, lxc=mock_lxc)
+
+    assert mock_lxc.config_set.mock_calls == [
+        call(
+            instance_name=fake_base_instance.instance_name,
+            key="raw.idmap",
+            value="both 101 0",
+            project="default",
+            remote="local",
+        )
+    ]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="unsupported on windows")
+def test_set_id_map_all_options(fake_base_instance, mock_lxc, mocker):
+    """Verify `_set_id_map()` sets the id map with all parameters specified."""
+    mocker.patch("craft_providers.lxd.launcher.os.getuid", return_value=101)
+
+    lxd.launcher._set_id_map(
+        instance=fake_base_instance,
+        lxc=mock_lxc,
+        project="test-project",
+        remote="test-remote",
+        uid=202,
+    )
+
+    assert mock_lxc.config_set.mock_calls == [
+        call(
+            instance_name=fake_base_instance.instance_name,
+            key="raw.idmap",
+            value="both 202 0",
+            project="test-project",
+            remote="test-remote",
+        )
+    ]
