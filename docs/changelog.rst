@@ -2,6 +2,11 @@
 Changelog
 *********
 
+1.7.1 (2023-01-23)
+------------------
+- Set LXD id maps after launching or copying an instance
+- Raise BaseConfigurationError for snap refresh failures
+
 1.7.0 (2023-01-11)
 ------------------
 - LXD instances launch from a cached base instance rather than a base image.
