@@ -298,6 +298,62 @@ def test_config_device_show_error(fake_process):
     )
 
 
+def test_config_get(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "config",
+            "get",
+            "test-remote:test-instance",
+            "test-key",
+        ],
+    )
+
+    LXC().config_get(
+        instance_name="test-instance",
+        key="test-key",
+        project="test-project",
+        remote="test-remote",
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_config_get_error(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "config",
+            "get",
+            "test-remote:test-instance",
+            "test-key",
+        ],
+        returncode=1,
+    )
+
+    with pytest.raises(LXDError) as exc_info:
+        LXC().config_get(
+            instance_name="test-instance",
+            key="test-key",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert exc_info.value == LXDError(
+        brief=(
+            "Failed to get value for config key 'test-key' "
+            "for instance 'test-instance'."
+        ),
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
+    )
+
+
 def test_config_set(fake_process):
     fake_process.register_subprocess(
         [
