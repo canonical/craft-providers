@@ -42,6 +42,29 @@ def test_exec(instance, lxc, project):
     assert proc.stdout == b"this is a test\n"
 
 
+def test_config_get_and_set(instance, instance_name, lxc, project):
+    """Set and get config key/value pairs."""
+    lxc.config_set(
+        instance_name=instance,
+        key="user.test-key",  # `user` namespace is for arbitrary config values
+        value="test-value",
+        project=project,
+    )
+
+    value = lxc.config_get(instance_name=instance, key="user.test-key", project=project)
+
+    assert value == "test-value"
+
+
+def test_config_get_non_existent_key(instance, instance_name, lxc, project):
+    """Get a non-existent key and confirm the value is an empty string."""
+    value = lxc.config_get(
+        instance_name=instance, key="non-existant-key", project=project
+    )
+
+    assert value == ""
+
+
 def test_copy(instance, instance_name, lxc, project):
     """Test `copy()` with default arguments."""
     destination_instance_name = instance_name + "-destination"
