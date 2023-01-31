@@ -16,7 +16,6 @@
 #
 import pathlib
 import subprocess
-from unittest.mock import call
 
 import pytest
 
@@ -46,13 +45,11 @@ def test_lxc_run_with_check(check, mocker, tmp_path):
 
     LXC()._run_lxc(command=["test-command"], check=check, project="test-project")
 
-    assert mock_run.mock_calls[:1] == [
-        call(
-            ["lxc", "--project", "test-project", "test-command"],
-            check=check,
-            stdin=subprocess.DEVNULL,
-        ),
-    ]
+    mock_run.assert_called_once_with(
+        ["lxc", "--project", "test-project", "test-command"],
+        check=check,
+        stdin=subprocess.DEVNULL,
+    )
 
 
 def test_lxc_run_with_project(mocker, tmp_path):
