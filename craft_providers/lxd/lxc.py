@@ -66,7 +66,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         self,
         command: List[str],
         *,
-        check: bool,
+        check: bool = True,
         project: Optional[str] = None,
         stdin: StdinType = StdinType.INTERACTIVE,
         **kwargs,
@@ -133,7 +133,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -171,7 +170,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -197,7 +195,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             proc = self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -233,7 +230,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -278,7 +274,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -313,7 +308,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -410,7 +404,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -477,7 +470,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -531,7 +523,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             proc = self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -591,7 +582,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 stdin=StdinType.INTERACTIVE,
                 project=project,
             )
@@ -634,7 +624,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -664,7 +653,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -687,7 +675,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             proc = self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -728,7 +715,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             proc = self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -795,7 +781,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
                 input=encoded_config,
             )
@@ -822,7 +807,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             proc = self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -847,7 +831,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -870,7 +853,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -894,7 +876,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             proc = self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
             )
         except subprocess.CalledProcessError as error:
             raise LXDError(
@@ -951,7 +932,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -977,7 +957,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
             )
         except subprocess.CalledProcessError as error:
             raise LXDError(
@@ -996,7 +975,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             proc = self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
             )
         except subprocess.CalledProcessError as error:
             raise LXDError(
@@ -1032,7 +1010,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:
@@ -1072,7 +1049,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 project=project,
             )
         except subprocess.CalledProcessError as error:

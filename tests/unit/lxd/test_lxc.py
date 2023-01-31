@@ -32,13 +32,27 @@ def test_lxc_run_default(mocker, tmp_path):
 
     LXC()._run_lxc(
         command=["test-command"],
-        check=True,
     )
 
     assert mock_run.mock_calls[:1] == [
         call(
             ["lxc", "test-command"],
             check=True,
+            stdin=subprocess.DEVNULL,
+        ),
+    ]
+
+@pytest.mark.parametrize("check", [True, False])
+def test_lxc_run_with_check(check, mocker, tmp_path):
+    """Test check parameter."""
+    mock_run = mocker.patch("subprocess.run")
+
+    LXC()._run_lxc(command=["test-command"], check=check, project="test-project")
+
+    assert mock_run.mock_calls[:1] == [
+        call(
+            ["lxc", "--project", "test-project", "test-command"],
+            check=check,
             stdin=subprocess.DEVNULL,
         ),
     ]
@@ -50,7 +64,6 @@ def test_lxc_run_with_project(mocker, tmp_path):
 
     LXC()._run_lxc(
         command=["test-command"],
-        check=True,
         project="test-project",
     )
 
@@ -69,7 +82,6 @@ def test_lxc_run_with_stdin(mocker, tmp_path):
 
     LXC()._run_lxc(
         command=["test-command"],
-        check=True,
         project="test-project",
         stdin=lxc.StdinType.NULL,
     )
@@ -89,7 +101,6 @@ def test_lxc_run_with_input(mocker, tmp_path):
 
     LXC()._run_lxc(
         command=["test-command"],
-        check=True,
         project="test-project",
         stdin=lxc.StdinType.NULL,
         input="test-input",
@@ -110,7 +121,6 @@ def test_lxc_run_with_input_and_stdin(mocker, tmp_path):
 
     LXC()._run_lxc(
         command=["test-command"],
-        check=True,
         project="test-project",
         stdin=lxc.StdinType.NULL,
         input="test-input",
