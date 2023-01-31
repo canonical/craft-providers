@@ -30,9 +30,7 @@ def test_lxc_run_default(mocker, tmp_path):
     """Test _lxc_run with default arguments."""
     mock_run = mocker.patch("subprocess.run")
 
-    LXC()._run_lxc(
-        command=["test-command"],
-    )
+    LXC()._run_lxc(command=["test-command"])
 
     assert mock_run.mock_calls[:1] == [
         call(
@@ -41,6 +39,7 @@ def test_lxc_run_default(mocker, tmp_path):
             stdin=subprocess.DEVNULL,
         ),
     ]
+
 
 @pytest.mark.parametrize("check", [True, False])
 def test_lxc_run_with_check(check, mocker, tmp_path):
@@ -62,10 +61,7 @@ def test_lxc_run_with_project(mocker, tmp_path):
     """Test _lxc_run with project."""
     mock_run = mocker.patch("subprocess.run")
 
-    LXC()._run_lxc(
-        command=["test-command"],
-        project="test-project",
-    )
+    LXC()._run_lxc(command=["test-command"], project="test-project")
 
     assert mock_run.mock_calls[:1] == [
         call(
@@ -81,9 +77,7 @@ def test_lxc_run_with_stdin(mocker, tmp_path):
     mock_run = mocker.patch("subprocess.run")
 
     LXC()._run_lxc(
-        command=["test-command"],
-        project="test-project",
-        stdin=lxc.StdinType.NULL,
+        command=["test-command"], project="test-project", stdin=lxc.StdinType.NULL
     )
 
     assert mock_run.mock_calls[:1] == [
