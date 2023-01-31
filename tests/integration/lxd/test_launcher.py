@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -560,6 +560,47 @@ def test_launch_instance_config_incompatible(core20_instance):
     assert exc_info.value.brief == (
         "Incompatible base detected:"
         " Expected image compatibility tag 'buildd-base-v0', found 'invalid'."
+    )
+
+    # when auto_clean is true, the instance will be deleted and recreated
+    lxd.launch(
+        name=core20_instance.name,
+        base_configuration=base_configuration,
+        image_name="20.04",
+        image_remote="ubuntu",
+        auto_clean=True,
+    )
+
+    assert core20_instance.exists()
+    assert core20_instance.is_running()
+
+
+def test_launch_instance_id_map_incompatible(core20_instance):
+    """Raise an error if the instance's id map is incompatible.
+    If auto_clean is true, delete and recreate the instance.
+    """
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+
+    lxc = lxd.LXC()
+    lxc.config_set(
+        instance_name=core20_instance.instance_name,
+        key="raw.idmap",
+        value="",  # equivalent to `lxc config unset`, which is not yet implemented
+    )
+
+    # will raise compatibility error when auto_clean is false
+    with pytest.raises(bases.BaseCompatibilityError) as exc_info:
+        lxd.launch(
+            name=core20_instance.name,
+            base_configuration=base_configuration,
+            image_name="20.04",
+            image_remote="ubuntu",
+            map_user_uid=True,
+        )
+
+    assert exc_info.value.brief == (
+        "Incompatible base detected: "
+        "the instance's id map ('raw.idmap') is not configured as expected."
     )
 
     # when auto_clean is true, the instance will be deleted and recreated
