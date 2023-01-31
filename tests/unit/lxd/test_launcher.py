@@ -1,6 +1,6 @@
 # -*- Mode:Python; indent-tabs-mode:nil; tab-width:4 -*-
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -84,6 +84,11 @@ def mock_lxd_instance(fake_instance, fake_base_instance, mocker):
 @pytest.fixture
 def mock_is_valid(mocker):
     yield mocker.patch("craft_providers.lxd.launcher._is_valid", return_value=True)
+
+
+@pytest.fixture
+def mock_check_id_map(mocker):
+    yield mocker.patch("craft_providers.lxd.launcher._check_id_map", return_value=True)
 
 
 def test_launch_no_base_instance(
@@ -437,7 +442,11 @@ def test_launch_create_project(
 
 
 def test_launch_with_existing_instance_not_running(
-    fake_instance, mock_base_configuration, mock_lxc, mock_lxd_instance
+    fake_instance,
+    mock_base_configuration,
+    mock_check_id_map,
+    mock_lxc,
+    mock_lxd_instance,
 ):
     """If the existing instance is not running, start it."""
     fake_instance.exists.return_value = True
@@ -467,7 +476,11 @@ def test_launch_with_existing_instance_not_running(
 
 
 def test_launch_with_existing_instance_running(
-    fake_instance, mock_base_configuration, mock_lxc, mock_lxd_instance
+    fake_instance,
+    mock_base_configuration,
+    mock_check_id_map,
+    mock_lxc,
+    mock_lxd_instance,
 ):
     """If the existing instance is running, do not start it."""
     fake_instance.exists.return_value = True
@@ -498,7 +511,11 @@ def test_launch_with_existing_instance_running(
 
 
 def test_launch_with_existing_instance_incompatible_with_auto_clean(
-    fake_instance, mock_base_configuration, mock_lxc, mock_lxd_instance
+    fake_instance,
+    mock_base_configuration,
+    mock_check_id_map,
+    mock_lxc,
+    mock_lxd_instance,
 ):
     """If instance is incompatible and auto_clean is true, launch a new instance."""
     fake_instance.exists.return_value = True
@@ -542,7 +559,11 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
 
 
 def test_launch_with_existing_instance_incompatible_without_auto_clean_error(
-    fake_instance, mock_base_configuration, mock_lxc, mock_lxd_instance
+    fake_instance,
+    mock_base_configuration,
+    mock_check_id_map,
+    mock_lxc,
+    mock_lxd_instance,
 ):
     """If instance is incompatible and auto_clean is False, raise an error."""
     fake_instance.exists.return_value = True
@@ -567,7 +588,11 @@ def test_launch_with_existing_instance_incompatible_without_auto_clean_error(
 
 
 def test_launch_with_existing_ephemeral_instance(
-    fake_instance, mock_base_configuration, mock_lxc, mock_lxd_instance
+    fake_instance,
+    mock_base_configuration,
+    mock_check_id_map,
+    mock_lxc,
+    mock_lxd_instance,
 ):
     """Delete and recreate existing ephemeral instances."""
     fake_instance.exists.return_value = True
@@ -600,6 +625,71 @@ def test_launch_with_existing_ephemeral_instance(
         call.get_command_environment(),
         call.setup(executor=fake_instance),
     ]
+
+
+def test_launch_existing_instance_id_map_mismatch_with_auto_clean(
+    fake_instance,
+    logs,
+    mock_base_configuration,
+    mock_check_id_map,
+    mock_lxc,
+    mock_lxd_instance,
+):
+    """If the id map is incorrect and auto_clean is true, return False."""
+    fake_instance.exists.return_value = True
+    mock_check_id_map.return_value = False
+
+    result = lxd.launcher._launch_existing_instance(
+        instance=fake_instance,
+        lxc=mock_lxc,
+        base_configuration=mock_base_configuration,
+        project="test-project",
+        remote="test-remote",
+        auto_clean=True,
+        ephemeral=False,
+        map_user_uid=True,
+        uid=1234,
+    )
+
+    assert not result
+
+    assert (
+        Exact(
+            f"Cleaning incompatible instance '{fake_instance.instance_name}' (reason: "
+            "the instance's id map ('raw.idmap') is not configured as expected)."
+        )
+        in logs.warning
+    )
+
+
+def test_launch_existing_instance_id_map_mismatch_without_auto_clean(
+    fake_instance,
+    mock_base_configuration,
+    mock_check_id_map,
+    mock_lxc,
+    mock_lxd_instance,
+):
+    """If the id map is incorrect and auto_clean is False, raise an error."""
+    fake_instance.exists.return_value = True
+    mock_check_id_map.return_value = False
+
+    with pytest.raises(bases.BaseCompatibilityError) as raised:
+        lxd.launcher._launch_existing_instance(
+            instance=fake_instance,
+            lxc=mock_lxc,
+            base_configuration=mock_base_configuration,
+            project="test-project",
+            remote="test-remote",
+            auto_clean=False,
+            ephemeral=False,
+            map_user_uid=True,
+            uid=1234,
+        )
+
+    assert raised.value.brief == (
+        "Incompatible base detected: "
+        "the instance's id map ('raw.idmap') is not configured as expected."
+    )
 
 
 def test_name_matches_base_name(
@@ -832,3 +922,73 @@ def test_set_id_map_all_options(fake_base_instance, mock_lxc, mocker):
             remote="test-remote",
         )
     ]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="unsupported on windows")
+@pytest.mark.parametrize(
+    "map_user_uid, actual_uid, expected_uid, expected_result",
+    [
+        # return True if an id map is not expected and there is no id map
+        (False, None, None, True),
+        # return False if an id map is expected and there is no id map
+        (True, None, 5678, False),
+        # return False if id map is not expected and there is an id map
+        (False, 1234, None, False),
+        # return True if an id map is expected and the uid matches
+        (True, 1234, 1234, True),
+        # return False if an id map is expected and the uid does not match
+        (True, 1234, 5678, False),
+        # return True if an id map is expected and the uid matches the current users uid
+        (True, 101, None, True),
+    ],
+)
+def test_check_id_map(
+    map_user_uid,
+    expected_uid,
+    actual_uid,
+    expected_result,
+    fake_base_instance,
+    mock_lxc,
+    mocker,
+):
+    """Verify the instances id map is properly checked."""
+    mocker.patch("craft_providers.lxd.launcher.os.getuid", return_value=101)
+
+    if actual_uid:
+        mock_lxc.config_get.return_value = f"both {actual_uid} 0"
+    else:
+        mock_lxc.config_get.return_value = ""
+
+    result = lxd.launcher._check_id_map(
+        instance=fake_base_instance,
+        lxc=mock_lxc,
+        project="test-project",
+        remote="test-remote",
+        map_user_uid=map_user_uid,
+        uid=expected_uid,
+    )
+
+    assert result == expected_result
+
+
+def test_check_id_map_wrong_format(fake_base_instance, logs, mock_lxc, mocker):
+    """Return false if the id map is not formatted as expected."""
+    mock_lxc.config_get.return_value = "gid 100-200 300-400"
+
+    result = lxd.launcher._check_id_map(
+        instance=fake_base_instance,
+        lxc=mock_lxc,
+        project="test-project",
+        remote="test-remote",
+        map_user_uid=True,
+        uid=1234,
+    )
+
+    assert not result
+    assert (
+        Exact(
+            f"Unexpected id map for '{fake_base_instance.instance_name}' "
+            "(expected 'both 1234 0', got 'gid 100-200 300-400')."
+        )
+        in logs.debug
+    )

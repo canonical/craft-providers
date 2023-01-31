@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -19,6 +19,7 @@
 
 import logging
 import os
+import re
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -61,7 +62,7 @@ def _create_instance(
     :param image_remote: LXD image to use, e.g. "ubuntu".
     :param ephemeral: After the instance is stopped, delete it.
     :param map_user_uid: Map host uid/gid to instance's root uid/gid.
-    :param uid: The uid to be mapped, if ``map_user_id`` is enabled.
+    :param uid: The uid to be mapped, if ``map_user_uid`` is enabled.
     :param project: LXD project to create instance in.
     :param remote: LXD remote to create instance on.
     :param lxc: LXC client.
@@ -200,23 +201,60 @@ def _is_valid(*, instance_name: str, project: str, remote: str, lxc: LXC) -> boo
 def _launch_existing_instance(
     *,
     instance: LXDInstance,
+    lxc: LXC,
+    project: str,
+    remote: str,
     auto_clean: bool,
     base_configuration: Base,
     ephemeral: bool,
+    map_user_uid: bool,
+    uid: Optional[int],
 ) -> bool:
     """Start and warmup an existing instance.
 
+    Autocleaning allows for an incompatible instance to be deleted and rebuilt rather
+    than raising an error. Autocleaning will be triggered if:
+    - the base instance is incompatible for any reason (e.g. wrong OS)
+    - the instance's existing id map does not match the id map passed to this function
+
     :param instance: LXD instance to launch
+    :param lxc: LXC client.
+    :param project: LXD project of the instance.
+    :param remote: LXD remote of the instance.
     :param auto_clean: If true, clean incompatible instances.
     :param base_configuration: Base configuration to apply to the instance.
     :param ephemeral: If the instance is ephemeral, it will not be launched.
     Instead, the instance will be deleted and the function will return false.
+    :param map_user_uid: True if host uid/gid should be mapped to the instance's
+    root uid/gid.
+    :param uid: The host uid that should be mapped, if ``map_user_uid`` is enabled.
+    If none, use the current user's uid.
 
     :returns: True if the instance was started and warmed up. False otherwise.
 
     :raises BaseCompatibilityError: If the instance is incompatible.
     """
-    # TODO: auto clean instance if map_user_uid is mismatched
+    if not _check_id_map(
+        instance=instance,
+        lxc=lxc,
+        project=project,
+        remote=remote,
+        map_user_uid=map_user_uid,
+        uid=uid,
+    ):
+        if auto_clean:
+            logger.warning(
+                "Cleaning incompatible instance %r (reason: %s).",
+                instance.instance_name,
+                "the instance's id map ('raw.idmap') is not configured as expected",
+            )
+            # delete the instance so a new instance can be created
+            instance.delete()
+            return False
+        raise bases.BaseCompatibilityError(
+            reason="the instance's id map ('raw.idmap') is not configured as expected"
+        )
+
     if ephemeral:
         logger.warning("Instance exists and is ephemeral. Cleaning instance.")
         instance.delete()
@@ -232,7 +270,7 @@ def _launch_existing_instance(
         base_configuration.warmup(executor=instance)
         return True
     except bases.BaseCompatibilityError as error:
-        # delete the instance and continue on so a new instance can be created
+        # delete the instance so a new instance can be created
         if auto_clean:
             logger.warning(
                 "Cleaning incompatible instance %r (reason: %s).",
@@ -242,6 +280,60 @@ def _launch_existing_instance(
             instance.delete()
             return False
         raise
+
+
+def _check_id_map(
+    *,
+    instance: LXDInstance,
+    lxc: LXC,
+    project: str,
+    remote: str,
+    map_user_uid: bool,
+    uid: Optional[int],
+) -> bool:
+    """Check if the instance's id map matches the uid passed as an argument.
+
+    :param instance: LXD instance to set the idmap of
+    :param lxc: LXC client.
+    :param project: LXD project to create instance in.
+    :param remote: LXD remote to create instance on.
+    :param map_user_uid: If true, check that the instance has an id map.
+    If false, check that the instance has no id map.
+    :param uid: The uid that should already be mapped. If None, the current user's uid
+    is used.
+
+    :returns: True if the instance's id map matches the expected id map.
+    """
+    if uid is None:
+        uid = os.getuid()
+
+    configured_id_map = lxc.config_get(
+        instance_name=instance.instance_name,
+        key="raw.idmap",
+        project=project,
+        remote=remote,
+    )
+
+    # if the id map is not configured and should not be configured, then return True
+    if not configured_id_map and not map_user_uid:
+        return True
+
+    match = re.fullmatch("both ([0-9]+) 0", configured_id_map)
+
+    # if the id map is not exactly what craft-providers configured, then return False
+    if not match:
+        logger.debug(
+            "Unexpected id map for %r (expected 'both %s 0', got %r).",
+            instance.instance_name,
+            uid,
+            configured_id_map,
+        )
+        return False
+
+    # get the configured uid from the id map
+    configured_uid = int(match.group(1))
+
+    return configured_uid == uid
 
 
 def _set_id_map(
@@ -324,7 +416,7 @@ def launch(
     cannot be converted to ephemeral instances, so if the instance already exists, it
     will be deleted, then recreated as an ephemeral instance.
     :param map_user_uid: Map host uid/gid to instance's root uid/gid.
-    :param uid: The uid to be mapped, if ``map_user_id`` is enabled.
+    :param uid: The uid to be mapped, if ``map_user_uid`` is enabled.
     :param use_base_instance: Use the base instance mechanisms to reduce setup time.
     :param use_snapshots: Deprecated parameter replaced by `use_base_instance`.
     :param project: LXD project to create instance in.
@@ -338,6 +430,8 @@ def launch(
     :raises LXDError: on unexpected LXD error.
     :raises ProviderError: if name of instance collides with base instance name.
     """
+    # TODO: create a private class to reduce the parameters passed between methods
+
     if use_snapshots:
         logger.warning(
             "Deprecated: Parameter 'use_snapshots' is deprecated. "
@@ -367,9 +461,14 @@ def launch(
         # instance to be deleted or if the instance is supposed to be ephemeral)
         if _launch_existing_instance(
             instance=instance,
+            lxc=lxc,
+            project=project,
+            remote=remote,
             auto_clean=auto_clean,
             base_configuration=base_configuration,
             ephemeral=ephemeral,
+            map_user_uid=map_user_uid,
+            uid=uid,
         ):
             return instance
 
