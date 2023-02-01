@@ -235,7 +235,7 @@ def test_execute_popen_with_cwd(mock_lxc, instance):
 
 
 def test_execute_popen_with_env(mock_lxc, instance):
-    instance.execute_popen(command=["test-command", "flags"], env=dict(foo="bar"))
+    instance.execute_popen(command=["test-command", "flags"], env={"foo": "bar"})
 
     assert mock_lxc.mock_calls == [
         mock.call.exec(
@@ -290,7 +290,7 @@ def test_execute_run_with_default_command_env(mock_lxc):
         lxc=mock_lxc,
     )
 
-    instance.execute_run(command=["test-command", "flags"], env=dict(foo="bar"))
+    instance.execute_run(command=["test-command", "flags"], env={"foo": "bar"})
 
     assert mock_lxc.mock_calls == [
         mock.call.exec(
@@ -328,7 +328,7 @@ def test_execute_run_with_default_command_env_unset(mock_lxc):
 
 
 def test_execute_run_with_env(mock_lxc, instance):
-    instance.execute_run(command=["test-command", "flags"], env=dict(foo="bar"))
+    instance.execute_run(command=["test-command", "flags"], env={"foo": "bar"})
 
     assert mock_lxc.mock_calls == [
         mock.call.exec(
@@ -344,7 +344,7 @@ def test_execute_run_with_env(mock_lxc, instance):
 
 def test_execute_run_with_env_unset(mock_lxc, instance):
     instance.execute_run(
-        command=["test-command", "flags"], env=dict(foo="bar", TERM=None)
+        command=["test-command", "flags"], env={"foo": "bar", "TERM": None}
     )
 
     assert mock_lxc.mock_calls == [

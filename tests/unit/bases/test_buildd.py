@@ -86,11 +86,11 @@ def mock_inject_from_host(mocker):
             ).encode(),
         ),
         (
-            dict(
-                https_proxy="http://foo.bar:8081",
-                PATH="/snap",
-                http_proxy="http://foo.bar:8080",
-            ),
+            {
+                "https_proxy": "http://foo.bar:8081",
+                "PATH": "/snap",
+                "http_proxy": "http://foo.bar:8080",
+            },
             (
                 "https_proxy=http://foo.bar:8081\n"
                 "PATH=/snap\nhttp_proxy=http://foo.bar:8080\n"
@@ -276,42 +276,42 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
     base_config.setup(executor=fake_executor)
 
     expected_push_file_io = [
-        dict(
-            destination="/etc/apt/apt.conf.d/20auto-upgrades",
-            content=dedent(
+        {
+            "destination": "/etc/apt/apt.conf.d/20auto-upgrades",
+            "content": dedent(
                 """\
                 APT::Periodic::Update-Package-Lists "10000";
                 APT::Periodic::Unattended-Upgrade "0";
                 """
             ).encode(),
-            file_mode="0644",
-            group="root",
-            user="root",
-        ),
-        dict(
-            destination="/etc/environment",
-            content=etc_environment_content,
-            file_mode="0644",
-            group="root",
-            user="root",
-        ),
-        dict(
-            destination="/etc/craft-instance.conf",
-            content=(f"compatibility_tag: {expected_tag}\n").encode(),
-            file_mode="0644",
-            group="root",
-            user="root",
-        ),
-        dict(
-            destination="/etc/hostname",
-            content=f"{hostname}\n".encode(),
-            file_mode="0644",
-            group="root",
-            user="root",
-        ),
-        dict(
-            destination="/etc/systemd/network/10-eth0.network",
-            content=dedent(
+            "file_mode": "0644",
+            "group": "root",
+            "user": "root",
+        },
+        {
+            "destination": "/etc/environment",
+            "content": etc_environment_content,
+            "file_mode": "0644",
+            "group": "root",
+            "user": "root",
+        },
+        {
+            "destination": "/etc/craft-instance.conf",
+            "content": (f"compatibility_tag: {expected_tag}\n").encode(),
+            "file_mode": "0644",
+            "group": "root",
+            "user": "root",
+        },
+        {
+            "destination": "/etc/hostname",
+            "content": f"{hostname}\n".encode(),
+            "file_mode": "0644",
+            "group": "root",
+            "user": "root",
+        },
+        {
+            "destination": "/etc/systemd/network/10-eth0.network",
+            "content": dedent(
                 """\
                 [Match]
                 Name=eth0
@@ -325,32 +325,32 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
                 UseMTU=true
                 """
             ).encode(),
-            file_mode="0644",
-            group="root",
-            user="root",
-        ),
-        dict(
-            destination="/etc/apt/apt.conf.d/00no-recommends",
-            content=b'APT::Install-Recommends "false";\n',
-            file_mode="0644",
-            group="root",
-            user="root",
-        ),
-        dict(
-            destination="/etc/apt/apt.conf.d/00update-errors",
-            content=b'APT::Update::Error-Mode "any";\n',
-            file_mode="0644",
-            group="root",
-            user="root",
-        ),
+            "file_mode": "0644",
+            "group": "root",
+            "user": "root",
+        },
+        {
+            "destination": "/etc/apt/apt.conf.d/00no-recommends",
+            "content": b'APT::Install-Recommends "false";\n',
+            "file_mode": "0644",
+            "group": "root",
+            "user": "root",
+        },
+        {
+            "destination": "/etc/apt/apt.conf.d/00update-errors",
+            "content": b'APT::Update::Error-Mode "any";\n',
+            "file_mode": "0644",
+            "group": "root",
+            "user": "root",
+        },
     ]
     expected_push_file = []
     if no_cdn:
         expected_push_file.append(
-            dict(
-                source=Path("/etc/systemd/system/snapd.service.d/no-cdn.conf"),
-                destination=Path("/etc/systemd/system/snapd.service.d/no-cdn.conf"),
-            )
+            {
+                "source": Path("/etc/systemd/system/snapd.service.d/no-cdn.conf"),
+                "destination": Path("/etc/systemd/system/snapd.service.d/no-cdn.conf"),
+            }
         )
 
     assert fake_executor.records_of_push_file_io == expected_push_file_io
@@ -792,10 +792,10 @@ def test_setup_resolved_restart_failure(
 
 def test_setup_snapd_proxy(fake_executor, fake_process):
     """Verify snapd proxy is set or unset."""
-    environment = dict(
-        http_proxy="http://foo.bar:8080",
-        https_proxy="http://foo.bar:8081",
-    )
+    environment = {
+        "http_proxy": "http://foo.bar:8080",
+        "https_proxy": "http://foo.bar:8081",
+    }
     base_config = buildd.BuilddBase(
         alias=buildd.BuilddBaseAlias.FOCAL,
         environment=environment,  # type: ignore
@@ -1086,10 +1086,10 @@ def test_ensure_config_compatible_empty_config_returns_none(fake_executor):
     "environment",
     [
         None,
-        dict(
-            https_proxy="http://foo.bar:8081",
-            http_proxy="http://foo.bar:8080",
-        ),
+        {
+            "https_proxy": "http://foo.bar:8081",
+            "http_proxy": "http://foo.bar:8080",
+        },
     ],
 )
 def test_warmup_overall(environment, fake_process, fake_executor, mock_load, mocker):
@@ -1484,7 +1484,6 @@ def test_disable_and_wait_for_snap_refresh_hold_error(fake_process, fake_executo
     )
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
-        # pylint: disable-next=protected-access
         base_config._disable_and_wait_for_snap_refresh(
             executor=fake_executor,
             deadline=None,
@@ -1510,7 +1509,6 @@ def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executo
     )
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
-        # pylint: disable-next=protected-access
         base_config._disable_and_wait_for_snap_refresh(
             executor=fake_executor,
             deadline=None,
