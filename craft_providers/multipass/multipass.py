@@ -334,7 +334,6 @@ class Multipass:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         ) as proc:
-
             # Should never happen, but mypy/pyright makes noise.
             assert proc.stdout is not None
             assert proc.stderr is not None
