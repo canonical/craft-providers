@@ -16,7 +16,6 @@
 #
 import pathlib
 import subprocess
-from unittest.mock import call
 
 import pytest
 
@@ -32,13 +31,11 @@ def test_lxc_run_default(mocker, tmp_path):
 
     LXC()._run_lxc(command=["test-command"])
 
-    assert mock_run.mock_calls[:1] == [
-        call(
-            ["lxc", "test-command"],
-            check=True,
-            stdin=subprocess.DEVNULL,
-        ),
-    ]
+    mock_run.assert_called_once_with(
+        ["lxc", "test-command"],
+        check=True,
+        stdin=subprocess.DEVNULL,
+    )
 
 
 @pytest.mark.parametrize("check", [True, False])
@@ -48,13 +45,11 @@ def test_lxc_run_with_check(check, mocker, tmp_path):
 
     LXC()._run_lxc(command=["test-command"], check=check, project="test-project")
 
-    assert mock_run.mock_calls[:1] == [
-        call(
-            ["lxc", "--project", "test-project", "test-command"],
-            check=check,
-            stdin=subprocess.DEVNULL,
-        ),
-    ]
+    mock_run.assert_called_once_with(
+        ["lxc", "--project", "test-project", "test-command"],
+        check=check,
+        stdin=subprocess.DEVNULL,
+    )
 
 
 def test_lxc_run_with_project(mocker, tmp_path):
@@ -63,13 +58,11 @@ def test_lxc_run_with_project(mocker, tmp_path):
 
     LXC()._run_lxc(command=["test-command"], project="test-project")
 
-    assert mock_run.mock_calls[:1] == [
-        call(
-            ["lxc", "--project", "test-project", "test-command"],
-            check=True,
-            stdin=subprocess.DEVNULL,
-        ),
-    ]
+    mock_run.assert_called_once_with(
+        ["lxc", "--project", "test-project", "test-command"],
+        check=True,
+        stdin=subprocess.DEVNULL,
+    )
 
 
 def test_lxc_run_with_stdin(mocker, tmp_path):
@@ -80,13 +73,11 @@ def test_lxc_run_with_stdin(mocker, tmp_path):
         command=["test-command"], project="test-project", stdin=lxc.StdinType.NULL
     )
 
-    assert mock_run.mock_calls[:1] == [
-        call(
-            ["lxc", "--project", "test-project", "test-command"],
-            check=True,
-            stdin=None,
-        ),
-    ]
+    mock_run.assert_called_once_with(
+        ["lxc", "--project", "test-project", "test-command"],
+        check=True,
+        stdin=None,
+    )
 
 
 def test_lxc_run_with_input(mocker, tmp_path):
@@ -100,13 +91,11 @@ def test_lxc_run_with_input(mocker, tmp_path):
         input="test-input",
     )
 
-    assert mock_run.mock_calls[:1] == [
-        call(
-            ["lxc", "--project", "test-project", "test-command"],
-            check=True,
-            input="test-input",
-        ),
-    ]
+    mock_run.assert_called_once_with(
+        ["lxc", "--project", "test-project", "test-command"],
+        check=True,
+        input="test-input",
+    )
 
 
 def test_lxc_run_with_input_and_stdin(mocker, tmp_path):
@@ -120,13 +109,11 @@ def test_lxc_run_with_input_and_stdin(mocker, tmp_path):
         input="test-input",
     )
 
-    assert mock_run.mock_calls[:1] == [
-        call(
-            ["lxc", "--project", "test-project", "test-command"],
-            check=True,
-            input="test-input",
-        ),
-    ]
+    mock_run.assert_called_once_with(
+        ["lxc", "--project", "test-project", "test-command"],
+        check=True,
+        input="test-input",
+    )
 
 
 def test_config_device_add_disk(fake_process, tmp_path):
