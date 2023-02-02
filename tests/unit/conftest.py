@@ -56,13 +56,13 @@ class FakeExecutor(Executor):
         user: str = "root",
     ) -> None:
         self.records_of_push_file_io.append(
-            dict(
-                destination=destination.as_posix(),
-                content=content.read(),
-                file_mode=file_mode,
-                group=group,
-                user=user,
-            )
+            {
+                "destination": destination.as_posix(),
+                "content": content.read(),
+                "file_mode": file_mode,
+                "group": group,
+                "user": user,
+            }
         )
 
     def execute_popen(
@@ -103,18 +103,18 @@ class FakeExecutor(Executor):
 
     def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:
         self.records_of_pull_file.append(
-            dict(
-                source=source,
-                destination=destination,
-            )
+            {
+                "source": source,
+                "destination": destination,
+            }
         )
 
     def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:
         self.records_of_push_file.append(
-            dict(
-                source=source,
-                destination=destination,
-            )
+            {
+                "source": source,
+                "destination": destination,
+            }
         )
 
     def delete(self) -> None:
@@ -125,7 +125,7 @@ class FakeExecutor(Executor):
         return True
 
     def mount(self, *, host_source: pathlib.Path, target: pathlib.Path) -> None:
-        self.records_of_mount.append(dict(host_source=host_source, target=target))
+        self.records_of_mount.append({"host_source": host_source, "target": target})
 
     def is_running(self) -> bool:
         self.records_of_is_running.append({})
