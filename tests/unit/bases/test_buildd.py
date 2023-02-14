@@ -73,6 +73,8 @@ def mock_inject_from_host(mocker):
         (buildd.BuilddBaseAlias.BIONIC, "test-bionic-host"),
         (buildd.BuilddBaseAlias.FOCAL, "test-focal-host"),
         (buildd.BuilddBaseAlias.JAMMY, "test-jammy-host"),
+        (buildd.BuilddBaseAlias.KINETIC, "test-kinetic-host"),
+        (buildd.BuilddBaseAlias.LUNAR, "test-lunar-host"),
     ],
 )
 @pytest.mark.parametrize(
@@ -846,6 +848,8 @@ def test_setup_snapd_failures(fake_process, fake_executor, fail_index):
         buildd.BuilddBaseAlias.BIONIC,
         buildd.BuilddBaseAlias.FOCAL,
         buildd.BuilddBaseAlias.JAMMY,
+        buildd.BuilddBaseAlias.KINETIC,
+        buildd.BuilddBaseAlias.LUNAR,
     ],
 )
 @pytest.mark.parametrize("system_running_ready_stdout", ["degraded", "running"])
@@ -918,6 +922,8 @@ def test_wait_for_system_ready(
         buildd.BuilddBaseAlias.BIONIC,
         buildd.BuilddBaseAlias.FOCAL,
         buildd.BuilddBaseAlias.JAMMY,
+        buildd.BuilddBaseAlias.KINETIC,
+        buildd.BuilddBaseAlias.LUNAR,
     ],
 )
 def test_wait_for_system_ready_timeout(fake_executor, fake_process, alias):
@@ -950,6 +956,8 @@ def test_wait_for_system_ready_timeout(fake_executor, fake_process, alias):
         buildd.BuilddBaseAlias.BIONIC,
         buildd.BuilddBaseAlias.FOCAL,
         buildd.BuilddBaseAlias.JAMMY,
+        buildd.BuilddBaseAlias.KINETIC,
+        buildd.BuilddBaseAlias.LUNAR,
     ],
 )
 def test_wait_for_system_ready_timeout_in_network(

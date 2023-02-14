@@ -1,6 +1,6 @@
 # -*- Mode:Python; indent-tabs-mode:nil; tab-width:4 -*-
 #
-# Copyright 2022 Canonical Ltd.
+# Copyright 2022-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -33,6 +33,7 @@ from .multipass_instance import MultipassInstance
 logger = logging.getLogger(__name__)
 
 
+# TODO: support KINETIC and LUNAR
 PROVIDER_BASE_TO_MULTIPASS_BASE = {
     bases.BuilddBaseAlias.BIONIC.value: "snapcraft:18.04",
     bases.BuilddBaseAlias.FOCAL.value: "snapcraft:20.04",

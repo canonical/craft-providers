@@ -28,6 +28,8 @@ from craft_providers import bases, lxd
         bases.BuilddBaseAlias.BIONIC,
         bases.BuilddBaseAlias.FOCAL,
         bases.BuilddBaseAlias.JAMMY,
+        bases.BuilddBaseAlias.KINETIC,
+        bases.BuilddBaseAlias.LUNAR,
     ],
 )
 def test_configure_and_launch_remote(instance_name, alias):

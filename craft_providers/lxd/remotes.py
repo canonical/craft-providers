@@ -32,6 +32,14 @@ logger = logging.getLogger(__name__)
 BUILDD_RELEASES_REMOTE_NAME = "craft-com.ubuntu.cloud-buildd"
 BUILDD_RELEASES_REMOTE_ADDRESS = "https://cloud-images.ubuntu.com/buildd/releases"
 
+# XXX: lunar and kinetic buildd daily images are not working (LP #2007419)
+BUILDD_DAILY_REMOTE_NAME = "craft-com.ubuntu.cloud-buildd-daily"
+BUILDD_DAILY_REMOTE_ADDRESS = "https://cloud-images.ubuntu.com/buildd/daily"
+
+# temporarily use the cloud release images until daily buildd images are fixed
+DAILY_REMOTE_NAME = "ubuntu-daily"
+DAILY_REMOTE_ADDRESS = "https://cloud-images.ubuntu.com/daily"
+
 
 class ProtocolType(Enum):
     """Enumeration of protocols for LXD remotes."""
@@ -116,6 +124,20 @@ _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE = {
         remote_address=BUILDD_RELEASES_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
         is_stable=True,
+    ),
+    BuilddBaseAlias.KINETIC.value: RemoteImage(
+        image_name="kinetic",
+        remote_name=DAILY_REMOTE_NAME,
+        remote_address=DAILY_REMOTE_ADDRESS,
+        remote_protocol=ProtocolType.SIMPLESTREAMS,
+        is_stable=False,
+    ),
+    BuilddBaseAlias.LUNAR.value: RemoteImage(
+        image_name="lunar",
+        remote_name=DAILY_REMOTE_NAME,
+        remote_address=DAILY_REMOTE_ADDRESS,
+        remote_protocol=ProtocolType.SIMPLESTREAMS,
+        is_stable=False,
     ),
 }
 

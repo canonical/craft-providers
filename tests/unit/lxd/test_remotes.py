@@ -124,6 +124,8 @@ def test_add_remote_race_condition_error(fake_remote_image, mock_lxc, logs):
         (BuilddBaseAlias.BIONIC.value, "core18"),
         (BuilddBaseAlias.FOCAL.value, "core20"),
         (BuilddBaseAlias.JAMMY.value, "core22"),
+        (BuilddBaseAlias.KINETIC.value, "kinetic"),
+        (BuilddBaseAlias.LUNAR.value, "lunar"),
     ],
 )
 def test_get_image_remote(provider_base, image_name):

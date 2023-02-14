@@ -48,6 +48,8 @@ def test_create_environment(installed_lxd, instance_name):
         BuilddBaseAlias.BIONIC,
         BuilddBaseAlias.FOCAL,
         BuilddBaseAlias.JAMMY,
+        BuilddBaseAlias.KINETIC,
+        BuilddBaseAlias.LUNAR,
     ],
 )
 def test_launched_environment(alias, installed_lxd, instance_name, tmp_path):
