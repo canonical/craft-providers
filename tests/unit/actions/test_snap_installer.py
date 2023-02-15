@@ -961,7 +961,9 @@ def test_get_snap_revision_ensuring_source_different_source_error(
             "test-name", snap_installer.SNAP_SRC_STORE, fake_executor
         )
     assert exc_info.value == snap_installer.SnapInstallationError(
-        brief="Failed to inject snap 'test-name'.",
-        details="unable to remove previously installed snap",
+        brief="Failed to remove snap 'test-name'.",
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
     assert exc_info.value.__cause__ is not None
