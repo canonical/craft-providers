@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -30,9 +30,6 @@ from craft_providers import errors
 from .errors import LXDError
 
 logger = logging.getLogger(__name__)
-
-
-# pylint: disable=too-many-lines
 
 
 class StdinType(enum.Enum):
