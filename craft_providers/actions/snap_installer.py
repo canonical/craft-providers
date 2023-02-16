@@ -150,8 +150,8 @@ def _get_snap_revision_ensuring_source(
         executor.execute_run(cmd, check=True, capture_output=True)
     except subprocess.CalledProcessError as error:
         raise SnapInstallationError(
-            brief=f"Failed to inject snap {snap_name!r}.",
-            details="unable to remove previously installed snap",
+            brief=f"Failed to remove snap {snap_name!r}.",
+            details=details_from_called_process_error(error),
         ) from error
     return None
 
