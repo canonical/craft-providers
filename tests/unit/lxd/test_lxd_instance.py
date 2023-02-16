@@ -391,7 +391,7 @@ def test_get_disk_devices_path_parse_error(mock_lxc, instance):
     }
 
     with pytest.raises(LXDError) as exc_info:
-        instance._get_disk_devices()  # pylint: disable=protected-access
+        instance._get_disk_devices()
 
     assert exc_info.value == LXDError(
         brief="Failed to parse lxc device 'mount_missing_path'.",
@@ -411,7 +411,7 @@ def test_get_disk_devices_source_parse_error(mock_lxc, instance):
     }
 
     with pytest.raises(LXDError) as exc_info:
-        instance._get_disk_devices()  # pylint: disable=protected-access
+        instance._get_disk_devices()
 
     assert exc_info.value == LXDError(
         brief="Failed to parse lxc device 'mount_missing_source'.",

@@ -26,7 +26,7 @@ def test_is_installed():
     assert multipass.is_installed() is expected
 
 
-def test_install(uninstalled_multipass):  # pylint: disable=unused-argument
+def test_install(uninstalled_multipass):
     assert multipass.is_installed() is False
 
     multipass_version = multipass.install()

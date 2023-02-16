@@ -39,7 +39,6 @@ def get_base_instance():
         project: str = "default",
     ):
         """Get the base instance."""
-        # pylint: disable-next=protected-access
         base_instance_name = lxd.launcher._formulate_base_instance_name(
             image_name=image_name,
             image_remote=image_remote,

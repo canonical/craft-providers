@@ -132,7 +132,7 @@ class LXDProvider(Provider):
                 auto_create_project=True,
                 map_user_uid=True,
                 uid=project_path.stat().st_uid,
-                use_snapshots=True,
+                use_base_instance=True,
                 project=self.lxd_project,
                 remote=self.lxd_remote,
             )

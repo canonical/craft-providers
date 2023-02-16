@@ -384,7 +384,7 @@ def launch(
     map_user_uid: bool = False,
     uid: Optional[int] = None,
     use_snapshots: Optional[bool] = None,
-    use_base_instance: Optional[bool] = False,
+    use_base_instance: bool = False,
     project: str = "default",
     remote: str = "local",
     lxc: LXC = LXC(),
