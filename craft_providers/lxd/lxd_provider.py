@@ -136,7 +136,7 @@ class LXDProvider(Provider):
                 project=self.lxd_project,
                 remote=self.lxd_remote,
             )
-        except (BaseConfigurationError) as error:
+        except BaseConfigurationError as error:
             raise LXDError(str(error)) from error
 
         try:

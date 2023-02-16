@@ -17,7 +17,7 @@
 
 """Craft Providers base package."""
 
-__version__ = "1.7.0"  # noqa: F401
+__version__ = "1.7.2"  # noqa: F401
 
 from .base import Base  # noqa: F401
 from .errors import ProviderError  # noqa: F401

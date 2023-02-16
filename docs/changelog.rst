@@ -2,6 +2,18 @@
 Changelog
 *********
 
+1.7.2 (2023-02-06)
+------------------
+- Check LXD id map before starting an existing instance.
+  If the id map does not match, the instance will be auto cleaned
+  or an error will be raised.
+- Add `lxc.config_get()` method to retrieve config values
+
+1.7.1 (2023-01-23)
+------------------
+- Set LXD id maps after launching or copying an instance
+- Raise BaseConfigurationError for snap refresh failures
+
 1.7.0 (2023-01-11)
 ------------------
 - LXD instances launch from a cached base instance rather than a base image.
