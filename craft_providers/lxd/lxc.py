@@ -187,6 +187,45 @@ class LXC:  # pylint: disable=too-many-public-methods
 
         return load_yaml(proc.stdout)
 
+    def config_get(
+        self,
+        *,
+        instance_name: str,
+        key: str,
+        project: str = "default",
+        remote: str = "local",
+    ) -> str:
+        """Get the value of an instance's config key.
+
+        This command only returns a single string value. It is different in behavior
+        than most other lxc commands, which can return multiple lines of yaml (like
+        `lxc config show`).
+
+        :param instance_name: Name of instance.
+        :param key: Config key name.
+        :param project: Name of LXD project.
+        :param remote: Name of LXD remote.
+
+        :returns: String containing the key's value. If the key does not exist, then
+        an empty string is returned.
+
+        :raises LXDError: on unexpected error.
+        """
+        command = ["config", "get", f"{remote}:{instance_name}", key]
+
+        try:
+            return self._run_lxc(
+                command, capture_output=True, check=True, text=True, project=project
+            ).stdout.rstrip()
+        except subprocess.CalledProcessError as error:
+            raise LXDError(
+                brief=(
+                    f"Failed to get value for config key {key!r} "
+                    f"for instance {instance_name!r}."
+                ),
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
     def config_set(
         self,
         *,

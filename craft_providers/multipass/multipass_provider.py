@@ -111,7 +111,7 @@ class MultipassProvider(Provider):
                 mem_gb=2,
                 auto_clean=True,
             )
-        except (bases.BaseConfigurationError) as error:
+        except bases.BaseConfigurationError as error:
             raise MultipassError(str(error)) from error
 
         try:

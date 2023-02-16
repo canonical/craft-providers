@@ -60,9 +60,9 @@ def default_command_environment() -> Dict[str, Optional[str]]:
 
     :returns: Dictionary of environment key/values.
     """
-    return dict(
-        PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
-    )
+    return {
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
+    }
 
 
 def _check_deadline(
