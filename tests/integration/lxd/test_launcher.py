@@ -496,10 +496,8 @@ def test_launch_existing_instance(core20_instance):
     assert proc.stdout == b"hi\n"
 
 
-def test_launch_os_incompatible(core20_instance):
-    """Raise an error if the instance's OS is Incompatible.
-    If auto_clean is true, delete and recreate the instance.
-    """
+def test_launch_os_incompatible_without_auto_clean(core20_instance):
+    """Raise an error if the OS is incompatible and auto_clean is False."""
     base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
 
     core20_instance.push_file_io(
@@ -522,7 +520,17 @@ def test_launch_os_incompatible(core20_instance):
         == "Incompatible base detected: Expected OS 'Ubuntu', found 'Fedora'."
     )
 
-    # TODO: split this into a separate test
+
+def test_launch_os_incompatible_with_auto_clean(core20_instance):
+    """Clean the instance if the OS is incompatible and auto_clean is True."""
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+
+    core20_instance.push_file_io(
+        destination=pathlib.Path("/etc/os-release"),
+        content=io.BytesIO(b"NAME=Fedora\nVERSION_ID=32\n"),
+        file_mode="0644",
+    )
+
     # when auto_clean is true, the instance will be deleted and recreated
     lxd.launch(
         name=core20_instance.name,
@@ -536,10 +544,8 @@ def test_launch_os_incompatible(core20_instance):
     assert core20_instance.is_running()
 
 
-def test_launch_instance_config_incompatible(core20_instance):
-    """Raise an error if the instance configuration file is incompatible.
-    If auto_clean is true, delete and recreate the instance.
-    """
+def test_launch_instance_config_incompatible_without_auto_clean(core20_instance):
+    """Raise an error if the config file is incompatible and auto_clean is False."""
     base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
 
     core20_instance.push_file_io(
@@ -562,7 +568,17 @@ def test_launch_instance_config_incompatible(core20_instance):
         " Expected image compatibility tag 'buildd-base-v0', found 'invalid'."
     )
 
-    # TODO: split this into a separate test
+
+def test_launch_instance_config_incompatible_with_auto_clean(core20_instance):
+    """Clean the instance if the config is incompatible and auto_clean is True."""
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+
+    core20_instance.push_file_io(
+        destination=base_configuration.instance_config_path,
+        content=io.BytesIO(b"compatibility_tag: invalid\n"),
+        file_mode="0644",
+    )
+
     # when auto_clean is true, the instance will be deleted and recreated
     lxd.launch(
         name=core20_instance.name,
