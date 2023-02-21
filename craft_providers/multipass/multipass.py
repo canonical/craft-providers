@@ -175,7 +175,7 @@ class Multipass:
         if cpus is not None:
             command.extend(["--cpus", cpus])
         if mem is not None:
-            command.extend(["--mem", mem])
+            command.extend(["--memory", mem])
         if disk is not None:
             command.extend(["--disk", disk])
 
