@@ -36,7 +36,7 @@ def test_is_installed():
     assert lxd.is_installed() is expected
 
 
-def test_install(uninstalled_lxd):  # pylint: disable=unused-argument
+def test_install(uninstalled_lxd):
     assert lxd.is_installed() is False
 
     lxd_version = lxd.install()
@@ -51,5 +51,7 @@ def test_ensure_lxd_is_ready(installed_lxd_without_init):
 
     assert exc_info.value == lxd.LXDError(
         brief="LXD has not been properly initialized.",
-        resolution="Execute 'lxd init --auto' to initialize LXD.",
+        resolution="Execute 'lxd init --auto' to initialize LXD.\n"
+        "Visit https://linuxcontainers.org/lxd/getting-started-cli/ for "
+        "instructions on installing and configuring LXD for your operating system.",
     )

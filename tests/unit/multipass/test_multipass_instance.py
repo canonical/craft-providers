@@ -49,7 +49,9 @@ EXAMPLE_INFO = {
     "info": {
         "flowing-hawfinch": {
             "disks": {"sda1": {}},
-            "image_hash": "c5f2f08c6a1adee1f2f96d84856bf0162d33ea182dae0e8ed45768a86182d110",
+            "image_hash": (
+                "c5f2f08c6a1adee1f2f96d84856bf0162d33ea182dae0e8ed45768a86182d110"
+            ),
             "image_release": "20.04 LTS",
             "ipv4": [],
             "load": [],
@@ -60,7 +62,9 @@ EXAMPLE_INFO = {
         },
         "test-instance": {
             "disks": {"sda1": {"total": "266219864064", "used": "1457451008"}},
-            "image_hash": "7c5c8f24046ca7b82897e0ca49fbd4dbdc771c2abd616991d10e6e09cc43002f",
+            "image_hash": (
+                "7c5c8f24046ca7b82897e0ca49fbd4dbdc771c2abd616991d10e6e09cc43002f"
+            ),
             "image_release": "Snapcraft builder for Core 18",
             "ipv4": ["10.114.154.133"],
             "load": [1.53, 0.84, 0.33],
@@ -119,11 +123,25 @@ def test_push_file_io(mock_multipass, instance):
     assert mock_multipass.mock_calls == [
         mock.call.exec(
             instance_name="test-instance",
-            command=["mktemp"],
+            command=["sudo", "-H", "--", "mktemp"],
             runner=subprocess.run,
             capture_output=True,
             check=True,
             text=True,
+        ),
+        mock.call.exec(
+            instance_name="test-instance",
+            command=[
+                "sudo",
+                "-H",
+                "--",
+                "chown",
+                "ubuntu:ubuntu",
+                "/tmp/mktemp-result",
+            ],
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
         ),
         mock.call.transfer_source_io(
             source=mock.ANY, destination="test-instance:/tmp/mktemp-result"
@@ -179,7 +197,10 @@ def test_push_file_io_error(mock_multipass, instance):
         )
 
     assert exc_info.value == MultipassError(
-        brief="Failed to create file '/etc/test.conf' in 'test-instance' VM.",
+        brief=(
+            "Failed to create file '/etc/test.conf' in Multipass instance "
+            "'test-instance'."
+        ),
         details=errors.details_from_called_process_error(error),
     )
 
@@ -229,7 +250,7 @@ def test_execute_popen_with_cwd(mock_multipass, instance):
 
 
 def test_execute_popen_with_env(mock_multipass, instance):
-    instance.execute_popen(command=["test-command", "flags"], env=dict(foo="bar"))
+    instance.execute_popen(command=["test-command", "flags"], env={"foo": "bar"})
 
     assert mock_multipass.mock_calls == [
         mock.call.exec(
@@ -274,7 +295,7 @@ def test_execute_run_with_cwd(mock_multipass, instance, tmp_path):
 
 
 def test_execute_run_with_env(mock_multipass, instance):
-    instance.execute_run(command=["test-command", "flags"], env=dict(foo="bar"))
+    instance.execute_run(command=["test-command", "flags"], env={"foo": "bar"})
 
     assert mock_multipass.mock_calls == [
         mock.call.exec(
@@ -287,7 +308,7 @@ def test_execute_run_with_env(mock_multipass, instance):
 
 def test_execute_run_with_env_unset(mock_multipass, instance):
     instance.execute_run(
-        command=["test-command", "flags"], env=dict(foo="bar", TERM=None)
+        command=["test-command", "flags"], env={"foo": "bar", "TERM": None}
     )
 
     assert mock_multipass.mock_calls == [

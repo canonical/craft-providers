@@ -17,6 +17,7 @@
 
 import json
 import pathlib
+import subprocess
 import textwrap
 from unittest import mock
 
@@ -43,7 +44,8 @@ def mock_requests():
 def config_fixture(request, tmp_path, mocker):
     """Creates an instance config file in the pytest temp directory.
 
-    Patches the temp_paths functions to point to the temporary directory containing the config.
+    Patches the temp_paths functions to point to the
+    temporary directory containing the config.
 
     :param request: The revision of the target's snap. Default revision = 1.
     """
@@ -73,13 +75,13 @@ def config_fixture(request, tmp_path, mocker):
     )
 
 
-@pytest.fixture(params=["2"])
-def mock_get_host_snap_revision(request, mocker):
+@pytest.fixture(params=[{"revision": "2", "id": "3", "publisher": {"id": "4"}}])
+def mock_get_host_snap_info(request, mocker):
     """Mocks the get_host_snap_revision() function
 
     :param request: The revision of the host's snap. Default revision = 2.
     """
-    mockee = "craft_providers.actions.snap_installer._get_host_snap_revision"
+    mockee = "craft_providers.actions.snap_installer.get_host_snap_info"
     if isinstance(request.param, Exception):
         mocker.patch(mockee, side_effect=request.param)
     else:
@@ -112,16 +114,23 @@ def mock_get_target_snap_revision_from_snapd(request, mocker):
 
 def test_inject_from_host_classic(
     config_fixture,
-    mock_get_host_snap_revision,
+    mock_get_host_snap_info,
     mock_requests,
     fake_executor,
     fake_process,
     logs,
     tmp_path,
 ):
-
+    # register 'snap known' calls
+    for _ in range(4):
+        fake_process.register_subprocess(["snap", "known", fake_process.any()])
     fake_process.register_subprocess(
-        ["fake-executor", "rm", "-f", "/tmp/test-name.snap"]
+        [
+            "fake-executor",
+            "snap",
+            "ack",
+            "/tmp/test-name.assert",
+        ]
     )
     fake_process.register_subprocess(
         [
@@ -130,7 +139,6 @@ def test_inject_from_host_classic(
             "install",
             "/tmp/test-name.snap",
             "--classic",
-            "--dangerous",
         ]
     )
 
@@ -138,14 +146,11 @@ def test_inject_from_host_classic(
         executor=fake_executor, snap_name="test-name", classic=True
     )
 
-    assert mock_requests.mock_calls == [
-        mock.call.get("http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name/file"),
-        mock.call.get().raise_for_status(),
-        mock.call.get().iter_content(65536),
-        mock.call.get().iter_content().__iter__(),
-    ]
+    mock_requests.get.assert_called_with(
+        "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name/file"
+    )
 
-    assert len(fake_process.calls) == 2
+    assert len(fake_process.calls) == 6
     assert Exact("Installing snap 'test-name' from host (classic=True)") in logs.debug
     assert "Revisions found: host='2', target='1'" in logs.debug
 
@@ -165,16 +170,69 @@ def test_inject_from_host_classic(
 
 def test_inject_from_host_strict(
     config_fixture,
-    mock_get_host_snap_revision,
+    mock_get_host_snap_info,
     mock_requests,
     fake_executor,
     fake_process,
     logs,
     tmp_path,
 ):
+    # register 'snap known' calls
+    for _ in range(4):
+        fake_process.register_subprocess(["snap", "known", fake_process.any()])
     fake_process.register_subprocess(
-        ["fake-executor", "rm", "-f", "/tmp/test-name.snap"]
+        [
+            "fake-executor",
+            "snap",
+            "ack",
+            "/tmp/test-name.assert",
+        ]
     )
+    fake_process.register_subprocess(
+        [
+            "fake-executor",
+            "snap",
+            "install",
+            "/tmp/test-name.snap",
+        ]
+    )
+
+    snap_installer.inject_from_host(
+        executor=fake_executor, snap_name="test-name", classic=False
+    )
+
+    mock_requests.get.assert_called_with(
+        "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name/file"
+    )
+
+    assert len(fake_process.calls) == 6
+    assert Exact("Installing snap 'test-name' from host (classic=False)") in logs.debug
+    assert "Revisions found: host='2', target='1'" in logs.debug
+
+    # check saved config
+    (saved_config_record,) = [
+        x
+        for x in fake_executor.records_of_push_file_io
+        if "craft-instance.conf" in x["destination"]
+    ]
+    config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
+    assert config.snaps is not None
+    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+        "revision": "2",
+        "source": snap_installer.SNAP_SRC_HOST,
+    }
+
+
+@pytest.mark.parametrize("mock_get_host_snap_info", [{"revision": "x3"}], indirect=True)
+def test_inject_from_host_dangerous(
+    config_fixture,
+    mock_get_host_snap_info,
+    mock_requests,
+    fake_executor,
+    fake_process,
+    logs,
+    tmp_path,
+):
     fake_process.register_subprocess(
         [
             "fake-executor",
@@ -189,14 +247,97 @@ def test_inject_from_host_strict(
         executor=fake_executor, snap_name="test-name", classic=False
     )
 
-    assert mock_requests.mock_calls == [
-        mock.call.get("http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name/file"),
-        mock.call.get().raise_for_status(),
-        mock.call.get().iter_content(65536),
-        mock.call.get().iter_content().__iter__(),
-    ]
+    mock_requests.get.assert_called_with(
+        "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name/file"
+    )
 
-    assert len(fake_process.calls) == 2
+    assert len(fake_process.calls) == 1
+    assert Exact("Installing snap 'test-name' from host (classic=False)") in logs.debug
+    assert "Revisions found: host='x3', target='1'" in logs.debug
+
+    # check saved config
+    (saved_config_record,) = [
+        x
+        for x in fake_executor.records_of_push_file_io
+        if "craft-instance.conf" in x["destination"]
+    ]
+    config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
+    assert config.snaps is not None
+    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+        "revision": "x3",
+        "source": snap_installer.SNAP_SRC_HOST,
+    }
+
+
+def test_inject_from_host_not_dangerous(
+    config_fixture,
+    mock_get_host_snap_info,
+    mock_requests,
+    fake_executor,
+    fake_process,
+    logs,
+    tmp_path,
+):
+    fake_process.register_subprocess(
+        [
+            "snap",
+            "known",
+            "account-key",
+            "public-key-sha3-384=BWDEoaqyr25nF5SNCvEv2v"
+            "7QnM9QsfCc0PBMYD_i2NGSQ32EF2d4D0hqUel3m8ul",
+        ]
+    )
+    fake_process.register_subprocess(
+        [
+            "snap",
+            "known",
+            "snap-declaration",
+            "snap-name=test-name",
+        ]
+    )
+    fake_process.register_subprocess(
+        [
+            "snap",
+            "known",
+            "snap-revision",
+            "snap-revision=2",
+            "snap-id=3",
+        ]
+    )
+    fake_process.register_subprocess(
+        [
+            "snap",
+            "known",
+            "account",
+            "account-id=4",
+        ]
+    )
+    fake_process.register_subprocess(
+        [
+            "fake-executor",
+            "snap",
+            "ack",
+            "/tmp/test-name.assert",
+        ]
+    )
+    fake_process.register_subprocess(
+        [
+            "fake-executor",
+            "snap",
+            "install",
+            "/tmp/test-name.snap",
+        ]
+    )
+
+    snap_installer.inject_from_host(
+        executor=fake_executor, snap_name="test-name", classic=False
+    )
+
+    mock_requests.get.assert_called_with(
+        "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name/file"
+    )
+
+    assert len(fake_process.calls) == 6
     assert Exact("Installing snap 'test-name' from host (classic=False)") in logs.debug
     assert "Revisions found: host='2', target='1'" in logs.debug
 
@@ -215,10 +356,10 @@ def test_inject_from_host_strict(
 
 
 @pytest.mark.parametrize("config_fixture", ["10"], indirect=True)
-@pytest.mark.parametrize("mock_get_host_snap_revision", ["10"], indirect=True)
+@pytest.mark.parametrize("mock_get_host_snap_info", [{"revision": "10"}], indirect=True)
 def test_inject_from_host_matching_revision_no_op(
     config_fixture,
-    mock_get_host_snap_revision,
+    mock_get_host_snap_info,
     mock_requests,
     fake_executor,
     fake_process,
@@ -238,11 +379,11 @@ def test_inject_from_host_matching_revision_no_op(
 
 
 @pytest.mark.parametrize(
-    "mock_get_host_snap_revision",
+    "mock_get_host_snap_info",
     [snap_installer.SnapInstallationError("msg")],
     indirect=True,
 )
-def test_inject_from_host_no_snapd(mock_get_host_snap_revision, fake_executor):
+def test_inject_from_host_no_snapd(mock_get_host_snap_info, fake_executor):
     """The host does not have snapd at all."""
     with pytest.raises(snap_installer.SnapInstallationError):
         snap_installer.inject_from_host(
@@ -256,25 +397,21 @@ def test_inject_from_host_push_error(
     mock_executor = mock.Mock(spec=fake_executor, wraps=fake_executor)
     mock_executor.push_file.side_effect = ProviderError(brief="foo")
 
-    fake_process.register_subprocess(
-        ["fake-executor", "rm", "-f", "/tmp/test-name.snap"]
-    )
-
     with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
         snap_installer.inject_from_host(
             executor=mock_executor, snap_name="test-name", classic=False
         )
 
     assert exc_info.value == snap_installer.SnapInstallationError(
-        brief="Failed to inject snap 'test-name'.",
-        details="Error copying snap into target environment.",
+        brief="failed to copy snap file for snap 'test-name'",
+        details="error copying snap file into target environment",
     )
     assert exc_info.value.__cause__ is not None
 
 
 def test_inject_from_host_snapd_connection_error_using_pack_fallback(
     config_fixture,
-    mock_get_host_snap_revision,
+    mock_get_host_snap_info,
     mock_requests,
     fake_executor,
     fake_process,
@@ -283,14 +420,22 @@ def test_inject_from_host_snapd_connection_error_using_pack_fallback(
     mock_requests.get.side_effect = requests.exceptions.ConnectionError()
 
     fake_process.register_subprocess(
-        ["fake-executor", "rm", "-f", "/tmp/test-name.snap"]
-    )
-    fake_process.register_subprocess(
         [
             "snap",
             "pack",
             "/snap/test-name/current/",
             f'--filename={pathlib.Path(tmpdir / "test-name.snap")}',
+        ]
+    )
+    # register 'snap known' calls
+    for _ in range(4):
+        fake_process.register_subprocess(["snap", "known", fake_process.any()])
+    fake_process.register_subprocess(
+        [
+            "fake-executor",
+            "snap",
+            "ack",
+            "/tmp/test-name.assert",
         ]
     )
     fake_process.register_subprocess(
@@ -299,7 +444,6 @@ def test_inject_from_host_snapd_connection_error_using_pack_fallback(
             "snap",
             "install",
             "/tmp/test-name.snap",
-            "--dangerous",
         ]
     )
 
@@ -310,12 +454,12 @@ def test_inject_from_host_snapd_connection_error_using_pack_fallback(
     assert mock_requests.mock_calls == [
         mock.call.get("http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name/file"),
     ]
-    assert len(fake_process.calls) == 3
+    assert len(fake_process.calls) == 7
 
 
 def test_inject_from_host_snapd_http_error_using_pack_fallback(
     config_fixture,
-    mock_get_host_snap_revision,
+    mock_get_host_snap_info,
     mock_requests,
     fake_executor,
     fake_process,
@@ -325,14 +469,22 @@ def test_inject_from_host_snapd_http_error_using_pack_fallback(
         requests.exceptions.HTTPError()
     )
     fake_process.register_subprocess(
-        ["fake-executor", "rm", "-f", "/tmp/test-name.snap"]
-    )
-    fake_process.register_subprocess(
         [
             "snap",
             "pack",
             "/snap/test-name/current/",
             f'--filename={pathlib.Path(tmpdir / "test-name.snap")}',
+        ]
+    )
+    # register 'snap known' calls
+    for _ in range(4):
+        fake_process.register_subprocess(["snap", "known", fake_process.any()])
+    fake_process.register_subprocess(
+        [
+            "fake-executor",
+            "snap",
+            "ack",
+            "/tmp/test-name.assert",
         ]
     )
     fake_process.register_subprocess(
@@ -341,7 +493,6 @@ def test_inject_from_host_snapd_http_error_using_pack_fallback(
             "snap",
             "install",
             "/tmp/test-name.snap",
-            "--dangerous",
         ]
     )
 
@@ -354,15 +505,12 @@ def test_inject_from_host_snapd_http_error_using_pack_fallback(
         mock.call.get().raise_for_status(),
     ]
 
-    assert len(fake_process.calls) == 3
+    assert len(fake_process.calls) == 7
 
 
 def test_inject_from_host_install_failure(
     mock_requests, config_fixture, fake_executor, fake_process
 ):
-    fake_process.register_subprocess(
-        ["fake-executor", "rm", "-f", "/tmp/test-name.snap"]
-    )
     fake_process.register_subprocess(
         [
             "fake-executor",
@@ -380,11 +528,13 @@ def test_inject_from_host_install_failure(
         )
 
     assert exc_info.value == snap_installer.SnapInstallationError(
-        brief="Failed to inject snap 'test-name'.",
-        details=details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        brief="failed to install snap 'test-name'",
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
-    assert len(fake_process.calls) == 2
+    assert len(fake_process.calls) == 1
 
 
 @pytest.mark.parametrize(
@@ -419,7 +569,8 @@ def test_install_from_store_strict(
     assert len(fake_process.calls) == 1
     assert (
         Exact(
-            "Installing snap 'test-name' from store (channel='test-chan', classic=False)"
+            "Installing snap 'test-name' from store"
+            " (channel='test-chan', classic=False)"
         )
         in logs.debug
     )
@@ -507,7 +658,8 @@ def test_refresh_from_store(
     assert len(fake_process.calls) == 1
     assert (
         Exact(
-            "Installing snap 'test-name' from store (channel='test-chan', classic=False)"
+            "Installing snap 'test-name' from store"
+            " (channel='test-chan', classic=False)"
         )
         in logs.debug
     )
@@ -553,14 +705,16 @@ def test_install_from_store_failure(
 
     assert exc_info.value == snap_installer.SnapInstallationError(
         brief="Failed to install/refresh snap 'test-name'.",
-        details=details_from_called_process_error(exc_info.value.__cause__),  # type: ignore
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
 
 
 # -- tests for the helping functions
 
 
-def test_get_host_snap_revision_ok(responses):
+def test_get_host_snap_info_ok(responses):
     """Revision retrieved ok."""
     snap_info = {"result": {"revision": "15"}}
     responses.add(
@@ -568,22 +722,98 @@ def test_get_host_snap_revision_ok(responses):
         "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-snap",
         json=snap_info,
     )
-    result = snap_installer._get_host_snap_revision("test-snap")
+    result = snap_installer.get_host_snap_info("test-snap")["revision"]
     assert result == "15"
 
 
-def test_get_host_snap_revision_connection_error(responses):
+def test_get_host_snap_info_connection_error(responses):
     """Error when connecting to snapd.
 
     Note that nothing is added to responses, so ConnectionError will be raised when
     trying to connect, which is the effect we want.
     """
     with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
-        snap_installer._get_host_snap_revision("test-snap")
+        snap_installer.get_host_snap_info("test-snap")
     assert exc_info.value == snap_installer.SnapInstallationError(
         brief="Unable to connect to snapd service."
     )
     assert exc_info.value.__cause__ is not None
+
+
+def test_get_assertion_connection_error(mocker):
+    """Raise SnapInstallation when 'snap known' call fails."""
+    mocker.patch(
+        "subprocess.run", side_effect=subprocess.CalledProcessError(100, ["error"])
+    )
+
+    with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
+        snap_installer._get_assertion(["test1", "test2"])
+    assert exc_info.value == snap_installer.SnapInstallationError(
+        brief="failed to get assertions for snap",
+        details="* Command that failed: 'error'\n* Command exit code: 100",
+    )
+    assert exc_info.value.__cause__ is not None
+
+
+def test_add_assertions_from_host_error_on_push(
+    fake_executor, fake_process, mock_requests, mocker, tmpdir
+):
+    """Raise SnapInstallationError when assert file cannot be pushed."""
+    mock_executor = mock.Mock(spec=fake_executor, wraps=fake_executor)
+    mock_executor.push_file.side_effect = ProviderError(brief="foo")
+    mocker.patch(
+        "craft_providers.bases.instance_config.temp_paths.home_temporary_file",
+        return_value=pathlib.Path(tmpdir) / "temp-file",
+    )
+
+    # register 'snap known' calls
+    for _ in range(4):
+        fake_process.register_subprocess(["snap", "known", fake_process.any()])
+
+    with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
+        snap_installer._add_assertions_from_host(
+            executor=mock_executor,
+            snap_name="test-name",
+        )
+
+    assert exc_info.value == snap_installer.SnapInstallationError(
+        brief="failed to copy assert file for snap 'test-name'",
+        details="error copying snap assert file into target environment",
+    )
+    assert exc_info.value.__cause__ is not None
+    assert len(fake_process.calls) == 4
+
+
+def test_add_assertions_from_host_error_on_ack(
+    fake_executor, fake_process, mock_requests, mocker, tmpdir
+):
+    """Raise SnapInstallationError when 'snap ack' fails."""
+    fake_process.register_subprocess(
+        ["fake-executor", "snap", "ack", "/tmp/test-name.assert"],
+        returncode=1,
+    )
+    mocker.patch(
+        "craft_providers.bases.instance_config.temp_paths.home_temporary_file",
+        return_value=pathlib.Path(tmpdir) / "temp-file",
+    )
+
+    # register 'snap known' calls
+    for _ in range(4):
+        fake_process.register_subprocess(["snap", "known", fake_process.any()])
+
+    with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
+        snap_installer._add_assertions_from_host(
+            executor=fake_executor, snap_name="test-name"
+        )
+
+    assert exc_info.value == snap_installer.SnapInstallationError(
+        brief="failed to add assertions for snap 'test-name'",
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
+    )
+
+    assert len(fake_process.calls) == 5
 
 
 def test_get_target_snap_revision_from_snapd_process_error(fake_process, fake_executor):
@@ -731,7 +961,9 @@ def test_get_snap_revision_ensuring_source_different_source_error(
             "test-name", snap_installer.SNAP_SRC_STORE, fake_executor
         )
     assert exc_info.value == snap_installer.SnapInstallationError(
-        brief="Failed to inject snap 'test-name'.",
-        details="unable to remove previously installed snap",
+        brief="Failed to remove snap 'test-name'.",
+        details=details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
     )
     assert exc_info.value.__cause__ is not None

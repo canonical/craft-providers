@@ -47,10 +47,12 @@ test_requires = [
     "black",
     "codespell",
     "flake8",
+    "freezegun",
     "isort",
     "mypy",
     "logassert",
     "pydocstyle",
+    "pyfakefs",
     "pylint",
     "pylint-fixme-info",
     "pylint-pytest",
@@ -71,7 +73,7 @@ extras_requires = {
 
 setup(
     name="craft-providers",
-    version="1.3.0",
+    version="1.7.2",
     description="Craft provider tooling",
     long_description=readme,
     long_description_content_type="text/markdown",

@@ -33,32 +33,36 @@ class FakeExecutor(Executor):
     Provides a fake execution environment meant to be paired with the
     fake_subprocess fixture for complete control over execution behaviors.
 
-    This records push_file_io(), pull_file(), and push_file() in
-    records_of_<name> for introspection, similar to mock_calls.
+    Calls to each method are recorded in `records_of_<method_name>` for introspection,
+    similar to mock_calls.
     """
 
     def __init__(self) -> None:
         self.records_of_push_file_io: List[Dict[str, Any]] = []
         self.records_of_pull_file: List[Dict[str, Any]] = []
         self.records_of_push_file: List[Dict[str, Any]] = []
+        self.records_of_delete: List[Dict[str, Any]] = []
+        self.records_of_exists: List[Dict[str, Any]] = []
+        self.records_of_mount: List[Dict[str, Any]] = []
+        self.records_of_is_running: List[Dict[str, Any]] = []
 
     def push_file_io(
         self,
         *,
-        destination: pathlib.Path,
+        destination: pathlib.PurePath,
         content: io.BytesIO,
         file_mode: str,
         group: str = "root",
         user: str = "root",
     ) -> None:
         self.records_of_push_file_io.append(
-            dict(
-                destination=destination.as_posix(),
-                content=content.read(),
-                file_mode=file_mode,
-                group=group,
-                user=user,
-            )
+            {
+                "destination": destination.as_posix(),
+                "content": content.read(),
+                "file_mode": file_mode,
+                "group": group,
+                "user": user,
+            }
         )
 
     def execute_popen(
@@ -75,9 +79,7 @@ class FakeExecutor(Executor):
             env_args = env_cmd.formulate_command(env, chdir=cwd)
 
         final_cmd = ["fake-executor"] + env_args + command
-        return subprocess.Popen(  # pylint: disable=consider-using-with
-            final_cmd, **kwargs
-        )
+        return subprocess.Popen(final_cmd, **kwargs)
 
     def execute_run(
         self,
@@ -93,25 +95,39 @@ class FakeExecutor(Executor):
             env_args = env_cmd.formulate_command(env, chdir=cwd)
 
         final_cmd = ["fake-executor"] + env_args + command
-        return subprocess.run(  # pylint: disable=subprocess-run-check
-            final_cmd, **kwargs
-        )
 
-    def pull_file(self, *, source: pathlib.Path, destination: pathlib.Path) -> None:
+        # pylint: disable-next=subprocess-run-check
+        return subprocess.run(final_cmd, **kwargs)
+
+    def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:
         self.records_of_pull_file.append(
-            dict(
-                source=source,
-                destination=destination,
-            )
+            {
+                "source": source,
+                "destination": destination,
+            }
         )
 
-    def push_file(self, *, source: pathlib.Path, destination: pathlib.Path) -> None:
+    def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:
         self.records_of_push_file.append(
-            dict(
-                source=source,
-                destination=destination,
-            )
+            {
+                "source": source,
+                "destination": destination,
+            }
         )
+
+    def delete(self) -> None:
+        self.records_of_delete.append({})
+
+    def exists(self) -> bool:
+        self.records_of_exists.append({})
+        return True
+
+    def mount(self, *, host_source: pathlib.Path, target: pathlib.Path) -> None:
+        self.records_of_mount.append({"host_source": host_source, "target": target})
+
+    def is_running(self) -> bool:
+        self.records_of_is_running.append({})
+        return True
 
 
 @pytest.fixture
@@ -121,6 +137,9 @@ def fake_executor():
 
 @pytest.fixture
 def responses():
-    """Simple helper to use responses module as a fixture, for easier integration in tests."""
+    """Simple helper to use responses module as a fixture.
+
+    Used for easier integration in tests.
+    """
     with responses_module.RequestsMock() as rsps:
         yield rsps

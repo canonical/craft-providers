@@ -19,19 +19,25 @@
 import enum
 import io
 import logging
+import os
 import pathlib
+import re
 import subprocess
+import sys
 import time
+from datetime import datetime, timedelta
 from textwrap import dedent
 from time import sleep
-from typing import Dict, Optional, Type
+from typing import Dict, List, Optional, Type
 
+import pydantic
 from pydantic import ValidationError
 
 from craft_providers import Base, Executor, errors
+from craft_providers.actions import snap_installer
 from craft_providers.util.os_release import parse_os_release
 
-from .errors import BaseCompatibilityError, BaseConfigurationError
+from .errors import BaseCompatibilityError, BaseConfigurationError, NetworkError
 from .instance_config import InstanceConfiguration
 
 logger = logging.getLogger(__name__)
@@ -46,16 +52,17 @@ def default_command_environment() -> Dict[str, Optional[str]]:
     instantiating PATH.  In practice it really just means the PATH set by sudo.
 
     Default /etc/environment found in supported Ubuntu versions:
-    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:
+         /usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 
     Default /etc/sudoers secure_path found in supported Ubuntu versions:
     PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
 
     :returns: Dictionary of environment key/values.
     """
-    return dict(
-        PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
-    )
+    return {
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
+    }
 
 
 def _check_deadline(
@@ -73,6 +80,63 @@ def _check_deadline(
         raise BaseConfigurationError(brief=message)
 
 
+def _network_connected(executor):
+    """Check if the network is connected."""
+    # bypass the network verification if there is a proxy set for HTTPS (because we're
+    # hitting port 443), as bash's TCP functionality will not use it (supporting
+    # both lowercase and uppercase names, which is what most applications do)
+    if os.getenv("HTTPS_PROXY") or os.getenv("https_proxy"):
+        return True
+
+    # check if the port is open using bash's built-in tcp-client, communicating with
+    # the HTTPS port on our site
+    command = ["bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"]
+    try:
+        # timeout quickly, so it's representative of current state (we don't
+        # want for it to hang a lot and then succeed 45 seconds later if network
+        # came back); capture the output just for it to not pollute the terminal
+        proc = executor.execute_run(
+            command, check=False, timeout=1, capture_output=True
+        )
+    except subprocess.TimeoutExpired:
+        return False
+    return proc.returncode == 0
+
+
+def _execute_run(
+    executor: Executor,
+    command: List[str],
+    *,
+    check: bool = True,
+    capture_output: bool = True,
+    text: bool = False,
+    verify_network=False,
+) -> subprocess.CompletedProcess:
+    """Run a command through the executor.
+
+    This is a helper to simplify most common calls and provide extra network
+    verification (if indicated) in a central place.
+
+    The default of capture_output is True because it's useful for error reports
+    (if the command failed) even if the output is not really wanted as a result
+    of the execution.
+    """
+    if not check and verify_network:
+        # if check is False, the caller needs the process result no matter what, it's
+        # wrong to also request to verify network, which may raise a different exception
+        raise RuntimeError("Invalid check and verify_network combination.")
+
+    try:
+        proc = executor.execute_run(
+            command, check=check, capture_output=capture_output, text=text
+        )
+    except subprocess.CalledProcessError as exc:
+        if verify_network and not _network_connected(executor):
+            raise NetworkError() from exc
+        raise
+    return proc
+
+
 class BuilddBaseAlias(enum.Enum):
     """Mappings for supported buildd images."""
 
@@ -80,6 +144,37 @@ class BuilddBaseAlias(enum.Enum):
     BIONIC = "18.04"
     FOCAL = "20.04"
     JAMMY = "22.04"
+
+
+class Snap(pydantic.BaseModel, extra=pydantic.Extra.forbid):
+    """Details of snap to install in the base.
+
+    :param name: name of snap
+    :param channel: snap store channel to install from (default is stable)
+      If channel is `None`, then the snap is injected from the host instead
+      of being installed from the store.
+    :param classic: true if snap is a classic snap (default is false)
+    """
+
+    name: str
+    channel: Optional[str] = "stable"
+    classic: bool = False
+
+    # pylint: disable=no-self-argument
+    @pydantic.validator("channel")
+    def validate_channel(cls, channel):
+        """Validate that channel is not an empty string.
+
+        :raises BaseConfigurationError: if channel is empty
+        """
+        if channel == "":
+            raise BaseConfigurationError(
+                brief="channel cannot be empty",
+                resolution="set channel to a non-empty string or `None`",
+            )
+        return channel
+
+    # pylint: enable=no-self-argument
 
 
 class BuilddBase(Base):
@@ -103,6 +198,8 @@ class BuilddBase(Base):
     :param alias: Base alias / version.
     :param environment: Environment to set in /etc/environment.
     :param hostname: Hostname to configure.
+    :param snaps: Optional list of snaps to install on the base image.
+    :param packages: Optional list of system packages to install on the base image.
     """
 
     compatibility_tag: str = f"buildd-{Base.compatibility_tag}"
@@ -113,8 +210,11 @@ class BuilddBase(Base):
         self,
         *,
         alias: BuilddBaseAlias,
+        compatibility_tag: Optional[str] = None,
         environment: Optional[Dict[str, Optional[str]]] = None,
         hostname: str = "craft-buildd-instance",
+        snaps: Optional[List[Snap]] = None,
+        packages: Optional[List[str]] = None,
     ):
         self.alias: BuilddBaseAlias = alias
 
@@ -123,7 +223,43 @@ class BuilddBase(Base):
         else:
             self.environment = environment
 
-        self.hostname = hostname
+        if compatibility_tag:
+            self.compatibility_tag = compatibility_tag
+
+        self._set_hostname(hostname)
+        self.snaps = snaps
+        self.packages = packages
+
+    def _set_hostname(self, hostname: str) -> None:
+        """Set hostname.
+
+        hostname naming convention:
+        - between 1 and 63 characters long
+        - be made up exclusively of letters, numbers, and hyphens from the ASCII table
+        - not begin or end with a hyphen
+
+        If needed, the provided hostname will be trimmed to meet naming conventions.
+
+        :param hostname: hostname to set
+        :raises BaseConfigurationError: if the hostname contains no
+          alphanumeric characters
+        """
+        # truncate to 63 characters
+        truncated_name = hostname[:63]
+
+        # remove anything that is not an alphanumeric character or hyphen
+        name_with_valid_chars = re.sub(r"[^\w-]", "", truncated_name)
+
+        # trim hyphens from the beginning and end
+        valid_name = name_with_valid_chars.strip("-")
+        if not valid_name:
+            raise BaseConfigurationError(
+                brief=f"failed to create base with hostname {hostname!r}.",
+                details="hostname must contain at least one alphanumeric character",
+            )
+
+        logger.debug("Using hostname %r", valid_name)
+        self.hostname = valid_name
 
     def _ensure_instance_config_compatible(
         self, *, executor: Executor, deadline: Optional[float]
@@ -159,6 +295,9 @@ class BuilddBase(Base):
                     f"{self.compatibility_tag!r}, found {config.compatibility_tag!r}"
                 )
             )
+        logger.debug(
+            "Instance is compatible with compatibility tag %r", config.compatibility_tag
+        )
 
     def _ensure_os_compatible(
         self, *, executor: Executor, deadline: Optional[float]
@@ -198,7 +337,10 @@ class BuilddBase(Base):
         version_id = os_release.get("VERSION_ID")
         if version_id != compat_version_id:
             raise BaseCompatibilityError(
-                reason=f"Expected OS version {compat_version_id!r}, found {version_id!r}"
+                reason=(
+                    f"Expected OS version {compat_version_id!r},"
+                    f" found {version_id!r}"
+                )
             )
 
     def get_command_environment(
@@ -231,18 +373,12 @@ class BuilddBase(Base):
         If timeout is specified, abort operation if time has been exceeded.
 
         Guarantees provided by this setup:
-
-            - configured /etc/environment
-
-            - configured hostname
-
-            - networking available (IP & DNS resolution)
-
-            - apt cache up-to-date
-
-            - snapd configured and ready
-
-            - system services are started and ready
+          - configured /etc/environment
+          - configured hostname
+          - networking available (IP & DNS resolution)
+          - apt cache up-to-date
+          - snapd configured and ready
+          - system services are started and ready
 
         :param executor: Executor for target container.
         :param retry_wait: Duration to sleep() between status checks (if
@@ -273,6 +409,9 @@ class BuilddBase(Base):
         )
         self._setup_apt(executor=executor, deadline=deadline)
         self._setup_snapd(executor=executor, deadline=deadline)
+        self._disable_and_wait_for_snap_refresh(executor=executor, deadline=deadline)
+        self._setup_snapd_proxy(executor=executor, deadline=deadline)
+        self._install_snaps(executor=executor, deadline=deadline)
 
     def warmup(
         self,
@@ -286,12 +425,9 @@ class BuilddBase(Base):
         Ensure the instance is still valid and wait for environment to become ready.
 
         Guarantees provided by this wait:
-
-            - OS and instance config are compatible
-
-            - networking available (IP & DNS resolution)
-
-            - system services are started and ready
+          - OS and instance config are compatible
+          - networking available (IP & DNS resolution)
+          - system services are started and ready
 
         If timeout is specified, abort operation if time has been exceeded.
 
@@ -315,15 +451,19 @@ class BuilddBase(Base):
         self._setup_wait_for_network(
             executor=executor, deadline=deadline, retry_wait=retry_wait
         )
+        self._disable_and_wait_for_snap_refresh(executor=executor, deadline=deadline)
+        self._setup_snapd_proxy(executor=executor, deadline=deadline)
+        self._install_snaps(executor=executor, deadline=deadline)
 
     def _disable_automatic_apt(
         self, *, executor: Executor, deadline: Optional[float]
     ) -> None:
         """Disable automatic apt actions.
 
-        This should happen as soon as possible in the instance overall setup, to reduce the
-        chances of an automatic apt work being triggered during the setup itself (because it
-        includes apt work which may clash the triggered unattended jobs).
+        This should happen as soon as possible in the instance overall setup,
+        to reduce the chances of an automatic apt work being triggered during
+        the setup itself (because it includes apt work which may clash
+        the triggered unattended jobs).
 
         :param executor: Executor for target container.
         :param deadline: Optional time.time() deadline.
@@ -341,6 +481,116 @@ class BuilddBase(Base):
             content=io.BytesIO(content),
             file_mode="0644",
         )
+
+    def _disable_and_wait_for_snap_refresh(
+        self, *, executor: Executor, deadline: Optional[float]
+    ) -> None:
+        """Disable automatic snap refreshes and wait for refreshes to complete.
+
+        Craft-providers manages the installation and versions of snaps inside the
+        build environment, so automatic refreshes of snaps by snapd are disabled.
+        """
+        # disable refresh for 1 day
+        hold_time = datetime.now() + timedelta(days=1)
+        logger.debug("Holding refreshes for snaps.")
+
+        _check_deadline(deadline)
+        # TODO: run `snap refresh --hold` once during setup (`--hold` is not yet stable)
+        try:
+            executor.execute_run(
+                ["snap", "set", "system", f"refresh.hold={hold_time.isoformat()}Z"],
+                capture_output=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as error:
+            raise BaseConfigurationError(
+                brief="Failed to hold snap refreshes.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
+        # a refresh may have started before the hold was set
+        logger.debug("Waiting for pending snap refreshes to complete.")
+        _check_deadline(deadline)
+        try:
+            executor.execute_run(
+                ["snap", "watch", "--last=auto-refresh?"],
+                capture_output=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as error:
+            raise BaseConfigurationError(
+                brief="Failed to wait for snap refreshes to complete.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
+    def _install_snaps(self, *, executor: Executor, deadline: Optional[float]) -> None:
+        """Install snaps.
+
+        Snaps will either be installed from the store or injected from the host.
+        - If channel is `None` on a linux system, the host snap is injected
+          into the provider.
+        - If channel is `None` on a non-linux system, an error is raised
+          because host injection is not supported on non-linux systems.
+
+        :param executor: Executor for target container.
+        :param deadline: Optional time.time() deadline.
+        :raises BaseConfigurationError: if the snap cannot be installed
+        """
+        if not self.snaps:
+            logger.debug("No snaps to install.")
+            return
+
+        for snap in self.snaps:
+            _check_deadline(deadline)
+            logger.debug(
+                "Installing snap %r with channel=%r and classic=%r",
+                snap.name,
+                snap.channel,
+                snap.classic,
+            )
+
+            # don't inject snaps on non-linux hosts
+            if sys.platform != "linux" and not snap.channel:
+                raise BaseConfigurationError(
+                    brief=(
+                        f"cannot inject snap {snap.name!r} from host on "
+                        "a non-linux system"
+                    ),
+                    resolution=(
+                        "install the snap from the store by setting the "
+                        "'channel' parameter"
+                    ),
+                )
+
+            if snap.channel:
+                try:
+                    snap_installer.install_from_store(
+                        executor=executor,
+                        snap_name=snap.name,
+                        channel=snap.channel,
+                        classic=snap.classic,
+                    )
+                except snap_installer.SnapInstallationError as error:
+                    raise BaseConfigurationError(
+                        brief=(
+                            f"failed to install snap {snap.name!r} from store"
+                            f" channel {snap.channel!r} in target environment."
+                        )
+                    ) from error
+            else:
+                try:
+                    snap_installer.inject_from_host(
+                        executor=executor,
+                        snap_name=snap.name,
+                        classic=snap.classic,
+                    )
+                except snap_installer.SnapInstallationError as error:
+                    raise BaseConfigurationError(
+                        brief=(
+                            f"failed to inject host's snap {snap.name!r} "
+                            "into target environment."
+                        )
+                    ) from error
 
     def _setup_apt(self, *, executor: Executor, deadline: Optional[float]) -> None:
         """Configure apt, update cache and install needed packages.
@@ -364,24 +614,22 @@ class BuilddBase(Base):
 
         try:
             _check_deadline(deadline)
-            executor.execute_run(
-                ["apt-get", "update"],
-                capture_output=True,
-                check=True,
-            )
+            _execute_run(executor, ["apt-get", "update"], verify_network=True)
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to update apt cache.",
                 details=errors.details_from_called_process_error(error),
             ) from error
 
+        # install required packages and user-defined packages
+        packages_to_install = ["apt-utils", "curl"]
+        if self.packages:
+            packages_to_install.extend(self.packages)
+
         try:
             _check_deadline(deadline)
-            executor.execute_run(
-                ["apt-get", "install", "-y", "apt-utils", "curl"],
-                capture_output=True,
-                check=True,
-            )
+            command = ["apt-get", "install", "-y"] + packages_to_install
+            _execute_run(executor, command, verify_network=True)
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to install packages.",
@@ -430,11 +678,7 @@ class BuilddBase(Base):
 
         try:
             _check_deadline(deadline)
-            executor.execute_run(
-                ["hostname", "-F", "/etc/hostname"],
-                capture_output=True,
-                check=True,
-            )
+            _execute_run(executor, ["hostname", "-F", "/etc/hostname"])
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to set hostname.",
@@ -483,18 +727,10 @@ class BuilddBase(Base):
 
         try:
             _check_deadline(deadline)
-            executor.execute_run(
-                ["systemctl", "enable", "systemd-networkd"],
-                capture_output=True,
-                check=True,
-            )
+            _execute_run(executor, ["systemctl", "enable", "systemd-networkd"])
 
             _check_deadline(deadline)
-            executor.execute_run(
-                ["systemctl", "restart", "systemd-networkd"],
-                check=True,
-                capture_output=True,
-            )
+            _execute_run(executor, ["systemctl", "restart", "systemd-networkd"])
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to setup systemd-networkd.",
@@ -509,30 +745,19 @@ class BuilddBase(Base):
         """
         try:
             _check_deadline(deadline)
-            executor.execute_run(
-                [
-                    "ln",
-                    "-sf",
-                    "/run/systemd/resolve/resolv.conf",
-                    "/etc/resolv.conf",
-                ],
-                check=True,
-                capture_output=True,
-            )
+            command = [
+                "ln",
+                "-sf",
+                "/run/systemd/resolve/resolv.conf",
+                "/etc/resolv.conf",
+            ]
+            _execute_run(executor, command)
 
             _check_deadline(deadline)
-            executor.execute_run(
-                ["systemctl", "enable", "systemd-resolved"],
-                check=True,
-                capture_output=True,
-            )
+            _execute_run(executor, ["systemctl", "enable", "systemd-resolved"])
 
             _check_deadline(deadline)
-            executor.execute_run(
-                ["systemctl", "restart", "systemd-resolved"],
-                check=True,
-                capture_output=True,
-            )
+            _execute_run(executor, ["systemctl", "restart", "systemd-resolved"])
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to setup systemd-resolved.",
@@ -549,64 +774,78 @@ class BuilddBase(Base):
         """
         try:
             _check_deadline(deadline)
-            executor.execute_run(
-                [
-                    "apt-get",
-                    "install",
-                    "-y",
-                    "fuse",
-                    "udev",
-                ],
-                check=True,
-                capture_output=True,
+            command = ["apt-get", "install", "-y", "fuse", "udev"]
+            _execute_run(executor, command, verify_network=True)
+
+            _check_deadline(deadline)
+            _execute_run(executor, ["systemctl", "enable", "systemd-udevd"])
+            _check_deadline(deadline)
+            _execute_run(executor, ["systemctl", "start", "systemd-udevd"])
+
+            # This file is created by launchpad-buildd to stop snapd from
+            # using the snap store's CDN when running in Canonical's
+            # production build farm, since internet access restrictions may
+            # prevent it from doing so but will allow the non-CDN storage
+            # endpoint.  If this is in place, then we need to propagate it
+            # to containers we create.
+            no_cdn = pathlib.Path("/etc/systemd/system/snapd.service.d/no-cdn.conf")
+            if no_cdn.exists():
+                _check_deadline(deadline)
+                _execute_run(executor, ["mkdir", "-p", no_cdn.parent.as_posix()])
+
+                _check_deadline(deadline)
+                executor.push_file(source=no_cdn, destination=no_cdn)
+
+            _check_deadline(deadline)
+            _execute_run(
+                executor, ["apt-get", "install", "-y", "snapd"], verify_network=True
             )
 
             _check_deadline(deadline)
-            executor.execute_run(
-                ["systemctl", "enable", "systemd-udevd"],
-                capture_output=True,
-                check=True,
-            )
-
-            _check_deadline(deadline)
-            executor.execute_run(
-                ["systemctl", "start", "systemd-udevd"],
-                capture_output=True,
-                check=True,
-            )
-
-            _check_deadline(deadline)
-            executor.execute_run(
-                ["apt-get", "install", "-y", "snapd"],
-                capture_output=True,
-                check=True,
-            )
-
-            _check_deadline(deadline)
-            executor.execute_run(
-                ["systemctl", "start", "snapd.socket"],
-                capture_output=True,
-                check=True,
-            )
+            _execute_run(executor, ["systemctl", "start", "snapd.socket"])
 
             # Restart, not start, the service in case the environment
             # has changed and the service is already running.
             _check_deadline(deadline)
-            executor.execute_run(
-                ["systemctl", "restart", "snapd.service"],
-                capture_output=True,
-                check=True,
-            )
+            _execute_run(executor, ["systemctl", "restart", "snapd.service"])
 
             _check_deadline(deadline)
-            executor.execute_run(
-                ["snap", "wait", "system", "seed.loaded"],
-                capture_output=True,
-                check=True,
-            )
+            _execute_run(executor, ["snap", "wait", "system", "seed.loaded"])
+
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to setup snapd.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
+    def _setup_snapd_proxy(
+        self, *, executor: Executor, deadline: Optional[float] = None
+    ) -> None:
+        """Configure the snapd proxy.
+
+        :param executor: Executor for target container.
+        :param deadline: Optional time.time() deadline.
+        """
+        try:
+            _check_deadline(deadline)
+            http_proxy = self.environment.get("http_proxy")
+            if http_proxy:
+                command = ["snap", "set", "system", f"proxy.http={http_proxy}"]
+            else:
+                command = ["snap", "unset", "system", "proxy.http"]
+            _execute_run(executor, command)
+
+            _check_deadline(deadline)
+            https_proxy = self.environment.get("https_proxy")
+            if https_proxy:
+                command = ["snap", "set", "system", f"proxy.https={https_proxy}"]
+            else:
+                command = ["snap", "unset", "system", "proxy.https"]
+            _execute_run(executor, command)
+
+        except subprocess.CalledProcessError as error:
+            raise BaseConfigurationError(
+                brief="Failed to set the snapd proxy.",
                 details=errors.details_from_called_process_error(error),
             ) from error
 
@@ -626,12 +865,9 @@ class BuilddBase(Base):
         logger.debug("Waiting for networking to be ready...")
 
         _check_deadline(deadline)
+        command = ["getent", "hosts", "snapcraft.io"]
         while True:
-            proc = executor.execute_run(
-                ["getent", "hosts", "snapcraft.io"],
-                capture_output=True,
-                check=False,
-            )
+            proc = _execute_run(executor, command, check=False)
             if proc.returncode == 0:
                 return
 
@@ -657,7 +893,8 @@ class BuilddBase(Base):
 
         _check_deadline(deadline)
         while True:
-            proc = executor.execute_run(
+            proc = _execute_run(
+                executor,
                 ["systemctl", "is-system-running"],
                 capture_output=True,
                 check=False,

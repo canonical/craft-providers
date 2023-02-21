@@ -97,18 +97,24 @@ class InstanceConfiguration(pydantic.BaseModel, extra=pydantic.Extra.forbid):
         """Load an instance config file from an environment.
 
         :param executor: Executor for instance.
-        :param config_path: Path to configuration file. Default is `/etc/craft-instance.conf`.
+        :param config_path: Path to configuration file.
+                            Default is `/etc/craft-instance.conf`.
 
-        :return: The InstanceConfiguration object or None if the config does not exist or is empty.
+        :return: The InstanceConfiguration object or None,
+                 if the config does not exist or is empty.
 
-        :raise BaseConfigurationError: If the file cannot be loaded from the environment.
+        :raise BaseConfigurationError: If the file cannot be loaded from
+                                       the environment.
         """
         with temp_paths.home_temporary_file() as temp_config_file:
             try:
                 executor.pull_file(source=config_path, destination=temp_config_file)
             except errors.ProviderError as error:
                 raise BaseConfigurationError(
-                    brief=f"Failed to read instance config in environment at {config_path}",
+                    brief=(
+                        "Failed to read instance config"
+                        f" in environment at {config_path}"
+                    ),
                 ) from error
             except FileNotFoundError:
                 return None
@@ -127,7 +133,8 @@ class InstanceConfiguration(pydantic.BaseModel, extra=pydantic.Extra.forbid):
         """Save an instance config file to an environment.
 
         :param executor: Executor for instance.
-        :param config_path: Path to configuration file. Default is `/etc/craft-instance.conf`.
+        :param config_path: Path to configuration file.
+                            Default is `/etc/craft-instance.conf`.
 
         """
         data = self.marshal()

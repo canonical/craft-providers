@@ -96,6 +96,13 @@ class Multipass:
     ):
         """Execute command in instance_name with specified runner.
 
+        The working directory the command is executed from inside the instance depends
+        on the host's cwd. From the Multipass documentation:
+        "In case we are executing the alias on the host from a directory which is
+        mounted on the instance, the command will be executed on the instance from
+        there. If the working directory is not mounted on the instance, the command will
+        be executed on the default directory on the instance."
+
         :param command: Command to execute in the instance.
         :param instance_name: Name of instance to execute in.
         :param runner: Execution function to invoke, e.g. subprocess.run or
@@ -281,6 +288,13 @@ class Multipass:
     def transfer(self, *, source: str, destination: str) -> None:
         """Transfer to destination path with source IO.
 
+        Multipass transfer uses sftp. By default, only the user `ubuntu` can transfer
+        files. Therefore, the path inside the instance should be accessible by the
+        `ubuntu` user.
+
+        By default, Multipass only has access to the host's home directory. The host's
+        path should be inside the home directory.
+
         :param source: The source path, prefixed with <name:> for a path inside
             the instance.
         :param destination: The destination path, prefixed with <name:> for a
@@ -320,7 +334,6 @@ class Multipass:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         ) as proc:
-
             # Should never happen, but mypy/pyright makes noise.
             assert proc.stdout is not None
             assert proc.stderr is not None

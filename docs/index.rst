@@ -18,6 +18,12 @@ Here you will find all of the provider documentation...
 
    craft_providers
 
+.. toctree:: 
+   :caption: Explanations:
+    
+   explanations
+
+
 Indices and tables
 ==================
 

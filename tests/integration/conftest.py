@@ -21,6 +21,7 @@ import contextlib
 import os
 import pathlib
 import random
+import re
 import shutil
 import string
 import subprocess
@@ -31,11 +32,22 @@ from typing import Optional
 import pytest
 
 from craft_providers import bases, lxd, multipass
+from craft_providers.actions.snap_installer import get_host_snap_info
 
 
 def generate_instance_name():
     """Generate a random instance name."""
     return "itest-" + "".join(random.choices(string.ascii_uppercase, k=8))
+
+
+def snap_exists(snap_name: str) -> bool:
+    """Returns true if a snap exists."""
+    return os.path.exists(f"/snap/{snap_name}/current")
+
+
+def is_installed_dangerously(snap_name: str) -> bool:
+    """Returns true if a snap is installed dangerously."""
+    return get_host_snap_info(snap_name)["revision"].startswith("x")
 
 
 @pytest.fixture()
@@ -186,12 +198,12 @@ def installed_snap():
 
     @contextlib.contextmanager
     def _installed_snap(snap_name, *, try_path: Optional[pathlib.Path] = None):
-        """Ensure snap is installed, or skip test."""
+        """Ensure snap is installed or skip test."""
         if shutil.which("snap") is None or sys.platform != "linux":
             pytest.skip("requires linux and snapd")
 
-        if os.path.exists(f"/snap/{snap_name}/current"):
-            # Already installed, nothing to do.
+        # do nothing if already installed and not dangerous
+        if snap_exists(snap_name) and not is_installed_dangerously(snap_name):
             yield
         else:
             # Install it, if enabled to do so by environment.
@@ -200,12 +212,67 @@ def installed_snap():
 
             if try_path:
                 subprocess.run(["sudo", "snap", "try", str(try_path)], check=True)
+            # if snap is already installed dangerously, use 'snap refresh'
+            elif snap_exists(snap_name) and is_installed_dangerously(snap_name):
+                subprocess.run(
+                    ["sudo", "snap", "refresh", "--amend", snap_name], check=True
+                )
+            # else use 'snap install'
             else:
                 subprocess.run(["sudo", "snap", "install", snap_name], check=True)
             yield
             subprocess.run(["sudo", "snap", "remove", snap_name], check=True)
 
     return _installed_snap
+
+
+@pytest.fixture()
+def dangerously_installed_snap(tmpdir):
+    """Fixture to provide contextmanager for a dangerously installed snap.
+
+    If the snap is not installed, it would be installed automatically with:
+    CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL=1
+    """
+
+    @contextlib.contextmanager
+    def _dangerously_installed_snap(snap_name):
+        """Ensure snap is installed or skip test."""
+        if shutil.which("snap") is None or sys.platform != "linux":
+            pytest.skip("requires linux and snapd")
+
+        # do nothing if the snap is already installed dangerously
+        if snap_exists(snap_name) and is_installed_dangerously(snap_name):
+            yield
+        else:
+            if not os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL") == "1":
+                pytest.skip(f"{snap_name!r} snap not installed, skipped")
+
+            # download the snap
+            output = subprocess.run(
+                ["snap", "download", "--target-directory", tmpdir, snap_name],
+                check=True,
+                capture_output=True,
+            )
+
+            # collect the file name
+            match = re.search(f"{snap_name}_\\d+.snap", str(output))
+            if not match:
+                # pylint: disable-next=broad-exception-raised
+                raise Exception(
+                    "could not parse snap file name from output of "
+                    f"'snap download {snap_name}' (output = {output!r})"
+                )
+            snap_file_path = pathlib.Path(tmpdir / match.group())
+
+            # the `--dangerous` flag will force the snap to be installed dangerously,
+            # even if the assertions exist in snapd
+            subprocess.run(
+                ["sudo", "snap", "install", snap_file_path, "--dangerous"], check=True
+            )
+            yield
+            subprocess.run(["sudo", "snap", "remove", snap_name], check=True)
+
+    return _dangerously_installed_snap
 
 
 @pytest.fixture()

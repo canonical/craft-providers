@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -30,9 +30,6 @@ from craft_providers import errors
 from .errors import LXDError
 
 logger = logging.getLogger(__name__)
-
-
-# pylint: disable=too-many-lines
 
 
 class StdinType(enum.Enum):
@@ -66,7 +63,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         self,
         command: List[str],
         *,
-        check: bool,
+        check: bool = True,
         project: Optional[str] = None,
         stdin: StdinType = StdinType.INTERACTIVE,
         **kwargs,
@@ -130,12 +127,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         ]
 
         try:
-            self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to add disk to instance {instance_name!r}.",
@@ -159,21 +151,10 @@ class LXC:  # pylint: disable=too-many-public-methods
 
         :raises LXDError: on unexpected error.
         """
-        command = [
-            "config",
-            "device",
-            "remove",
-            f"{remote}:{instance_name}",
-            device,
-        ]
+        command = ["config", "device", "remove", f"{remote}:{instance_name}", device]
 
         try:
-            self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to remove device from instance {instance_name!r}.",
@@ -194,12 +175,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         command = ["config", "device", "show", f"{remote}:{instance_name}"]
 
         try:
-            proc = self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            proc = self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to show devices for instance {instance_name!r}.",
@@ -207,6 +183,45 @@ class LXC:  # pylint: disable=too-many-public-methods
             ) from error
 
         return load_yaml(proc.stdout)
+
+    def config_get(
+        self,
+        *,
+        instance_name: str,
+        key: str,
+        project: str = "default",
+        remote: str = "local",
+    ) -> str:
+        """Get the value of an instance's config key.
+
+        This command only returns a single string value. It is different in behavior
+        than most other lxc commands, which can return multiple lines of yaml (like
+        `lxc config show`).
+
+        :param instance_name: Name of instance.
+        :param key: Config key name.
+        :param project: Name of LXD project.
+        :param remote: Name of LXD remote.
+
+        :returns: String containing the key's value. If the key does not exist, then
+        an empty string is returned.
+
+        :raises LXDError: on unexpected error.
+        """
+        command = ["config", "get", f"{remote}:{instance_name}", key]
+
+        try:
+            return self._run_lxc(
+                command, capture_output=True, check=True, text=True, project=project
+            ).stdout.rstrip()
+        except subprocess.CalledProcessError as error:
+            raise LXDError(
+                brief=(
+                    f"Failed to get value for config key {key!r} "
+                    f"for instance {instance_name!r}."
+                ),
+                details=errors.details_from_called_process_error(error),
+            ) from error
 
     def config_set(
         self,
@@ -230,15 +245,50 @@ class LXC:  # pylint: disable=too-many-public-methods
         command = ["config", "set", f"{remote}:{instance_name}", key, value]
 
         try:
-            self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
-                brief=f"Failed to set config key {key!r} to {value!r} for instance {instance_name!r}.",
+                brief=(
+                    f"Failed to set config key {key!r} to {value!r}"
+                    f" for instance {instance_name!r}."
+                ),
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
+    def copy(
+        self,
+        *,
+        source_remote: str = "local",
+        source_instance_name: str,
+        destination_remote: str = "local",
+        destination_instance_name: str,
+        project: str = "default",
+    ) -> None:
+        """Copy instances within or in between LXD servers.
+
+        Calls `lxc copy <source_remote>:<source_instance_name> <destination_remote>:
+        destination_instance_name>`. A running instance can be copied but the manpages
+        state "This may cause data corruption or data loss depending on the used
+        filesystem and applications. Use with care."
+
+        :param source_remote: Name of source LXD remote.
+        :param source_instance_name: Name of instance to copy from.
+        :param destination_remote: Name of remote LXD destination.
+        :param destination_instance_name: Name of instance to copy to.
+        :param project: Name of LXD project.
+
+        :raises LXDError: on unexpected error.
+        """
+        source = f"{source_remote}:{source_instance_name}"
+        destination = f"{destination_remote}:{destination_instance_name}"
+
+        command = ["copy", source, destination]
+
+        try:
+            self._run_lxc(command, capture_output=True, project=project)
+        except subprocess.CalledProcessError as error:
+            raise LXDError(
+                brief=(f"Failed to copy instance {source!r} to {destination!r}."),
                 details=errors.details_from_called_process_error(error),
             ) from error
 
@@ -265,12 +315,7 @@ class LXC:  # pylint: disable=too-many-public-methods
             command.append("--force")
 
         try:
-            self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to delete instance {instance_name!r}.",
@@ -362,15 +407,13 @@ class LXC:  # pylint: disable=too-many-public-methods
             command.append("--recursive")
 
         try:
-            self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
-                brief=f"Failed to pull file {source.as_posix()!r} from instance {instance_name!r}.",
+                brief=(
+                    f"Failed to pull file {source.as_posix()!r}"
+                    f" from instance {instance_name!r}."
+                ),
                 details=errors.details_from_called_process_error(error),
             ) from error
 
@@ -426,15 +469,13 @@ class LXC:  # pylint: disable=too-many-public-methods
             command.append(f"--uid={uid}")
 
         try:
-            self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
-                brief=f"Failed to push file {source.as_posix()!r} to instance {instance_name!r}.",
+                brief=(
+                    f"Failed to push file {source.as_posix()!r}"
+                    f" to instance {instance_name!r}."
+                ),
                 details=errors.details_from_called_process_error(error),
             ) from error
 
@@ -477,12 +518,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         command = ["info", remote + ":" + instance_name]
 
         try:
-            proc = self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            proc = self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to get info for remote {remote!r}.",
@@ -523,11 +559,7 @@ class LXC:  # pylint: disable=too-many-public-methods
 
         :raises LXDError: on unexpected error.
         """
-        command = [
-            "launch",
-            f"{image_remote}:{image}",
-            f"{remote}:{instance_name}",
-        ]
+        command = ["launch", f"{image_remote}:{image}", f"{remote}:{instance_name}"]
 
         if ephemeral:
             command.append("--ephemeral")
@@ -540,7 +572,6 @@ class LXC:  # pylint: disable=too-many-public-methods
             self._run_lxc(
                 command,
                 capture_output=True,
-                check=True,
                 stdin=StdinType.INTERACTIVE,
                 project=project,
             )
@@ -569,23 +600,13 @@ class LXC:  # pylint: disable=too-many-public-methods
 
         :raises LXDError: on unexpected error.
         """
-        command = [
-            "image",
-            "copy",
-            f"{image_remote}:{image}",
-            f"{remote}:",
-        ]
+        command = ["image", "copy", f"{image_remote}:{image}", f"{remote}:"]
 
         if alias is not None:
             command.append(f"--alias={alias}")
 
         try:
-            self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to copy image {image!r}.",
@@ -603,19 +624,10 @@ class LXC:  # pylint: disable=too-many-public-methods
 
         :raises LXDError: on unexpected error.
         """
-        command = [
-            "image",
-            "delete",
-            f"{remote}:{image}",
-        ]
+        command = ["image", "delete", f"{remote}:{image}"]
 
         try:
-            self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to delete image {image!r}.",
@@ -633,12 +645,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         command = ["image", "list", f"{remote}:", "--format=yaml"]
 
         try:
-            proc = self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            proc = self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to list images for project {project!r}.",
@@ -674,12 +681,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         command = ["list", f"{remote}:", "--format=yaml"]
 
         try:
-            proc = self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            proc = self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to list instances for project {project!r}.",
@@ -742,11 +744,7 @@ class LXC:  # pylint: disable=too-many-public-methods
 
         try:
             self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-                input=encoded_config,
+                command, capture_output=True, project=project, input=encoded_config
             )
         except subprocess.CalledProcessError as error:
             raise LXDError(
@@ -768,12 +766,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         command = ["profile", "show", f"{remote}:{profile}"]
 
         try:
-            proc = self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            proc = self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to show profile {profile!r}.",
@@ -793,12 +786,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         command = ["project", "create", f"{remote}:{project}"]
 
         try:
-            self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to create project {project!r}.",
@@ -816,12 +804,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         command = ["project", "delete", f"{remote}:{project}"]
 
         try:
-            self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to delete project {project!r}.",
@@ -840,11 +823,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         command = ["project", "list", f"{remote}:", "--format=yaml"]
 
         try:
-            proc = self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-            )
+            proc = self._run_lxc(command, capture_output=True)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to list projects on remote {remote!r}.",
@@ -884,11 +863,7 @@ class LXC:  # pylint: disable=too-many-public-methods
 
         :raises LXDError: on unexpected error.
         """
-        command = [
-            "publish",
-            f"{remote}:{instance_name}",
-            f"{image_remote}:",
-        ]
+        command = ["publish", f"{remote}:{instance_name}", f"{image_remote}:"]
 
         if alias is not None:
             command.append(f"--alias={alias}")
@@ -897,12 +872,7 @@ class LXC:  # pylint: disable=too-many-public-methods
             command.append("--force")
 
         try:
-            self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to publish image from {instance_name!r}.",
@@ -923,11 +893,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         command = ["remote", "add", remote, addr, f"--protocol={protocol}"]
 
         try:
-            self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-            )
+            self._run_lxc(command, capture_output=True)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to add remote {remote!r}.",
@@ -942,11 +908,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         command = ["remote", "list", "--format=yaml"]
 
         try:
-            proc = self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-            )
+            proc = self._run_lxc(command, capture_output=True)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief="Failed to list remotes.",
@@ -978,12 +940,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         command = ["start", f"{remote}:{instance_name}"]
 
         try:
-            self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to start {instance_name!r}.",
@@ -1018,12 +975,7 @@ class LXC:  # pylint: disable=too-many-public-methods
             command.append(f"--timeout={timeout}")
 
         try:
-            self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
+            self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to stop {instance_name!r}.",

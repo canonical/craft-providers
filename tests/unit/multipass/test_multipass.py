@@ -182,7 +182,10 @@ def test_info(fake_process):
 def test_info_error(fake_process, mock_details_from_process_error):
     fake_process.register_subprocess(
         ["multipass", "info", "test-instance", "--format", "json"],
-        stderr='info failed: The following errors occurred:\ninstance "foo" does not exist',
+        stderr=(
+            "info failed: The following errors occurred:\n"
+            'instance "foo" does not exist'
+        ),
         returncode=1,
     )
 
@@ -698,7 +701,10 @@ def test_wait_until_ready_timeout_error(
         ("multipass  1.6.2+mac\nmultipassd 1.6.3+mac\n", ("1.6.2", "1.6.3")),
         ("multipass  1.6.2+win\r\nmultipassd 1.6.3+win\r\n", ("1.6.2", "1.6.3")),
         (
-            "multipass  1.6.2+win\r\nmultipassd 1.6.3+win\r\nsome\r\nother\r\nnotice\r\n",
+            (
+                "multipass  1.6.2+win\r\nmultipassd 1.6.3+win\r\n"
+                "some\r\nother\r\nnotice\r\n"
+            ),
             ("1.6.2", "1.6.3"),
         ),
     ],

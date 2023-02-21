@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2022 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -22,6 +22,7 @@ from craft_providers.actions import snap_installer
 
 
 def test_inject_from_host(core20_lxd_instance, installed_snap, caplog):
+    """Verify a snap can be injected from the host."""
     core20_lxd_instance.execute_run(
         ["test", "!", "-d", "/snap/hello-world"], check=True
     )
@@ -36,9 +37,28 @@ def test_inject_from_host(core20_lxd_instance, installed_snap, caplog):
     assert caplog.records == []
 
 
+def test_inject_from_host_dangerous(
+    core20_lxd_instance, dangerously_installed_snap, caplog
+):
+    """Verify a dangerously installed snap can be injected from the host."""
+    core20_lxd_instance.execute_run(
+        ["test", "!", "-d", "/snap/hello-world"], check=True
+    )
+
+    with dangerously_installed_snap("hello-world"):
+        snap_installer.inject_from_host(
+            executor=core20_lxd_instance, snap_name="hello-world", classic=False
+        )
+
+    core20_lxd_instance.execute_run(["test", "-d", "/snap/hello-world"], check=True)
+
+    assert caplog.records == []
+
+
 def test_inject_from_host_using_pack_fallback(
     core20_lxd_instance, empty_test_snap, caplog
 ):
+    """Verify a snap is packed if the local download fails."""
     snap_installer.inject_from_host(
         executor=core20_lxd_instance,
         snap_name=empty_test_snap,
@@ -56,6 +76,7 @@ def test_inject_from_host_using_pack_fallback(
 
 
 def test_install_from_store_strict(core20_lxd_instance, installed_snap, caplog):
+    """Verify a strictly confined snap from the store can be installed."""
     core20_lxd_instance.execute_run(
         ["test", "!", "-d", "/snap/hello-world"], check=True
     )
@@ -73,6 +94,7 @@ def test_install_from_store_strict(core20_lxd_instance, installed_snap, caplog):
 
 
 def test_install_from_store_classic(core20_lxd_instance, installed_snap, caplog):
+    """Verify a classicly confined snap from the store can be installed."""
     core20_lxd_instance.execute_run(["test", "!", "-d", "/snap/charmcraft"], check=True)
 
     snap_installer.install_from_store(
@@ -88,6 +110,7 @@ def test_install_from_store_classic(core20_lxd_instance, installed_snap, caplog)
 
 
 def test_install_from_store_channel(core20_lxd_instance, installed_snap, caplog):
+    """Verify a channel can be specified when installing from the store"""
     core20_lxd_instance.execute_run(["test", "!", "-d", "/snap/go"], check=True)
 
     snap_installer.install_from_store(

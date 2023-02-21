@@ -26,13 +26,13 @@ from craft_providers.util import env_cmd
     "env,expected",
     [
         ({}, ["env"]),
-        (dict(foo="bar"), ["env", "foo=bar"]),
-        (dict(foo="bar", foo2="bar2"), ["env", "foo=bar", "foo2=bar2"]),
+        ({"foo": "bar"}, ["env", "foo=bar"]),
+        ({"foo": "bar", "foo2": "bar2"}, ["env", "foo=bar", "foo2=bar2"]),
         (
-            dict(foo="bar", foo2=None, foo3="baz"),
+            {"foo": "bar", "foo2": None, "foo3": "baz"},
             ["env", "foo=bar", "-u", "foo2", "foo3=baz"],
         ),
-        (dict(foo=None), ["env", "-u", "foo"]),
+        ({"foo": None}, ["env", "-u", "foo"]),
     ],
 )
 def test_formulate_command(env, expected):
@@ -43,13 +43,13 @@ def test_formulate_command(env, expected):
     "env,expected",
     [
         ({}, ["env", "-i"]),
-        (dict(foo="bar"), ["env", "-i", "foo=bar"]),
-        (dict(foo="bar", foo2="bar2"), ["env", "-i", "foo=bar", "foo2=bar2"]),
+        ({"foo": "bar"}, ["env", "-i", "foo=bar"]),
+        ({"foo": "bar", "foo2": "bar2"}, ["env", "-i", "foo=bar", "foo2=bar2"]),
         (
-            dict(foo="bar", foo2=None, foo3="baz"),
+            {"foo": "bar", "foo2": None, "foo3": "baz"},
             ["env", "-i", "foo=bar", "-u", "foo2", "foo3=baz"],
         ),
-        (dict(foo=None), ["env", "-i", "-u", "foo"]),
+        ({"foo": None}, ["env", "-i", "-u", "foo"]),
     ],
 )
 def test_formulate_command_ignore(env, expected):

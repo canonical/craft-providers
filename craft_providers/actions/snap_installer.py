@@ -24,7 +24,7 @@ import pathlib
 import shlex
 import subprocess
 import urllib.parse
-from typing import Iterator, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 import requests
 import requests_unixsocket  # type: ignore
@@ -37,8 +37,8 @@ from craft_providers.util import snap_cmd, temp_paths
 logger = logging.getLogger(__name__)
 
 
-# possible sources for the snap (using these two constants instead of an enum because the
-# values are persisted with JSON)
+# possible sources for the snap (using these two constants instead
+# of an enum because the values are persisted with JSON)
 SNAP_SRC_HOST = "host"
 SNAP_SRC_STORE = "store"
 
@@ -74,23 +74,18 @@ def _download_host_snap(
 
 def _pack_host_snap(*, snap_name: str, output: pathlib.Path) -> None:
     """Pack the current host snap."""
-    cmd = [
-        "snap",
-        "pack",
-        f"/snap/{snap_name}/current/",
-        f"--filename={output}",
-    ]
+    command = snap_cmd.formulate_pack_command(snap_name, output)
 
-    logger.debug("Executing command on host: %s", shlex.join(cmd))
+    logger.debug("Executing command on host: %s", shlex.join(command))
     subprocess.run(
-        cmd,
+        command,
         capture_output=True,
         check=True,
     )
 
 
-def _get_host_snap_revision(snap_name: str) -> str:
-    """Get the revision of the snap on the host."""
+def get_host_snap_info(snap_name: str) -> Dict[str, Any]:
+    """Get info about a snap installed on the host."""
     quoted_name = urllib.parse.quote(snap_name, safe="")
     url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}"
     try:
@@ -100,7 +95,8 @@ def _get_host_snap_revision(snap_name: str) -> str:
             brief="Unable to connect to snapd service."
         ) from error
     snap_info.raise_for_status()
-    return snap_info.json()["result"]["revision"]
+    # TODO: represent snap info in a dataclass
+    return snap_info.json()["result"]
 
 
 def _get_target_snap_revision_from_snapd(
@@ -129,7 +125,7 @@ def _get_target_snap_revision_from_snapd(
 def _get_snap_revision_ensuring_source(
     snap_name: str, source: str, executor: Executor
 ) -> Optional[str]:
-    """Get the revision of the snap on the target ensuring it's installed from same source."""
+    """Get revision of snap on target and ensure the installation source."""
     instance_config = InstanceConfiguration.load(executor=executor)
     if instance_config is None or instance_config.snaps is None:
         return None
@@ -139,7 +135,8 @@ def _get_snap_revision_ensuring_source(
         # not installed before
         return None
 
-    # use 'get' to retrieve the source to support configs saved by previous versions of the lib
+    # use 'get' to retrieve the source to support configs
+    # saved by previous versions of the lib
     if config.get("source") == source:
         # previously installed from specified source: ok
         return config["revision"]
@@ -153,8 +150,8 @@ def _get_snap_revision_ensuring_source(
         executor.execute_run(cmd, check=True, capture_output=True)
     except subprocess.CalledProcessError as error:
         raise SnapInstallationError(
-            brief=f"Failed to inject snap {snap_name!r}.",
-            details="unable to remove previously installed snap",
+            brief=f"Failed to remove snap {snap_name!r}.",
+            details=details_from_called_process_error(error),
         ) from error
     return None
 
@@ -167,7 +164,8 @@ def _get_host_snap(snap_name: str) -> Iterator[pathlib.Path]:
     If the snap is installed using `snap try`, it may fail to download. In
     that case, attempt to construct the snap by packing it ourselves.
 
-    :yields: Path to snap which will be cleaned up afterwards.
+    :yields: context manager that sets the temporary snap installation file
+      as the target
     """
     with temp_paths.home_temporary_directory() as tmp_dir:
         snap_path = tmp_dir / f"{snap_name}.snap"
@@ -175,21 +173,117 @@ def _get_host_snap(snap_name: str) -> Iterator[pathlib.Path]:
             _download_host_snap(snap_name=snap_name, output=snap_path)
         except SnapInstallationError:
             logger.warning(
-                "Failed to fetch snap from snapd, falling back to `snap pack` to recreate"
+                "Failed to fetch snap from snapd,"
+                " falling back to `snap pack` to recreate"
             )
             _pack_host_snap(snap_name=snap_name, output=snap_path)
 
         yield snap_path
 
 
+def _get_assertion(query: List[str]) -> bytes:
+    """Get an assertion from snapd.
+
+    :param query: assertion query to pass to `snap known`
+    :returns: assertion data
+    :raises SnapInstallationError: if 'snap known' call fails
+    """
+    command = snap_cmd.formulate_known_command(query=query)
+    logger.debug("Executing command on host: %s", command)
+    try:
+        return subprocess.run(command, capture_output=True, check=True).stdout
+    except subprocess.CalledProcessError as error:
+        raise SnapInstallationError(
+            brief="failed to get assertions for snap",
+            details=details_from_called_process_error(error),
+        ) from error
+
+
+@contextlib.contextmanager
+def _get_assertions_file(
+    snap_name: str, snap_id: str, snap_revision: str, snap_publisher_id: str
+) -> Iterator[pathlib.Path]:
+    """Get an assertion file for a snap.
+
+    :param snap_name: Name of snap to inject
+    :param snap_id: ID of the snap
+    :param snap_revision: Revision of the snap
+    :param snap_publisher_id: The ID of the snap's publisher's account
+
+    :yields: context manager that will set the temporary snap assertion file
+      as the target
+    """
+    logger.debug("Creating an assert file for snap %r", snap_name)
+    assertion_queries = [
+        [
+            "account-key",
+            "public-key-sha3-384=BWDEoaqyr25nF5SNCvEv2v"
+            "7QnM9QsfCc0PBMYD_i2NGSQ32EF2d4D0hqUel3m8ul",
+        ],
+        ["snap-declaration", f"snap-name={snap_name}"],
+        ["snap-revision", f"snap-revision={snap_revision}", f"snap-id={snap_id}"],
+        ["account", f"account-id={snap_publisher_id}"],
+    ]
+
+    with temp_paths.home_temporary_file() as assert_file_path:
+        with open(assert_file_path, "wb") as assert_file:
+            for query in assertion_queries:
+                assert_file.write(_get_assertion(query))
+                assert_file.write(b"\n")
+            assert_file.flush()
+            yield assert_file_path
+
+
+def _add_assertions_from_host(executor: Executor, snap_name: str) -> None:
+    """Add assertions from the host into the target for a snap.
+
+    :param executor: Executor for target
+    :param snap_name: Name of snap to inject
+    """
+    target_assert_path = pathlib.Path(f"/tmp/{snap_name}.assert")
+    snap_info = get_host_snap_info(snap_name)
+
+    try:
+        with _get_assertions_file(
+            snap_name=snap_name,
+            snap_id=snap_info["id"],
+            snap_revision=snap_info["revision"],
+            snap_publisher_id=snap_info["publisher"]["id"],
+        ) as host_assert_path:
+            executor.push_file(
+                source=host_assert_path,
+                destination=target_assert_path,
+            )
+    except ProviderError as error:
+        raise SnapInstallationError(
+            brief=f"failed to copy assert file for snap {snap_name!r}",
+            details="error copying snap assert file into target environment",
+        ) from error
+
+    try:
+        executor.execute_run(
+            snap_cmd.formulate_ack_command(snap_assert_path=target_assert_path),
+            check=True,
+            capture_output=True,
+        )
+    except subprocess.CalledProcessError as error:
+        raise SnapInstallationError(
+            brief=f"failed to add assertions for snap {snap_name!r}",
+            details=details_from_called_process_error(error),
+        ) from error
+
+
 def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> None:
     """Inject snap from host snap.
 
-    :raises SnapInstallationError: on unexpected error.
+    :param executor: Executor for target
+    :param snap_name: Name of snap to inject
+    :param classic: Install in classic mode
+    :raises SnapInstallationError: on failure to inject snap
     """
     logger.debug("Installing snap %r from host (classic=%s)", snap_name, classic)
 
-    host_revision = _get_host_snap_revision(snap_name=snap_name)
+    host_revision = get_host_snap_info(snap_name)["revision"]
     target_revision = _get_snap_revision_ensuring_source(
         snap_name=snap_name,
         source=SNAP_SRC_HOST,
@@ -199,41 +293,40 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
 
     if target_revision is not None and target_revision == host_revision:
         logger.debug(
-            "Skipping snap injection: target is already up-to-date with revision on host"
+            "Skipping snap injection:"
+            " target is already up-to-date with revision on host"
         )
         return
 
     target_snap_path = pathlib.Path(f"/tmp/{snap_name}.snap")
+    is_dangerous = host_revision.startswith("x")
+
+    if not is_dangerous:
+        _add_assertions_from_host(executor=executor, snap_name=snap_name)
+
+    with _get_host_snap(snap_name) as host_snap_path:
+        try:
+            executor.push_file(
+                source=host_snap_path,
+                destination=target_snap_path,
+            )
+        except ProviderError as error:
+            raise SnapInstallationError(
+                brief=f"failed to copy snap file for snap {snap_name!r}",
+                details="error copying snap file into target environment",
+            ) from error
+
     try:
-        # Clean outdated snap, if exists.
-        executor.execute_run(
-            ["rm", "-f", target_snap_path.as_posix()],
-            check=True,
-            capture_output=True,
-        )
-
-        with _get_host_snap(snap_name) as host_snap_path:
-            try:
-                executor.push_file(
-                    source=host_snap_path,
-                    destination=target_snap_path,
-                )
-            except ProviderError as error:
-                raise SnapInstallationError(
-                    brief=f"Failed to inject snap {snap_name!r}.",
-                    details="Error copying snap into target environment.",
-                ) from error
-
         executor.execute_run(
             snap_cmd.formulate_local_install_command(
-                classic=classic, dangerous=True, snap_path=target_snap_path
+                classic=classic, dangerous=is_dangerous, snap_path=target_snap_path
             ),
             check=True,
             capture_output=True,
         )
     except subprocess.CalledProcessError as error:
         raise SnapInstallationError(
-            brief=f"Failed to inject snap {snap_name!r}.",
+            brief=f"failed to install snap {snap_name!r}",
             details=details_from_called_process_error(error),
         ) from error
 

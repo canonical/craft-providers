@@ -45,8 +45,7 @@ def core20_instance(instance_name):
     [
         (bases.BuilddBaseAlias.BIONIC, "snapcraft:core18"),
         (bases.BuilddBaseAlias.FOCAL, "snapcraft:core20"),
-        # FIXME: enable after image is available
-        # (bases.BuilddBaseAlias.JAMMY, "snapcraft:core22"),
+        (bases.BuilddBaseAlias.JAMMY, "snapcraft:core22"),
     ],
 )
 def test_launch(instance_name, alias, image_name):
@@ -139,9 +138,9 @@ def test_launch_instance_config_incompatible_instance(core20_instance):
             image_name="snapcraft:core20",
         )
 
-    assert (
-        exc_info.value.brief
-        == "Incompatible base detected: Expected image compatibility tag 'buildd-base-v0', found 'invalid'."
+    assert exc_info.value.brief == (
+        "Incompatible base detected:"
+        " Expected image compatibility tag 'buildd-base-v0', found 'invalid'."
     )
 
     # Retry with auto_clean=True.

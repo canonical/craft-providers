@@ -20,6 +20,11 @@ from typing import Optional
 
 from craft_providers.errors import ProviderError
 
+LXD_INSTALL_HELP = (
+    "Visit https://linuxcontainers.org/lxd/getting-started-cli/"
+    " for instructions on installing and configuring LXD for your operating system."
+)
+
 
 class LXDError(ProviderError):
     """Unexpected LXD error."""
@@ -39,6 +44,5 @@ class LXDInstallationError(LXDError):
         details: Optional[str] = None,
     ) -> None:
         brief = f"Failed to install LXD: {reason}."
-        resolution = "Please visit https://linuxcontainers.org/lxd/getting-started-cli/ for instructions on installing LXD for your operating system."
-
+        resolution = LXD_INSTALL_HELP
         super().__init__(brief=brief, details=details, resolution=resolution)

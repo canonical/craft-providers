@@ -27,6 +27,7 @@ from craft_providers import bases, lxd
     [
         (bases.BuilddBaseAlias.BIONIC, "18.04"),
         (bases.BuilddBaseAlias.FOCAL, "20.04"),
+        (bases.BuilddBaseAlias.JAMMY, "22.04"),
     ],
 )
 def test_configure_and_launch_buildd_remotes(instance_name, alias, image_name):
