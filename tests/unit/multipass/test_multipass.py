@@ -251,7 +251,7 @@ def test_launch_all_opts(fake_process):
             "test-instance",
             "--cpus",
             "4",
-            "--mem",
+            "--memory",
             "8G",
             "--disk",
             "80G",

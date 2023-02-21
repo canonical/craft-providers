@@ -46,7 +46,7 @@ def tmp_instance(
             instance_name,
             "--cpus",
             cpus,
-            "--mem",
+            "--memory",
             mem,
             "--disk",
             disk,
