@@ -21,6 +21,7 @@ from unittest.mock import call
 import pytest
 
 from craft_providers import lxd
+from craft_providers.bases import BuilddBaseAlias
 from craft_providers.lxd.remotes import (
     BUILDD_RELEASES_REMOTE_ADDRESS,
     BUILDD_RELEASES_REMOTE_NAME,
@@ -94,3 +95,42 @@ def test_configure_buildd_image_remote_racecondition_error(mock_lxc, logs):
 
     with pytest.raises(ValueError):
         lxd.remotes.configure_buildd_image_remote(lxc=mock_lxc)
+
+
+@pytest.mark.parametrize(
+    "provider_base, image_name",
+    [
+        (BuilddBaseAlias.BIONIC.value, "core18"),
+        (BuilddBaseAlias.FOCAL.value, "core20"),
+        (BuilddBaseAlias.JAMMY.value, "core22"),
+    ],
+)
+def test_get_image_remote(provider_base, image_name):
+    """Verify `get_remote_image()` returns a RemoteImage."""
+    remote_image = lxd.remotes.get_remote_image(provider_base)
+
+    assert remote_image.image_name == image_name
+
+
+def test_get_image_remote_xenial_error():
+    """Raise an error when retrieving a xenial image.
+
+    The remote image for Xenial has not been chosen for craft-providers + LXD, so an
+    error is raised.
+    """
+    with pytest.raises(lxd.LXDError) as raised:
+        lxd.remotes.get_remote_image(BuilddBaseAlias.XENIAL.value)
+
+    assert str(raised.value) == (
+        "could not find a lxd remote image for the provider base '16.04'"
+    )
+
+
+def test_get_image_remote_error():
+    """Raise an error for an unknown provider base."""
+    with pytest.raises(lxd.LXDError) as raised:
+        lxd.remotes.get_remote_image("unknown-base")
+
+    assert str(raised.value) == (
+        "could not find a lxd remote image for the provider base 'unknown-base'"
+    )
