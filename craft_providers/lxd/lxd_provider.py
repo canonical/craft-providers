@@ -1,6 +1,6 @@
 # -*- Mode:Python; indent-tabs-mode:nil; tab-width:4 -*-
 #
-# Copyright 2022 Canonical Ltd.
+# Copyright 2022-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -19,27 +19,21 @@
 import contextlib
 import logging
 import pathlib
+import warnings
 from typing import Generator
 
 from craft_providers import Executor, Provider
 from craft_providers.base import Base
-from craft_providers.bases import BaseConfigurationError, BuilddBaseAlias
+from craft_providers.bases import BaseConfigurationError
 
 from .errors import LXDError
 from .installer import ensure_lxd_is_ready, install, is_installed
 from .launcher import launch
 from .lxc import LXC
 from .lxd_instance import LXDInstance
-from .remotes import configure_buildd_image_remote
+from .remotes import get_remote_image
 
 logger = logging.getLogger(__name__)
-
-
-PROVIDER_BASE_TO_LXD_BASE = {
-    BuilddBaseAlias.BIONIC.value: "core18",
-    BuilddBaseAlias.FOCAL.value: "core20",
-    BuilddBaseAlias.JAMMY.value: "core22",
-}
 
 
 class LXDProvider(Provider):
@@ -120,14 +114,26 @@ class LXDProvider(Provider):
 
         :raises LXDError: if instance cannot be configured and launched
         """
-        image_remote = configure_buildd_image_remote()
+        image = get_remote_image(build_base)
+        image.add_remote()
+
+        # we can't guarantee daily and devel images, so explicitly warn the user
+        if not image.is_stable:
+            warnings.warn(
+                message=(
+                    f"You are using an daily or devel image {image.image_name!r}"
+                    f" from remote {image.remote_name!r}. Devel or daily images are "
+                    "not guaranteed and are intended for experimental use only."
+                ),
+                category=UserWarning,
+            )
 
         try:
             instance = launch(
                 name=instance_name,
                 base_configuration=base_configuration,
-                image_name=PROVIDER_BASE_TO_LXD_BASE[build_base],
-                image_remote=image_remote,
+                image_name=image.image_name,
+                image_remote=image.remote_name,
                 auto_clean=True,
                 auto_create_project=True,
                 map_user_uid=True,

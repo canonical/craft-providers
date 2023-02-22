@@ -29,8 +29,8 @@ from .launcher import launch  # noqa: F401
 from .lxc import LXC  # noqa: F401
 from .lxd import LXD  # noqa: F401
 from .lxd_instance import LXDInstance  # noqa: F401
-from .lxd_provider import PROVIDER_BASE_TO_LXD_BASE, LXDProvider  # noqa: F401
-from .remotes import configure_buildd_image_remote  # noqa: F401
+from .lxd_provider import LXDProvider  # noqa: F401
+from .remotes import configure_buildd_image_remote, get_remote_image  # noqa: F401
 
 __all__ = [
     "LXC",
@@ -39,7 +39,7 @@ __all__ = [
     "LXDError",
     "LXDInstallationError",
     "LXDProvider",
-    "PROVIDER_BASE_TO_LXD_BASE",
+    "get_remote_image",
     "install",
     "is_installed",
     "is_initialized",
