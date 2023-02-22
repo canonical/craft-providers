@@ -19,12 +19,14 @@
 from unittest.mock import call
 
 import pytest
+from logassert import Exact  # type: ignore
 
 from craft_providers import lxd
 from craft_providers.bases import BuilddBaseAlias
 from craft_providers.lxd.remotes import (
-    BUILDD_RELEASES_REMOTE_ADDRESS,
     BUILDD_RELEASES_REMOTE_NAME,
+    ProtocolType,
+    RemoteImage,
 )
 
 
@@ -33,68 +35,87 @@ def mock_lxc(mocker):
     yield mocker.patch("craft_providers.lxd.launcher.LXC", spec=lxd.LXC)
 
 
-def test_configure_buildd_image_remote_fresh(mock_lxc, logs):
-    name = lxd.remotes.configure_buildd_image_remote(lxc=mock_lxc)
+@pytest.fixture
+def fake_remote_image(mocker):
+    return RemoteImage(
+        image_name="test-image-name",
+        remote_name="test-remote-name",
+        remote_address="test-remote-address",
+        remote_protocol=ProtocolType.LXD,
+        is_stable=False,
+    )
 
-    assert name == BUILDD_RELEASES_REMOTE_NAME
+
+@pytest.fixture
+def mock_remote_image(mocker):
+    yield mocker.patch("craft_providers.lxd.remotes.RemoteImage", spec=RemoteImage)
+
+
+@pytest.fixture
+def mock_get_remote_image(mocker, mock_remote_image):
+    yield mocker.patch(
+        "craft_providers.lxd.remotes.get_remote_image", return_value=mock_remote_image
+    )
+
+
+def test_add_remote_new(fake_remote_image, mock_lxc, logs):
+    """Verify remote is added if it does not already exist."""
+    fake_remote_image.add_remote(mock_lxc)
+
     assert mock_lxc.mock_calls == [
         call.remote_list(),
-        call.remote_list().__contains__(BUILDD_RELEASES_REMOTE_NAME),
+        call.remote_list().__contains__("test-remote-name"),
         call.remote_add(
-            remote=BUILDD_RELEASES_REMOTE_NAME,
-            addr=BUILDD_RELEASES_REMOTE_ADDRESS,
-            protocol="simplestreams",
+            remote="test-remote-name",
+            addr="test-remote-address",
+            protocol=ProtocolType.LXD.value,
         ),
     ]
-    assert f"Remote '{BUILDD_RELEASES_REMOTE_NAME}' was successfully added." in logs.debug
+    assert "Remote 'test-remote-name' was successfully added." in logs.debug
 
 
-def test_configure_buildd_image_remote_already_exists(mock_lxc, logs):
-    mock_lxc.remote_list.return_value = {BUILDD_RELEASES_REMOTE_NAME: {}}
+def test_add_remote_existing(fake_remote_image, mock_lxc, logs):
+    """Verify existing remote is not added again."""
+    mock_lxc.remote_list.return_value = {"test-remote-name": {}}
 
-    name = lxd.remotes.configure_buildd_image_remote(lxc=mock_lxc)
+    fake_remote_image.add_remote(mock_lxc)
 
-    assert name == BUILDD_RELEASES_REMOTE_NAME
-    assert mock_lxc.mock_calls == [
-        call.remote_list(),
-    ]
-    assert f"Remote '{BUILDD_RELEASES_REMOTE_NAME}' already exists." in logs.debug
+    assert mock_lxc.mock_calls == [call.remote_list()]
+    assert "Remote 'test-remote-name' already exists." in logs.debug
 
 
-def test_configure_buildd_image_remote_racecondition_created(mock_lxc, logs):
+def test_add_remote_race_condition(fake_remote_image, mock_lxc, logs):
     """Race condition when adding the remote, it was created by other process."""
     # the first time the list will not show the remote, then `remote_add` will fail
     # because it was just created from other process, and exactly because of that
     # it will show in the list the second time is asked
-    test_remote_name = BUILDD_RELEASES_REMOTE_NAME
-    mock_lxc.remote_list.side_effect = [{}, {test_remote_name: {}}]
+    mock_lxc.remote_list.side_effect = [{}, {"test-remote-name": {}}]
     mock_lxc.remote_add.side_effect = ValueError()
 
-    name = lxd.remotes.configure_buildd_image_remote(lxc=mock_lxc)
+    fake_remote_image.add_remote(mock_lxc)
 
-    assert name == BUILDD_RELEASES_REMOTE_NAME
     assert mock_lxc.mock_calls == [
         call.remote_list(),
         call.remote_add(
-            remote=BUILDD_RELEASES_REMOTE_NAME,
-            addr=BUILDD_RELEASES_REMOTE_ADDRESS,
-            protocol="simplestreams",
+            remote="test-remote-name",
+            addr="test-remote-address",
+            protocol=ProtocolType.LXD.value,
         ),
         call.remote_list(),
     ]
     assert (
-        f"Remote '{BUILDD_RELEASES_REMOTE_NAME}' is present on second check, "
-        "ignoring exception ValueError()." in logs.debug
+        "Remote 'test-remote-name' is present on second check, ignoring exception "
+        "ValueError()." in logs.debug
     )
 
 
-def test_configure_buildd_image_remote_racecondition_error(mock_lxc, logs):
+def test_add_remote_race_condition_error(fake_remote_image, mock_lxc, logs):
     """Race condition code triggered but it was actually an error."""
     mock_lxc.remote_list.return_value = {}
     mock_lxc.remote_add.side_effect = ValueError()
 
     with pytest.raises(ValueError):
-        lxd.remotes.configure_buildd_image_remote(lxc=mock_lxc)
+        fake_remote_image.add_remote(mock_lxc)
 
 
 @pytest.mark.parametrize(
@@ -134,3 +155,21 @@ def test_get_image_remote_error():
     assert str(raised.value) == (
         "could not find a lxd remote image for the provider base 'unknown-base'"
     )
+
+
+def test_configure_buildd_image_remote(
+    mock_lxc, logs, mock_get_remote_image, mock_remote_image
+):
+    """Verify deprecated `configure_buildd_image_remote()` call."""
+    name = lxd.remotes.configure_buildd_image_remote(lxc=mock_lxc)
+
+    assert (
+        Exact(
+            "configure_buildd_image_remote() is deprecated. "
+            "Use configure_image_remote()."
+        )
+        in logs.warning
+    )
+    mock_get_remote_image.assert_called_once_with(BuilddBaseAlias.JAMMY.value)
+    mock_remote_image.add_remote.assert_called_once_with(mock_lxc)
+    assert name == BUILDD_RELEASES_REMOTE_NAME

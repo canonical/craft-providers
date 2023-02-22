@@ -58,6 +58,40 @@ class RemoteImage:
     remote_protocol: ProtocolType
     is_stable: bool
 
+    def add_remote(self, lxc: LXC = LXC()) -> None:
+        """Add the LXD remote for an image.
+
+        If the remote already exists, it will not be re-added.
+
+        :param lxc: LXC client.
+        """
+        # TODO verify both the remote name and address
+        if self.remote_name in lxc.remote_list():
+            logger.debug("Remote %r already exists.", self.remote_name)
+        else:
+            try:
+                lxc.remote_add(
+                    remote=self.remote_name,
+                    addr=self.remote_address,
+                    protocol=self.remote_protocol.value,
+                )
+
+            except Exception as exc:  # pylint: disable=broad-except
+                # the remote adding failed, no matter really how: if it was because a
+                # race condition on remote creation (it's not idempotent) and now the
+                # remote is there, the purpose of this function is done (otherwise we
+                # let the original exception fly)
+                if self.remote_name in lxc.remote_list():
+                    logger.debug(
+                        "Remote %r is present on second check, ignoring exception %r.",
+                        self.remote_name,
+                        exc,
+                    )
+                else:
+                    raise
+            else:
+                logger.debug("Remote %r was successfully added.", self.remote_name)
+
 
 # XXX: support xenial?
 # mapping from supported bases to actual lxd remote images
@@ -105,36 +139,21 @@ def get_remote_image(provider_base: str) -> RemoteImage:
     return image
 
 
-def configure_buildd_image_remote(
-    lxc: LXC = LXC(),
-) -> str:
-    """Configure buildd remote, adding remote as required.
+def configure_buildd_image_remote(lxc: LXC = LXC()) -> str:
+    """Configure the default buildd image remote.
+
+    This is a deprecated function to maintain the existing API. It will be
+    removed with the release of craft-providers 2.0.
+
     :param lxc: LXC client.
+
     :returns: Name of remote to pass to launcher.
     """
-    if BUILDD_RELEASES_REMOTE_NAME in lxc.remote_list():
-        logger.debug("Remote %r already exists.", BUILDD_RELEASES_REMOTE_NAME)
-    else:
-        try:
-            lxc.remote_add(
-                remote=BUILDD_RELEASES_REMOTE_NAME,
-                addr=BUILDD_RELEASES_REMOTE_ADDRESS,
-                protocol="simplestreams",
-            )
-        except Exception as exc:  # pylint: disable=broad-except
-            # the remote adding failed, no matter really how: if it was because a race
-            # condition on remote creation (it's not idempotent) and now the remote is
-            # there, the purpose of this function is done (otherwise we let the
-            # original exception fly)
-            if BUILDD_RELEASES_REMOTE_NAME in lxc.remote_list():
-                logger.debug(
-                    "Remote %r is present on second check, ignoring exception %r.",
-                    BUILDD_RELEASES_REMOTE_NAME,
-                    exc,
-                )
-            else:
-                raise
-        else:
-            logger.debug("Remote %r was successfully added.", BUILDD_RELEASES_REMOTE_NAME)
+    logger.warning(
+        "configure_buildd_image_remote() is deprecated. Use configure_image_remote()."
+    )
+    # configure the buildd remote for core22
+    image = get_remote_image(BuilddBaseAlias.JAMMY.value)
+    image.add_remote(lxc)
 
     return BUILDD_RELEASES_REMOTE_NAME
