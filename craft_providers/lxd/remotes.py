@@ -1,5 +1,6 @@
+# -*- Mode:Python; indent-tabs-mode:nil; tab-width:4 -*-
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -15,7 +16,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
-"""Remote helper utilities."""
+"""Manages LXD remotes and provides access to remote images."""
 
 import logging
 
@@ -23,26 +24,24 @@ from .lxc import LXC
 
 logger = logging.getLogger(__name__)
 
-BUILDD_REMOTE_NAME = "craft-com.ubuntu.cloud-buildd"
-BUILDD_REMOTE_ADDR = "https://cloud-images.ubuntu.com/buildd/releases"
+BUILDD_RELEASES_REMOTE_NAME = "craft-com.ubuntu.cloud-buildd"
+BUILDD_RELEASES_REMOTE_ADDRESS = "https://cloud-images.ubuntu.com/buildd/releases"
 
 
 def configure_buildd_image_remote(
     lxc: LXC = LXC(),
 ) -> str:
     """Configure buildd remote, adding remote as required.
-
     :param lxc: LXC client.
-
     :returns: Name of remote to pass to launcher.
     """
-    if BUILDD_REMOTE_NAME in lxc.remote_list():
-        logger.debug("Remote %r already exists.", BUILDD_REMOTE_NAME)
+    if BUILDD_RELEASES_REMOTE_NAME in lxc.remote_list():
+        logger.debug("Remote %r already exists.", BUILDD_RELEASES_REMOTE_NAME)
     else:
         try:
             lxc.remote_add(
-                remote=BUILDD_REMOTE_NAME,
-                addr=BUILDD_REMOTE_ADDR,
+                remote=BUILDD_RELEASES_REMOTE_NAME,
+                addr=BUILDD_RELEASES_REMOTE_ADDRESS,
                 protocol="simplestreams",
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -50,15 +49,15 @@ def configure_buildd_image_remote(
             # condition on remote creation (it's not idempotent) and now the remote is
             # there, the purpose of this function is done (otherwise we let the
             # original exception fly)
-            if BUILDD_REMOTE_NAME in lxc.remote_list():
+            if BUILDD_RELEASES_REMOTE_NAME in lxc.remote_list():
                 logger.debug(
                     "Remote %r is present on second check, ignoring exception %r.",
-                    BUILDD_REMOTE_NAME,
+                    BUILDD_RELEASES_REMOTE_NAME,
                     exc,
                 )
             else:
                 raise
         else:
-            logger.debug("Remote %r was successfully added.", BUILDD_REMOTE_NAME)
+            logger.debug("Remote %r was successfully added.", BUILDD_RELEASES_REMOTE_NAME)
 
-    return BUILDD_REMOTE_NAME
+    return BUILDD_RELEASES_REMOTE_NAME
