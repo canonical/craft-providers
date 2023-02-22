@@ -16,7 +16,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
-from unittest import mock
+from unittest.mock import call
 
 import pytest
 
@@ -28,12 +28,8 @@ from craft_providers.lxd.remotes import (
 
 
 @pytest.fixture
-def mock_lxc():
-    with mock.patch(
-        "craft_providers.lxd.launcher.LXC",
-        spec=lxd.LXC,
-    ) as mock_lxc:
-        yield mock_lxc.return_value
+def mock_lxc(mocker):
+    yield mocker.patch("craft_providers.lxd.launcher.LXC", spec=lxd.LXC)
 
 
 def test_configure_buildd_image_remote_fresh(mock_lxc, logs):
@@ -41,9 +37,9 @@ def test_configure_buildd_image_remote_fresh(mock_lxc, logs):
 
     assert name == BUILDD_RELEASES_REMOTE_NAME
     assert mock_lxc.mock_calls == [
-        mock.call.remote_list(),
-        mock.call.remote_list().__contains__(BUILDD_RELEASES_REMOTE_NAME),
-        mock.call.remote_add(
+        call.remote_list(),
+        call.remote_list().__contains__(BUILDD_RELEASES_REMOTE_NAME),
+        call.remote_add(
             remote=BUILDD_RELEASES_REMOTE_NAME,
             addr=BUILDD_RELEASES_REMOTE_ADDRESS,
             protocol="simplestreams",
@@ -59,7 +55,7 @@ def test_configure_buildd_image_remote_already_exists(mock_lxc, logs):
 
     assert name == BUILDD_RELEASES_REMOTE_NAME
     assert mock_lxc.mock_calls == [
-        mock.call.remote_list(),
+        call.remote_list(),
     ]
     assert f"Remote '{BUILDD_RELEASES_REMOTE_NAME}' already exists." in logs.debug
 
@@ -77,13 +73,13 @@ def test_configure_buildd_image_remote_racecondition_created(mock_lxc, logs):
 
     assert name == BUILDD_RELEASES_REMOTE_NAME
     assert mock_lxc.mock_calls == [
-        mock.call.remote_list(),
-        mock.call.remote_add(
+        call.remote_list(),
+        call.remote_add(
             remote=BUILDD_RELEASES_REMOTE_NAME,
             addr=BUILDD_RELEASES_REMOTE_ADDRESS,
             protocol="simplestreams",
         ),
-        mock.call.remote_list(),
+        call.remote_list(),
     ]
     assert (
         f"Remote '{BUILDD_RELEASES_REMOTE_NAME}' is present on second check, "
