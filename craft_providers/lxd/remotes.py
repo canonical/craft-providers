@@ -19,6 +19,7 @@
 """Manages LXD remotes and provides access to remote images."""
 
 import logging
+import warnings
 from dataclasses import dataclass
 from enum import Enum
 
@@ -171,8 +172,12 @@ def configure_buildd_image_remote(lxc: LXC = LXC()) -> str:
 
     :returns: Name of remote to pass to launcher.
     """
-    logger.warning(
-        "configure_buildd_image_remote() is deprecated. Use configure_image_remote()."
+    warnings.warn(
+        message=(
+            "configure_buildd_image_remote() is deprecated. "
+            "Use configure_image_remote()."
+        ),
+        category=DeprecationWarning,
     )
     # configure the buildd remote for core22
     image = get_remote_image(BuilddBaseAlias.JAMMY.value)
