@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -31,8 +31,8 @@ from craft_providers.bases import (
     BaseConfigurationError,
     buildd,
     errors,
-    instance_config,
 )
+from craft_providers.bases.instance_config import InstanceConfiguration
 from craft_providers.errors import details_from_called_process_error
 
 # pylint: disable=too-many-lines
@@ -42,11 +42,9 @@ DEFAULT_FAKE_CMD = ["fake-executor"]
 
 @pytest.fixture()
 def mock_load(mocker):
-    mocker.patch(
+    yield mocker.patch(
         "craft_providers.bases.instance_config.InstanceConfiguration.load",
-        return_value=instance_config.InstanceConfiguration(
-            compatibility_tag="buildd-base-v0"
-        ),
+        return_value=InstanceConfiguration(compatibility_tag="buildd-base-v0"),
     )
 
 
@@ -141,12 +139,7 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
     tag,
     expected_tag,
 ):
-    mocker.patch(
-        "craft_providers.bases.instance_config.InstanceConfiguration.load",
-        return_value=instance_config.InstanceConfiguration(
-            compatibility_tag=expected_tag
-        ),
-    )
+    mock_load.return_value = InstanceConfiguration(compatibility_tag=expected_tag)
 
     mock_datetime = mocker.patch("craft_providers.bases.buildd.datetime")
     mock_datetime.now.return_value = datetime(2022, 1, 2, 3, 4, 5, 6)
@@ -537,11 +530,9 @@ def test_install_packages_install_error(mocker, fake_executor):
 def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
     monkeypatch.setattr(
-        instance_config.InstanceConfiguration,
+        InstanceConfiguration,
         "load",
-        lambda **kwargs: instance_config.InstanceConfiguration(
-            compatibility_tag="invalid-tag"
-        ),
+        lambda **kwargs: InstanceConfiguration(compatibility_tag="invalid-tag"),
     )
 
     with pytest.raises(errors.BaseCompatibilityError) as exc_info:
@@ -985,11 +976,9 @@ def test_wait_for_system_ready_timeout_in_network(
     )
 
 
-@patch(
-    "craft_providers.bases.instance_config.InstanceConfiguration.load",
-    side_effect=ValidationError("foo", instance_config.InstanceConfiguration),
-)
-def test_ensure_config_compatible_validation_error(fake_executor):
+def test_ensure_config_compatible_validation_error(fake_executor, mock_load):
+    mock_load.side_effect = ValidationError("foo", InstanceConfiguration)
+
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
@@ -1002,11 +991,9 @@ def test_ensure_config_compatible_validation_error(fake_executor):
     )
 
 
-@patch(
-    "craft_providers.bases.instance_config.InstanceConfiguration.load",
-    return_value=None,
-)
-def test_ensure_config_compatible_empty_config_returns_none(fake_executor):
+def test_ensure_config_compatible_empty_config_returns_none(fake_executor, mock_load):
+    mock_load.return_value = None
+
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
 
     assert (
