@@ -402,7 +402,7 @@ class BuilddBase(Base):
         self._setup_wait_for_system_ready(
             executor=executor, deadline=deadline, retry_wait=retry_wait
         )
-        self._setup_instance_config(executor=executor, deadline=deadline)
+        self._update_compatibility_tag(executor=executor, deadline=deadline)
         self._setup_hostname(executor=executor, deadline=deadline)
         self._setup_resolved(executor=executor, deadline=deadline)
         self._setup_networkd(executor=executor, deadline=deadline)
@@ -687,16 +687,6 @@ class BuilddBase(Base):
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    def _setup_instance_config(
-        self, *, executor: Executor, deadline: Optional[float]
-    ) -> None:
-        InstanceConfiguration.update(
-            executor=executor,
-            data={"compatibility_tag": self.compatibility_tag},
-            config_path=self.instance_config_path,
-        )
-        _check_deadline(deadline)
-
     def _setup_networkd(self, *, executor: Executor, deadline: Optional[float]) -> None:
         """Configure networkd and start it.
 
@@ -913,6 +903,17 @@ class BuilddBase(Base):
                 deadline, message="Timed out waiting for environment to be ready."
             )
             sleep(retry_wait)
+
+    def _update_compatibility_tag(
+        self, *, executor: Executor, deadline: Optional[float]
+    ) -> None:
+        """Update the compatibility_tag in the instance config."""
+        InstanceConfiguration.update(
+            executor=executor,
+            data={"compatibility_tag": self.compatibility_tag},
+            config_path=self.instance_config_path,
+        )
+        _check_deadline(deadline)
 
     def wait_until_ready(
         self,

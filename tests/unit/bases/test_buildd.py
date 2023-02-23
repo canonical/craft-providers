@@ -976,6 +976,25 @@ def test_wait_for_system_ready_timeout_in_network(
     )
 
 
+def test_update_compatibility_tag(fake_executor):
+    """`update_compatibility_tag()` should update the instance config."""
+    base_config = buildd.BuilddBase(
+        alias=buildd.BuilddBaseAlias.JAMMY, compatibility_tag="test-tag"
+    )
+
+    base_config._update_compatibility_tag(executor=fake_executor, deadline=None)
+
+    assert fake_executor.records_of_push_file_io == [
+        {
+            "content": b"compatibility_tag: test-tag\n",
+            "destination": "/etc/craft-instance.conf",
+            "file_mode": "0644",
+            "group": "root",
+            "user": "root",
+        }
+    ]
+
+
 def test_ensure_config_compatible_validation_error(fake_executor, mock_load):
     mock_load.side_effect = ValidationError("foo", InstanceConfiguration)
 
