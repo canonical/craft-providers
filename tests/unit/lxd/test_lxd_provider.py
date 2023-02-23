@@ -126,9 +126,10 @@ def test_launched_environment(
     mock_get_remote_image,
     mock_remote_image,
     mock_launch,
+    mock_lxc,
     tmp_path,
 ):
-    provider = LXDProvider()
+    provider = LXDProvider(lxc=mock_lxc)
 
     with provider.launched_environment(
         project_name="test-project",
@@ -139,7 +140,7 @@ def test_launched_environment(
     ) as instance:
         assert instance is not None
         mock_get_remote_image.assert_called_once_with("test-build-base")
-        mock_remote_image.add_remote.assert_called_once()
+        mock_remote_image.add_remote.assert_called_once_with(lxc=mock_lxc)
         assert mock_launch.mock_calls == [
             call(
                 name="test-instance-name",

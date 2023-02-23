@@ -67,7 +67,7 @@ class RemoteImage:
     remote_protocol: ProtocolType
     is_stable: bool
 
-    def add_remote(self, lxc: LXC = LXC()) -> None:
+    def add_remote(self, lxc: LXC) -> None:
         """Add the LXD remote for an image.
 
         If the remote already exists, it will not be re-added.

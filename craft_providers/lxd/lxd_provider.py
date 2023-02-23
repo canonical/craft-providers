@@ -115,7 +115,7 @@ class LXDProvider(Provider):
         :raises LXDError: if instance cannot be configured and launched
         """
         image = get_remote_image(build_base)
-        image.add_remote()
+        image.add_remote(lxc=self.lxc)
 
         # we can't guarantee daily and devel images, so explicitly warn the user
         if not image.is_stable:
