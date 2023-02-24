@@ -20,8 +20,7 @@ Free software: GNU Lesser General Public License v3
 
 # Documentation
 
-https://craft-providers.readthedocs.io.
-
+https://canonical-craft-providers.readthedocs-hosted.com/en/latest/
 
 # Contributing
 
