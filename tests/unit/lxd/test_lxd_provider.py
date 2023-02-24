@@ -19,7 +19,7 @@ from unittest.mock import call
 import pytest
 
 from craft_providers import bases
-from craft_providers.lxd import LXDError, LXDProvider
+from craft_providers.lxd import LXDError, LXDProvider, LXDUnstableImageError
 
 
 @pytest.fixture
@@ -121,7 +121,18 @@ def test_create_environment(mocker):
     )
 
 
+@pytest.mark.parametrize(
+    "allow_unstable, is_stable",
+    [
+        # all permutations are valid except allow_unstable=False and is_stable=False
+        (True, True),
+        (True, False),
+        (False, True),
+    ],
+)
 def test_launched_environment(
+    allow_unstable,
+    is_stable,
     mock_buildd_base_configuration,
     mock_get_remote_image,
     mock_remote_image,
@@ -129,6 +140,7 @@ def test_launched_environment(
     mock_lxc,
     tmp_path,
 ):
+    mock_remote_image.is_stable = is_stable
     provider = LXDProvider(lxc=mock_lxc)
 
     with provider.launched_environment(
@@ -137,6 +149,7 @@ def test_launched_environment(
         base_configuration=mock_buildd_base_configuration,
         build_base="test-build-base",
         instance_name="test-instance-name",
+        allow_unstable=allow_unstable,
     ) as instance:
         assert instance is not None
         mock_get_remote_image.assert_called_once_with("test-build-base")
@@ -189,18 +202,18 @@ def test_launched_environment_launch_base_configuration_error(
     assert raised.value.__cause__ is error
 
 
-def test_launched_environment_unsupported_image_warning(
+def test_launched_environment_unstable_error(
     mock_buildd_base_configuration,
     mock_get_remote_image,
     mock_remote_image,
     mock_launch,
     tmp_path,
 ):
-    """Raise a warning when an unstable remote image is used."""
+    """Raise an Exception when an unstable image is used with opting in."""
     mock_remote_image.is_stable = False
     provider = LXDProvider()
 
-    with pytest.warns(UserWarning) as warning:
+    with pytest.raises(LXDUnstableImageError) as raised:
         with provider.launched_environment(
             project_name="test-project",
             project_path=tmp_path,
@@ -210,8 +223,7 @@ def test_launched_environment_unsupported_image_warning(
         ):
             pass
 
-    assert str(warning[0].message) == (
-        "You are using an daily or devel image 'test-image-name' from remote "
-        "'test-remote-name'. Devel or daily images are not guaranteed and are "
-        "intended for experimental use only."
+    assert raised.value.brief == (
+        "Cannot launch an unstable image 'test-image-name' from remote "
+        "'test-remote-name'"
     )

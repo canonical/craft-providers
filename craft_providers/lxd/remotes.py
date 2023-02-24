@@ -57,15 +57,26 @@ class RemoteImage:
     :param remote_name: Name of the remote server.
     :param remote_address: Address of the remote (can be an IP, FDQN, URL, or token)
     :param remote_protocol: Remote protocol (options are `lxd` and `simplestreams`)
-    :param is_stable: True if the image is a stable release. Daily and devel images
-    are not stable.
     """
 
     image_name: str
     remote_name: str
     remote_address: str
     remote_protocol: ProtocolType
-    is_stable: bool
+
+    @property
+    def is_stable(self) -> bool:
+        """Check if the image is stable.
+
+        Images are considered stable if they are from a release remote. Images from
+        daily or devel remotes are not considered.
+
+        :returns: True if the image is stable.
+        """
+        return (
+            self.remote_name == BUILDD_RELEASES_REMOTE_NAME
+            and self.remote_address == BUILDD_RELEASES_REMOTE_ADDRESS
+        )
 
     def add_remote(self, lxc: LXC) -> None:
         """Add the LXD remote for an image.
@@ -110,35 +121,30 @@ _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE = {
         remote_name=BUILDD_RELEASES_REMOTE_NAME,
         remote_address=BUILDD_RELEASES_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
-        is_stable=True,
     ),
     BuilddBaseAlias.FOCAL.value: RemoteImage(
         image_name="core20",
         remote_name=BUILDD_RELEASES_REMOTE_NAME,
         remote_address=BUILDD_RELEASES_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
-        is_stable=True,
     ),
     BuilddBaseAlias.JAMMY.value: RemoteImage(
         image_name="core22",
         remote_name=BUILDD_RELEASES_REMOTE_NAME,
         remote_address=BUILDD_RELEASES_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
-        is_stable=True,
     ),
     BuilddBaseAlias.KINETIC.value: RemoteImage(
         image_name="kinetic",
         remote_name=DAILY_REMOTE_NAME,
         remote_address=DAILY_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
-        is_stable=False,
     ),
     BuilddBaseAlias.LUNAR.value: RemoteImage(
         image_name="lunar",
         remote_name=DAILY_REMOTE_NAME,
         remote_address=DAILY_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
-        is_stable=False,
     ),
 }
 

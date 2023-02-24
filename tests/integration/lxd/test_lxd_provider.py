@@ -63,6 +63,7 @@ def test_launched_environment(alias, installed_lxd, instance_name, tmp_path):
         base_configuration=base_configuration,
         build_base=alias.value,
         instance_name=instance_name,
+        allow_unstable=True,
     ) as test_instance:
         assert test_instance.exists() is True
         assert test_instance.is_running() is True

@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -17,7 +17,7 @@
 
 """LXD environment provider."""
 
-from .errors import LXDError, LXDInstallationError  # noqa: F401
+from .errors import LXDError, LXDInstallationError, LXDUnstableImageError  # noqa: F401
 from .installer import (  # noqa: F401
     ensure_lxd_is_ready,
     install,
@@ -38,6 +38,7 @@ __all__ = [
     "LXDInstance",
     "LXDError",
     "LXDInstallationError",
+    "LXDUnstableImageError",
     "LXDProvider",
     "get_remote_image",
     "install",

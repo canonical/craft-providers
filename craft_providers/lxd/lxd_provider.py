@@ -19,14 +19,13 @@
 import contextlib
 import logging
 import pathlib
-import warnings
 from typing import Generator
 
 from craft_providers import Executor, Provider
 from craft_providers.base import Base
 from craft_providers.bases import BaseConfigurationError
 
-from .errors import LXDError
+from .errors import LXDError, LXDUnstableImageError
 from .installer import ensure_lxd_is_ready, install, is_installed
 from .launcher import launch
 from .lxc import LXC
@@ -99,6 +98,7 @@ class LXDProvider(Provider):
         base_configuration: Base,
         build_base: str,
         instance_name: str,
+        allow_unstable: bool = False,
     ) -> Generator[Executor, None, None]:
         """Configure and launch environment for specified base.
 
@@ -111,21 +111,20 @@ class LXDProvider(Provider):
         :param base_configuration: Base configuration to apply to instance.
         :param build_base: Base to build from.
         :param instance_name: Name of the instance to launch.
+        :param allow_unstable: If true, allow unstable images to be launched
 
         :raises LXDError: if instance cannot be configured and launched
         """
         image = get_remote_image(build_base)
         image.add_remote(lxc=self.lxc)
 
-        # we can't guarantee daily and devel images, so explicitly warn the user
-        if not image.is_stable:
-            warnings.warn(
-                message=(
-                    f"You are using an daily or devel image {image.image_name!r}"
-                    f" from remote {image.remote_name!r}. Devel or daily images are "
-                    "not guaranteed and are intended for experimental use only."
+        # only allow launching unstable images when opted-in with `allow_unstable`
+        if not image.is_stable and not allow_unstable:
+            raise LXDUnstableImageError(
+                brief=(
+                    f"Cannot launch an unstable image {image.image_name!r} from remote "
+                    f"{image.remote_name!r}"
                 ),
-                category=UserWarning,
             )
 
         try:

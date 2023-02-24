@@ -22,11 +22,7 @@ import pytest
 
 from craft_providers import lxd
 from craft_providers.bases import BuilddBaseAlias
-from craft_providers.lxd.remotes import (
-    BUILDD_RELEASES_REMOTE_NAME,
-    ProtocolType,
-    RemoteImage,
-)
+from craft_providers.lxd import remotes
 
 
 @pytest.fixture
@@ -36,18 +32,19 @@ def mock_lxc(mocker):
 
 @pytest.fixture
 def fake_remote_image(mocker):
-    return RemoteImage(
+    return remotes.RemoteImage(
         image_name="test-image-name",
         remote_name="test-remote-name",
         remote_address="test-remote-address",
-        remote_protocol=ProtocolType.LXD,
-        is_stable=False,
+        remote_protocol=remotes.ProtocolType.LXD,
     )
 
 
 @pytest.fixture
 def mock_remote_image(mocker):
-    yield mocker.patch("craft_providers.lxd.remotes.RemoteImage", spec=RemoteImage)
+    yield mocker.patch(
+        "craft_providers.lxd.remotes.RemoteImage", spec=remotes.RemoteImage
+    )
 
 
 @pytest.fixture
@@ -55,6 +52,31 @@ def mock_get_remote_image(mocker, mock_remote_image):
     yield mocker.patch(
         "craft_providers.lxd.remotes.get_remote_image", return_value=mock_remote_image
     )
+
+
+@pytest.mark.parametrize(
+    "remote_name, remote_address, is_stable",
+    [
+        (
+            remotes.BUILDD_RELEASES_REMOTE_NAME,
+            remotes.BUILDD_RELEASES_REMOTE_ADDRESS,
+            True,
+        ),
+        (remotes.BUILDD_DAILY_REMOTE_NAME, remotes.BUILDD_DAILY_REMOTE_ADDRESS, False),
+        (remotes.DAILY_REMOTE_NAME, remotes.DAILY_REMOTE_ADDRESS, False),
+        ("other-remote-name", "other-remote-address", False),
+    ],
+)
+def test_remote_image_is_stable_true(remote_name, remote_address, is_stable):
+    """Verify `is_stable` is only true for images from the BUILDD_RELEASES remote."""
+    test_remote = remotes.RemoteImage(
+        image_name="test-image-name",
+        remote_name=remote_name,
+        remote_address=remote_address,
+        remote_protocol=remotes.ProtocolType.LXD,
+    )
+
+    assert test_remote.is_stable == is_stable
 
 
 def test_add_remote_new(fake_remote_image, mock_lxc, logs):
@@ -67,7 +89,7 @@ def test_add_remote_new(fake_remote_image, mock_lxc, logs):
         call.remote_add(
             remote="test-remote-name",
             addr="test-remote-address",
-            protocol=ProtocolType.LXD.value,
+            protocol=remotes.ProtocolType.LXD.value,
         ),
     ]
     assert "Remote 'test-remote-name' was successfully added." in logs.debug
@@ -98,7 +120,7 @@ def test_add_remote_race_condition(fake_remote_image, mock_lxc, logs):
         call.remote_add(
             remote="test-remote-name",
             addr="test-remote-address",
-            protocol=ProtocolType.LXD.value,
+            protocol=remotes.ProtocolType.LXD.value,
         ),
         call.remote_list(),
     ]
@@ -172,4 +194,4 @@ def test_configure_buildd_image_remote(
     )
     mock_get_remote_image.assert_called_once_with(BuilddBaseAlias.JAMMY.value)
     mock_remote_image.add_remote.assert_called_once_with(mock_lxc)
-    assert name == BUILDD_RELEASES_REMOTE_NAME
+    assert name == remotes.BUILDD_RELEASES_REMOTE_NAME
