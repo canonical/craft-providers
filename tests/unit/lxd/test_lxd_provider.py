@@ -1,6 +1,6 @@
 # -*- Mode:Python; indent-tabs-mode:nil; tab-width:4 -*-
 #
-# Copyright 2022 Canonical Ltd.
+# Copyright 2022-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -14,12 +14,29 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from unittest import mock
+from unittest.mock import call
 
 import pytest
 
 from craft_providers import bases
-from craft_providers.lxd import LXDError, LXDProvider
+from craft_providers.lxd import LXDError, LXDProvider, LXDUnstableImageError
+
+
+@pytest.fixture
+def mock_remote_image(mocker):
+    _mock_remote_image = mocker.patch("craft_providers.lxd.remotes.RemoteImage")
+    _mock_remote_image.image_name = "test-image-name"
+    _mock_remote_image.remote_name = "test-remote-name"
+    yield _mock_remote_image
+
+
+@pytest.fixture
+def mock_get_remote_image(mock_remote_image, mocker):
+    _mock_get_remote_image = mocker.patch(
+        "craft_providers.lxd.lxd_provider.get_remote_image",
+        return_value=mock_remote_image,
+    )
+    yield _mock_get_remote_image
 
 
 @pytest.fixture
@@ -27,14 +44,6 @@ def mock_buildd_base_configuration(mocker):
     mock_base_config = mocker.patch("craft_providers.bases.BuilddBase", autospec=True)
     mock_base_config.compatibility_tag = "buildd-base-v0"
     yield mock_base_config
-
-
-@pytest.fixture
-def mock_configure_buildd_image_remote(mocker):
-    yield mocker.patch(
-        "craft_providers.lxd.lxd_provider.configure_buildd_image_remote",
-        return_value="buildd-remote",
-    )
 
 
 @pytest.fixture
@@ -113,38 +122,44 @@ def test_create_environment(mocker):
 
 
 @pytest.mark.parametrize(
-    "build_base, lxd_base",
+    "allow_unstable, is_stable",
     [
-        (bases.BuilddBaseAlias.BIONIC.value, "core18"),
-        (bases.BuilddBaseAlias.FOCAL.value, "core20"),
-        (bases.BuilddBaseAlias.JAMMY.value, "core22"),
+        # all permutations are valid except allow_unstable=False and is_stable=False
+        (True, True),
+        (True, False),
+        (False, True),
     ],
 )
 def test_launched_environment(
-    build_base,
-    lxd_base,
+    allow_unstable,
+    is_stable,
     mock_buildd_base_configuration,
-    mock_configure_buildd_image_remote,
+    mock_get_remote_image,
+    mock_remote_image,
     mock_launch,
+    mock_lxc,
     tmp_path,
 ):
-    provider = LXDProvider()
+    mock_remote_image.is_stable = is_stable
+    provider = LXDProvider(lxc=mock_lxc)
 
     with provider.launched_environment(
         project_name="test-project",
         project_path=tmp_path,
         base_configuration=mock_buildd_base_configuration,
-        build_base=build_base,
+        build_base="test-build-base",
         instance_name="test-instance-name",
+        allow_unstable=allow_unstable,
     ) as instance:
         assert instance is not None
-        assert mock_configure_buildd_image_remote.mock_calls == [mock.call()]
+        mock_get_remote_image.assert_called_once_with("test-build-base")
+        mock_remote_image.add_remote.assert_called_once_with(lxc=mock_lxc)
         assert mock_launch.mock_calls == [
-            mock.call(
+            call(
                 name="test-instance-name",
                 base_configuration=mock_buildd_base_configuration,
-                image_name=lxd_base,
-                image_remote="buildd-remote",
+                image_name="test-image-name",
+                image_remote="test-remote-name",
                 auto_clean=True,
                 auto_create_project=True,
                 map_user_uid=True,
@@ -158,14 +173,15 @@ def test_launched_environment(
         mock_launch.reset_mock()
 
     assert mock_launch.mock_calls == [
-        mock.call().unmount_all(),
-        mock.call().stop(),
+        call().unmount_all(),
+        call().stop(),
     ]
 
 
 def test_launched_environment_launch_base_configuration_error(
     mock_buildd_base_configuration,
-    mock_configure_buildd_image_remote,
+    mock_get_remote_image,
+    mock_remote_image,
     mock_launch,
     tmp_path,
 ):
@@ -184,3 +200,30 @@ def test_launched_environment_launch_base_configuration_error(
             pass
 
     assert raised.value.__cause__ is error
+
+
+def test_launched_environment_unstable_error(
+    mock_buildd_base_configuration,
+    mock_get_remote_image,
+    mock_remote_image,
+    mock_launch,
+    tmp_path,
+):
+    """Raise an Exception when an unstable image is used with opting in."""
+    mock_remote_image.is_stable = False
+    provider = LXDProvider()
+
+    with pytest.raises(LXDUnstableImageError) as raised:
+        with provider.launched_environment(
+            project_name="test-project",
+            project_path=tmp_path,
+            base_configuration=mock_buildd_base_configuration,
+            build_base=bases.BuilddBaseAlias.FOCAL.value,
+            instance_name="test-instance-name",
+        ):
+            pass
+
+    assert raised.value.brief == (
+        "Cannot launch an unstable image 'test-image-name' from remote "
+        "'test-remote-name'"
+    )

@@ -58,3 +58,13 @@ def test_lxd_installation_error_with_details():
         "Visit https://linuxcontainers.org/lxd/getting-started-cli/"
         " for instructions on installing and configuring LXD for your operating system."
     )
+
+
+def test_lxd_unstable_image_error():
+    error = errors.LXDUnstableImageError(brief="test error")
+
+    assert str(error) == (
+        "test error\n"
+        "Devel or daily images are not guaranteed and are intended for "
+        "experimental use only."
+    )

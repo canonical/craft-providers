@@ -46,3 +46,19 @@ class LXDInstallationError(LXDError):
         brief = f"Failed to install LXD: {reason}."
         resolution = LXD_INSTALL_HELP
         super().__init__(brief=brief, details=details, resolution=resolution)
+
+
+class LXDUnstableImageError(LXDError):
+    """LXD Unstable Image Error.
+
+    :param brief: Brief description of error.
+    """
+
+    def __init__(self, brief: str) -> None:
+        super().__init__(
+            brief=brief,
+            details=(
+                "Devel or daily images are not guaranteed and are intended for "
+                "experimental use only."
+            ),
+        )

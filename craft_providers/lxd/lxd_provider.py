@@ -1,6 +1,6 @@
 # -*- Mode:Python; indent-tabs-mode:nil; tab-width:4 -*-
 #
-# Copyright 2022 Canonical Ltd.
+# Copyright 2022-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -23,23 +23,16 @@ from typing import Generator
 
 from craft_providers import Executor, Provider
 from craft_providers.base import Base
-from craft_providers.bases import BaseConfigurationError, BuilddBaseAlias
+from craft_providers.bases import BaseConfigurationError
 
-from .errors import LXDError
+from .errors import LXDError, LXDUnstableImageError
 from .installer import ensure_lxd_is_ready, install, is_installed
 from .launcher import launch
 from .lxc import LXC
 from .lxd_instance import LXDInstance
-from .remotes import configure_buildd_image_remote
+from .remotes import get_remote_image
 
 logger = logging.getLogger(__name__)
-
-
-PROVIDER_BASE_TO_LXD_BASE = {
-    BuilddBaseAlias.BIONIC.value: "core18",
-    BuilddBaseAlias.FOCAL.value: "core20",
-    BuilddBaseAlias.JAMMY.value: "core22",
-}
 
 
 class LXDProvider(Provider):
@@ -105,6 +98,7 @@ class LXDProvider(Provider):
         base_configuration: Base,
         build_base: str,
         instance_name: str,
+        allow_unstable: bool = False,
     ) -> Generator[Executor, None, None]:
         """Configure and launch environment for specified base.
 
@@ -117,17 +111,28 @@ class LXDProvider(Provider):
         :param base_configuration: Base configuration to apply to instance.
         :param build_base: Base to build from.
         :param instance_name: Name of the instance to launch.
+        :param allow_unstable: If true, allow unstable images to be launched
 
         :raises LXDError: if instance cannot be configured and launched
         """
-        image_remote = configure_buildd_image_remote()
+        image = get_remote_image(build_base)
+        image.add_remote(lxc=self.lxc)
+
+        # only allow launching unstable images when opted-in with `allow_unstable`
+        if not image.is_stable and not allow_unstable:
+            raise LXDUnstableImageError(
+                brief=(
+                    f"Cannot launch an unstable image {image.image_name!r} from remote "
+                    f"{image.remote_name!r}"
+                ),
+            )
 
         try:
             instance = launch(
                 name=instance_name,
                 base_configuration=base_configuration,
-                image_name=PROVIDER_BASE_TO_LXD_BASE[build_base],
-                image_remote=image_remote,
+                image_name=image.image_name,
+                image_remote=image.remote_name,
                 auto_clean=True,
                 auto_create_project=True,
                 map_user_uid=True,

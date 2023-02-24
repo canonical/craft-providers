@@ -1,6 +1,6 @@
 # -*- Mode:Python; indent-tabs-mode:nil; tab-width:4 -*-
 #
-# Copyright 2022 Canonical Ltd.
+# Copyright 2022-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -15,6 +15,8 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
+
+import pytest
 
 from craft_providers.bases import BuilddBase, BuilddBaseAlias
 from craft_providers.lxd import LXDProvider, is_installed
@@ -40,17 +42,28 @@ def test_create_environment(installed_lxd, instance_name):
     assert test_instance.exists() is False
 
 
-def test_launched_environment(installed_lxd, instance_name, tmp_path):
+@pytest.mark.parametrize(
+    "alias",
+    [
+        BuilddBaseAlias.BIONIC,
+        BuilddBaseAlias.FOCAL,
+        BuilddBaseAlias.JAMMY,
+        BuilddBaseAlias.KINETIC,
+        BuilddBaseAlias.LUNAR,
+    ],
+)
+def test_launched_environment(alias, installed_lxd, instance_name, tmp_path):
     provider = LXDProvider()
 
-    base_configuration = BuilddBase(alias=BuilddBaseAlias.JAMMY)
+    base_configuration = BuilddBase(alias=alias)
 
     with provider.launched_environment(
         project_name="test-project",
         project_path=tmp_path,
         base_configuration=base_configuration,
-        build_base=BuilddBaseAlias.JAMMY.value,
+        build_base=alias.value,
         instance_name=instance_name,
+        allow_unstable=True,
     ) as test_instance:
         assert test_instance.exists() is True
         assert test_instance.is_running() is True

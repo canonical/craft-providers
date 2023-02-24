@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -144,6 +144,8 @@ class BuilddBaseAlias(enum.Enum):
     BIONIC = "18.04"
     FOCAL = "20.04"
     JAMMY = "22.04"
+    KINETIC = "22.10"
+    LUNAR = "23.04"
 
 
 class Snap(pydantic.BaseModel, extra=pydantic.Extra.forbid):
