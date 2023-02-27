@@ -44,7 +44,7 @@ DEFAULT_FAKE_CMD = ["fake-executor"]
 def mock_load(mocker):
     yield mocker.patch(
         "craft_providers.bases.instance_config.InstanceConfiguration.load",
-        return_value=InstanceConfiguration(compatibility_tag="buildd-base-v0"),
+        return_value=InstanceConfiguration(compatibility_tag="buildd-base-v1"),
     )
 
 
@@ -117,7 +117,7 @@ def mock_inject_from_host(mocker):
     ],
 )
 @pytest.mark.parametrize(
-    "tag, expected_tag", [(None, "buildd-base-v0"), ("test-tag", "test-tag")]
+    "tag, expected_tag", [(None, "buildd-base-v1"), ("test-tag", "test-tag")]
 )
 def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
     fake_process,
@@ -555,7 +555,7 @@ def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
         )
 
     assert exc_info.value == errors.BaseCompatibilityError(
-        "Expected image compatibility tag 'buildd-base-v0', found 'invalid-tag'"
+        "Expected image compatibility tag 'buildd-base-v1', found 'invalid-tag'"
     )
 
 
@@ -1023,7 +1023,7 @@ def test_update_setup_status(fake_executor, mock_load, status):
     assert fake_executor.records_of_push_file_io == [
         {
             "content": (
-                "compatibility_tag: buildd-base-v0\n"
+                "compatibility_tag: buildd-base-v1\n"
                 f"setup: {str(status).lower()}\n".encode()
             ),
             "destination": "/etc/craft-instance.conf",
@@ -1137,7 +1137,7 @@ def test_ensure_setup_completed_not_setup(status, fake_executor, mock_load):
 )
 def test_warmup_overall(environment, fake_process, fake_executor, mock_load, mocker):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v0", setup=True
+        compatibility_tag="buildd-base-v1", setup=True
     )
     mock_datetime = mocker.patch("craft_providers.bases.buildd.datetime")
     mock_datetime.now.return_value = datetime(2022, 1, 2, 3, 4, 5, 6)
@@ -1202,7 +1202,7 @@ def test_warmup_overall(environment, fake_process, fake_executor, mock_load, moc
 
 def test_warmup_bad_os(fake_process, fake_executor, mock_load):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v0", setup=True
+        compatibility_tag="buildd-base-v1", setup=True
     )
     base_config = buildd.BuilddBase(
         alias=buildd.BuilddBaseAlias.JAMMY,
@@ -1227,7 +1227,7 @@ def test_warmup_bad_os(fake_process, fake_executor, mock_load):
 
 def test_warmup_bad_instance_config(fake_process, fake_executor, mock_load):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v0", setup=True
+        compatibility_tag="buildd-base-v1", setup=True
     )
     alias = buildd.BuilddBaseAlias.JAMMY
     base_config = buildd.BuilddBase(
@@ -1256,7 +1256,7 @@ def test_warmup_bad_instance_config(fake_process, fake_executor, mock_load):
 def test_warmup_not_setup(setup, fake_process, fake_executor, mock_load):
     """Raise a BaseConfigurationError if the instance is not setup."""
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v0", setup=setup
+        compatibility_tag="buildd-base-v1", setup=setup
     )
     alias = buildd.BuilddBaseAlias.JAMMY
     base_config = buildd.BuilddBase(
@@ -1284,7 +1284,7 @@ def test_warmup_not_setup(setup, fake_process, fake_executor, mock_load):
 
 def test_warmup_never_ready(fake_process, fake_executor, mock_load):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v0", setup=True
+        compatibility_tag="buildd-base-v1", setup=True
     )
     alias = buildd.BuilddBaseAlias.JAMMY
     base_config = buildd.BuilddBase(
@@ -1315,7 +1315,7 @@ def test_warmup_never_ready(fake_process, fake_executor, mock_load):
 
 def test_warmup_never_network(fake_process, fake_executor, mock_load):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v0", setup=True
+        compatibility_tag="buildd-base-v1", setup=True
     )
     alias = buildd.BuilddBaseAlias.JAMMY
     base_config = buildd.BuilddBase(

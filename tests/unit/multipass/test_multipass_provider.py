@@ -1,6 +1,6 @@
 # -*- Mode:Python; indent-tabs-mode:nil; tab-width:4 -*-
 #
-# Copyright 2022 Canonical Ltd.
+# Copyright 2022-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -25,7 +25,7 @@ from craft_providers.multipass import MultipassError, MultipassProvider
 @pytest.fixture
 def mock_buildd_base_configuration(mocker):
     mock_base_config = mocker.patch("craft_providers.bases.BuilddBase", autospec=True)
-    mock_base_config.compatibility_tag = "buildd-base-v0"
+    mock_base_config.compatibility_tag = "buildd-base-v1"
     yield mock_base_config
 
 
