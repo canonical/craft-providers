@@ -42,6 +42,8 @@ from .instance_config import InstanceConfiguration
 
 logger = logging.getLogger(__name__)
 
+# pylint: disable=too-many-lines
+
 
 def default_command_environment() -> Dict[str, Optional[str]]:
     """Provide default command environment dictionary.
@@ -268,6 +270,10 @@ class BuilddBase(Base):
     ) -> None:
         """Ensure instance configuration is compatible.
 
+        As long as the config is not incompatible (via a mismatched compatibility tag),
+        then assume the instance is compatible. This assumption is done is because the
+        config file may not exist or contain a tag while the set up is in progress.
+
         :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.
         """
@@ -286,8 +292,8 @@ class BuilddBase(Base):
         except FileNotFoundError:
             return
 
-        # make the same assumption as above for empty configs
-        if config is None:
+        # make the same assumption as above for empty configs or configs without a tag
+        if config is None or config.compatibility_tag is None:
             return
 
         if config.compatibility_tag != self.compatibility_tag:
@@ -300,6 +306,41 @@ class BuilddBase(Base):
         logger.debug(
             "Instance is compatible with compatibility tag %r", config.compatibility_tag
         )
+
+    def _ensure_setup_completed(
+        self, *, executor: Executor, deadline: Optional[float]
+    ) -> None:
+        """Ensure the instance was fully setup.
+
+        The last step of setting up an instance is to set the `setup` key in the
+        instance config file to True. This flag is used to verify that setup was
+        completed for the instance.
+
+        :raises BaseCompatibilityError: If setup was not completed.
+        """
+        _check_deadline(deadline)
+
+        try:
+            config = InstanceConfiguration.load(
+                executor=executor,
+                config_path=self.instance_config_path,
+            )
+        except ValidationError as error:
+            raise BaseCompatibilityError(
+                reason="failed to parse instance configuration file",
+            ) from error
+        except FileNotFoundError as error:
+            raise BaseCompatibilityError(
+                reason="failed to find instance config file",
+            ) from error
+
+        if config is None:
+            raise BaseCompatibilityError(reason="instance config is empty")
+
+        if not config.setup or config.setup is False:
+            raise BaseCompatibilityError(reason="instance is marked as not setup")
+
+        logger.debug("Instance has already been setup.")
 
     def _ensure_os_compatible(
         self, *, executor: Executor, deadline: Optional[float]
@@ -369,6 +410,10 @@ class BuilddBase(Base):
         of the installed dependencies required for subsequent use by the
         application.
 
+        The state of the setup is tracked in the instance config. If the setup is
+        interrupted, the state can be checked so that a partially setup instance
+        can be discarded.
+
         Setup may be called more than once in a given instance to refresh/update
         the environment.
 
@@ -395,6 +440,7 @@ class BuilddBase(Base):
         else:
             deadline = None
 
+        self._update_setup_status(executor=executor, deadline=deadline, status=False)
         self._ensure_os_compatible(executor=executor, deadline=deadline)
         self._ensure_instance_config_compatible(executor=executor, deadline=deadline)
         self._disable_automatic_apt(executor=executor, deadline=deadline)
@@ -414,6 +460,7 @@ class BuilddBase(Base):
         self._disable_and_wait_for_snap_refresh(executor=executor, deadline=deadline)
         self._setup_snapd_proxy(executor=executor, deadline=deadline)
         self._install_snaps(executor=executor, deadline=deadline)
+        self._update_setup_status(executor=executor, deadline=deadline, status=True)
 
     def warmup(
         self,
@@ -445,8 +492,13 @@ class BuilddBase(Base):
         else:
             deadline = None
 
+        self._ensure_setup_completed(executor=executor, deadline=deadline)
         self._ensure_os_compatible(executor=executor, deadline=deadline)
+
+        # XXX: checking the compatibility_tag should be much more strict when called
+        # by warmup (warmup will continue if the compatibility tag is missing or none!)
         self._ensure_instance_config_compatible(executor=executor, deadline=deadline)
+
         self._setup_wait_for_system_ready(
             executor=executor, deadline=deadline, retry_wait=retry_wait
         )
@@ -911,6 +963,22 @@ class BuilddBase(Base):
         InstanceConfiguration.update(
             executor=executor,
             data={"compatibility_tag": self.compatibility_tag},
+            config_path=self.instance_config_path,
+        )
+        _check_deadline(deadline)
+
+    def _update_setup_status(
+        self, *, executor: Executor, deadline: Optional[float], status: bool
+    ) -> None:
+        """Update the instance config to indicate the status of the setup.
+
+        :param executor: Executor for target container.
+        :param deadline: Optional time.time() deadline.
+        :param status: True if the setup is complete, False otherwise.
+        """
+        InstanceConfiguration.update(
+            executor=executor,
+            data={"setup": status},
             config_path=self.instance_config_path,
         )
         _check_deadline(deadline)
