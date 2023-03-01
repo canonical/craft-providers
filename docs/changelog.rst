@@ -2,6 +2,27 @@
 Changelog
 *********
 
+1.8.0 (2023-03-01)
+------------------
+- Track if instances are properly setup when launching. If the instance did not fully
+  complete setup and auto-clean is enabled, the instance will be cleaned and recreated.
+- Add new field `setup` to instance configuration to track set up status
+- Update base compatibility tag from `base-v0` to `base-v1`
+- Add new BuilddBaseAliases for Lunar and Kinetic
+- Add support for interim Ubuntu releases for LXD
+- Add support for custom LXD image remotes. LXD remotes can now add any
+  remote server to retrieve images from using the `RemoteImage` class.
+- Add deprecation warning for LXD function `configure_buildd_image_remote()`.
+  Usage of this function should be replaced with RemoteImage's `add_remote()`.
+- Rename BuilddBase function `setup_instance_config()` to `update_compatibility_tag()`
+- Update brew for macos CI tests
+- Update readthedocs link in readme
+- Capture subproccess error details when snap removal fails
+- Add default for `_run_lxc()` parameter `check=True`
+- Refactor lxd unit and integration tests
+- Enable more pylint checks
+- Use new `use_base_instance` parameter when launching LXD instances from LXDProvider
+
 1.7.2 (2023-02-06)
 ------------------
 - Check LXD id map before starting an existing instance.
