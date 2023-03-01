@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -54,7 +54,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra=pydantic.Extra.forbid):
     """Instance configuration datastore.
 
     :param compatibility_tag: Compatibility tag for instance.
-
+    :param setup: True if instance was fully setup.
     :param snaps: dictionary of snaps and their revisions, e.g.
       snaps:
         snapcraft:
@@ -64,6 +64,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra=pydantic.Extra.forbid):
     """
 
     compatibility_tag: Optional[str] = None
+    setup: Optional[bool] = None
     snaps: Optional[Dict[str, Dict[str, Any]]] = None
 
     @classmethod

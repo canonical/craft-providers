@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -31,6 +31,7 @@ from craft_providers.bases.instance_config import InstanceConfiguration
 def default_config_data():
     return {
         "compatibility_tag": "tag-foo-v1",
+        "setup": True,
         "snaps": {
             "charmcraft": {"revision": 834},
             "core22": {"revision": 147},
@@ -62,6 +63,15 @@ def config_fixture(mocker, tmpdir):
         return config_file
 
     yield _config_fixture
+
+
+def test_instance_config_defaults():
+    """Verify default values for instance configuration objects."""
+    config = InstanceConfiguration()
+
+    assert config.setup is None
+    assert config.compatibility_tag is None
+    assert config.snaps is None
 
 
 def test_save(mock_executor):
@@ -118,6 +128,7 @@ def test_load_with_valid_config(mock_executor, config_fixture, default_config_da
 
     assert config_instance == {
         "compatibility_tag": "tag-foo-v1",
+        "setup": True,
         "snaps": {"charmcraft": {"revision": 834}, "core22": {"revision": 147}},
     }
 

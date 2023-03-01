@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -28,11 +28,28 @@ from . import conftest
 
 @pytest.fixture()
 def core20_instance(instance_name):
+    """Yields a minimally setup core20 instance.
+
+    The yielded instance will be launched, started, and marked as setup, even though
+    most of the setup is skipped to speed up test execution.
+
+    Delete instance on fixture teardown.
+    """
     with conftest.tmp_instance(
         instance_name=instance_name,
         image_name="snapcraft:core20",
     ) as tmp_instance:
         instance = multipass.MultipassInstance(name=tmp_instance)
+
+        # mark instance as setup in the config file
+        instance.push_file_io(
+            destination=bases.BuilddBase.instance_config_path,
+            content=io.BytesIO(
+                f"compatibility_tag: {bases.BuilddBase.compatibility_tag}"
+                "\nsetup: true\n".encode()
+            ),
+            file_mode="0644",
+        )
 
         yield instance
 
@@ -126,7 +143,7 @@ def test_launch_instance_config_incompatible_instance(core20_instance):
 
     core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,
-        content=io.BytesIO(b"compatibility_tag: invalid\n"),
+        content=io.BytesIO(b"compatibility_tag: invalid\nsetup: true\n"),
         file_mode="0644",
     )
 
@@ -140,10 +157,56 @@ def test_launch_instance_config_incompatible_instance(core20_instance):
 
     assert exc_info.value.brief == (
         "Incompatible base detected:"
-        " Expected image compatibility tag 'buildd-base-v0', found 'invalid'."
+        " Expected image compatibility tag 'buildd-base-v1', found 'invalid'."
     )
 
     # Retry with auto_clean=True.
+    multipass.launch(
+        name=core20_instance.name,
+        base_configuration=base_configuration,
+        image_name="snapcraft:core20",
+        auto_clean=True,
+    )
+
+    assert core20_instance.exists() is True
+    assert core20_instance.is_running() is True
+
+
+def test_launch_instance_not_setup_without_auto_clean(core20_instance):
+    """Raise an error if an existing instance is not setup and auto_clean is False."""
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+
+    core20_instance.push_file_io(
+        destination=base_configuration.instance_config_path,
+        content=io.BytesIO(b"compatibility_tag: buildd-base-v1\nsetup: false\n"),
+        file_mode="0644",
+    )
+
+    # will raise a compatibility error
+    with pytest.raises(bases.BaseCompatibilityError) as exc_info:
+        multipass.launch(
+            name=core20_instance.name,
+            base_configuration=base_configuration,
+            image_name="snapcraft:core20",
+            auto_clean=False,
+        )
+
+    assert exc_info.value == bases.BaseCompatibilityError(
+        "instance is marked as not setup"
+    )
+
+
+def test_launch_instance_not_setup_with_auto_clean(core20_instance):
+    """Clean the instance if it is not setup and auto_clean is True."""
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+
+    core20_instance.push_file_io(
+        destination=base_configuration.instance_config_path,
+        content=io.BytesIO(b"compatibility_tag: buildd-base-v1\nsetup: false\n"),
+        file_mode="0644",
+    )
+
+    # when auto_clean is true, the instance will be deleted and recreated
     multipass.launch(
         name=core20_instance.name,
         base_configuration=base_configuration,

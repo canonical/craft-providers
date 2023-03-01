@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -31,8 +31,8 @@ from craft_providers.bases import (
     BaseConfigurationError,
     buildd,
     errors,
-    instance_config,
 )
+from craft_providers.bases.instance_config import InstanceConfiguration
 from craft_providers.errors import details_from_called_process_error
 
 # pylint: disable=too-many-lines
@@ -42,11 +42,9 @@ DEFAULT_FAKE_CMD = ["fake-executor"]
 
 @pytest.fixture()
 def mock_load(mocker):
-    mocker.patch(
+    return mocker.patch(
         "craft_providers.bases.instance_config.InstanceConfiguration.load",
-        return_value=instance_config.InstanceConfiguration(
-            compatibility_tag="buildd-base-v0"
-        ),
+        return_value=InstanceConfiguration(compatibility_tag="buildd-base-v1"),
     )
 
 
@@ -119,7 +117,7 @@ def mock_inject_from_host(mocker):
     ],
 )
 @pytest.mark.parametrize(
-    "tag, expected_tag", [(None, "buildd-base-v0"), ("test-tag", "test-tag")]
+    "tag, expected_tag", [(None, "buildd-base-v1"), ("test-tag", "test-tag")]
 )
 def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
     fake_process,
@@ -141,12 +139,7 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
     tag,
     expected_tag,
 ):
-    mocker.patch(
-        "craft_providers.bases.instance_config.InstanceConfiguration.load",
-        return_value=instance_config.InstanceConfiguration(
-            compatibility_tag=expected_tag
-        ),
-    )
+    mock_load.return_value = InstanceConfiguration(compatibility_tag=expected_tag)
 
     mock_datetime = mocker.patch("craft_providers.bases.buildd.datetime")
     mock_datetime.now.return_value = datetime(2022, 1, 2, 3, 4, 5, 6)
@@ -279,6 +272,13 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
 
     expected_push_file_io = [
         {
+            "destination": "/etc/craft-instance.conf",
+            "content": (f"compatibility_tag: {expected_tag}\nsetup: false\n").encode(),
+            "file_mode": "0644",
+            "group": "root",
+            "user": "root",
+        },
+        {
             "destination": "/etc/apt/apt.conf.d/20auto-upgrades",
             "content": dedent(
                 """\
@@ -341,6 +341,13 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
         {
             "destination": "/etc/apt/apt.conf.d/00update-errors",
             "content": b'APT::Update::Error-Mode "any";\n',
+            "file_mode": "0644",
+            "group": "root",
+            "user": "root",
+        },
+        {
+            "destination": "/etc/craft-instance.conf",
+            "content": (f"compatibility_tag: {expected_tag}\nsetup: true\n").encode(),
             "file_mode": "0644",
             "group": "root",
             "user": "root",
@@ -537,11 +544,9 @@ def test_install_packages_install_error(mocker, fake_executor):
 def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
     monkeypatch.setattr(
-        instance_config.InstanceConfiguration,
+        InstanceConfiguration,
         "load",
-        lambda **kwargs: instance_config.InstanceConfiguration(
-            compatibility_tag="invalid-tag"
-        ),
+        lambda **kwargs: InstanceConfiguration(compatibility_tag="invalid-tag"),
     )
 
     with pytest.raises(errors.BaseCompatibilityError) as exc_info:
@@ -550,12 +555,12 @@ def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
         )
 
     assert exc_info.value == errors.BaseCompatibilityError(
-        "Expected image compatibility tag 'buildd-base-v0', found 'invalid-tag'"
+        "Expected image compatibility tag 'buildd-base-v1', found 'invalid-tag'"
     )
 
 
 @patch("time.time", side_effect=[0.0, 1.0])
-def test_setup_timeout(fake_executor, fake_process, monkeypatch):
+def test_setup_timeout(fake_executor, fake_process, monkeypatch, mock_load):
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
     fake_process.register_subprocess([fake_process.any()])
 
@@ -985,11 +990,53 @@ def test_wait_for_system_ready_timeout_in_network(
     )
 
 
-@patch(
-    "craft_providers.bases.instance_config.InstanceConfiguration.load",
-    side_effect=ValidationError("foo", instance_config.InstanceConfiguration),
-)
-def test_ensure_config_compatible_validation_error(fake_executor):
+def test_update_compatibility_tag(fake_executor, mock_load):
+    """`update_compatibility_tag()` should update the instance config."""
+    base_config = buildd.BuilddBase(
+        alias=buildd.BuilddBaseAlias.JAMMY, compatibility_tag="test-tag"
+    )
+
+    base_config._update_compatibility_tag(executor=fake_executor, deadline=None)
+
+    assert fake_executor.records_of_push_file_io == [
+        {
+            "content": b"compatibility_tag: test-tag\n",
+            "destination": "/etc/craft-instance.conf",
+            "file_mode": "0644",
+            "group": "root",
+            "user": "root",
+        }
+    ]
+
+
+@pytest.mark.parametrize("status", [True, False])
+def test_update_setup_status(fake_executor, mock_load, status):
+    """`update_setup_status()` should update the instance config."""
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+
+    base_config._update_setup_status(
+        executor=fake_executor,
+        deadline=None,
+        status=status,
+    )
+
+    assert fake_executor.records_of_push_file_io == [
+        {
+            "content": (
+                "compatibility_tag: buildd-base-v1\n"
+                f"setup: {str(status).lower()}\n".encode()
+            ),
+            "destination": "/etc/craft-instance.conf",
+            "file_mode": "0644",
+            "group": "root",
+            "user": "root",
+        }
+    ]
+
+
+def test_ensure_config_compatible_validation_error(fake_executor, mock_load):
+    mock_load.side_effect = ValidationError("foo", InstanceConfiguration)
+
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
 
     with pytest.raises(errors.BaseConfigurationError) as exc_info:
@@ -1002,11 +1049,9 @@ def test_ensure_config_compatible_validation_error(fake_executor):
     )
 
 
-@patch(
-    "craft_providers.bases.instance_config.InstanceConfiguration.load",
-    return_value=None,
-)
-def test_ensure_config_compatible_empty_config_returns_none(fake_executor):
+def test_ensure_config_compatible_empty_config_returns_none(fake_executor, mock_load):
+    mock_load.return_value = None
+
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
 
     assert (
@@ -1015,6 +1060,69 @@ def test_ensure_config_compatible_empty_config_returns_none(fake_executor):
         )
         is None
     )
+
+
+def test_ensure_setup_completed(fake_executor, logs, mock_load):
+    """Verify the setup was completed by checking the instance config file."""
+    mock_load.return_value = InstanceConfiguration(setup=True)
+
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+
+    assert (
+        base_config._ensure_setup_completed(executor=fake_executor, deadline=None)
+        is None
+    )
+
+    assert "Instance has already been setup." in logs.debug
+
+
+@pytest.mark.parametrize(
+    "error, error_message",
+    [
+        (
+            ValidationError("test-error", InstanceConfiguration),
+            "failed to parse instance configuration file",
+        ),
+        (FileNotFoundError, "failed to find instance config file"),
+    ],
+)
+def test_ensure_setup_completed_load_error(
+    error, error_message, fake_executor, mock_load
+):
+    """Raise an error when the instance config cannot be loaded."""
+    mock_load.side_effect = error
+
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+
+    with pytest.raises(BaseCompatibilityError) as raised:
+        base_config._ensure_setup_completed(executor=fake_executor, deadline=None)
+
+    assert raised.value == BaseCompatibilityError(error_message)
+
+
+def test_ensure_setup_completed_empty_config(fake_executor, mock_load):
+    """Raise an error if the instance config is empty."""
+    mock_load.return_value = None
+
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+
+    with pytest.raises(BaseCompatibilityError) as raised:
+        base_config._ensure_setup_completed(executor=fake_executor, deadline=None)
+
+    assert raised.value == BaseCompatibilityError("instance config is empty")
+
+
+@pytest.mark.parametrize("status", [None, False])
+def test_ensure_setup_completed_not_setup(status, fake_executor, mock_load):
+    """Raise an error if the setup was not completed (setup field is None or False)."""
+    mock_load.return_value = InstanceConfiguration(setup=status)
+
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+
+    with pytest.raises(BaseCompatibilityError) as raised:
+        base_config._ensure_setup_completed(executor=fake_executor, deadline=None)
+
+    assert raised.value == BaseCompatibilityError("instance is marked as not setup")
 
 
 @pytest.mark.parametrize(
@@ -1028,6 +1136,9 @@ def test_ensure_config_compatible_empty_config_returns_none(fake_executor):
     ],
 )
 def test_warmup_overall(environment, fake_process, fake_executor, mock_load, mocker):
+    mock_load.return_value = InstanceConfiguration(
+        compatibility_tag="buildd-base-v1", setup=True
+    )
     mock_datetime = mocker.patch("craft_providers.bases.buildd.datetime")
     mock_datetime.now.return_value = datetime(2022, 1, 2, 3, 4, 5, 6)
     # expected datetime will be 24 hours after the current time
@@ -1090,6 +1201,9 @@ def test_warmup_overall(environment, fake_process, fake_executor, mock_load, moc
 
 
 def test_warmup_bad_os(fake_process, fake_executor, mock_load):
+    mock_load.return_value = InstanceConfiguration(
+        compatibility_tag="buildd-base-v1", setup=True
+    )
     base_config = buildd.BuilddBase(
         alias=buildd.BuilddBaseAlias.JAMMY,
         environment=buildd.default_command_environment(),
@@ -1112,6 +1226,9 @@ def test_warmup_bad_os(fake_process, fake_executor, mock_load):
 
 
 def test_warmup_bad_instance_config(fake_process, fake_executor, mock_load):
+    mock_load.return_value = InstanceConfiguration(
+        compatibility_tag="buildd-base-v1", setup=True
+    )
     alias = buildd.BuilddBaseAlias.JAMMY
     base_config = buildd.BuilddBase(
         alias=alias,
@@ -1135,7 +1252,40 @@ def test_warmup_bad_instance_config(fake_process, fake_executor, mock_load):
         base_config.warmup(executor=fake_executor)
 
 
+@pytest.mark.parametrize("setup", [False, None])
+def test_warmup_not_setup(setup, fake_process, fake_executor, mock_load):
+    """Raise a BaseConfigurationError if the instance is not setup."""
+    mock_load.return_value = InstanceConfiguration(
+        compatibility_tag="buildd-base-v1", setup=setup
+    )
+    alias = buildd.BuilddBaseAlias.JAMMY
+    base_config = buildd.BuilddBase(
+        alias=alias,
+        environment=buildd.default_command_environment(),
+    )
+
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout=dedent(
+            f"""\
+            NAME="Ubuntu"
+            ID=ubuntu
+            ID_LIKE=debian
+            VERSION_ID="{alias.value}"
+            """
+        ),
+    )
+
+    with pytest.raises(BaseCompatibilityError) as raised:
+        base_config.warmup(executor=fake_executor)
+
+    assert raised.value == BaseCompatibilityError("instance is marked as not setup")
+
+
 def test_warmup_never_ready(fake_process, fake_executor, mock_load):
+    mock_load.return_value = InstanceConfiguration(
+        compatibility_tag="buildd-base-v1", setup=True
+    )
     alias = buildd.BuilddBaseAlias.JAMMY
     base_config = buildd.BuilddBase(
         alias=alias,
@@ -1164,6 +1314,9 @@ def test_warmup_never_ready(fake_process, fake_executor, mock_load):
 
 
 def test_warmup_never_network(fake_process, fake_executor, mock_load):
+    mock_load.return_value = InstanceConfiguration(
+        compatibility_tag="buildd-base-v1", setup=True
+    )
     alias = buildd.BuilddBaseAlias.JAMMY
     base_config = buildd.BuilddBase(
         alias=alias,

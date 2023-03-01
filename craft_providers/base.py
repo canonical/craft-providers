@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -51,7 +51,7 @@ class Base(ABC):
         compatibility levels are maintained.
     """
 
-    compatibility_tag: str = "base-v0"
+    compatibility_tag: str = "base-v1"
 
     @abstractmethod
     def get_command_environment(

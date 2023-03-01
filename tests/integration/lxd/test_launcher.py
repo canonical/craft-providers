@@ -35,7 +35,7 @@ def get_base_instance():
     def _base_instance(
         image_name: str = "20.04",
         image_remote: str = "ubuntu",
-        compatibility_tag: str = "buildd-base-v0",
+        compatibility_tag: str = "buildd-base-v1",
         project: str = "default",
     ):
         """Get the base instance."""
@@ -52,6 +52,13 @@ def get_base_instance():
 
 @pytest.fixture()
 def core20_instance(instance_name):
+    """Yields a minimally setup core20 instance.
+
+    The yielded instance will be launched, started, and marked as setup, even though
+    most of the setup is skipped to speed up test execution.
+
+    Delete instance on fixture teardown.
+    """
     with conftest.tmp_instance(
         name=instance_name,
         image="20.04",
@@ -59,6 +66,16 @@ def core20_instance(instance_name):
         project="default",
     ):
         instance = lxd.LXDInstance(name=instance_name)
+
+        # mark instance as setup in the config file
+        instance.push_file_io(
+            destination=bases.BuilddBase.instance_config_path,
+            content=io.BytesIO(
+                f"compatibility_tag: {bases.BuilddBase.compatibility_tag}"
+                "\nsetup: true\n".encode()
+            ),
+            file_mode="0644",
+        )
 
         yield instance
 
@@ -550,7 +567,7 @@ def test_launch_instance_config_incompatible_without_auto_clean(core20_instance)
 
     core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,
-        content=io.BytesIO(b"compatibility_tag: invalid\n"),
+        content=io.BytesIO(b"compatibility_tag: invalid\nsetup: true\n"),
         file_mode="0644",
     )
 
@@ -565,7 +582,7 @@ def test_launch_instance_config_incompatible_without_auto_clean(core20_instance)
 
     assert exc_info.value.brief == (
         "Incompatible base detected:"
-        " Expected image compatibility tag 'buildd-base-v0', found 'invalid'."
+        " Expected image compatibility tag 'buildd-base-v1', found 'invalid'."
     )
 
 
@@ -575,7 +592,55 @@ def test_launch_instance_config_incompatible_with_auto_clean(core20_instance):
 
     core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,
-        content=io.BytesIO(b"compatibility_tag: invalid\n"),
+        content=io.BytesIO(b"compatibility_tag: invalid\nsetup: true\n"),
+        file_mode="0644",
+    )
+
+    # when auto_clean is true, the instance will be deleted and recreated
+    lxd.launch(
+        name=core20_instance.name,
+        base_configuration=base_configuration,
+        image_name="20.04",
+        image_remote="ubuntu",
+        auto_clean=True,
+    )
+
+    assert core20_instance.exists()
+    assert core20_instance.is_running()
+
+
+def test_launch_instance_not_setup_without_auto_clean(core20_instance):
+    """Raise an error if an existing instance is not setup and auto_clean is False."""
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+
+    core20_instance.push_file_io(
+        destination=base_configuration.instance_config_path,
+        content=io.BytesIO(b"compatibility_tag: buildd-base-v1\nsetup: false\n"),
+        file_mode="0644",
+    )
+
+    # will raise a compatibility error
+    with pytest.raises(bases.BaseCompatibilityError) as exc_info:
+        lxd.launch(
+            name=core20_instance.name,
+            base_configuration=base_configuration,
+            image_name="20.04",
+            image_remote="ubuntu",
+            auto_clean=False,
+        )
+
+    assert exc_info.value == bases.BaseCompatibilityError(
+        "instance is marked as not setup"
+    )
+
+
+def test_launch_instance_not_setup_with_auto_clean(core20_instance):
+    """Clean the instance if it is not setup and auto_clean is True."""
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+
+    core20_instance.push_file_io(
+        destination=base_configuration.instance_config_path,
+        content=io.BytesIO(b"compatibility_tag: buildd-base-v1\nsetup: false\n"),
         file_mode="0644",
     )
 
