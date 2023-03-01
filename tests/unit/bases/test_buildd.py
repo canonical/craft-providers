@@ -42,7 +42,7 @@ DEFAULT_FAKE_CMD = ["fake-executor"]
 
 @pytest.fixture()
 def mock_load(mocker):
-    yield mocker.patch(
+    return mocker.patch(
         "craft_providers.bases.instance_config.InstanceConfiguration.load",
         return_value=InstanceConfiguration(compatibility_tag="buildd-base-v1"),
     )

@@ -271,7 +271,7 @@ class BuilddBase(Base):
         """Ensure instance configuration is compatible.
 
         As long as the config is not incompatible (via a mismatched compatibility tag),
-        then assume the instance is compatible. This assumption is done is because the
+        then assume the instance is compatible. This assumption is done because the
         config file may not exist or contain a tag while the set up is in progress.
 
         :raises BaseCompatibilityError: if instance is incompatible.
@@ -337,7 +337,7 @@ class BuilddBase(Base):
         if config is None:
             raise BaseCompatibilityError(reason="instance config is empty")
 
-        if not config.setup or config.setup is False:
+        if not config.setup:
             raise BaseCompatibilityError(reason="instance is marked as not setup")
 
         logger.debug("Instance has already been setup.")
