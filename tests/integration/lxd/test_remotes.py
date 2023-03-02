@@ -19,23 +19,16 @@ import subprocess
 
 import pytest
 
-from craft_providers import bases, lxd
+from craft_providers import lxd
+from craft_providers.bases import BuilddBase, BuilddBaseAlias
 
 
-@pytest.mark.parametrize(
-    "alias",
-    [
-        bases.BuilddBaseAlias.BIONIC,
-        bases.BuilddBaseAlias.FOCAL,
-        bases.BuilddBaseAlias.JAMMY,
-        bases.BuilddBaseAlias.KINETIC,
-        bases.BuilddBaseAlias.LUNAR,
-    ],
-)
+# exclude XENIAL because it is not supported for LXD
+@pytest.mark.parametrize("alias", list(set(BuilddBaseAlias) - {BuilddBaseAlias.XENIAL}))
 def test_configure_and_launch_remote(instance_name, alias):
     """Verify remotes are configured and images can be launched."""
     remote_image = lxd.get_remote_image(alias.value)
-    base_configuration = bases.BuilddBase(alias=alias)
+    base_configuration = BuilddBase(alias=alias)
     instance = lxd.launch(
         name=instance_name,
         base_configuration=base_configuration,
@@ -56,23 +49,19 @@ def test_configure_and_launch_remote(instance_name, alias):
 
 
 @pytest.mark.parametrize(
-    "alias,image_name",
-    [
-        (bases.BuilddBaseAlias.BIONIC, "18.04"),
-        (bases.BuilddBaseAlias.FOCAL, "20.04"),
-        (bases.BuilddBaseAlias.JAMMY, "22.04"),
-    ],
+    "alias",
+    [BuilddBaseAlias.BIONIC, BuilddBaseAlias.FOCAL, BuilddBaseAlias.JAMMY],
 )
-def test_configure_and_launch_buildd_remotes(instance_name, alias, image_name):
+def test_configure_and_launch_buildd_remotes(instance_name, alias):
     """Verify function `configure_buildd_image_remote()` can launch core 18|20|22."""
     image_remote = lxd.configure_buildd_image_remote()
     assert image_remote == "craft-com.ubuntu.cloud-buildd"
 
-    base_configuration = bases.BuilddBase(alias=alias)
+    base_configuration = BuilddBase(alias=alias)
     instance = lxd.launch(
         name=instance_name,
         base_configuration=base_configuration,
-        image_name=image_name,
+        image_name=alias.value,
         image_remote=image_remote,
     )
 
