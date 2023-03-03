@@ -17,14 +17,14 @@
 
 """Collection of bases used to configure build environments."""
 
+from .buildd import BaseAlias  # noqa: F401
 from .buildd import BuilddBase  # noqa: F401
-from .buildd import BuilddBaseAlias  # noqa: F401
 from .errors import BaseCompatibilityError  # noqa: F401
 from .errors import BaseConfigurationError  # noqa: F401
 
 __all__ = [
+    "BaseAlias",
     "BuilddBase",
-    "BuilddBaseAlias",
     "BaseCompatibilityError",
     "BaseConfigurationError",
 ]

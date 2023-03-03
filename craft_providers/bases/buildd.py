@@ -139,15 +139,16 @@ def _execute_run(
     return proc
 
 
-class BuilddBaseAlias(enum.Enum):
+class BaseAlias(enum.Enum):
     """Mappings for supported buildd images."""
 
-    XENIAL = "16.04"
-    BIONIC = "18.04"
-    FOCAL = "20.04"
-    JAMMY = "22.04"
-    KINETIC = "22.10"
-    LUNAR = "23.04"
+    UBUNTU_XENIAL = ("ubuntu", "16.04")
+    UBUNTU_BIONIC = ("ubuntu", "18.04")
+    UBUNTU_FOCAL = ("ubuntu", "20.04")
+    UBUNTU_JAMMY = ("ubuntu", "22.04")
+    UBUNTU_KINETIC = ("ubuntu", "22.10")
+    UBUNTU_LUNAR = ("ubuntu", "23.04")
+    CENTOS_7 = ("centos", "7")
 
 
 class Snap(pydantic.BaseModel, extra=pydantic.Extra.forbid):
@@ -213,14 +214,14 @@ class BuilddBase(Base):
     def __init__(
         self,
         *,
-        alias: BuilddBaseAlias,
+        alias: BaseAlias,
         compatibility_tag: Optional[str] = None,
         environment: Optional[Dict[str, Optional[str]]] = None,
         hostname: str = "craft-buildd-instance",
         snaps: Optional[List[Snap]] = None,
         packages: Optional[List[str]] = None,
     ):
-        self.alias: BuilddBaseAlias = alias
+        self.alias: BaseAlias = alias
 
         if environment is None:
             self.environment = default_command_environment()
@@ -370,18 +371,18 @@ class BuilddBase(Base):
 
         os_release = parse_os_release(proc.stdout)
 
-        os_name = os_release.get("NAME")
-        if os_name != "Ubuntu":
+        system = os_release.get("ID")
+        if system not in ["ubuntu", "centos"]:
             raise BaseCompatibilityError(
-                reason=f"Expected OS 'Ubuntu', found {os_name!r}"
+                reason=f"Expected OS ID 'ubuntu' or 'centos', found {system!r}"
             )
 
         compat_version_id = self.alias.value
         version_id = os_release.get("VERSION_ID")
-        if version_id != compat_version_id:
+        if (system, version_id) != compat_version_id:
             raise BaseCompatibilityError(
                 reason=(
-                    f"Expected OS version {compat_version_id!r},"
+                    f"Expected OS version {compat_version_id[1]!r},"
                     f" found {version_id!r}"
                 )
             )

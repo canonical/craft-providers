@@ -18,7 +18,7 @@
 
 import pytest
 
-from craft_providers.bases import BuilddBase, BuilddBaseAlias
+from craft_providers.bases import BaseAlias, BuilddBase
 from craft_providers.lxd import LXDProvider, is_installed
 
 
@@ -45,11 +45,11 @@ def test_create_environment(installed_lxd, instance_name):
 @pytest.mark.parametrize(
     "alias",
     [
-        BuilddBaseAlias.BIONIC,
-        BuilddBaseAlias.FOCAL,
-        BuilddBaseAlias.JAMMY,
-        BuilddBaseAlias.KINETIC,
-        BuilddBaseAlias.LUNAR,
+        BaseAlias.UBUNTU_BIONIC,
+        BaseAlias.UBUNTU_FOCAL,
+        BaseAlias.UBUNTU_JAMMY,
+        BaseAlias.UBUNTU_KINETIC,
+        BaseAlias.UBUNTU_LUNAR,
     ],
 )
 def test_launched_environment(alias, installed_lxd, instance_name, tmp_path):

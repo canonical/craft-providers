@@ -16,7 +16,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
-from craft_providers.bases import BuilddBase, BuilddBaseAlias
+from craft_providers.bases import BaseAlias, BuilddBase
 from craft_providers.multipass import MultipassProvider, is_installed
 
 
@@ -46,13 +46,13 @@ def test_launched_environment(installed_multipass, instance_name, tmp_path):
     the instance when the method loses context."""
     provider = MultipassProvider()
 
-    base_configuration = BuilddBase(alias=BuilddBaseAlias.JAMMY)
+    base_configuration = BuilddBase(alias=BaseAlias.UBUNTU_JAMMY)
 
     with provider.launched_environment(
         project_name="test-project",
         project_path=tmp_path,
         base_configuration=base_configuration,
-        build_base=BuilddBaseAlias.JAMMY.value,
+        build_base=BaseAlias.UBUNTU_JAMMY.value,
         instance_name=instance_name,
     ) as test_instance:
         assert test_instance.exists() is True

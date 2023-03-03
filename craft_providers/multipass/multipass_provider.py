@@ -19,7 +19,7 @@
 import contextlib
 import logging
 import pathlib
-from typing import Generator
+from typing import Generator, Tuple
 
 from craft_providers import Executor, Provider, base, bases
 
@@ -35,9 +35,9 @@ logger = logging.getLogger(__name__)
 
 # TODO: support KINETIC and LUNAR
 PROVIDER_BASE_TO_MULTIPASS_BASE = {
-    bases.BuilddBaseAlias.BIONIC.value: "snapcraft:18.04",
-    bases.BuilddBaseAlias.FOCAL.value: "snapcraft:20.04",
-    bases.BuilddBaseAlias.JAMMY.value: "snapcraft:22.04",
+    bases.BaseAlias.UBUNTU_BIONIC.value: "snapcraft:18.04",
+    bases.BaseAlias.UBUNTU_FOCAL.value: "snapcraft:20.04",
+    bases.BaseAlias.UBUNTU_JAMMY.value: "snapcraft:22.04",
 }
 
 
@@ -87,7 +87,7 @@ class MultipassProvider(Provider):
         project_name: str,
         project_path: pathlib.Path,
         base_configuration: base.Base,
-        build_base: str,
+        build_base: Tuple[str, str],
         instance_name: str,
     ) -> Generator[Executor, None, None]:
         """Configure and launch environment for specified base.

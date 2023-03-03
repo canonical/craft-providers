@@ -172,7 +172,7 @@ def uninstalled_multipass():
 @pytest.fixture()
 def core20_lxd_instance(installed_lxd, instance_name):
     """Fully configured buildd-based core20 LXD instance."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     instance = lxd.launch(
         name=instance_name,

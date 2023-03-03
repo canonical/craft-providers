@@ -25,11 +25,11 @@ from craft_providers import bases, lxd
 @pytest.mark.parametrize(
     "alias",
     [
-        bases.BuilddBaseAlias.BIONIC,
-        bases.BuilddBaseAlias.FOCAL,
-        bases.BuilddBaseAlias.JAMMY,
-        bases.BuilddBaseAlias.KINETIC,
-        bases.BuilddBaseAlias.LUNAR,
+        bases.BaseAlias.UBUNTU_BIONIC,
+        bases.BaseAlias.UBUNTU_FOCAL,
+        bases.BaseAlias.UBUNTU_JAMMY,
+        bases.BaseAlias.UBUNTU_KINETIC,
+        bases.BaseAlias.UBUNTU_LUNAR,
     ],
 )
 def test_configure_and_launch_remote(instance_name, alias):
@@ -58,9 +58,9 @@ def test_configure_and_launch_remote(instance_name, alias):
 @pytest.mark.parametrize(
     "alias,image_name",
     [
-        (bases.BuilddBaseAlias.BIONIC, "18.04"),
-        (bases.BuilddBaseAlias.FOCAL, "20.04"),
-        (bases.BuilddBaseAlias.JAMMY, "22.04"),
+        (bases.BaseAlias.UBUNTU_BIONIC, "18.04"),
+        (bases.BaseAlias.UBUNTU_FOCAL, "20.04"),
+        (bases.BaseAlias.UBUNTU_JAMMY, "22.04"),
     ],
 )
 def test_configure_and_launch_buildd_remotes(instance_name, alias, image_name):

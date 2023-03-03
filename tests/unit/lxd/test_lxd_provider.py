@@ -147,12 +147,12 @@ def test_launched_environment(
         project_name="test-project",
         project_path=tmp_path,
         base_configuration=mock_buildd_base_configuration,
-        build_base="test-build-base",
+        build_base=("test-build-base", "1"),
         instance_name="test-instance-name",
         allow_unstable=allow_unstable,
     ) as instance:
         assert instance is not None
-        mock_get_remote_image.assert_called_once_with("test-build-base")
+        mock_get_remote_image.assert_called_once_with(("test-build-base", "1"))
         mock_remote_image.add_remote.assert_called_once_with(lxc=mock_lxc)
         assert mock_launch.mock_calls == [
             call(
@@ -194,7 +194,7 @@ def test_launched_environment_launch_base_configuration_error(
             project_name="test-project",
             project_path=tmp_path,
             base_configuration=mock_buildd_base_configuration,
-            build_base=bases.BuilddBaseAlias.FOCAL.value,
+            build_base=bases.BaseAlias.UBUNTU_FOCAL.value,
             instance_name="test-instance-name",
         ):
             pass
@@ -218,7 +218,7 @@ def test_launched_environment_unstable_error(
             project_name="test-project",
             project_path=tmp_path,
             base_configuration=mock_buildd_base_configuration,
-            build_base=bases.BuilddBaseAlias.FOCAL.value,
+            build_base=bases.BaseAlias.UBUNTU_FOCAL.value,
             instance_name="test-instance-name",
         ):
             pass

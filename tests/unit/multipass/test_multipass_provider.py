@@ -112,9 +112,9 @@ def test_create_environment(mocker):
 @pytest.mark.parametrize(
     "build_base, multipass_base",
     [
-        (bases.BuilddBaseAlias.BIONIC.value, "snapcraft:18.04"),
-        (bases.BuilddBaseAlias.FOCAL.value, "snapcraft:20.04"),
-        (bases.BuilddBaseAlias.JAMMY.value, "snapcraft:22.04"),
+        (bases.BaseAlias.UBUNTU_BIONIC.value, "snapcraft:18.04"),
+        (bases.BaseAlias.UBUNTU_FOCAL.value, "snapcraft:20.04"),
+        (bases.BaseAlias.UBUNTU_JAMMY.value, "snapcraft:22.04"),
     ],
 )
 def test_launched_environment(
@@ -165,7 +165,7 @@ def test_launched_environment_launch_base_configuration_error(
             project_name="test-project",
             project_path=tmp_path,
             base_configuration=mock_buildd_base_configuration,
-            build_base=bases.BuilddBaseAlias.FOCAL.value,
+            build_base=bases.BaseAlias.UBUNTU_FOCAL.value,
             instance_name="test-instance-name",
         ):
             pass

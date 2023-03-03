@@ -25,7 +25,7 @@ import contextlib
 import logging
 import pathlib
 from abc import ABC, abstractmethod
-from typing import Generator
+from typing import Generator, Tuple
 
 from .base import Base
 from .executor import Executor
@@ -85,7 +85,7 @@ class Provider(ABC):
         project_name: str,
         project_path: pathlib.Path,
         base_configuration: Base,
-        build_base: str,
+        build_base: Tuple[str, str],
         instance_name: str,
     ) -> Generator[Executor, None, None]:
         """Configure and launch environment for specified base.

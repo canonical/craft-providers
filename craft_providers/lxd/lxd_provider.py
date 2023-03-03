@@ -19,7 +19,7 @@
 import contextlib
 import logging
 import pathlib
-from typing import Generator
+from typing import Generator, Tuple
 
 from craft_providers import Executor, Provider
 from craft_providers.base import Base
@@ -96,7 +96,7 @@ class LXDProvider(Provider):
         project_name: str,
         project_path: pathlib.Path,
         base_configuration: Base,
-        build_base: str,
+        build_base: Tuple[str, str],
         instance_name: str,
         allow_unstable: bool = False,
     ) -> Generator[Executor, None, None]:

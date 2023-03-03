@@ -60,9 +60,9 @@ def core20_instance(instance_name):
 @pytest.mark.parametrize(
     "alias,image_name",
     [
-        (bases.BuilddBaseAlias.BIONIC, "snapcraft:core18"),
-        (bases.BuilddBaseAlias.FOCAL, "snapcraft:core20"),
-        (bases.BuilddBaseAlias.JAMMY, "snapcraft:core22"),
+        (bases.BaseAlias.UBUNTU_BIONIC, "snapcraft:core18"),
+        (bases.BaseAlias.UBUNTU_FOCAL, "snapcraft:core20"),
+        (bases.BaseAlias.UBUNTU_JAMMY, "snapcraft:core22"),
     ],
 )
 def test_launch(instance_name, alias, image_name):
@@ -87,7 +87,7 @@ def test_launch(instance_name, alias, image_name):
 
 
 def test_launch_existing_instance(core20_instance):
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     instance = multipass.launch(
         name=core20_instance.name,
@@ -105,7 +105,7 @@ def test_launch_existing_instance(core20_instance):
 
 
 def test_launch_os_incompatible_instance(core20_instance):
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     core20_instance.push_file_io(
         destination=pathlib.Path("/etc/os-release"),
@@ -139,7 +139,7 @@ def test_launch_os_incompatible_instance(core20_instance):
 
 
 def test_launch_instance_config_incompatible_instance(core20_instance):
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,
@@ -174,7 +174,7 @@ def test_launch_instance_config_incompatible_instance(core20_instance):
 
 def test_launch_instance_not_setup_without_auto_clean(core20_instance):
     """Raise an error if an existing instance is not setup and auto_clean is False."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,
@@ -198,7 +198,7 @@ def test_launch_instance_not_setup_without_auto_clean(core20_instance):
 
 def test_launch_instance_not_setup_with_auto_clean(core20_instance):
     """Clean the instance if it is not setup and auto_clean is True."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,

@@ -90,7 +90,7 @@ def get_instance_and_base_instance(get_base_instance, instance_name):
     Delete instances on fixture teardown.
     """
     base_instance = get_base_instance()
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     # launch an instance from an image and create a base instance
     instance = lxd.launch(
@@ -119,10 +119,10 @@ def get_instance_and_base_instance(get_base_instance, instance_name):
 @pytest.mark.parametrize(
     "alias,image_name",
     [
-        (bases.BuilddBaseAlias.XENIAL, "16.04"),
-        (bases.BuilddBaseAlias.BIONIC, "18.04"),
-        (bases.BuilddBaseAlias.FOCAL, "20.04"),
-        (bases.BuilddBaseAlias.JAMMY, "22.04"),
+        (bases.BaseAlias.UBUNTU_XENIAL, "16.04"),
+        (bases.BaseAlias.UBUNTU_BIONIC, "18.04"),
+        (bases.BaseAlias.UBUNTU_FOCAL, "20.04"),
+        (bases.BaseAlias.UBUNTU_JAMMY, "22.04"),
     ],
 )
 def test_launch_and_run(instance_name, alias, image_name):
@@ -151,7 +151,7 @@ def test_launch_and_run(instance_name, alias, image_name):
 def test_launch_use_snapshots_deprecated(get_base_instance, instance_name):
     """Launch an instance with the deprecated parameter `use_snapshots`."""
     base_instance = get_base_instance()
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     instance = lxd.launch(
         name=instance_name,
@@ -181,7 +181,7 @@ def test_launch_use_base_instance(get_instance_and_base_instance, instance_name)
     The parameter `use_base_instance` and the deprecated parameter `use_snapshots`
     should both result in the same behavior.
     """
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
     instance, base_instance = get_instance_and_base_instance
 
     # fingerprint the base instance
@@ -238,7 +238,7 @@ def test_launch_use_base_instance_expired(
     The LXD instance is created via subprocess, so the creation date the instance is
     out of freezegun's scope and can't be modified.
     """
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
     instance, base_instance = get_instance_and_base_instance
 
     # fingerprint the expired base instance
@@ -277,7 +277,7 @@ def test_launch_use_base_instance_expired(
 
 def test_launch_create_project(instance_name, project_name):
     """Create a project if it does not exist and `auto_create_project` is true."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
     lxc = lxd.LXC()
 
     assert project_name not in lxc.project_list()
@@ -304,7 +304,7 @@ def test_launch_with_project_and_use_base_instance(
 ):
     """With a LXD project specified, launch an instance and use base instances."""
     base_instance = get_base_instance(project=project)
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     # launch an instance from an image and create a base instance
     instance = lxd.launch(
@@ -363,7 +363,7 @@ def test_launch_with_project_and_use_base_instance(
 
 def test_launch_ephemeral(instance_name):
     """Launch an ephemeral instance and verify it is deleted after it is stopped."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     instance = lxd.launch(
         name=instance_name,
@@ -385,7 +385,7 @@ def test_launch_ephemeral(instance_name):
 
 def test_launch_ephemeral_existing(instance_name):
     """If an ephemeral instance already exists, delete it and create a new instance."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     # create a non-ephemeral instance
     instance = lxd.launch(
@@ -424,7 +424,7 @@ def test_launch_map_user_uid_true(instance_name, tmp_path):
     """Enable and map the the UID of the test account."""
     tmp_path.chmod(0o755)
 
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     instance = lxd.launch(
         name=instance_name,
@@ -449,7 +449,7 @@ def test_launch_map_user_uid_true_no_uid(instance_name, tmp_path):
     """Enable UID mapping without specifying a UID."""
     tmp_path.chmod(0o755)
 
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     instance = lxd.launch(
         name=instance_name,
@@ -473,7 +473,7 @@ def test_launch_map_user_uid_false(instance_name, tmp_path):
     """If UID mapping is not enabled, access to a mounted directory will be denied."""
     tmp_path.chmod(0o755)
 
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     instance = lxd.launch(
         name=instance_name,
@@ -496,7 +496,7 @@ def test_launch_map_user_uid_false(instance_name, tmp_path):
 
 def test_launch_existing_instance(core20_instance):
     """Launch an existing instance and run a command."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     instance = lxd.launch(
         name=core20_instance.name,
@@ -515,7 +515,7 @@ def test_launch_existing_instance(core20_instance):
 
 def test_launch_os_incompatible_without_auto_clean(core20_instance):
     """Raise an error if the OS is incompatible and auto_clean is False."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     core20_instance.push_file_io(
         destination=pathlib.Path("/etc/os-release"),
@@ -540,7 +540,7 @@ def test_launch_os_incompatible_without_auto_clean(core20_instance):
 
 def test_launch_os_incompatible_with_auto_clean(core20_instance):
     """Clean the instance if the OS is incompatible and auto_clean is True."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     core20_instance.push_file_io(
         destination=pathlib.Path("/etc/os-release"),
@@ -563,7 +563,7 @@ def test_launch_os_incompatible_with_auto_clean(core20_instance):
 
 def test_launch_instance_config_incompatible_without_auto_clean(core20_instance):
     """Raise an error if the config file is incompatible and auto_clean is False."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,
@@ -588,7 +588,7 @@ def test_launch_instance_config_incompatible_without_auto_clean(core20_instance)
 
 def test_launch_instance_config_incompatible_with_auto_clean(core20_instance):
     """Clean the instance if the config is incompatible and auto_clean is True."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,
@@ -611,7 +611,7 @@ def test_launch_instance_config_incompatible_with_auto_clean(core20_instance):
 
 def test_launch_instance_not_setup_without_auto_clean(core20_instance):
     """Raise an error if an existing instance is not setup and auto_clean is False."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,
@@ -636,7 +636,7 @@ def test_launch_instance_not_setup_without_auto_clean(core20_instance):
 
 def test_launch_instance_not_setup_with_auto_clean(core20_instance):
     """Clean the instance if it is not setup and auto_clean is True."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,
@@ -659,7 +659,7 @@ def test_launch_instance_not_setup_with_auto_clean(core20_instance):
 
 def test_launch_instance_id_map_incompatible_without_auto_clean(core20_instance):
     """Raise an error if the id map is incompatible and auto_clean is False."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     lxc = lxd.LXC()
     lxc.config_set(
@@ -686,7 +686,7 @@ def test_launch_instance_id_map_incompatible_without_auto_clean(core20_instance)
 
 def test_launch_instance_id_map_incompatible_with_auto_clean(core20_instance):
     """Clean the instance if the id map is incompatible and auto_clean is True."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = bases.BuilddBase(alias=bases.BaseAlias.UBUNTU_FOCAL)
 
     lxc = lxd.LXC()
     lxc.config_set(

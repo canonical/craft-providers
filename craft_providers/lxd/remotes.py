@@ -22,8 +22,9 @@ import logging
 import warnings
 from dataclasses import dataclass
 from enum import Enum
+from typing import Tuple
 
-from craft_providers.bases import BuilddBaseAlias
+from craft_providers.bases import BaseAlias
 
 from .errors import LXDError
 from .lxc import LXC
@@ -116,31 +117,31 @@ class RemoteImage:
 # XXX: support xenial?
 # mapping from supported bases to actual lxd remote images
 _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE = {
-    BuilddBaseAlias.BIONIC.value: RemoteImage(
+    BaseAlias.UBUNTU_BIONIC.value: RemoteImage(
         image_name="core18",
         remote_name=BUILDD_RELEASES_REMOTE_NAME,
         remote_address=BUILDD_RELEASES_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
-    BuilddBaseAlias.FOCAL.value: RemoteImage(
+    BaseAlias.UBUNTU_FOCAL.value: RemoteImage(
         image_name="core20",
         remote_name=BUILDD_RELEASES_REMOTE_NAME,
         remote_address=BUILDD_RELEASES_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
-    BuilddBaseAlias.JAMMY.value: RemoteImage(
+    BaseAlias.UBUNTU_JAMMY.value: RemoteImage(
         image_name="core22",
         remote_name=BUILDD_RELEASES_REMOTE_NAME,
         remote_address=BUILDD_RELEASES_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
-    BuilddBaseAlias.KINETIC.value: RemoteImage(
+    BaseAlias.UBUNTU_KINETIC.value: RemoteImage(
         image_name="kinetic",
         remote_name=DAILY_REMOTE_NAME,
         remote_address=DAILY_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
-    BuilddBaseAlias.LUNAR.value: RemoteImage(
+    BaseAlias.UBUNTU_LUNAR.value: RemoteImage(
         image_name="lunar",
         remote_name=DAILY_REMOTE_NAME,
         remote_address=DAILY_REMOTE_ADDRESS,
@@ -149,7 +150,7 @@ _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE = {
 }
 
 
-def get_remote_image(provider_base: str) -> RemoteImage:
+def get_remote_image(provider_base: Tuple[str, str]) -> RemoteImage:
     """Get a RemoteImage for a particular provider base.
 
     :param provider_base: string containing the provider base
@@ -186,7 +187,7 @@ def configure_buildd_image_remote(lxc: LXC = LXC()) -> str:
         category=DeprecationWarning,
     )
     # configure the buildd remote for core22
-    image = get_remote_image(BuilddBaseAlias.JAMMY.value)
+    image = get_remote_image(BaseAlias.UBUNTU_JAMMY.value)
     image.add_remote(lxc)
 
     return BUILDD_RELEASES_REMOTE_NAME
