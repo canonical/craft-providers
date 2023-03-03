@@ -118,7 +118,7 @@ def get_instance_and_base_instance(get_base_instance, instance_name):
 
 # exclude 23.04 (lunar) because it is a daily, not a supported release
 @pytest.mark.parametrize(
-    "alias", list(set(bases.BuilddBaseAlias) - {bases.BuilddBaseAlias.LUNAR})
+    "alias", set(bases.BuilddBaseAlias) - {bases.BuilddBaseAlias.LUNAR}
 )
 def test_launch_and_run(instance_name, alias):
     """Launch an instance from the `ubuntu` remote and run a command in the instance."""
