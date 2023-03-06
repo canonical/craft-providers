@@ -249,6 +249,7 @@ def test_launch_use_base_instance_expired(
         image_name="20.04",
         image_remote="ubuntu",
         use_base_instance=True,
+        expiration=timedelta(days=90),
     )
 
     assert instance.exists()
