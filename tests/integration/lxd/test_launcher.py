@@ -116,23 +116,18 @@ def get_instance_and_base_instance(get_base_instance, instance_name):
             base_instance.delete()
 
 
+# exclude 23.04 (lunar) because it is a daily, not a supported release
 @pytest.mark.parametrize(
-    "alias,image_name",
-    [
-        (bases.BuilddBaseAlias.XENIAL, "16.04"),
-        (bases.BuilddBaseAlias.BIONIC, "18.04"),
-        (bases.BuilddBaseAlias.FOCAL, "20.04"),
-        (bases.BuilddBaseAlias.JAMMY, "22.04"),
-    ],
+    "alias", set(bases.BuilddBaseAlias) - {bases.BuilddBaseAlias.LUNAR}
 )
-def test_launch_and_run(instance_name, alias, image_name):
-    """Launch an instance and run a command in the instance."""
+def test_launch_and_run(instance_name, alias):
+    """Launch an instance from the `ubuntu` remote and run a command in the instance."""
     base_configuration = bases.BuilddBase(alias=alias)
 
     instance = lxd.launch(
         name=instance_name,
         base_configuration=base_configuration,
-        image_name=image_name,
+        image_name=alias.value,
         image_remote="ubuntu",
     )
 

@@ -64,17 +64,7 @@ def mock_inject_from_host(mocker):
     yield mocker.patch("craft_providers.actions.snap_installer.inject_from_host")
 
 
-@pytest.mark.parametrize(
-    "alias,hostname",
-    [
-        (buildd.BuilddBaseAlias.XENIAL, "test-xenial-host"),
-        (buildd.BuilddBaseAlias.BIONIC, "test-bionic-host"),
-        (buildd.BuilddBaseAlias.FOCAL, "test-focal-host"),
-        (buildd.BuilddBaseAlias.JAMMY, "test-jammy-host"),
-        (buildd.BuilddBaseAlias.KINETIC, "test-kinetic-host"),
-        (buildd.BuilddBaseAlias.LUNAR, "test-lunar-host"),
-    ],
-)
+@pytest.mark.parametrize("alias", list(buildd.BuilddBaseAlias))
 @pytest.mark.parametrize(
     "environment, etc_environment_content",
     [
@@ -124,7 +114,6 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
     fake_executor,
     fake_filesystem,
     alias,
-    hostname,
     environment,
     etc_environment_content,
     no_cdn,
@@ -164,7 +153,7 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
         alias=alias,
         compatibility_tag=tag,
         environment=environment,
-        hostname=hostname,
+        hostname="test-hostname",
         snaps=snaps,
         packages=packages,
     )
@@ -306,7 +295,7 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
         },
         {
             "destination": "/etc/hostname",
-            "content": f"{hostname}\n".encode(),
+            "content": b"test-hostname\n",
             "file_mode": "0644",
             "group": "root",
             "user": "root",
@@ -846,17 +835,7 @@ def test_setup_snapd_failures(fake_process, fake_executor, fail_index):
     )
 
 
-@pytest.mark.parametrize(
-    "alias",
-    [
-        buildd.BuilddBaseAlias.XENIAL,
-        buildd.BuilddBaseAlias.BIONIC,
-        buildd.BuilddBaseAlias.FOCAL,
-        buildd.BuilddBaseAlias.JAMMY,
-        buildd.BuilddBaseAlias.KINETIC,
-        buildd.BuilddBaseAlias.LUNAR,
-    ],
-)
+@pytest.mark.parametrize("alias", list(buildd.BuilddBaseAlias))
 @pytest.mark.parametrize("system_running_ready_stdout", ["degraded", "running"])
 def test_wait_for_system_ready(
     fake_executor, fake_process, alias, system_running_ready_stdout
@@ -920,17 +899,7 @@ def test_wait_for_system_ready(
 
 
 @patch("time.time", side_effect=[0.0, 0.0, 1.0])
-@pytest.mark.parametrize(
-    "alias",
-    [
-        buildd.BuilddBaseAlias.XENIAL,
-        buildd.BuilddBaseAlias.BIONIC,
-        buildd.BuilddBaseAlias.FOCAL,
-        buildd.BuilddBaseAlias.JAMMY,
-        buildd.BuilddBaseAlias.KINETIC,
-        buildd.BuilddBaseAlias.LUNAR,
-    ],
-)
+@pytest.mark.parametrize("alias", list(buildd.BuilddBaseAlias))
 def test_wait_for_system_ready_timeout(fake_executor, fake_process, alias):
     base_config = buildd.BuilddBase(
         alias=alias,
@@ -954,17 +923,7 @@ def test_wait_for_system_ready_timeout(fake_executor, fake_process, alias):
 
 
 @patch("time.time", side_effect=[0.0, 0.0, 1.0])
-@pytest.mark.parametrize(
-    "alias",
-    [
-        buildd.BuilddBaseAlias.XENIAL,
-        buildd.BuilddBaseAlias.BIONIC,
-        buildd.BuilddBaseAlias.FOCAL,
-        buildd.BuilddBaseAlias.JAMMY,
-        buildd.BuilddBaseAlias.KINETIC,
-        buildd.BuilddBaseAlias.LUNAR,
-    ],
-)
+@pytest.mark.parametrize("alias", list(buildd.BuilddBaseAlias))
 def test_wait_for_system_ready_timeout_in_network(
     fake_executor, fake_process, alias, monkeypatch
 ):
