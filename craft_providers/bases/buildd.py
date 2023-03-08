@@ -342,18 +342,20 @@ class BuilddBase(Base):
 
         logger.debug("Instance has already been setup.")
 
-    def _ensure_os_compatible(
+    def _get_os_release(
         self, *, executor: Executor, deadline: Optional[float]
-    ) -> None:
-        """Ensure OS is compatible with Base.
+    ) -> Dict[str, str]:
+        """Get the OS release information from an instance's /etc/os-release.
 
-        :raises BaseCompatibilityError: if instance is incompatible.
-        :raises BaseConfigurationError: on other unexpected error.
+        :param executor: Executor to get OS release from.
+        :param deadline: Optional time.time() deadline.
+
+        :returns: Dictionary of key-mappings found in os-release.
         """
+        _check_deadline(deadline)
         try:
             # Replace encoding errors if it somehow occurs with utf-8. This
             # doesn't need to be perfect for checking compatibility.
-            _check_deadline(deadline)
             proc = executor.execute_run(
                 command=["cat", "/etc/os-release"],
                 capture_output=True,
@@ -368,7 +370,17 @@ class BuilddBase(Base):
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-        os_release = parse_os_release(proc.stdout)
+        return parse_os_release(proc.stdout)
+
+    def _ensure_os_compatible(
+        self, *, executor: Executor, deadline: Optional[float]
+    ) -> None:
+        """Ensure OS is compatible with Base.
+
+        :raises BaseCompatibilityError: if instance is incompatible.
+        :raises BaseConfigurationError: on other unexpected error.
+        """
+        os_release = self._get_os_release(executor=executor, deadline=deadline)
 
         os_name = os_release.get("NAME")
         if os_name != "Ubuntu":

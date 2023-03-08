@@ -561,12 +561,41 @@ def test_setup_timeout(fake_executor, fake_process, monkeypatch, mock_load):
     )
 
 
-def test_ensure_os_compatible_name_failure(fake_executor, fake_process):
+def test_get_os_release(fake_process, fake_executor):
+    """`_get_os_release` should parse data from `/etc/os-release` to a dict."""
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
-        stdout="NAME=Fedora\nVERSION_ID=32\n",
+        stdout="NAME=Ubuntu\nVERSION_ID=12.04\n",
     )
+
+    result = base_config._get_os_release(executor=fake_executor, deadline=None)
+
+    assert result == {"NAME": "Ubuntu", "VERSION_ID": "12.04"}
+
+
+def test_ensure_os_compatible(fake_executor, fake_process, mocker):
+    """Do nothing if the OS is compatible."""
+    mock_get_os_release = mocker.patch.object(
+        buildd.BuilddBase,
+        "_get_os_release",
+        return_value={"NAME": "Ubuntu", "VERSION_ID": "20.04"},
+    )
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
+
+    base_config._ensure_os_compatible(executor=fake_executor, deadline=None)
+
+    mock_get_os_release.assert_called_once()
+
+
+def test_ensure_os_compatible_name_failure(fake_executor, fake_process, mocker):
+    """Raise an error if the OS name does not match."""
+    mock_get_os_release = mocker.patch.object(
+        buildd.BuilddBase,
+        "_get_os_release",
+        return_value={"NAME": "Fedora", "VERSION_ID": "32"},
+    )
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
 
     with pytest.raises(errors.BaseCompatibilityError) as exc_info:
         base_config._ensure_os_compatible(executor=fake_executor, deadline=None)
@@ -575,13 +604,17 @@ def test_ensure_os_compatible_name_failure(fake_executor, fake_process):
         "Expected OS 'Ubuntu', found 'Fedora'"
     )
 
+    mock_get_os_release.assert_called_once()
 
-def test_ensure_os_compatible_version_failure(fake_executor, fake_process):
-    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
-        stdout="NAME=Ubuntu\nVERSION_ID=12.04\n",
+
+def test_ensure_os_compatible_version_failure(fake_executor, fake_process, mocker):
+    """Raise an error if the OS version id does not match."""
+    mock_get_os_release = mocker.patch.object(
+        buildd.BuilddBase,
+        "_get_os_release",
+        return_value={"NAME": "Ubuntu", "VERSION_ID": "12.04"},
     )
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
 
     with pytest.raises(errors.BaseCompatibilityError) as exc_info:
         base_config._ensure_os_compatible(executor=fake_executor, deadline=None)
@@ -590,24 +623,7 @@ def test_ensure_os_compatible_version_failure(fake_executor, fake_process):
         "Expected OS version '20.04', found '12.04'"
     )
 
-
-def test_read_os_release_failure(fake_process, fake_executor):
-    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
-        returncode=-1,
-    )
-
-    with pytest.raises(errors.BaseConfigurationError) as exc_info:
-        base_config._ensure_os_compatible(executor=fake_executor, deadline=None)
-
-    assert exc_info.value.__cause__ is not None
-    assert exc_info.value == errors.BaseConfigurationError(
-        brief="Failed to read /etc/os-release.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
+    mock_get_os_release.assert_called_once()
 
 
 def test_setup_hostname_failure(fake_process, fake_executor):
