@@ -38,6 +38,7 @@ PROVIDER_BASE_TO_MULTIPASS_BASE = {
     bases.BuilddBaseAlias.BIONIC.value: "snapcraft:18.04",
     bases.BuilddBaseAlias.FOCAL.value: "snapcraft:20.04",
     bases.BuilddBaseAlias.JAMMY.value: "snapcraft:22.04",
+    bases.BuilddBaseAlias.DEVEL.value: "snapcraft:devel",
 }
 
 

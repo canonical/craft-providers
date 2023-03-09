@@ -148,6 +148,7 @@ class BuilddBaseAlias(enum.Enum):
     JAMMY = "22.04"
     KINETIC = "22.10"
     LUNAR = "23.04"
+    DEVEL = "devel"
 
 
 class Snap(pydantic.BaseModel, extra=pydantic.Extra.forbid):
@@ -390,6 +391,15 @@ class BuilddBase(Base):
 
         compat_version_id = self.alias.value
         version_id = os_release.get("VERSION_ID")
+
+        if compat_version_id == BuilddBaseAlias.DEVEL.value:
+            logger.debug(
+                "Ignoring OS version mismatch for %r because base is %r.",
+                version_id,
+                compat_version_id,
+            )
+            return
+
         if version_id != compat_version_id:
             raise BaseCompatibilityError(
                 reason=(
@@ -677,6 +687,14 @@ class BuilddBase(Base):
             content=io.BytesIO('APT::Update::Error-Mode "any";\n'.encode()),
             file_mode="0644",
         )
+
+        # devel images should use the devel repository
+        if self.alias == BuilddBaseAlias.DEVEL:
+            self._update_apt_sources(
+                executor=executor,
+                deadline=deadline,
+                codename=BuilddBaseAlias.DEVEL.value,
+            )
 
         try:
             _check_deadline(deadline)
@@ -967,6 +985,62 @@ class BuilddBase(Base):
                 deadline, message="Timed out waiting for environment to be ready."
             )
             sleep(retry_wait)
+
+    def _update_apt_sources(
+        self, *, executor: Executor, deadline: Optional[float], codename: str
+    ) -> None:
+        """Update the codename in the apt source config files.
+
+        :param executor: Executor for target container.
+        :param deadline: Optional time.time() deadline.
+        :param codename: New codename to use in apt source config files (i.e. 'lunar')
+        """
+        _check_deadline(deadline)
+
+        apt_source = "/etc/apt/sources.list"
+        apt_source_dir = "/etc/apt/sources.list.d/"
+
+        # get the current ubuntu codename
+        os_release = self._get_os_release(executor=executor, deadline=deadline)
+        version_codename = os_release.get("VERSION_CODENAME")
+        logger.debug("updating apt sources from %r to %r", version_codename, codename)
+
+        # replace all occurrences of the codename in the `sources.list` file
+        sed_command = ["sed", "-i", f"s/{version_codename}/{codename}/g"]
+        try:
+            _execute_run(executor, sed_command + [apt_source])
+        except subprocess.CalledProcessError as error:
+            raise BaseConfigurationError(
+                brief=f"Failed to update {apt_source!r}.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
+        # running `find` and `sed` as two separate calls may appear unoptimized,
+        # but these shell commands will pass through `shlex.join()` before being
+        # executed, which means one-liners like `find -exec sed` or
+        # `find | xargs sed` cannot be used
+
+        try:
+            additional_source_files = _execute_run(
+                executor,
+                ["find", apt_source_dir, "-type", "f", "-name", "*.list"],
+                text=True,
+            ).stdout.strip()
+        except subprocess.CalledProcessError as error:
+            raise BaseConfigurationError(
+                brief=f"Failed to find apt source files in {apt_source_dir!r}.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
+        # if there are config files in `sources.list.d/`, then update them
+        if additional_source_files:
+            try:
+                _execute_run(executor, sed_command + [apt_source_dir + "*.list"])
+            except subprocess.CalledProcessError as error:
+                raise BaseConfigurationError(
+                    brief=f"Failed to update apt source files in {apt_source_dir!r}.",
+                    details=errors.details_from_called_process_error(error),
+                ) from error
 
     def _update_compatibility_tag(
         self, *, executor: Executor, deadline: Optional[float]
