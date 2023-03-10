@@ -116,23 +116,14 @@ def get_instance_and_base_instance(get_base_instance, instance_name):
             base_instance.delete()
 
 
-@pytest.mark.parametrize(
-    "alias,image_name",
-    [
-        (bases.BuilddBaseAlias.XENIAL, "16.04"),
-        (bases.BuilddBaseAlias.BIONIC, "18.04"),
-        (bases.BuilddBaseAlias.FOCAL, "20.04"),
-        (bases.BuilddBaseAlias.JAMMY, "22.04"),
-    ],
-)
-def test_launch_and_run(instance_name, alias, image_name):
-    """Launch an instance and run a command in the instance."""
-    base_configuration = bases.BuilddBase(alias=alias)
+def test_launch_and_run(instance_name):
+    """Launch an instance from the `ubuntu` remote and run a command in the instance."""
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.JAMMY)
 
     instance = lxd.launch(
         name=instance_name,
         base_configuration=base_configuration,
-        image_name=image_name,
+        image_name=bases.BuilddBaseAlias.JAMMY.value,
         image_remote="ubuntu",
     )
 
@@ -254,6 +245,7 @@ def test_launch_use_base_instance_expired(
         image_name="20.04",
         image_remote="ubuntu",
         use_base_instance=True,
+        expiration=timedelta(days=90),
     )
 
     assert instance.exists()

@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from datetime import timedelta
 from unittest.mock import call
 
 import pytest
@@ -143,6 +144,12 @@ def test_launched_environment(
     mock_remote_image.is_stable = is_stable
     provider = LXDProvider(lxc=mock_lxc)
 
+    # set the expected expiration time
+    if is_stable:
+        expiration = timedelta(days=90)
+    else:
+        expiration = timedelta(days=14)
+
     with provider.launched_environment(
         project_name="test-project",
         project_path=tmp_path,
@@ -167,6 +174,7 @@ def test_launched_environment(
                 use_base_instance=True,
                 project="default",
                 remote="local",
+                expiration=expiration,
             ),
         ]
 

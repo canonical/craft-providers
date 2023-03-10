@@ -17,6 +17,7 @@
 #
 
 import sys
+from datetime import timedelta
 from unittest.mock import MagicMock, Mock, call
 
 import pytest
@@ -802,7 +803,7 @@ def test_use_snapshots_deprecated(
     ],
 )
 def test_is_valid(creation_date, mocker, mock_lxc):
-    """Instances created within the last 90 days (inclusive) are valid."""
+    """Instances younger than the expiration date (inclusive) are valid."""
     mock_lxc.info.return_value = {"Created": creation_date}
 
     is_valid = lxd.launcher._is_valid(
@@ -810,6 +811,7 @@ def test_is_valid(creation_date, mocker, mock_lxc):
         project="test-project",
         remote="test-remote",
         lxc=mock_lxc,
+        expiration=timedelta(days=90),
     )
 
     assert is_valid
@@ -817,7 +819,7 @@ def test_is_valid(creation_date, mocker, mock_lxc):
 
 @freeze_time("2022/12/07 11:05:00 UTC")
 def test_is_valid_expired(mocker, mock_lxc):
-    """Instances created more than 90 days ago are not valid."""
+    """Instances older than the expiration date are not valid."""
     # 91 days old
     mock_lxc.info.return_value = {"Created": "2022/09/07 11:05 UTC"}
 
@@ -826,6 +828,7 @@ def test_is_valid_expired(mocker, mock_lxc):
         project="test-project",
         remote="test-remote",
         lxc=mock_lxc,
+        expiration=timedelta(days=90),
     )
 
     assert not is_valid
@@ -840,6 +843,7 @@ def test_is_valid_lxd_error(logs, mocker, mock_lxc):
         project="test-project",
         remote="test-remote",
         lxc=mock_lxc,
+        expiration=timedelta(days=1),
     )
 
     assert not is_valid
@@ -855,6 +859,7 @@ def test_is_valid_key_error(logs, mocker, mock_lxc):
         project="test-project",
         remote="test-remote",
         lxc=mock_lxc,
+        expiration=timedelta(days=1),
     )
 
     assert not is_valid
@@ -870,6 +875,7 @@ def test_is_valid_value_error(logs, mocker, mock_lxc):
         project="test-project",
         remote="test-remote",
         lxc=mock_lxc,
+        expiration=timedelta(days=1),
     )
 
     assert not is_valid
