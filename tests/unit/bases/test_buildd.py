@@ -64,17 +64,16 @@ def mock_inject_from_host(mocker):
     yield mocker.patch("craft_providers.actions.snap_installer.inject_from_host")
 
 
-@pytest.mark.parametrize(
-    "alias,hostname",
-    [
-        (buildd.BuilddBaseAlias.XENIAL, "test-xenial-host"),
-        (buildd.BuilddBaseAlias.BIONIC, "test-bionic-host"),
-        (buildd.BuilddBaseAlias.FOCAL, "test-focal-host"),
-        (buildd.BuilddBaseAlias.JAMMY, "test-jammy-host"),
-        (buildd.BuilddBaseAlias.KINETIC, "test-kinetic-host"),
-        (buildd.BuilddBaseAlias.LUNAR, "test-lunar-host"),
-    ],
-)
+@pytest.fixture
+def mock_get_os_release(mocker):
+    return mocker.patch.object(
+        buildd.BuilddBase,
+        "_get_os_release",
+        return_value={"NAME": "Ubuntu", "VERSION_ID": "22.04"},
+    )
+
+
+@pytest.mark.parametrize("alias", list(buildd.BuilddBaseAlias))
 @pytest.mark.parametrize(
     "environment, etc_environment_content",
     [
@@ -124,7 +123,6 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
     fake_executor,
     fake_filesystem,
     alias,
-    hostname,
     environment,
     etc_environment_content,
     no_cdn,
@@ -164,7 +162,7 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
         alias=alias,
         compatibility_tag=tag,
         environment=environment,
-        hostname=hostname,
+        hostname="test-hostname",
         snaps=snaps,
         packages=packages,
     )
@@ -213,6 +211,32 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "getent", "hosts", "snapcraft.io"]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout=dedent(
+            f"""\
+            NAME="Ubuntu"
+            ID=ubuntu
+            ID_LIKE=debian
+            VERSION_ID="{alias.value}"
+            VERSION_CODENAME="test-name"
+            """
+        ),
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "sed", "-i", "s/test-name/devel/g", "/etc/apt/sources.list"]
+    )
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "find",
+            "/etc/apt/sources.list.d/",
+            "-type",
+            "f",
+            "-name",
+            "*.list",
+        ]
     )
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
     fake_process.register_subprocess(
@@ -306,7 +330,7 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
         },
         {
             "destination": "/etc/hostname",
-            "content": f"{hostname}\n".encode(),
+            "content": b"test-hostname\n",
             "file_mode": "0644",
             "group": "root",
             "user": "root",
@@ -493,7 +517,7 @@ def test_setup_apt(fake_executor, fake_process):
     base._setup_apt(executor=fake_executor, deadline=None)
 
 
-def test_install_default(fake_executor, fake_process):
+def test_setup_apt_install_default(fake_executor, fake_process):
     """Verify only default packages are installed."""
     base = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
@@ -504,7 +528,7 @@ def test_install_default(fake_executor, fake_process):
     base._setup_apt(executor=fake_executor, deadline=None)
 
 
-def test_install_packages_update_error(mocker, fake_executor):
+def test_setup_apt_install_packages_update_error(mocker, fake_executor):
     """Verify error is caught from `apt-get update` call."""
     error = subprocess.CalledProcessError(100, ["error"])
     base = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
@@ -520,7 +544,7 @@ def test_install_packages_update_error(mocker, fake_executor):
     )
 
 
-def test_install_packages_install_error(mocker, fake_executor):
+def test_setup_apt_install_packages_install_error(mocker, fake_executor):
     """Verify error is caught from `apt-get install` call."""
     error = subprocess.CalledProcessError(100, ["error"])
     base = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
@@ -539,6 +563,23 @@ def test_install_packages_install_error(mocker, fake_executor):
         brief="Failed to install packages.",
         details="* Command that failed: 'error'\n* Command exit code: 100",
     )
+
+
+def test_setup_apt_devel(fake_executor, fake_process, mocker):
+    """Verify `update_apt_sources()` is called for devel bases."""
+    mock_update_apt_sources = mocker.patch.object(
+        buildd.BuilddBase, "_update_apt_sources"
+    )
+
+    base = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.DEVEL)
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "apt-utils", "curl"]
+    )
+
+    base._setup_apt(executor=fake_executor, deadline=None)
+
+    mock_update_apt_sources.assert_called_once()
 
 
 def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
@@ -572,12 +613,50 @@ def test_setup_timeout(fake_executor, fake_process, monkeypatch, mock_load):
     )
 
 
-def test_ensure_os_compatible_name_failure(fake_executor, fake_process):
+def test_get_os_release(fake_process, fake_executor):
+    """`_get_os_release` should parse data from `/etc/os-release` to a dict."""
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
-        stdout="NAME=Fedora\nVERSION_ID=32\n",
+        stdout="NAME=Ubuntu\nVERSION_ID=12.04\n",
     )
+
+    result = base_config._get_os_release(executor=fake_executor, deadline=None)
+
+    assert result == {"NAME": "Ubuntu", "VERSION_ID": "12.04"}
+
+
+def test_ensure_os_compatible(fake_executor, fake_process, mock_get_os_release):
+    """Do nothing if the OS is compatible."""
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+
+    base_config._ensure_os_compatible(executor=fake_executor, deadline=None)
+
+    mock_get_os_release.assert_called_once()
+
+
+def test_ensure_os_compatible_devel_mismatch(
+    fake_executor, fake_process, logs, mock_get_os_release
+):
+    """Ignore OS version id mismatch when using a devel base."""
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.DEVEL)
+
+    base_config._ensure_os_compatible(executor=fake_executor, deadline=None)
+
+    mock_get_os_release.assert_called_once()
+
+    assert (
+        "Ignoring OS version mismatch for '22.04' because base is 'devel'."
+        in logs.debug
+    )
+
+
+def test_ensure_os_compatible_name_failure(
+    fake_executor, fake_process, mock_get_os_release
+):
+    """Raise an error if the OS name does not match."""
+    mock_get_os_release.return_value = {"NAME": "Fedora", "VERSION_ID": "32"}
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
 
     with pytest.raises(errors.BaseCompatibilityError) as exc_info:
         base_config._ensure_os_compatible(executor=fake_executor, deadline=None)
@@ -586,13 +665,15 @@ def test_ensure_os_compatible_name_failure(fake_executor, fake_process):
         "Expected OS 'Ubuntu', found 'Fedora'"
     )
 
+    mock_get_os_release.assert_called_once()
 
-def test_ensure_os_compatible_version_failure(fake_executor, fake_process):
+
+def test_ensure_os_compatible_version_failure(
+    fake_executor, fake_process, mock_get_os_release
+):
+    """Raise an error if the OS version id does not match."""
+    mock_get_os_release.return_value = {"NAME": "Ubuntu", "VERSION_ID": "12.04"}
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
-        stdout="NAME=Ubuntu\nVERSION_ID=12.04\n",
-    )
 
     with pytest.raises(errors.BaseCompatibilityError) as exc_info:
         base_config._ensure_os_compatible(executor=fake_executor, deadline=None)
@@ -601,24 +682,7 @@ def test_ensure_os_compatible_version_failure(fake_executor, fake_process):
         "Expected OS version '20.04', found '12.04'"
     )
 
-
-def test_read_os_release_failure(fake_process, fake_executor):
-    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
-        returncode=-1,
-    )
-
-    with pytest.raises(errors.BaseConfigurationError) as exc_info:
-        base_config._ensure_os_compatible(executor=fake_executor, deadline=None)
-
-    assert exc_info.value.__cause__ is not None
-    assert exc_info.value == errors.BaseConfigurationError(
-        brief="Failed to read /etc/os-release.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
+    mock_get_os_release.assert_called_once()
 
 
 def test_setup_hostname_failure(fake_process, fake_executor):
@@ -846,17 +910,7 @@ def test_setup_snapd_failures(fake_process, fake_executor, fail_index):
     )
 
 
-@pytest.mark.parametrize(
-    "alias",
-    [
-        buildd.BuilddBaseAlias.XENIAL,
-        buildd.BuilddBaseAlias.BIONIC,
-        buildd.BuilddBaseAlias.FOCAL,
-        buildd.BuilddBaseAlias.JAMMY,
-        buildd.BuilddBaseAlias.KINETIC,
-        buildd.BuilddBaseAlias.LUNAR,
-    ],
-)
+@pytest.mark.parametrize("alias", list(buildd.BuilddBaseAlias))
 @pytest.mark.parametrize("system_running_ready_stdout", ["degraded", "running"])
 def test_wait_for_system_ready(
     fake_executor, fake_process, alias, system_running_ready_stdout
@@ -920,17 +974,7 @@ def test_wait_for_system_ready(
 
 
 @patch("time.time", side_effect=[0.0, 0.0, 1.0])
-@pytest.mark.parametrize(
-    "alias",
-    [
-        buildd.BuilddBaseAlias.XENIAL,
-        buildd.BuilddBaseAlias.BIONIC,
-        buildd.BuilddBaseAlias.FOCAL,
-        buildd.BuilddBaseAlias.JAMMY,
-        buildd.BuilddBaseAlias.KINETIC,
-        buildd.BuilddBaseAlias.LUNAR,
-    ],
-)
+@pytest.mark.parametrize("alias", list(buildd.BuilddBaseAlias))
 def test_wait_for_system_ready_timeout(fake_executor, fake_process, alias):
     base_config = buildd.BuilddBase(
         alias=alias,
@@ -954,17 +998,7 @@ def test_wait_for_system_ready_timeout(fake_executor, fake_process, alias):
 
 
 @patch("time.time", side_effect=[0.0, 0.0, 1.0])
-@pytest.mark.parametrize(
-    "alias",
-    [
-        buildd.BuilddBaseAlias.XENIAL,
-        buildd.BuilddBaseAlias.BIONIC,
-        buildd.BuilddBaseAlias.FOCAL,
-        buildd.BuilddBaseAlias.JAMMY,
-        buildd.BuilddBaseAlias.KINETIC,
-        buildd.BuilddBaseAlias.LUNAR,
-    ],
-)
+@pytest.mark.parametrize("alias", list(buildd.BuilddBaseAlias))
 def test_wait_for_system_ready_timeout_in_network(
     fake_executor, fake_process, alias, monkeypatch
 ):
@@ -987,6 +1021,147 @@ def test_wait_for_system_ready_timeout_in_network(
 
     assert exc_info.value == errors.BaseConfigurationError(
         brief="Timed out waiting for networking to be ready."
+    )
+
+
+def test_update_apt_sources(fake_executor, fake_process, mock_get_os_release):
+    """`update_apt_sources()` should update the apt source config files."""
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "sed",
+            "-i",
+            "s/None/test-codename/g",
+            "/etc/apt/sources.list",
+        ]
+    )
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "find",
+            "/etc/apt/sources.list.d/",
+            "-type",
+            "f",
+            "-name",
+            "*.list",
+        ],
+    )
+    base_config._update_apt_sources(
+        executor=fake_executor, deadline=None, codename="test-codename"
+    )
+
+    mock_get_os_release.assert_called_once()
+
+
+def test_update_apt_sources_dir(fake_executor, fake_process, mock_get_os_release):
+    """Verify source files in `/etc/apt/sources.list.d/` are updated."""
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "sed",
+            "-i",
+            "s/None/test-codename/g",
+            "/etc/apt/sources.list",
+        ]
+    )
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "find",
+            "/etc/apt/sources.list.d/",
+            "-type",
+            "f",
+            "-name",
+            "*.list",
+        ],
+        stdout="/etc/apt/sources.list.d/file1.list\n/etc/apt/sources.list.d/file2.list",
+    )
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "sed",
+            "-i",
+            "s/None/test-codename/g",
+            "/etc/apt/sources.list.d/*.list",
+        ]
+    )
+
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+
+    base_config._update_apt_sources(
+        executor=fake_executor, deadline=None, codename="test-codename"
+    )
+
+    mock_get_os_release.assert_called_once()
+
+
+def test_update_apt_sources_sed_error(fake_executor, fake_process, mock_get_os_release):
+    """Raise an error when the sed command fails to update apt sources."""
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+
+    # fail on the first `sed` call
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "sed", fake_process.any()], returncode=1
+    )
+
+    with pytest.raises(buildd.BaseConfigurationError) as raised:
+        base_config._update_apt_sources(
+            executor=fake_executor, deadline=None, codename="test-codename"
+        )
+
+    assert raised.value.brief == "Failed to update '/etc/apt/sources.list'."
+
+
+def test_update_apt_sources_find_error(
+    fake_executor, fake_process, mock_get_os_release
+):
+    """Raise an error when the find command fails to find apt source files."""
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
+    # fail on the `find` call
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "find", fake_process.any()], returncode=1
+    )
+
+    with pytest.raises(buildd.BaseConfigurationError) as raised:
+        base_config._update_apt_sources(
+            executor=fake_executor, deadline=None, codename="test-codename"
+        )
+
+    assert (
+        raised.value.brief
+        == "Failed to find apt source files in '/etc/apt/sources.list.d/'."
+    )
+
+
+def test_update_apt_sources_dir_sed_error(
+    fake_executor, fake_process, mock_get_os_release
+):
+    """Raise an error when the sed command fails in the `sources.list.d` directory."""
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "find", fake_process.any()],
+        stdout="test-output",
+    )
+    # fail on the second `sed` call
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "sed", fake_process.any()],
+        returncode=1,
+    )
+
+    with pytest.raises(buildd.BaseConfigurationError) as raised:
+        base_config._update_apt_sources(
+            executor=fake_executor, deadline=None, codename="test-codename"
+        )
+
+    assert (
+        raised.value.brief
+        == "Failed to update apt source files in '/etc/apt/sources.list.d/'."
     )
 
 

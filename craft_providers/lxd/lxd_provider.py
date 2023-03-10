@@ -19,6 +19,7 @@
 import contextlib
 import logging
 import pathlib
+from datetime import timedelta
 from typing import Generator
 
 from craft_providers import Executor, Provider
@@ -127,6 +128,12 @@ class LXDProvider(Provider):
                 ),
             )
 
+        if image.is_stable:
+            expiration = timedelta(days=90)
+        else:
+            # unstable images should be refreshed more often
+            expiration = timedelta(days=14)
+
         try:
             instance = launch(
                 name=instance_name,
@@ -140,6 +147,7 @@ class LXDProvider(Provider):
                 use_base_instance=True,
                 project=self.lxd_project,
                 remote=self.lxd_remote,
+                expiration=expiration,
             )
         except BaseConfigurationError as error:
             raise LXDError(str(error)) from error

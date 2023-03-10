@@ -42,16 +42,7 @@ def test_create_environment(installed_lxd, instance_name):
     assert test_instance.exists() is False
 
 
-@pytest.mark.parametrize(
-    "alias",
-    [
-        BuilddBaseAlias.BIONIC,
-        BuilddBaseAlias.FOCAL,
-        BuilddBaseAlias.JAMMY,
-        BuilddBaseAlias.KINETIC,
-        BuilddBaseAlias.LUNAR,
-    ],
-)
+@pytest.mark.parametrize("alias", set(BuilddBaseAlias) - {BuilddBaseAlias.XENIAL})
 def test_launched_environment(alias, installed_lxd, instance_name, tmp_path):
     provider = LXDProvider()
 

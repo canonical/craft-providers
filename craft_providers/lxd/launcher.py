@@ -143,11 +143,19 @@ def _formulate_base_instance_name(
     return "-".join(["base-instance", compatibility_tag, image_remote, image_name])
 
 
-def _is_valid(*, instance_name: str, project: str, remote: str, lxc: LXC) -> bool:
+def _is_valid(
+    *,
+    instance_name: str,
+    project: str,
+    remote: str,
+    lxc: LXC,
+    expiration: timedelta,
+) -> bool:
     """Check if an instance is valid.
 
-    Instances are valid for 3 months (90 days). After 3 months, they are considered
-    expired and invalid.
+    Instances are valid if they are not expired (too old). An instance's age is measured
+    by it's creation date. For example, if the expiration is 90 days, then the instance
+    will expire 91 days after it was created.
 
     If errors occur during the validity check, the instance is assumed to be invalid.
 
@@ -155,6 +163,7 @@ def _is_valid(*, instance_name: str, project: str, remote: str, lxc: LXC) -> boo
     :param project: LXD project name to create.
     :param remote: LXD remote to create project on.
     :param lxc: LXC client.
+    :param expiration: How long an instance will be valid from its creation date.
 
     :returns: True if the instance is valid. False otherwise.
     """
@@ -185,7 +194,7 @@ def _is_valid(*, instance_name: str, project: str, remote: str, lxc: LXC) -> boo
         )
         return False
 
-    expiration_date = datetime.now() - timedelta(days=90)
+    expiration_date = datetime.now() - expiration
     if creation_date < expiration_date:
         logger.warning(
             "Instance is expired (Instance creation date: %s, expiration date: %s).",
@@ -388,6 +397,7 @@ def launch(
     project: str = "default",
     remote: str = "local",
     lxc: LXC = LXC(),
+    expiration: timedelta = timedelta(days=90),
 ) -> LXDInstance:
     """Create, start, and configure an instance.
 
@@ -402,7 +412,8 @@ def launch(
     referred to as 'warmup'.
 
     To keep build environments clean, consistent, and up-to-date, any base instance
-    older than 3 months (90 days) is deleted and recreated.
+    older than 3 months (90 days) is deleted and recreated. This 90 day default can be
+    changed with the `expiration` parameter.
 
     :param name: Name of instance.
     :param base_configuration: Base configuration to apply to the instance.
@@ -422,6 +433,7 @@ def launch(
     :param project: LXD project to create instance in.
     :param remote: LXD remote to create instance on.
     :param lxc: LXC client.
+    :param expiration: How long a base instance will be valid from its creation date.
 
     :returns: LXD instance.
 
@@ -543,6 +555,7 @@ def launch(
         project=project,
         remote=remote,
         lxc=lxc,
+        expiration=expiration,
     ):
         logger.warning(
             "Base instance %r is not valid. Deleting base instance.",

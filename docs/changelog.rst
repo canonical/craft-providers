@@ -2,6 +2,12 @@
 Changelog
 *********
 
+1.8.1 (2023-03-10)
+------------------
+- Add new base alias `BuilddBaseAlias.DEVEL`
+- Expire unstable base instances every 14 days
+- Refactor tests such that all base aliases are tested by default
+
 1.8.0 (2023-03-01)
 ------------------
 - Track if instances are properly setup when launching. If the instance did not fully
