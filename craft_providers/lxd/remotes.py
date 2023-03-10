@@ -146,6 +146,12 @@ _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE = {
         remote_address=DAILY_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
+    BuilddBaseAlias.DEVEL.value: RemoteImage(
+        image_name="devel",
+        remote_name=DAILY_REMOTE_NAME,
+        remote_address=DAILY_REMOTE_ADDRESS,
+        remote_protocol=ProtocolType.SIMPLESTREAMS,
+    ),
 }
 
 

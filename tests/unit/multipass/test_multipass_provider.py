@@ -115,6 +115,7 @@ def test_create_environment(mocker):
         (bases.BuilddBaseAlias.BIONIC.value, "snapcraft:18.04"),
         (bases.BuilddBaseAlias.FOCAL.value, "snapcraft:20.04"),
         (bases.BuilddBaseAlias.JAMMY.value, "snapcraft:22.04"),
+        (bases.BuilddBaseAlias.DEVEL.value, "snapcraft:devel"),
     ],
 )
 def test_launched_environment(
