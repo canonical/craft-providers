@@ -90,6 +90,7 @@ class MultipassProvider(Provider):
         base_configuration: base.Base,
         build_base: str,
         instance_name: str,
+        allow_unstable: bool = False,
     ) -> Generator[Executor, None, None]:
         """Configure and launch environment for specified base.
 
