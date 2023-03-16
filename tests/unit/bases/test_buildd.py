@@ -230,6 +230,15 @@ def test_setup(  # pylint: disable=too-many-arguments, too-many-locals
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
+            "sed",
+            "-i",
+            "$ aapt_preserve_sources_list: true",
+            "/etc/cloud/cloud.cfg",
+        ]
+    )
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
             "find",
             "/etc/apt/sources.list.d/",
             "-type",
@@ -1040,6 +1049,15 @@ def test_update_apt_sources(fake_executor, fake_process, mock_get_os_release):
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
+            "sed",
+            "-i",
+            "$ aapt_preserve_sources_list: true",
+            "/etc/cloud/cloud.cfg",
+        ]
+    )
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
             "find",
             "/etc/apt/sources.list.d/",
             "-type",
@@ -1064,6 +1082,15 @@ def test_update_apt_sources_dir(fake_executor, fake_process, mock_get_os_release
             "-i",
             "s/None/test-codename/g",
             "/etc/apt/sources.list",
+        ]
+    )
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "sed",
+            "-i",
+            "$ aapt_preserve_sources_list: true",
+            "/etc/cloud/cloud.cfg",
         ]
     )
     fake_process.register_subprocess(
@@ -1097,7 +1124,9 @@ def test_update_apt_sources_dir(fake_executor, fake_process, mock_get_os_release
     mock_get_os_release.assert_called_once()
 
 
-def test_update_apt_sources_sed_error(fake_executor, fake_process, mock_get_os_release):
+def test_update_apt_sources_source_list_sed_error(
+    fake_executor, fake_process, mock_get_os_release
+):
     """Raise an error when the sed command fails to update apt sources."""
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
 
@@ -1114,12 +1143,33 @@ def test_update_apt_sources_sed_error(fake_executor, fake_process, mock_get_os_r
     assert raised.value.brief == "Failed to update '/etc/apt/sources.list'."
 
 
+def test_update_apt_sources_cloud_cfg_sed_error(
+    fake_executor, fake_process, mock_get_os_release
+):
+    """Raise an error when the sed command fails to update cloud.cfg."""
+    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
+
+    # fail on the second `sed` call
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "sed", fake_process.any()], returncode=1
+    )
+
+    with pytest.raises(buildd.BaseConfigurationError) as raised:
+        base_config._update_apt_sources(
+            executor=fake_executor, deadline=None, codename="test-codename"
+        )
+
+    assert raised.value.brief == "Failed to update '/etc/cloud/cloud.cfg'."
+
+
 def test_update_apt_sources_find_error(
     fake_executor, fake_process, mock_get_os_release
 ):
     """Raise an error when the find command fails to find apt source files."""
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
 
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
     # fail on the `find` call
     fake_process.register_subprocess(
@@ -1144,11 +1194,12 @@ def test_update_apt_sources_dir_sed_error(
     base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY)
 
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "find", fake_process.any()],
         stdout="test-output",
     )
-    # fail on the second `sed` call
+    # fail on the third `sed` call
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "sed", fake_process.any()],
         returncode=1,
