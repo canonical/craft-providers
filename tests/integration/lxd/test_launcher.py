@@ -16,6 +16,7 @@
 #
 
 import io
+import json
 import os
 import pathlib
 import subprocess
@@ -214,6 +215,42 @@ def test_launch_use_base_instance(get_instance_and_base_instance, instance_name)
 
     assert instance.exists()
     assert instance.is_running()
+
+
+def test_launch_create_base_instance_with_correct_image_description(
+    get_base_instance, instance_name
+):
+    """Create a base instance and check the image description"""
+    base_instance = get_base_instance()
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+
+    # launch an instance from an image and create a base instance
+    lxd.launch(
+        name=instance_name,
+        base_configuration=base_configuration,
+        image_name="20.04",
+        image_remote="ubuntu",
+        use_base_instance=True,
+    )
+
+    lxc_result_json = subprocess.check_output(
+        [
+            "lxc",
+            "--project",
+            base_instance.project,
+            "--format",
+            "json",
+            "list",
+            base_instance.instance_name,
+        ]
+    ).decode()
+
+    lxc_result = json.loads(lxc_result_json)
+
+    assert (
+        lxc_result[0]["expanded_config"]["image.description"]
+        == "base-instance-buildd-base-v1-ubuntu-20.04"
+    )
 
 
 @freeze_time(datetime.now() + timedelta(days=91))

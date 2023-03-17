@@ -16,6 +16,8 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
+# pylint: disable=too-many-lines
+
 import sys
 from datetime import timedelta
 from unittest.mock import MagicMock, Mock, call
@@ -153,6 +155,13 @@ def test_launch_use_base_instance(
             destination_instance_name=fake_base_instance.instance_name,
             project="test-project",
         ),
+        call.config_set(
+            instance_name="test-base-instance-e14661a426076717fa04",
+            key="image.description",
+            value="test-base-instance-$",
+            project="test-project",
+            remote="test-remote",
+        ),
     ]
     assert mock_lxd_instance.mock_calls == [
         call(
@@ -289,6 +298,13 @@ def test_launch_existing_base_instance_invalid(
             destination_remote="test-remote",
             destination_instance_name=fake_base_instance.instance_name,
             project="test-project",
+        ),
+        call.config_set(
+            instance_name="test-base-instance-e14661a426076717fa04",
+            key="image.description",
+            value="test-base-instance-$",
+            project="test-project",
+            remote="test-remote",
         ),
     ]
     assert mock_lxd_instance.mock_calls == [
@@ -758,6 +774,13 @@ def test_use_snapshots_deprecated(
             destination_remote="test-remote",
             destination_instance_name=fake_base_instance.instance_name,
             project="test-project",
+        ),
+        call.config_set(
+            instance_name="test-base-instance-e14661a426076717fa04",
+            key="image.description",
+            value="test-base-instance-$",
+            project="test-project",
+            remote="test-remote",
         ),
     ]
     assert mock_lxd_instance.mock_calls == [
