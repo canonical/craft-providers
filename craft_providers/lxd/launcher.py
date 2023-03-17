@@ -92,6 +92,15 @@ def _create_instance(
             project=project,
         )
 
+        # set the full instance name as image description
+        lxc.config_set(
+            instance_name=base_instance.instance_name,
+            key="image.description",
+            value=base_instance.name,
+            project=project,
+            remote=remote,
+        )
+
     # after creating the base instance, the id map can be set
     if map_user_uid:
         _set_id_map(instance=instance, lxc=lxc, project=project, remote=remote, uid=uid)
