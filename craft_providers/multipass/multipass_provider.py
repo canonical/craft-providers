@@ -103,6 +103,7 @@ class MultipassProvider(Provider):
         :param base_configuration: Base configuration to apply to instance.
         :param build_base: Base to build from.
         :param instance_name: Name of the instance to launch.
+        :param allow_unstable: Unused - unstable images are not yet supported.
         """
         try:
             instance = launch(
