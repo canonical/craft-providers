@@ -112,9 +112,9 @@ class LXDProvider(Provider):
         :param base_configuration: Base configuration to apply to instance.
         :param build_base: Base to build from.
         :param instance_name: Name of the instance to launch.
-        :param allow_unstable: If true, allow unstable images to be launched
+        :param allow_unstable: If true, allow unstable images to be launched.
 
-        :raises LXDError: if instance cannot be configured and launched
+        :raises LXDError: if instance cannot be configured and launched.
         """
         image = get_remote_image(build_base)
         image.add_remote(lxc=self.lxc)
