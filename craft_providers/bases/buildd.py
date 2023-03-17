@@ -1004,7 +1004,7 @@ class BuilddBase(Base):
         # get the current ubuntu codename
         os_release = self._get_os_release(executor=executor, deadline=deadline)
         version_codename = os_release.get("VERSION_CODENAME")
-        logger.debug("updating apt sources from %r to %r", version_codename, codename)
+        logger.debug("Updating apt sources from %r to %r.", version_codename, codename)
 
         # replace all occurrences of the codename in the `sources.list` file
         sed_command = ["sed", "-i", f"s/{version_codename}/{codename}/g"]
@@ -1016,7 +1016,20 @@ class BuilddBase(Base):
                 details=errors.details_from_called_process_error(error),
             ) from error
 
+        # if cloud-init and cloud.cfg isn't present, then raise an error
+        try:
+            _execute_run(executor, ["test", "-s", cloud_config])
+        except subprocess.CalledProcessError as error:
+            raise BaseConfigurationError(
+                brief=(
+                    f"Could not update {cloud_config!r} because it is empty or "
+                    "does not exist."
+                ),
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
         # update cloud.cfg to prevent the sources.list file from being reset
+        logger.debug("Updating %r to preserve apt sources.", cloud_config)
         try:
             _execute_run(
                 executor,
