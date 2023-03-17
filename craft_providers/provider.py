@@ -87,6 +87,7 @@ class Provider(ABC):
         base_configuration: Base,
         build_base: str,
         instance_name: str,
+        allow_unstable: bool,
     ) -> Generator[Executor, None, None]:
         """Configure and launch environment for specified base.
 
@@ -99,4 +100,5 @@ class Provider(ABC):
         :param base_configuration: Base configuration to apply to instance.
         :param build_base: Base to build from.
         :param instance_name: Name of the instance to launch.
+        :param allow_unstable: If true, allow unstable images to be launched.
         """
