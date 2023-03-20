@@ -2,6 +2,12 @@
 Changelog
 *********
 
+1.9.0 (2023-03-20)
+------------------
+- Set cloud.cfg to not reset apt's source list for buildd bases
+- Store LXD instance's full name in the config's description
+- Add `allow_unstable` parameter to `Provider.launched_environment()`
+
 1.8.1 (2023-03-10)
 ------------------
 - Add new base alias `BuilddBaseAlias.DEVEL`
