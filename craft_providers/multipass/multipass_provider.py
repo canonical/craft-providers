@@ -19,6 +19,8 @@
 import contextlib
 import logging
 import pathlib
+from dataclasses import dataclass
+from enum import Enum
 from typing import Generator
 
 from craft_providers import Executor, Provider, base, bases
@@ -33,13 +35,97 @@ from .multipass_instance import MultipassInstance
 logger = logging.getLogger(__name__)
 
 
-# TODO: support KINETIC and LUNAR
+class Remote(Enum):
+    """Enumeration of Multipass remotes.
+
+    Multipass uses the name 'snapcraft' for the Ubuntu buildd remote at
+    https://cloud-images.ubuntu.com/buildd/.
+    """
+
+    RELEASE = "release"
+    DAILY = "daily"
+    SNAPCRAFT = "snapcraft"
+
+
+@dataclass
+class RemoteImage:
+    """Contains the name and details of a remote Multipass image.
+
+    :param remote: Remote server that hosts the image.
+    :param image_name: Name of the image on the remote.
+    """
+
+    remote: Remote
+    image_name: str
+
+    @property
+    def is_stable(self) -> bool:
+        """Check if the image is stable.
+
+        Images are stable if they are from the snapcraft or release remotes.
+        Devel images and images from daily remotes or any other remotes are not stable.
+
+        :returns: True if the image is stable.
+        """
+        return (
+            self.remote in (Remote.RELEASE, Remote.SNAPCRAFT)
+            and "devel" not in self.image_name
+        )
+
+    @property
+    def name(self) -> str:
+        """Get the full name of a remote image.
+
+        This name is used to launch an instance with `multipass launch <name>`.
+
+        :returns: Full name of the remote image, formatted as `<remote>:<image_name>`.
+        """
+        return f"{self.remote.value}:{self.image_name}"
+
+
+# mapping of Provider bases to Multipass remote images
 _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE = {
-    bases.BuilddBaseAlias.BIONIC.value: "snapcraft:18.04",
-    bases.BuilddBaseAlias.FOCAL.value: "snapcraft:20.04",
-    bases.BuilddBaseAlias.JAMMY.value: "snapcraft:22.04",
-    bases.BuilddBaseAlias.DEVEL.value: "snapcraft:devel",
+    bases.BuilddBaseAlias.BIONIC.value: RemoteImage(
+        remote=Remote.SNAPCRAFT, image_name="18.04"
+    ),
+    bases.BuilddBaseAlias.FOCAL.value: RemoteImage(
+        remote=Remote.SNAPCRAFT, image_name="20.04"
+    ),
+    bases.BuilddBaseAlias.JAMMY.value: RemoteImage(
+        remote=Remote.SNAPCRAFT, image_name="22.04"
+    ),
+    bases.BuilddBaseAlias.KINETIC.value: RemoteImage(
+        remote=Remote.RELEASE, image_name="kinetic"
+    ),
+    bases.BuilddBaseAlias.LUNAR.value: RemoteImage(
+        remote=Remote.DAILY, image_name="lunar"
+    ),
+    # XXX: devel image from snapcraft remote is not working (LP #2007419)
+    bases.BuilddBaseAlias.DEVEL.value: RemoteImage(
+        remote=Remote.DAILY, image_name="devel"
+    ),
 }
+
+
+def _get_remote_image(provider_base: str) -> RemoteImage:
+    """Get a RemoteImage for a particular provider base.
+
+    :param provider_base: String containing the provider base.
+
+    :returns: The RemoteImage for the provider base.
+
+    :raises MultipassError: If the remote image does not exist.
+    """
+    image = _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE.get(provider_base)
+    if not image:
+        raise MultipassError(
+            brief=(
+                "could not find a multipass remote image for the provider base "
+                f"{provider_base!r}"
+            )
+        )
+
+    return image
 
 
 class MultipassProvider(Provider):
@@ -103,13 +189,29 @@ class MultipassProvider(Provider):
         :param base_configuration: Base configuration to apply to instance.
         :param build_base: Base to build from.
         :param instance_name: Name of the instance to launch.
-        :param allow_unstable: Unused - unstable images are not yet supported.
+        :param allow_unstable: If true, allow unstable images to be launched.
+
+        :raises MultipassError: If the instance cannot be launched or configured.
         """
+        image = _get_remote_image(build_base)
+
+        # only allow launching unstable images when opted-in with `allow_unstable`
+        if not image.is_stable and not allow_unstable:
+            raise MultipassError(
+                brief=f"Cannot launch unstable image {image.name!r}.",
+                details=(
+                    "Devel or daily images are not guaranteed and are intended for "
+                    "experimental use only."
+                ),
+                resolution=(
+                    "Set parameter `allow_unstable` to True to launch unstable images."
+                ),
+            )
         try:
             instance = launch(
                 name=instance_name,
                 base_configuration=base_configuration,
-                image_name=_BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE[build_base],
+                image_name=image.name,
                 cpus=2,
                 disk_gb=64,
                 mem_gb=2,

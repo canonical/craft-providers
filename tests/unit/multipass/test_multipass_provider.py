@@ -22,6 +22,8 @@ from craft_providers import bases
 from craft_providers.multipass import MultipassError, MultipassProvider
 from craft_providers.multipass.multipass_provider import (
     _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE,
+    Remote,
+    RemoteImage,
 )
 
 
@@ -62,6 +64,17 @@ def mock_launch(mocker):
     yield mocker.patch(
         "craft_providers.multipass.multipass_provider.launch", autospec=True
     )
+
+
+@pytest.fixture
+def mock_remote_image(mocker):
+    """Returns a mock RemoteImage object."""
+    _mock_remote_image = mocker.patch(
+        "craft_providers.multipass.multipass_provider.RemoteImage", autospec=True
+    )
+    _mock_remote_image.name = "test-remote:test-image"
+    _mock_remote_image.is_stable = True
+    return _mock_remote_image
 
 
 def test_ensure_provider_is_available_installed(
@@ -130,13 +143,14 @@ def test_launched_environment(
         base_configuration=mock_buildd_base_configuration,
         build_base=build_base,
         instance_name="test-instance-name",
+        allow_unstable=not remote_image.is_stable,
     ) as instance:
         assert instance is not None
         assert mock_launch.mock_calls == [
             call(
                 name="test-instance-name",
                 base_configuration=mock_buildd_base_configuration,
-                image_name=remote_image,
+                image_name=remote_image.name,
                 cpus=2,
                 disk_gb=64,
                 mem_gb=2,
@@ -149,6 +163,98 @@ def test_launched_environment(
         call().unmount_all(),
         call().stop(),
     ]
+
+
+@pytest.mark.parametrize(
+    "is_stable, allow_unstable",
+    [
+        # unstable images can only be launched when `allow_unstable=True`
+        (False, True),
+        # stable images can be launched regardless of `allow_unstable`
+        (True, False),
+        (True, True),
+    ],
+)
+def test_launched_environment_stable(
+    is_stable,
+    allow_unstable,
+    mock_buildd_base_configuration,
+    mock_launch,
+    mock_remote_image,
+    mocker,
+    tmp_path,
+):
+    """Verify allow_unstable parameter works as expected."""
+    mock_remote_image.is_stable = is_stable
+    mocker.patch(
+        "craft_providers.multipass.multipass_provider._get_remote_image",
+        return_value=mock_remote_image,
+    )
+
+    provider = MultipassProvider()
+    with provider.launched_environment(
+        project_name="test-project",
+        project_path=tmp_path,
+        base_configuration=mock_buildd_base_configuration,
+        build_base=bases.BuilddBaseAlias.JAMMY.value,
+        instance_name="test-instance-name",
+        allow_unstable=allow_unstable,
+    ) as instance:
+        assert instance is not None
+        assert mock_launch.mock_calls == [
+            call(
+                name="test-instance-name",
+                base_configuration=mock_buildd_base_configuration,
+                image_name="test-remote:test-image",
+                cpus=2,
+                disk_gb=64,
+                mem_gb=2,
+                auto_clean=True,
+            ),
+        ]
+        mock_launch.reset_mock()
+
+    assert mock_launch.mock_calls == [
+        call().unmount_all(),
+        call().stop(),
+    ]
+
+
+def test_launched_environment_unstable_image_error(
+    mock_buildd_base_configuration,
+    mock_launch,
+    mock_remote_image,
+    mocker,
+    tmp_path,
+):
+    """Raise an error when `allow_unstable=False` and image is unstable."""
+    mock_remote_image.is_stable = False
+    mocker.patch(
+        "craft_providers.multipass.multipass_provider._get_remote_image",
+        return_value=mock_remote_image,
+    )
+
+    provider = MultipassProvider()
+    with pytest.raises(MultipassError) as raised:
+        with provider.launched_environment(
+            project_name="test-project",
+            project_path=tmp_path,
+            base_configuration=mock_buildd_base_configuration,
+            build_base=bases.BuilddBaseAlias.JAMMY.value,
+            instance_name="test-instance-name",
+        ):
+            pass
+
+    assert raised.value == MultipassError(
+        brief="Cannot launch unstable image 'test-remote:test-image'.",
+        details=(
+            "Devel or daily images are not guaranteed and are intended for "
+            "experimental use only."
+        ),
+        resolution=(
+            "Set parameter `allow_unstable` to True to launch unstable images."
+        ),
+    )
 
 
 def test_launched_environment_launch_base_configuration_error(
@@ -169,3 +275,29 @@ def test_launched_environment_launch_base_configuration_error(
             pass
 
     assert raised.value.__cause__ is error
+
+
+@pytest.mark.parametrize("remote", Remote)
+def test_remote_image_name(remote):
+    """Verify RemoteImage name is formulated properly."""
+    remote_image = RemoteImage(remote=remote, image_name="test-name")
+    assert remote_image.name == f"{remote.value}:test-name"
+
+
+@pytest.mark.parametrize(
+    "remote_image, is_stable",
+    [
+        # 'release' and 'snapcraft' remotes are stable
+        (RemoteImage(remote=Remote.RELEASE, image_name="test-name"), True),
+        (RemoteImage(remote=Remote.SNAPCRAFT, image_name="test-name"), True),
+        # 'daily' remote is not stable
+        (RemoteImage(remote=Remote.DAILY, image_name="test-name"), False),
+        # 'devel' images are not stable, regardless of remote
+        (RemoteImage(remote=Remote.RELEASE, image_name="devel"), False),
+        (RemoteImage(remote=Remote.DAILY, image_name="devel"), False),
+        (RemoteImage(remote=Remote.SNAPCRAFT, image_name="devel"), False),
+    ],
+)
+def test_remote_is_stable(remote_image, is_stable):
+    """RemoteImages should be properly marked as stable or unstable."""
+    assert remote_image.is_stable == is_stable
