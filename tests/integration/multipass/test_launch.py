@@ -58,20 +58,16 @@ def core20_instance(instance_name):
 
 
 @pytest.mark.parametrize(
-    "alias,image_name",
-    [
-        (bases.BuilddBaseAlias.BIONIC, "snapcraft:core18"),
-        (bases.BuilddBaseAlias.FOCAL, "snapcraft:core20"),
-        (bases.BuilddBaseAlias.JAMMY, "snapcraft:core22"),
-    ],
+    "build_base,remote_image",
+    multipass.multipass_provider._BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE.items(),
 )
-def test_launch(instance_name, alias, image_name):
-    base_configuration = bases.BuilddBase(alias=alias)
+def test_launch(instance_name, build_base, remote_image):
+    base_configuration = bases.BuilddBase(alias=build_base)
 
     instance = multipass.launch(
         name=instance_name,
         base_configuration=base_configuration,
-        image_name=image_name,
+        image_name=remote_image,
     )
 
     try:

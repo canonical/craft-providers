@@ -14,12 +14,15 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from unittest import mock
+from unittest.mock import call
 
 import pytest
 
 from craft_providers import bases
 from craft_providers.multipass import MultipassError, MultipassProvider
+from craft_providers.multipass.multipass_provider import (
+    _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE,
+)
 
 
 @pytest.fixture
@@ -110,23 +113,17 @@ def test_create_environment(mocker):
 
 
 @pytest.mark.parametrize(
-    "build_base, multipass_base",
-    [
-        (bases.BuilddBaseAlias.BIONIC.value, "snapcraft:18.04"),
-        (bases.BuilddBaseAlias.FOCAL.value, "snapcraft:20.04"),
-        (bases.BuilddBaseAlias.JAMMY.value, "snapcraft:22.04"),
-        (bases.BuilddBaseAlias.DEVEL.value, "snapcraft:devel"),
-    ],
+    "build_base, remote_image", _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE.items()
 )
 def test_launched_environment(
     build_base,
-    multipass_base,
+    remote_image,
     mock_buildd_base_configuration,
     mock_launch,
     tmp_path,
 ):
+    """Verify `launched_environment()` function."""
     provider = MultipassProvider()
-
     with provider.launched_environment(
         project_name="test-project",
         project_path=tmp_path,
@@ -136,10 +133,10 @@ def test_launched_environment(
     ) as instance:
         assert instance is not None
         assert mock_launch.mock_calls == [
-            mock.call(
+            call(
                 name="test-instance-name",
                 base_configuration=mock_buildd_base_configuration,
-                image_name=multipass_base,
+                image_name=remote_image,
                 cpus=2,
                 disk_gb=64,
                 mem_gb=2,
@@ -149,8 +146,8 @@ def test_launched_environment(
         mock_launch.reset_mock()
 
     assert mock_launch.mock_calls == [
-        mock.call().unmount_all(),
-        mock.call().stop(),
+        call().unmount_all(),
+        call().stop(),
     ]
 
 
