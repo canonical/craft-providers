@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 # TODO: support KINETIC and LUNAR
-PROVIDER_BASE_TO_MULTIPASS_BASE = {
+_BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE = {
     bases.BuilddBaseAlias.BIONIC.value: "snapcraft:18.04",
     bases.BuilddBaseAlias.FOCAL.value: "snapcraft:20.04",
     bases.BuilddBaseAlias.JAMMY.value: "snapcraft:22.04",
@@ -109,7 +109,7 @@ class MultipassProvider(Provider):
             instance = launch(
                 name=instance_name,
                 base_configuration=base_configuration,
-                image_name=PROVIDER_BASE_TO_MULTIPASS_BASE[build_base],
+                image_name=_BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE[build_base],
                 cpus=2,
                 disk_gb=64,
                 mem_gb=2,
