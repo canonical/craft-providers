@@ -68,8 +68,8 @@ class RemoteImage:
     def is_stable(self) -> bool:
         """Check if the image is stable.
 
-        Images are considered stable if they are from a release remote. Images from
-        daily or devel remotes are not considered.
+        Images are stable if they are from a release remote.
+        Images from daily, devel, and any other remotes are not stable.
 
         :returns: True if the image is stable.
         """

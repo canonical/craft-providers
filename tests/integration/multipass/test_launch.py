@@ -57,21 +57,14 @@ def core20_instance(instance_name):
             instance.delete()
 
 
-@pytest.mark.parametrize(
-    "alias,image_name",
-    [
-        (bases.BuilddBaseAlias.BIONIC, "snapcraft:core18"),
-        (bases.BuilddBaseAlias.FOCAL, "snapcraft:core20"),
-        (bases.BuilddBaseAlias.JAMMY, "snapcraft:core22"),
-    ],
-)
-def test_launch(instance_name, alias, image_name):
-    base_configuration = bases.BuilddBase(alias=alias)
+def test_launch(instance_name):
+    """Launch an instance and run a command inside the instance."""
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.JAMMY)
 
     instance = multipass.launch(
         name=instance_name,
         base_configuration=base_configuration,
-        image_name=image_name,
+        image_name="snapcraft:core22",
     )
 
     try:

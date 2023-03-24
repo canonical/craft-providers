@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -23,7 +23,7 @@ from .errors import MultipassError, MultipassInstallationError
 from .installer import install, is_installed
 from .multipass import Multipass
 from .multipass_instance import MultipassInstance
-from .multipass_provider import PROVIDER_BASE_TO_MULTIPASS_BASE, MultipassProvider
+from .multipass_provider import MultipassProvider
 
 __all__ = [
     "Multipass",
@@ -31,7 +31,6 @@ __all__ = [
     "MultipassError",
     "MultipassInstallationError",
     "MultipassProvider",
-    "PROVIDER_BASE_TO_MULTIPASS_BASE",
     "install",
     "is_installed",
     "ensure_multipass_is_ready",
