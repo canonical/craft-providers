@@ -57,17 +57,14 @@ def core20_instance(instance_name):
             instance.delete()
 
 
-@pytest.mark.parametrize(
-    "build_base,remote_image",
-    multipass.multipass_provider._BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE.items(),
-)
-def test_launch(instance_name, build_base, remote_image):
-    base_configuration = bases.BuilddBase(alias=build_base)
+def test_launch(instance_name):
+    """Launch an instance and run a command inside the instance."""
+    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.JAMMY)
 
     instance = multipass.launch(
         name=instance_name,
         base_configuration=base_configuration,
-        image_name=remote_image,
+        image_name="snapcraft:core22",
     )
 
     try:

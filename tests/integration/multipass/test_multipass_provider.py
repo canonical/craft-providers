@@ -16,6 +16,8 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
+import pytest
+
 from craft_providers.bases import BuilddBase, BuilddBaseAlias
 from craft_providers.multipass import MultipassProvider, is_installed
 
@@ -41,19 +43,21 @@ def test_create_environment(installed_multipass, instance_name):
     assert test_instance.exists() is False
 
 
-def test_launched_environment(installed_multipass, instance_name, tmp_path):
+@pytest.mark.parametrize("alias", set(BuilddBaseAlias) - {BuilddBaseAlias.XENIAL})
+def test_launched_environment(alias, installed_multipass, instance_name, tmp_path):
     """Verify `launched_environment()` creates and starts an instance then stops
     the instance when the method loses context."""
     provider = MultipassProvider()
 
-    base_configuration = BuilddBase(alias=BuilddBaseAlias.JAMMY)
+    base_configuration = BuilddBase(alias=alias)
 
     with provider.launched_environment(
-        project_name="test-project",
+        project_name="test-multipass-project",
         project_path=tmp_path,
         base_configuration=base_configuration,
-        build_base=BuilddBaseAlias.JAMMY.value,
+        build_base=alias.value,
         instance_name=instance_name,
+        allow_unstable=True,
     ) as test_instance:
         assert test_instance.exists() is True
         assert test_instance.is_running() is True

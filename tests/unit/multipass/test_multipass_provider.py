@@ -143,7 +143,7 @@ def test_launched_environment(
         base_configuration=mock_buildd_base_configuration,
         build_base=build_base,
         instance_name="test-instance-name",
-        allow_unstable=not remote_image.is_stable,
+        allow_unstable=True,
     ) as instance:
         assert instance is not None
         assert mock_launch.mock_calls == [
