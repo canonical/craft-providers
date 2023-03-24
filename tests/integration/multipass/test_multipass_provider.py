@@ -43,7 +43,12 @@ def test_create_environment(installed_multipass, instance_name):
     assert test_instance.exists() is False
 
 
-@pytest.mark.parametrize("alias", set(BuilddBaseAlias) - {BuilddBaseAlias.XENIAL})
+@pytest.mark.parametrize(
+    "alias",
+    set(BuilddBaseAlias)
+    # skip devel images because they are not available on macos
+    - {BuilddBaseAlias.XENIAL, BuilddBaseAlias.LUNAR, BuilddBaseAlias.DEVEL},
+)
 def test_launched_environment(alias, installed_multipass, instance_name, tmp_path):
     """Verify `launched_environment()` creates and starts an instance then stops
     the instance when the method loses context."""
