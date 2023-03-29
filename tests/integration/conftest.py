@@ -27,6 +27,7 @@ import string
 import subprocess
 import sys
 import tempfile
+from time import sleep
 from typing import Optional
 
 import pytest
@@ -296,3 +297,20 @@ def empty_test_snap(installed_snap, tmp_path):
 
     with installed_snap(snap_name, try_path=tmp_path):
         yield snap_name
+
+
+#@pytest.fixture(autouse=True)
+@pytest.fixture()
+def multipass_delay():
+    if sys.platform == "darwin":
+        print("sleeping...")
+        sleep(5)
+        print("restarting multipass")
+        subprocess.run(
+            ["sudo", "launchctl", "kickstart", "-k", "system/com.canonical.multipassd"],
+            check=True,
+        )
+        print("waiting for restart")
+        sleep(20)
+    else:
+        print("not sleeping...")
