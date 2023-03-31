@@ -2,6 +2,12 @@
 Changelog
 *********
 
+1.10.0 (2023-03-31)
+-------------------
+- Add support for kinetic, lunar, and devel images with Multipass
+- Remove unused import suppressions in init files
+- Update github actions
+
 1.9.0 (2023-03-20)
 ------------------
 - Set cloud.cfg to not reset apt's source list for buildd bases
