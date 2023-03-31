@@ -25,7 +25,9 @@ from datetime import datetime, timedelta
 import pytest
 from freezegun import freeze_time
 
-from craft_providers import bases, lxd
+from craft_providers import lxd
+from craft_providers.bases import ubuntu
+from craft_providers.errors import BaseCompatibilityError
 from craft_providers.lxd import project as lxd_project
 
 from . import conftest
@@ -70,9 +72,9 @@ def core20_instance(instance_name):
 
         # mark instance as setup in the config file
         instance.push_file_io(
-            destination=bases.BuilddBase.instance_config_path,
+            destination=ubuntu.BuilddBase.instance_config_path,
             content=io.BytesIO(
-                f"compatibility_tag: {bases.BuilddBase.compatibility_tag}"
+                f"compatibility_tag: {ubuntu.BuilddBase.compatibility_tag}"
                 "\nsetup: true\n".encode()
             ),
             file_mode="0644",
@@ -91,7 +93,7 @@ def get_instance_and_base_instance(get_base_instance, instance_name):
     Delete instances on fixture teardown.
     """
     base_instance = get_base_instance()
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     # launch an instance from an image and create a base instance
     instance = lxd.launch(
@@ -119,12 +121,12 @@ def get_instance_and_base_instance(get_base_instance, instance_name):
 
 def test_launch_and_run(instance_name):
     """Launch an instance from the `ubuntu` remote and run a command in the instance."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.JAMMY)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     instance = lxd.launch(
         name=instance_name,
         base_configuration=base_configuration,
-        image_name=bases.BuilddBaseAlias.JAMMY.value,
+        image_name=ubuntu.BuilddBaseAlias.JAMMY.value,
         image_remote="ubuntu",
     )
 
@@ -143,7 +145,7 @@ def test_launch_and_run(instance_name):
 def test_launch_use_snapshots_deprecated(get_base_instance, instance_name):
     """Launch an instance with the deprecated parameter `use_snapshots`."""
     base_instance = get_base_instance()
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     instance = lxd.launch(
         name=instance_name,
@@ -173,7 +175,7 @@ def test_launch_use_base_instance(get_instance_and_base_instance, instance_name)
     The parameter `use_base_instance` and the deprecated parameter `use_snapshots`
     should both result in the same behavior.
     """
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
     instance, base_instance = get_instance_and_base_instance
 
     # fingerprint the base instance
@@ -222,7 +224,7 @@ def test_launch_create_base_instance_with_correct_image_description(
 ):
     """Create a base instance and check the image description"""
     base_instance = get_base_instance()
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     # launch an instance from an image and create a base instance
     lxd.launch(
@@ -266,7 +268,7 @@ def test_launch_use_base_instance_expired(
     The LXD instance is created via subprocess, so the creation date the instance is
     out of freezegun's scope and can't be modified.
     """
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
     instance, base_instance = get_instance_and_base_instance
 
     # fingerprint the expired base instance
@@ -306,7 +308,7 @@ def test_launch_use_base_instance_expired(
 
 def test_launch_create_project(instance_name, project_name):
     """Create a project if it does not exist and `auto_create_project` is true."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
     lxc = lxd.LXC()
 
     assert project_name not in lxc.project_list()
@@ -333,7 +335,7 @@ def test_launch_with_project_and_use_base_instance(
 ):
     """With a LXD project specified, launch an instance and use base instances."""
     base_instance = get_base_instance(project=project)
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     # launch an instance from an image and create a base instance
     instance = lxd.launch(
@@ -392,7 +394,7 @@ def test_launch_with_project_and_use_base_instance(
 
 def test_launch_ephemeral(instance_name):
     """Launch an ephemeral instance and verify it is deleted after it is stopped."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     instance = lxd.launch(
         name=instance_name,
@@ -414,7 +416,7 @@ def test_launch_ephemeral(instance_name):
 
 def test_launch_ephemeral_existing(instance_name):
     """If an ephemeral instance already exists, delete it and create a new instance."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     # create a non-ephemeral instance
     instance = lxd.launch(
@@ -453,7 +455,7 @@ def test_launch_map_user_uid_true(instance_name, tmp_path):
     """Enable and map the the UID of the test account."""
     tmp_path.chmod(0o755)
 
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     instance = lxd.launch(
         name=instance_name,
@@ -478,7 +480,7 @@ def test_launch_map_user_uid_true_no_uid(instance_name, tmp_path):
     """Enable UID mapping without specifying a UID."""
     tmp_path.chmod(0o755)
 
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     instance = lxd.launch(
         name=instance_name,
@@ -502,7 +504,7 @@ def test_launch_map_user_uid_false(instance_name, tmp_path):
     """If UID mapping is not enabled, access to a mounted directory will be denied."""
     tmp_path.chmod(0o755)
 
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     instance = lxd.launch(
         name=instance_name,
@@ -525,7 +527,7 @@ def test_launch_map_user_uid_false(instance_name, tmp_path):
 
 def test_launch_existing_instance(core20_instance):
     """Launch an existing instance and run a command."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     instance = lxd.launch(
         name=core20_instance.name,
@@ -544,7 +546,7 @@ def test_launch_existing_instance(core20_instance):
 
 def test_launch_os_incompatible_without_auto_clean(core20_instance):
     """Raise an error if the OS is incompatible and auto_clean is False."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     core20_instance.push_file_io(
         destination=pathlib.Path("/etc/os-release"),
@@ -553,7 +555,7 @@ def test_launch_os_incompatible_without_auto_clean(core20_instance):
     )
 
     # will raise compatibility error when auto_clean is false
-    with pytest.raises(bases.BaseCompatibilityError) as exc_info:
+    with pytest.raises(BaseCompatibilityError) as exc_info:
         lxd.launch(
             name=core20_instance.name,
             base_configuration=base_configuration,
@@ -569,7 +571,7 @@ def test_launch_os_incompatible_without_auto_clean(core20_instance):
 
 def test_launch_os_incompatible_with_auto_clean(core20_instance):
     """Clean the instance if the OS is incompatible and auto_clean is True."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     core20_instance.push_file_io(
         destination=pathlib.Path("/etc/os-release"),
@@ -592,7 +594,7 @@ def test_launch_os_incompatible_with_auto_clean(core20_instance):
 
 def test_launch_instance_config_incompatible_without_auto_clean(core20_instance):
     """Raise an error if the config file is incompatible and auto_clean is False."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,
@@ -601,7 +603,7 @@ def test_launch_instance_config_incompatible_without_auto_clean(core20_instance)
     )
 
     # will raise compatibility error when auto_clean is false
-    with pytest.raises(bases.BaseCompatibilityError) as exc_info:
+    with pytest.raises(BaseCompatibilityError) as exc_info:
         lxd.launch(
             name=core20_instance.name,
             base_configuration=base_configuration,
@@ -617,7 +619,7 @@ def test_launch_instance_config_incompatible_without_auto_clean(core20_instance)
 
 def test_launch_instance_config_incompatible_with_auto_clean(core20_instance):
     """Clean the instance if the config is incompatible and auto_clean is True."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,
@@ -640,7 +642,7 @@ def test_launch_instance_config_incompatible_with_auto_clean(core20_instance):
 
 def test_launch_instance_not_setup_without_auto_clean(core20_instance):
     """Raise an error if an existing instance is not setup and auto_clean is False."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,
@@ -649,7 +651,7 @@ def test_launch_instance_not_setup_without_auto_clean(core20_instance):
     )
 
     # will raise a compatibility error
-    with pytest.raises(bases.BaseCompatibilityError) as exc_info:
+    with pytest.raises(BaseCompatibilityError) as exc_info:
         lxd.launch(
             name=core20_instance.name,
             base_configuration=base_configuration,
@@ -658,14 +660,12 @@ def test_launch_instance_not_setup_without_auto_clean(core20_instance):
             auto_clean=False,
         )
 
-    assert exc_info.value == bases.BaseCompatibilityError(
-        "instance is marked as not setup"
-    )
+    assert exc_info.value == BaseCompatibilityError("instance is marked as not setup")
 
 
 def test_launch_instance_not_setup_with_auto_clean(core20_instance):
     """Clean the instance if it is not setup and auto_clean is True."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,
@@ -688,7 +688,7 @@ def test_launch_instance_not_setup_with_auto_clean(core20_instance):
 
 def test_launch_instance_id_map_incompatible_without_auto_clean(core20_instance):
     """Raise an error if the id map is incompatible and auto_clean is False."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     lxc = lxd.LXC()
     lxc.config_set(
@@ -698,7 +698,7 @@ def test_launch_instance_id_map_incompatible_without_auto_clean(core20_instance)
     )
 
     # will raise compatibility error when auto_clean is false
-    with pytest.raises(bases.BaseCompatibilityError) as exc_info:
+    with pytest.raises(BaseCompatibilityError) as exc_info:
         lxd.launch(
             name=core20_instance.name,
             base_configuration=base_configuration,
@@ -715,7 +715,7 @@ def test_launch_instance_id_map_incompatible_without_auto_clean(core20_instance)
 
 def test_launch_instance_id_map_incompatible_with_auto_clean(core20_instance):
     """Clean the instance if the id map is incompatible and auto_clean is True."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     lxc = lxd.LXC()
     lxc.config_set(

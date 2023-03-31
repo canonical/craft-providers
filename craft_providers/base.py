@@ -18,8 +18,13 @@
 """Base configuration module."""
 
 import logging
+import os
+import subprocess
+import time
 from abc import ABC, abstractmethod
-from typing import Dict, Optional
+from typing import Dict, List, Optional
+
+from craft_providers.errors import BaseConfigurationError, NetworkError
 
 from .executor import Executor
 
@@ -140,3 +145,79 @@ class Base(ABC):
         :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.
         """
+
+    @classmethod
+    def _check_deadline(
+        cls,
+        deadline: Optional[float],
+        *,
+        message: str = "Timed out configuring environment.",
+    ) -> None:
+        """Check deadline and raise error if passed.
+
+        :param deadline: Optional time.time() deadline.
+
+        :raises BaseConfigurationError: if deadline is passed.
+        """
+        if deadline is not None and time.time() >= deadline:
+            raise BaseConfigurationError(brief=message)
+
+    @classmethod
+    def _network_connected(cls, executor):
+        """Check if the network is connected."""
+        # bypass the network verification if there is a proxy set for HTTPS
+        # (because we're hitting port 443), as bash's TCP functionality will not
+        # use it (supporting both lowercase and uppercase names, which is what
+        # most applications do)
+        if os.getenv("HTTPS_PROXY") or os.getenv("https_proxy"):
+            return True
+
+        # check if the port is open using bash's built-in tcp-client, communicating with
+        # the HTTPS port on our site
+        command = ["bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"]
+        try:
+            # timeout quickly, so it's representative of current state (we don't
+            # want for it to hang a lot and then succeed 45 seconds later if network
+            # came back); capture the output just for it to not pollute the terminal
+            proc = executor.execute_run(
+                command, check=False, timeout=1, capture_output=True
+            )
+        except subprocess.TimeoutExpired:
+            return False
+        return proc.returncode == 0
+
+    @classmethod
+    def _execute_run(
+        cls,
+        executor: Executor,
+        command: List[str],
+        *,
+        check: bool = True,
+        capture_output: bool = True,
+        text: bool = False,
+        verify_network=False,
+    ) -> subprocess.CompletedProcess:
+        """Run a command through the executor.
+
+        This is a helper to simplify most common calls and provide extra network
+        verification (if indicated) in a central place.
+
+        The default of capture_output is True because it's useful for error reports
+        (if the command failed) even if the output is not really wanted as a result
+        of the execution.
+        """
+        if not check and verify_network:
+            # if check is False, the caller needs the process result no matter
+            # what, it's wrong to also request to verify network, which may
+            # raise a different exception
+            raise RuntimeError("Invalid check and verify_network combination.")
+
+        try:
+            proc = executor.execute_run(
+                command, check=check, capture_output=capture_output, text=text
+            )
+        except subprocess.CalledProcessError as exc:
+            if verify_network and not cls._network_connected(executor):
+                raise NetworkError() from exc
+            raise
+        return proc

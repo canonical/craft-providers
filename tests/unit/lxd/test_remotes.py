@@ -21,7 +21,7 @@ from unittest.mock import call
 import pytest
 
 from craft_providers import lxd
-from craft_providers.bases import BuilddBaseAlias
+from craft_providers.bases import ubuntu
 from craft_providers.lxd import remotes
 
 
@@ -142,12 +142,12 @@ def test_add_remote_race_condition_error(fake_remote_image, mock_lxc, logs):
 @pytest.mark.parametrize(
     "provider_base, image_name",
     [
-        (BuilddBaseAlias.BIONIC.value, "core18"),
-        (BuilddBaseAlias.FOCAL.value, "core20"),
-        (BuilddBaseAlias.JAMMY.value, "core22"),
-        (BuilddBaseAlias.KINETIC.value, "kinetic"),
-        (BuilddBaseAlias.LUNAR.value, "lunar"),
-        (BuilddBaseAlias.DEVEL.value, "devel"),
+        (ubuntu.BuilddBaseAlias.BIONIC.value, "core18"),
+        (ubuntu.BuilddBaseAlias.FOCAL.value, "core20"),
+        (ubuntu.BuilddBaseAlias.JAMMY.value, "core22"),
+        (ubuntu.BuilddBaseAlias.KINETIC.value, "kinetic"),
+        (ubuntu.BuilddBaseAlias.LUNAR.value, "lunar"),
+        (ubuntu.BuilddBaseAlias.DEVEL.value, "devel"),
     ],
 )
 def test_get_image_remote(provider_base, image_name):
@@ -164,7 +164,7 @@ def test_get_image_remote_xenial_error():
     error is raised.
     """
     with pytest.raises(lxd.LXDError) as raised:
-        lxd.remotes.get_remote_image(BuilddBaseAlias.XENIAL.value)
+        lxd.remotes.get_remote_image(ubuntu.BuilddBaseAlias.XENIAL.value)
 
     assert str(raised.value) == (
         "could not find a lxd remote image for the provider base '16.04'"
@@ -193,6 +193,6 @@ def test_configure_buildd_image_remote(
         "configure_buildd_image_remote() is deprecated. "
         "Use configure_image_remote()."
     )
-    mock_get_remote_image.assert_called_once_with(BuilddBaseAlias.JAMMY.value)
+    mock_get_remote_image.assert_called_once_with(ubuntu.BuilddBaseAlias.JAMMY.value)
     mock_remote_image.add_remote.assert_called_once_with(mock_lxc)
     assert name == remotes.BUILDD_RELEASES_REMOTE_NAME

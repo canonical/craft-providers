@@ -31,8 +31,9 @@ from typing import Optional
 
 import pytest
 
-from craft_providers import bases, lxd, multipass
+from craft_providers import lxd, multipass
 from craft_providers.actions.snap_installer import get_host_snap_info
+from craft_providers.bases import ubuntu
 
 
 def generate_instance_name():
@@ -172,7 +173,7 @@ def uninstalled_multipass():
 @pytest.fixture()
 def core20_lxd_instance(installed_lxd, instance_name):
     """Fully configured buildd-based core20 LXD instance."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     instance = lxd.launch(
         name=instance_name,

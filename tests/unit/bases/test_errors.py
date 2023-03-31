@@ -16,7 +16,7 @@
 #
 
 
-from craft_providers.bases import errors
+from craft_providers import errors
 
 
 def test_base_configuration_error():

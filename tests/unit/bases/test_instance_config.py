@@ -23,8 +23,8 @@ import yaml
 from pydantic import ValidationError
 
 from craft_providers import Executor
-from craft_providers.bases.errors import BaseConfigurationError, ProviderError
 from craft_providers.bases.instance_config import InstanceConfiguration
+from craft_providers.errors import BaseConfigurationError, ProviderError
 
 
 @pytest.fixture
