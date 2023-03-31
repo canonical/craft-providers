@@ -18,7 +18,8 @@ from unittest.mock import call
 
 import pytest
 
-from craft_providers import bases
+from craft_providers.bases import ubuntu
+from craft_providers.errors import BaseConfigurationError
 from craft_providers.multipass import MultipassError, MultipassProvider
 from craft_providers.multipass.multipass_provider import (
     _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE,
@@ -29,7 +30,9 @@ from craft_providers.multipass.multipass_provider import (
 
 @pytest.fixture
 def mock_buildd_base_configuration(mocker):
-    mock_base_config = mocker.patch("craft_providers.bases.BuilddBase", autospec=True)
+    mock_base_config = mocker.patch(
+        "craft_providers.bases.ubuntu.BuilddBase", autospec=True
+    )
     mock_base_config.compatibility_tag = "buildd-base-v1"
     yield mock_base_config
 
@@ -196,7 +199,7 @@ def test_launched_environment_stable(
         project_name="test-project",
         project_path=tmp_path,
         base_configuration=mock_buildd_base_configuration,
-        build_base=bases.BuilddBaseAlias.JAMMY.value,
+        build_base=ubuntu.BuilddBaseAlias.JAMMY.value,
         instance_name="test-instance-name",
         allow_unstable=allow_unstable,
     ) as instance:
@@ -240,7 +243,7 @@ def test_launched_environment_unstable_image_error(
             project_name="test-project",
             project_path=tmp_path,
             base_configuration=mock_buildd_base_configuration,
-            build_base=bases.BuilddBaseAlias.JAMMY.value,
+            build_base=ubuntu.BuilddBaseAlias.JAMMY.value,
             instance_name="test-instance-name",
         ):
             pass
@@ -260,7 +263,7 @@ def test_launched_environment_unstable_image_error(
 def test_launched_environment_launch_base_configuration_error(
     mock_buildd_base_configuration, mock_launch, tmp_path
 ):
-    error = bases.BaseConfigurationError(brief="fail")
+    error = BaseConfigurationError(brief="fail")
     mock_launch.side_effect = error
     provider = MultipassProvider()
 
@@ -269,7 +272,7 @@ def test_launched_environment_launch_base_configuration_error(
             project_name="test-project",
             project_path=tmp_path,
             base_configuration=mock_buildd_base_configuration,
-            build_base=bases.BuilddBaseAlias.FOCAL.value,
+            build_base=ubuntu.BuilddBaseAlias.FOCAL.value,
             instance_name="test-instance-name",
         ):
             pass

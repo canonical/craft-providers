@@ -23,7 +23,9 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Generator
 
-from craft_providers import Executor, Provider, base, bases
+from craft_providers import Executor, Provider, base
+from craft_providers.bases import ubuntu
+from craft_providers.errors import BaseConfigurationError
 
 from ._launch import launch
 from ._ready import ensure_multipass_is_ready
@@ -85,23 +87,23 @@ class RemoteImage:
 
 # mapping of Provider bases to Multipass remote images
 _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE = {
-    bases.BuilddBaseAlias.BIONIC.value: RemoteImage(
+    ubuntu.BuilddBaseAlias.BIONIC.value: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="18.04"
     ),
-    bases.BuilddBaseAlias.FOCAL.value: RemoteImage(
+    ubuntu.BuilddBaseAlias.FOCAL.value: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="20.04"
     ),
-    bases.BuilddBaseAlias.JAMMY.value: RemoteImage(
+    ubuntu.BuilddBaseAlias.JAMMY.value: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="22.04"
     ),
-    bases.BuilddBaseAlias.KINETIC.value: RemoteImage(
+    ubuntu.BuilddBaseAlias.KINETIC.value: RemoteImage(
         remote=Remote.RELEASE, image_name="kinetic"
     ),
-    bases.BuilddBaseAlias.LUNAR.value: RemoteImage(
+    ubuntu.BuilddBaseAlias.LUNAR.value: RemoteImage(
         remote=Remote.DAILY, image_name="lunar"
     ),
     # XXX: devel image from snapcraft remote is not working (LP #2007419)
-    bases.BuilddBaseAlias.DEVEL.value: RemoteImage(
+    ubuntu.BuilddBaseAlias.DEVEL.value: RemoteImage(
         remote=Remote.DAILY, image_name="devel"
     ),
 }
@@ -217,7 +219,7 @@ class MultipassProvider(Provider):
                 mem_gb=2,
                 auto_clean=True,
             )
-        except bases.BaseConfigurationError as error:
+        except BaseConfigurationError as error:
             raise MultipassError(str(error)) from error
 
         try:
