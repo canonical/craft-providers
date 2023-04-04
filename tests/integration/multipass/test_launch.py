@@ -21,7 +21,9 @@ import subprocess
 
 import pytest
 
-from craft_providers import bases, multipass
+from craft_providers import multipass
+from craft_providers.bases import ubuntu
+from craft_providers.errors import BaseCompatibilityError
 
 from . import conftest
 
@@ -43,9 +45,9 @@ def core20_instance(instance_name):
 
         # mark instance as setup in the config file
         instance.push_file_io(
-            destination=bases.BuilddBase.instance_config_path,
+            destination=ubuntu.BuilddBase.instance_config_path,
             content=io.BytesIO(
-                f"compatibility_tag: {bases.BuilddBase.compatibility_tag}"
+                f"compatibility_tag: {ubuntu.BuilddBase.compatibility_tag}"
                 "\nsetup: true\n".encode()
             ),
             file_mode="0644",
@@ -59,7 +61,7 @@ def core20_instance(instance_name):
 
 def test_launch(instance_name):
     """Launch an instance and run a command inside the instance."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.JAMMY)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     instance = multipass.launch(
         name=instance_name,
@@ -80,7 +82,7 @@ def test_launch(instance_name):
 
 
 def test_launch_existing_instance(core20_instance):
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     instance = multipass.launch(
         name=core20_instance.name,
@@ -98,7 +100,7 @@ def test_launch_existing_instance(core20_instance):
 
 
 def test_launch_os_incompatible_instance(core20_instance):
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     core20_instance.push_file_io(
         destination=pathlib.Path("/etc/os-release"),
@@ -107,7 +109,7 @@ def test_launch_os_incompatible_instance(core20_instance):
     )
 
     # Should raise compatibility error with auto_clean=False.
-    with pytest.raises(bases.BaseCompatibilityError) as exc_info:
+    with pytest.raises(BaseCompatibilityError) as exc_info:
         multipass.launch(
             name=core20_instance.name,
             base_configuration=base_configuration,
@@ -132,7 +134,7 @@ def test_launch_os_incompatible_instance(core20_instance):
 
 
 def test_launch_instance_config_incompatible_instance(core20_instance):
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,
@@ -141,7 +143,7 @@ def test_launch_instance_config_incompatible_instance(core20_instance):
     )
 
     # Should raise compatibility error with auto_clean=False.
-    with pytest.raises(bases.BaseCompatibilityError) as exc_info:
+    with pytest.raises(BaseCompatibilityError) as exc_info:
         multipass.launch(
             name=core20_instance.name,
             base_configuration=base_configuration,
@@ -167,7 +169,7 @@ def test_launch_instance_config_incompatible_instance(core20_instance):
 
 def test_launch_instance_not_setup_without_auto_clean(core20_instance):
     """Raise an error if an existing instance is not setup and auto_clean is False."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,
@@ -176,7 +178,7 @@ def test_launch_instance_not_setup_without_auto_clean(core20_instance):
     )
 
     # will raise a compatibility error
-    with pytest.raises(bases.BaseCompatibilityError) as exc_info:
+    with pytest.raises(BaseCompatibilityError) as exc_info:
         multipass.launch(
             name=core20_instance.name,
             base_configuration=base_configuration,
@@ -184,14 +186,12 @@ def test_launch_instance_not_setup_without_auto_clean(core20_instance):
             auto_clean=False,
         )
 
-    assert exc_info.value == bases.BaseCompatibilityError(
-        "instance is marked as not setup"
-    )
+    assert exc_info.value == BaseCompatibilityError("instance is marked as not setup")
 
 
 def test_launch_instance_not_setup_with_auto_clean(core20_instance):
     """Clean the instance if it is not setup and auto_clean is True."""
-    base_configuration = bases.BuilddBase(alias=bases.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     core20_instance.push_file_io(
         destination=base_configuration.instance_config_path,

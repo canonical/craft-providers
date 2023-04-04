@@ -19,7 +19,8 @@ from unittest.mock import call
 
 import pytest
 
-from craft_providers import bases
+from craft_providers.bases import ubuntu
+from craft_providers.errors import BaseConfigurationError
 from craft_providers.lxd import LXDError, LXDProvider, LXDUnstableImageError
 
 
@@ -42,7 +43,9 @@ def mock_get_remote_image(mock_remote_image, mocker):
 
 @pytest.fixture
 def mock_buildd_base_configuration(mocker):
-    mock_base_config = mocker.patch("craft_providers.bases.BuilddBase", autospec=True)
+    mock_base_config = mocker.patch(
+        "craft_providers.bases.ubuntu.BuilddBase", autospec=True
+    )
     mock_base_config.compatibility_tag = "buildd-base-v1"
     yield mock_base_config
 
@@ -193,7 +196,7 @@ def test_launched_environment_launch_base_configuration_error(
     mock_launch,
     tmp_path,
 ):
-    error = bases.BaseConfigurationError(brief="fail")
+    error = BaseConfigurationError(brief="fail")
     mock_launch.side_effect = error
     provider = LXDProvider()
 
@@ -202,7 +205,7 @@ def test_launched_environment_launch_base_configuration_error(
             project_name="test-project",
             project_path=tmp_path,
             base_configuration=mock_buildd_base_configuration,
-            build_base=bases.BuilddBaseAlias.FOCAL.value,
+            build_base=ubuntu.BuilddBaseAlias.FOCAL.value,
             instance_name="test-instance-name",
         ):
             pass
@@ -226,7 +229,7 @@ def test_launched_environment_unstable_error(
             project_name="test-project",
             project_path=tmp_path,
             base_configuration=mock_buildd_base_configuration,
-            build_base=bases.BuilddBaseAlias.FOCAL.value,
+            build_base=ubuntu.BuilddBaseAlias.FOCAL.value,
             instance_name="test-instance-name",
         ):
             pass

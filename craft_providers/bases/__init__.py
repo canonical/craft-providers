@@ -17,8 +17,15 @@
 
 """Collection of bases used to configure build environments."""
 
-from .buildd import BuilddBase, BuilddBaseAlias
-from .errors import BaseCompatibilityError, BaseConfigurationError
+# Backward compatible, will be removed in 2.0
+import sys
+
+from craft_providers.errors import BaseCompatibilityError, BaseConfigurationError
+
+from . import ubuntu as buildd
+from .ubuntu import BuilddBase, BuilddBaseAlias
+
+sys.modules["craft_providers.bases.buildd"] = buildd
 
 __all__ = [
     "BuilddBase",

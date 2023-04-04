@@ -18,7 +18,7 @@
 
 import pytest
 
-from craft_providers.bases import BuilddBase, BuilddBaseAlias
+from craft_providers.bases import ubuntu
 from craft_providers.multipass import MultipassProvider, is_installed
 
 
@@ -45,16 +45,20 @@ def test_create_environment(installed_multipass, instance_name):
 
 @pytest.mark.parametrize(
     "alias",
-    set(BuilddBaseAlias)
+    set(ubuntu.BuilddBaseAlias)
     # skip devel images because they are not available on macos
-    - {BuilddBaseAlias.XENIAL, BuilddBaseAlias.LUNAR, BuilddBaseAlias.DEVEL},
+    - {
+        ubuntu.BuilddBaseAlias.XENIAL,
+        ubuntu.BuilddBaseAlias.LUNAR,
+        ubuntu.BuilddBaseAlias.DEVEL,
+    },
 )
 def test_launched_environment(alias, installed_multipass, instance_name, tmp_path):
     """Verify `launched_environment()` creates and starts an instance then stops
     the instance when the method loses context."""
     provider = MultipassProvider()
 
-    base_configuration = BuilddBase(alias=alias)
+    base_configuration = ubuntu.BuilddBase(alias=alias)
 
     with provider.launched_environment(
         project_name="test-multipass-project",

@@ -15,11 +15,10 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
-"""Buildd image(s)."""
+"""Ubuntu image(s)."""
 import enum
 import io
 import logging
-import os
 import pathlib
 import re
 import subprocess
@@ -35,108 +34,14 @@ from pydantic import ValidationError
 
 from craft_providers import Base, Executor, errors
 from craft_providers.actions import snap_installer
+from craft_providers.errors import BaseCompatibilityError, BaseConfigurationError
 from craft_providers.util.os_release import parse_os_release
 
-from .errors import BaseCompatibilityError, BaseConfigurationError, NetworkError
 from .instance_config import InstanceConfiguration
 
 logger = logging.getLogger(__name__)
 
 # pylint: disable=too-many-lines
-
-
-def default_command_environment() -> Dict[str, Optional[str]]:
-    """Provide default command environment dictionary.
-
-    The minimum environment for the buildd image to be configured and function
-    properly.  This contains the default environment found in Ubuntu's
-    /etc/environment, replaced with the "secure_path" defaults used by sudo for
-    instantiating PATH.  In practice it really just means the PATH set by sudo.
-
-    Default /etc/environment found in supported Ubuntu versions:
-    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:
-         /usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
-
-    Default /etc/sudoers secure_path found in supported Ubuntu versions:
-    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
-
-    :returns: Dictionary of environment key/values.
-    """
-    return {
-        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
-    }
-
-
-def _check_deadline(
-    deadline: Optional[float],
-    *,
-    message: str = "Timed out configuring environment.",
-) -> None:
-    """Check deadline and raise error if passed.
-
-    :param deadline: Optional time.time() deadline.
-
-    :raises BaseConfigurationError: if deadline is passed.
-    """
-    if deadline is not None and time.time() >= deadline:
-        raise BaseConfigurationError(brief=message)
-
-
-def _network_connected(executor):
-    """Check if the network is connected."""
-    # bypass the network verification if there is a proxy set for HTTPS (because we're
-    # hitting port 443), as bash's TCP functionality will not use it (supporting
-    # both lowercase and uppercase names, which is what most applications do)
-    if os.getenv("HTTPS_PROXY") or os.getenv("https_proxy"):
-        return True
-
-    # check if the port is open using bash's built-in tcp-client, communicating with
-    # the HTTPS port on our site
-    command = ["bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"]
-    try:
-        # timeout quickly, so it's representative of current state (we don't
-        # want for it to hang a lot and then succeed 45 seconds later if network
-        # came back); capture the output just for it to not pollute the terminal
-        proc = executor.execute_run(
-            command, check=False, timeout=1, capture_output=True
-        )
-    except subprocess.TimeoutExpired:
-        return False
-    return proc.returncode == 0
-
-
-def _execute_run(
-    executor: Executor,
-    command: List[str],
-    *,
-    check: bool = True,
-    capture_output: bool = True,
-    text: bool = False,
-    verify_network=False,
-) -> subprocess.CompletedProcess:
-    """Run a command through the executor.
-
-    This is a helper to simplify most common calls and provide extra network
-    verification (if indicated) in a central place.
-
-    The default of capture_output is True because it's useful for error reports
-    (if the command failed) even if the output is not really wanted as a result
-    of the execution.
-    """
-    if not check and verify_network:
-        # if check is False, the caller needs the process result no matter what, it's
-        # wrong to also request to verify network, which may raise a different exception
-        raise RuntimeError("Invalid check and verify_network combination.")
-
-    try:
-        proc = executor.execute_run(
-            command, check=check, capture_output=capture_output, text=text
-        )
-    except subprocess.CalledProcessError as exc:
-        if verify_network and not _network_connected(executor):
-            raise NetworkError() from exc
-        raise
-    return proc
 
 
 class BuilddBaseAlias(enum.Enum):
@@ -224,7 +129,7 @@ class BuilddBase(Base):
         self.alias: BuilddBaseAlias = alias
 
         if environment is None:
-            self.environment = default_command_environment()
+            self.environment = self.default_command_environment()
         else:
             self.environment = environment
 
@@ -234,6 +139,29 @@ class BuilddBase(Base):
         self._set_hostname(hostname)
         self.snaps = snaps
         self.packages = packages
+
+    @staticmethod
+    def default_command_environment() -> Dict[str, Optional[str]]:
+        """Provide default command environment dictionary.
+
+        The minimum environment for the buildd image to be configured and function
+        properly.  This contains the default environment found in Ubuntu's
+        /etc/environment, replaced with the "secure_path" defaults used by sudo for
+        instantiating PATH.  In practice it really just means the PATH set by sudo.
+
+        Default /etc/environment found in supported Ubuntu versions:
+        PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:
+            /usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+
+        Default /etc/sudoers secure_path found in supported Ubuntu versions:
+        PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+
+        :returns: Dictionary of environment key/values.
+        """
+        return {
+            "PATH": "/usr/local/sbin:/usr/local/bin:"
+            "/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
+        }
 
     def _set_hostname(self, hostname: str) -> None:
         """Set hostname.
@@ -278,7 +206,7 @@ class BuilddBase(Base):
         :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.
         """
-        _check_deadline(deadline)
+        self._check_deadline(deadline)
 
         try:
             config = InstanceConfiguration.load(
@@ -319,7 +247,7 @@ class BuilddBase(Base):
 
         :raises BaseCompatibilityError: If setup was not completed.
         """
-        _check_deadline(deadline)
+        self._check_deadline(deadline)
 
         try:
             config = InstanceConfiguration.load(
@@ -353,7 +281,7 @@ class BuilddBase(Base):
 
         :returns: Dictionary of key-mappings found in os-release.
         """
-        _check_deadline(deadline)
+        self._check_deadline(deadline)
         try:
             # Replace encoding errors if it somehow occurs with utf-8. This
             # doesn't need to be perfect for checking compatibility.
@@ -544,7 +472,7 @@ class BuilddBase(Base):
         :param executor: Executor for target container.
         :param deadline: Optional time.time() deadline.
         """
-        _check_deadline(deadline)
+        self._check_deadline(deadline)
         # set the verification frequency in 10000 days and disable the upgrade
         content = dedent(
             """\
@@ -570,7 +498,7 @@ class BuilddBase(Base):
         hold_time = datetime.now() + timedelta(days=1)
         logger.debug("Holding refreshes for snaps.")
 
-        _check_deadline(deadline)
+        self._check_deadline(deadline)
         # TODO: run `snap refresh --hold` once during setup (`--hold` is not yet stable)
         try:
             executor.execute_run(
@@ -586,7 +514,7 @@ class BuilddBase(Base):
 
         # a refresh may have started before the hold was set
         logger.debug("Waiting for pending snap refreshes to complete.")
-        _check_deadline(deadline)
+        self._check_deadline(deadline)
         try:
             executor.execute_run(
                 ["snap", "watch", "--last=auto-refresh?"],
@@ -617,7 +545,7 @@ class BuilddBase(Base):
             return
 
         for snap in self.snaps:
-            _check_deadline(deadline)
+            self._check_deadline(deadline)
             logger.debug(
                 "Installing snap %r with channel=%r and classic=%r",
                 snap.name,
@@ -674,14 +602,14 @@ class BuilddBase(Base):
         :param executor: Executor for target container.
         :param deadline: Optional time.time() deadline.
         """
-        _check_deadline(deadline)
+        self._check_deadline(deadline)
         executor.push_file_io(
             destination=pathlib.Path("/etc/apt/apt.conf.d/00no-recommends"),
             content=io.BytesIO('APT::Install-Recommends "false";\n'.encode()),
             file_mode="0644",
         )
 
-        _check_deadline(deadline)
+        self._check_deadline(deadline)
         executor.push_file_io(
             destination=pathlib.Path("/etc/apt/apt.conf.d/00update-errors"),
             content=io.BytesIO('APT::Update::Error-Mode "any";\n'.encode()),
@@ -697,8 +625,8 @@ class BuilddBase(Base):
             )
 
         try:
-            _check_deadline(deadline)
-            _execute_run(executor, ["apt-get", "update"], verify_network=True)
+            self._check_deadline(deadline)
+            self._execute_run(executor, ["apt-get", "update"], verify_network=True)
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to update apt cache.",
@@ -711,9 +639,9 @@ class BuilddBase(Base):
             packages_to_install.extend(self.packages)
 
         try:
-            _check_deadline(deadline)
+            self._check_deadline(deadline)
             command = ["apt-get", "install", "-y"] + packages_to_install
-            _execute_run(executor, command, verify_network=True)
+            self._execute_run(executor, command, verify_network=True)
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to install packages.",
@@ -740,7 +668,7 @@ class BuilddBase(Base):
             + "\n"
         ).encode()
 
-        _check_deadline(deadline)
+        self._check_deadline(deadline)
         executor.push_file_io(
             destination=pathlib.Path("/etc/environment"),
             content=io.BytesIO(content),
@@ -753,7 +681,7 @@ class BuilddBase(Base):
         :param executor: Executor for target container.
         :param deadline: Optional time.time() deadline.
         """
-        _check_deadline(deadline)
+        self._check_deadline(deadline)
         executor.push_file_io(
             destination=pathlib.Path("/etc/hostname"),
             content=io.BytesIO((self.hostname + "\n").encode()),
@@ -761,8 +689,8 @@ class BuilddBase(Base):
         )
 
         try:
-            _check_deadline(deadline)
-            _execute_run(executor, ["hostname", "-F", "/etc/hostname"])
+            self._check_deadline(deadline)
+            self._execute_run(executor, ["hostname", "-F", "/etc/hostname"])
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to set hostname.",
@@ -777,7 +705,7 @@ class BuilddBase(Base):
         :param executor: Executor for target container.
         :param deadline: Optional time.time() deadline.
         """
-        _check_deadline(deadline)
+        self._check_deadline(deadline)
         executor.push_file_io(
             destination=pathlib.Path("/etc/systemd/network/10-eth0.network"),
             content=io.BytesIO(
@@ -800,11 +728,11 @@ class BuilddBase(Base):
         )
 
         try:
-            _check_deadline(deadline)
-            _execute_run(executor, ["systemctl", "enable", "systemd-networkd"])
+            self._check_deadline(deadline)
+            self._execute_run(executor, ["systemctl", "enable", "systemd-networkd"])
 
-            _check_deadline(deadline)
-            _execute_run(executor, ["systemctl", "restart", "systemd-networkd"])
+            self._check_deadline(deadline)
+            self._execute_run(executor, ["systemctl", "restart", "systemd-networkd"])
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to setup systemd-networkd.",
@@ -818,20 +746,20 @@ class BuilddBase(Base):
         :param deadline: Optional time.time() deadline.
         """
         try:
-            _check_deadline(deadline)
+            self._check_deadline(deadline)
             command = [
                 "ln",
                 "-sf",
                 "/run/systemd/resolve/resolv.conf",
                 "/etc/resolv.conf",
             ]
-            _execute_run(executor, command)
+            self._execute_run(executor, command)
 
-            _check_deadline(deadline)
-            _execute_run(executor, ["systemctl", "enable", "systemd-resolved"])
+            self._check_deadline(deadline)
+            self._execute_run(executor, ["systemctl", "enable", "systemd-resolved"])
 
-            _check_deadline(deadline)
-            _execute_run(executor, ["systemctl", "restart", "systemd-resolved"])
+            self._check_deadline(deadline)
+            self._execute_run(executor, ["systemctl", "restart", "systemd-resolved"])
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to setup systemd-resolved.",
@@ -847,14 +775,14 @@ class BuilddBase(Base):
         :param deadline: Optional time.time() deadline.
         """
         try:
-            _check_deadline(deadline)
+            self._check_deadline(deadline)
             command = ["apt-get", "install", "-y", "fuse", "udev"]
-            _execute_run(executor, command, verify_network=True)
+            self._execute_run(executor, command, verify_network=True)
 
-            _check_deadline(deadline)
-            _execute_run(executor, ["systemctl", "enable", "systemd-udevd"])
-            _check_deadline(deadline)
-            _execute_run(executor, ["systemctl", "start", "systemd-udevd"])
+            self._check_deadline(deadline)
+            self._execute_run(executor, ["systemctl", "enable", "systemd-udevd"])
+            self._check_deadline(deadline)
+            self._execute_run(executor, ["systemctl", "start", "systemd-udevd"])
 
             # This file is created by launchpad-buildd to stop snapd from
             # using the snap store's CDN when running in Canonical's
@@ -864,27 +792,27 @@ class BuilddBase(Base):
             # to containers we create.
             no_cdn = pathlib.Path("/etc/systemd/system/snapd.service.d/no-cdn.conf")
             if no_cdn.exists():
-                _check_deadline(deadline)
-                _execute_run(executor, ["mkdir", "-p", no_cdn.parent.as_posix()])
+                self._check_deadline(deadline)
+                self._execute_run(executor, ["mkdir", "-p", no_cdn.parent.as_posix()])
 
-                _check_deadline(deadline)
+                self._check_deadline(deadline)
                 executor.push_file(source=no_cdn, destination=no_cdn)
 
-            _check_deadline(deadline)
-            _execute_run(
+            self._check_deadline(deadline)
+            self._execute_run(
                 executor, ["apt-get", "install", "-y", "snapd"], verify_network=True
             )
 
-            _check_deadline(deadline)
-            _execute_run(executor, ["systemctl", "start", "snapd.socket"])
+            self._check_deadline(deadline)
+            self._execute_run(executor, ["systemctl", "start", "snapd.socket"])
 
             # Restart, not start, the service in case the environment
             # has changed and the service is already running.
-            _check_deadline(deadline)
-            _execute_run(executor, ["systemctl", "restart", "snapd.service"])
+            self._check_deadline(deadline)
+            self._execute_run(executor, ["systemctl", "restart", "snapd.service"])
 
-            _check_deadline(deadline)
-            _execute_run(executor, ["snap", "wait", "system", "seed.loaded"])
+            self._check_deadline(deadline)
+            self._execute_run(executor, ["snap", "wait", "system", "seed.loaded"])
 
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -901,21 +829,21 @@ class BuilddBase(Base):
         :param deadline: Optional time.time() deadline.
         """
         try:
-            _check_deadline(deadline)
+            self._check_deadline(deadline)
             http_proxy = self.environment.get("http_proxy")
             if http_proxy:
                 command = ["snap", "set", "system", f"proxy.http={http_proxy}"]
             else:
                 command = ["snap", "unset", "system", "proxy.http"]
-            _execute_run(executor, command)
+            self._execute_run(executor, command)
 
-            _check_deadline(deadline)
+            self._check_deadline(deadline)
             https_proxy = self.environment.get("https_proxy")
             if https_proxy:
                 command = ["snap", "set", "system", f"proxy.https={https_proxy}"]
             else:
                 command = ["snap", "unset", "system", "proxy.https"]
-            _execute_run(executor, command)
+            self._execute_run(executor, command)
 
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -938,14 +866,14 @@ class BuilddBase(Base):
         """
         logger.debug("Waiting for networking to be ready...")
 
-        _check_deadline(deadline)
+        self._check_deadline(deadline)
         command = ["getent", "hosts", "snapcraft.io"]
         while True:
-            proc = _execute_run(executor, command, check=False)
+            proc = self._execute_run(executor, command, check=False)
             if proc.returncode == 0:
                 return
 
-            _check_deadline(
+            self._check_deadline(
                 deadline, message="Timed out waiting for networking to be ready."
             )
             sleep(retry_wait)
@@ -965,9 +893,9 @@ class BuilddBase(Base):
         """
         logger.debug("Waiting for environment to be ready...")
 
-        _check_deadline(deadline)
+        self._check_deadline(deadline)
         while True:
-            proc = _execute_run(
+            proc = self._execute_run(
                 executor,
                 ["systemctl", "is-system-running"],
                 capture_output=True,
@@ -981,7 +909,7 @@ class BuilddBase(Base):
 
             logger.debug("systemctl is-system-running status: %s", running_state)
 
-            _check_deadline(
+            self._check_deadline(
                 deadline, message="Timed out waiting for environment to be ready."
             )
             sleep(retry_wait)
@@ -995,7 +923,7 @@ class BuilddBase(Base):
         :param deadline: Optional time.time() deadline.
         :param codename: New codename to use in apt source config files (i.e. 'lunar')
         """
-        _check_deadline(deadline)
+        self._check_deadline(deadline)
 
         apt_source = "/etc/apt/sources.list"
         apt_source_dir = "/etc/apt/sources.list.d/"
@@ -1009,7 +937,7 @@ class BuilddBase(Base):
         # replace all occurrences of the codename in the `sources.list` file
         sed_command = ["sed", "-i", f"s/{version_codename}/{codename}/g"]
         try:
-            _execute_run(executor, sed_command + [apt_source])
+            self._execute_run(executor, sed_command + [apt_source])
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief=f"Failed to update {apt_source!r}.",
@@ -1018,7 +946,7 @@ class BuilddBase(Base):
 
         # if cloud-init and cloud.cfg isn't present, then raise an error
         try:
-            _execute_run(executor, ["test", "-s", cloud_config])
+            self._execute_run(executor, ["test", "-s", cloud_config])
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief=(
@@ -1031,7 +959,7 @@ class BuilddBase(Base):
         # update cloud.cfg to prevent the sources.list file from being reset
         logger.debug("Updating %r to preserve apt sources.", cloud_config)
         try:
-            _execute_run(
+            self._execute_run(
                 executor,
                 # 'aapt' is not a typo, the first 'a' is the sed command to append
                 # this is a shlex-compatible way to append to a file
@@ -1049,7 +977,7 @@ class BuilddBase(Base):
         # `find | xargs sed` cannot be used
 
         try:
-            additional_source_files = _execute_run(
+            additional_source_files = self._execute_run(
                 executor,
                 ["find", apt_source_dir, "-type", "f", "-name", "*.list"],
                 text=True,
@@ -1063,7 +991,7 @@ class BuilddBase(Base):
         # if there are config files in `sources.list.d/`, then update them
         if additional_source_files:
             try:
-                _execute_run(executor, sed_command + [apt_source_dir + "*.list"])
+                self._execute_run(executor, sed_command + [apt_source_dir + "*.list"])
             except subprocess.CalledProcessError as error:
                 raise BaseConfigurationError(
                     brief=f"Failed to update apt source files in {apt_source_dir!r}.",
@@ -1079,7 +1007,7 @@ class BuilddBase(Base):
             data={"compatibility_tag": self.compatibility_tag},
             config_path=self.instance_config_path,
         )
-        _check_deadline(deadline)
+        self._check_deadline(deadline)
 
     def _update_setup_status(
         self, *, executor: Executor, deadline: Optional[float], status: bool
@@ -1095,7 +1023,7 @@ class BuilddBase(Base):
             data={"setup": status},
             config_path=self.instance_config_path,
         )
-        _check_deadline(deadline)
+        self._check_deadline(deadline)
 
     def wait_until_ready(
         self,
@@ -1142,3 +1070,7 @@ class BuilddBase(Base):
             retry_wait=retry_wait,
             deadline=deadline,
         )
+
+
+# Backward compatible, will be removed in 2.0
+default_command_environment = BuilddBase.default_command_environment

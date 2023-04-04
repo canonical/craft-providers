@@ -18,7 +18,7 @@
 
 import pytest
 
-from craft_providers.bases import BuilddBase, BuilddBaseAlias
+from craft_providers.bases import ubuntu
 from craft_providers.lxd import LXDProvider, is_installed
 
 
@@ -42,11 +42,13 @@ def test_create_environment(installed_lxd, instance_name):
     assert test_instance.exists() is False
 
 
-@pytest.mark.parametrize("alias", set(BuilddBaseAlias) - {BuilddBaseAlias.XENIAL})
+@pytest.mark.parametrize(
+    "alias", set(ubuntu.BuilddBaseAlias) - {ubuntu.BuilddBaseAlias.XENIAL}
+)
 def test_launched_environment(alias, installed_lxd, instance_name, tmp_path):
     provider = LXDProvider()
 
-    base_configuration = BuilddBase(alias=alias)
+    base_configuration = ubuntu.BuilddBase(alias=alias)
 
     with provider.launched_environment(
         project_name="test-project",

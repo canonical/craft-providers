@@ -24,7 +24,7 @@ from typing import Generator
 
 from craft_providers import Executor, Provider
 from craft_providers.base import Base
-from craft_providers.bases import BaseConfigurationError
+from craft_providers.errors import BaseConfigurationError
 
 from .errors import LXDError, LXDUnstableImageError
 from .installer import ensure_lxd_is_ready, install, is_installed

@@ -25,9 +25,8 @@ import pydantic
 import yaml
 
 from craft_providers import Executor, errors
+from craft_providers.errors import BaseConfigurationError
 from craft_providers.util import temp_paths
-
-from .errors import BaseConfigurationError
 
 
 def update_nested_dictionaries(

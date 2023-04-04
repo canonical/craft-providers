@@ -23,7 +23,7 @@ import warnings
 from dataclasses import dataclass
 from enum import Enum
 
-from craft_providers.bases import BuilddBaseAlias
+from craft_providers.bases import ubuntu
 
 from .errors import LXDError
 from .lxc import LXC
@@ -116,37 +116,37 @@ class RemoteImage:
 # XXX: support xenial?
 # mapping from supported bases to actual lxd remote images
 _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE = {
-    BuilddBaseAlias.BIONIC.value: RemoteImage(
+    ubuntu.BuilddBaseAlias.BIONIC.value: RemoteImage(
         image_name="core18",
         remote_name=BUILDD_RELEASES_REMOTE_NAME,
         remote_address=BUILDD_RELEASES_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
-    BuilddBaseAlias.FOCAL.value: RemoteImage(
+    ubuntu.BuilddBaseAlias.FOCAL.value: RemoteImage(
         image_name="core20",
         remote_name=BUILDD_RELEASES_REMOTE_NAME,
         remote_address=BUILDD_RELEASES_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
-    BuilddBaseAlias.JAMMY.value: RemoteImage(
+    ubuntu.BuilddBaseAlias.JAMMY.value: RemoteImage(
         image_name="core22",
         remote_name=BUILDD_RELEASES_REMOTE_NAME,
         remote_address=BUILDD_RELEASES_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
-    BuilddBaseAlias.KINETIC.value: RemoteImage(
+    ubuntu.BuilddBaseAlias.KINETIC.value: RemoteImage(
         image_name="kinetic",
         remote_name=DAILY_REMOTE_NAME,
         remote_address=DAILY_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
-    BuilddBaseAlias.LUNAR.value: RemoteImage(
+    ubuntu.BuilddBaseAlias.LUNAR.value: RemoteImage(
         image_name="lunar",
         remote_name=DAILY_REMOTE_NAME,
         remote_address=DAILY_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
-    BuilddBaseAlias.DEVEL.value: RemoteImage(
+    ubuntu.BuilddBaseAlias.DEVEL.value: RemoteImage(
         image_name="devel",
         remote_name=DAILY_REMOTE_NAME,
         remote_address=DAILY_REMOTE_ADDRESS,
@@ -192,7 +192,7 @@ def configure_buildd_image_remote(lxc: LXC = LXC()) -> str:
         category=DeprecationWarning,
     )
     # configure the buildd remote for core22
-    image = get_remote_image(BuilddBaseAlias.JAMMY.value)
+    image = get_remote_image(ubuntu.BuilddBaseAlias.JAMMY.value)
     image.add_remote(lxc)
 
     return BUILDD_RELEASES_REMOTE_NAME
