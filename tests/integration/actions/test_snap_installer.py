@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -17,6 +17,8 @@
 
 """Tests for snap installer."""
 
+import re
+from textwrap import dedent
 
 from craft_providers.actions import snap_installer
 
@@ -34,6 +36,29 @@ def test_inject_from_host(core20_lxd_instance, installed_snap, caplog):
 
     core20_lxd_instance.execute_run(["test", "-d", "/snap/hello-world"], check=True)
 
+    config = core20_lxd_instance.execute_run(
+        ["cat", "/etc/craft-instance.conf"], check=True, capture_output=True
+    ).stdout.decode()
+
+    # verify instance config was properly updated
+    assert (
+        re.fullmatch(
+            re.compile(
+                dedent(
+                    """\
+                    compatibility_tag: buildd-base-v\\d+
+                    setup: true
+                    snaps:
+                      hello-world:
+                        revision: '\\d+'
+                        source: host
+                    """
+                )
+            ),
+            config,
+        )
+        is not None
+    )
     assert caplog.records == []
 
 
@@ -52,6 +77,29 @@ def test_inject_from_host_dangerous(
 
     core20_lxd_instance.execute_run(["test", "-d", "/snap/hello-world"], check=True)
 
+    config = core20_lxd_instance.execute_run(
+        ["cat", "/etc/craft-instance.conf"], check=True, capture_output=True
+    ).stdout.decode()
+
+    # verify instance config was properly updated
+    assert (
+        re.fullmatch(
+            re.compile(
+                dedent(
+                    """\
+                    compatibility_tag: buildd-base-v\\d+
+                    setup: true
+                    snaps:
+                      hello-world:
+                        revision: x\\d+
+                        source: host
+                    """
+                )
+            ),
+            config,
+        )
+        is not None
+    )
     assert caplog.records == []
 
 
@@ -90,6 +138,29 @@ def test_install_from_store_strict(core20_lxd_instance, installed_snap, caplog):
 
     core20_lxd_instance.execute_run(["test", "-f", "/snap/bin/hello-world"], check=True)
 
+    config = core20_lxd_instance.execute_run(
+        ["cat", "/etc/craft-instance.conf"], check=True, capture_output=True
+    ).stdout.decode()
+
+    # verify instance config was properly updated
+    assert (
+        re.fullmatch(
+            re.compile(
+                dedent(
+                    """\
+                    compatibility_tag: buildd-base-v\\d+
+                    setup: true
+                    snaps:
+                      hello-world:
+                        revision: '\\d+'
+                        source: store
+                    """
+                )
+            ),
+            config,
+        )
+        is not None
+    )
     assert caplog.records == []
 
 
@@ -106,6 +177,29 @@ def test_install_from_store_classic(core20_lxd_instance, installed_snap, caplog)
 
     core20_lxd_instance.execute_run(["test", "-f", "/snap/bin/charmcraft"], check=True)
 
+    config = core20_lxd_instance.execute_run(
+        ["cat", "/etc/craft-instance.conf"], check=True, capture_output=True
+    ).stdout.decode()
+
+    # verify instance config was properly updated
+    assert (
+        re.fullmatch(
+            re.compile(
+                dedent(
+                    """\
+                    compatibility_tag: buildd-base-v\\d+
+                    setup: true
+                    snaps:
+                      charmcraft:
+                        revision: '\\d+'
+                        source: store
+                    """
+                )
+            ),
+            config,
+        )
+        is not None
+    )
     assert caplog.records == []
 
 
@@ -125,4 +219,71 @@ def test_install_from_store_channel(core20_lxd_instance, installed_snap, caplog)
     )
 
     assert "go1.15" in proc.stdout
+
+    config = core20_lxd_instance.execute_run(
+        ["cat", "/etc/craft-instance.conf"], check=True, capture_output=True
+    ).stdout.decode()
+
+    # verify instance config was properly updated
+    assert (
+        re.fullmatch(
+            re.compile(
+                dedent(
+                    """\
+                    compatibility_tag: buildd-base-v\\d+
+                    setup: true
+                    snaps:
+                      go:
+                        revision: '\\d+'
+                        source: store
+                    """
+                )
+            ),
+            config,
+        )
+        is not None
+    )
+    assert caplog.records == []
+
+
+def test_install_from_store_snap_name_suffix(
+    core20_lxd_instance, installed_snap, caplog
+):
+    """Verify a snap can be installed from the store when the snap name has a suffix."""
+    core20_lxd_instance.execute_run(
+        ["test", "!", "-d", "/snap/hello-world"], check=True
+    )
+
+    snap_installer.install_from_store(
+        executor=core20_lxd_instance,
+        snap_name="hello-world_suffix",
+        channel="latest/stable",
+        classic=False,
+    )
+
+    core20_lxd_instance.execute_run(["test", "-f", "/snap/bin/hello-world"], check=True)
+
+    config = core20_lxd_instance.execute_run(
+        ["cat", "/etc/craft-instance.conf"], check=True, capture_output=True
+    ).stdout.decode()
+
+    # track the `hello-world` snap in the config file, not `hello-world_suffix`
+    assert (
+        re.fullmatch(
+            re.compile(
+                dedent(
+                    """\
+                    compatibility_tag: buildd-base-v\\d+
+                    setup: true
+                    snaps:
+                      hello-world:
+                        revision: '\\d+'
+                        source: store
+                    """
+                )
+            ),
+            config,
+        )
+        is not None
+    )
     assert caplog.records == []

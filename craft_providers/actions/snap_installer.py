@@ -240,7 +240,8 @@ def _add_assertions_from_host(executor: Executor, snap_name: str) -> None:
     :param executor: Executor for target
     :param snap_name: Name of snap to inject
     """
-    target_assert_path = pathlib.Path(f"/tmp/{snap_name}.assert")
+    # trim the `_name` suffix, if present
+    target_assert_path = pathlib.Path(f"/tmp/{snap_name.split('_')[0]}.assert")
     snap_info = get_host_snap_info(snap_name)
 
     try:
@@ -276,16 +277,32 @@ def _add_assertions_from_host(executor: Executor, snap_name: str) -> None:
 def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> None:
     """Inject snap from host snap.
 
+    If the snap on the host was installed with the `--name` parameter, the host snap's
+    name will be formatted as `<snap_name>_<name>`. The `--name` parameter is not
+    used when the snap is installed inside the instance, so the instance's snap
+    name will just be `<snap_name>` (no suffix).
+
     :param executor: Executor for target
     :param snap_name: Name of snap to inject
     :param classic: Install in classic mode
+
     :raises SnapInstallationError: on failure to inject snap
     """
-    logger.debug("Installing snap %r from host (classic=%s)", snap_name, classic)
+    # the local snap name may have a suffix if it was installed with `--name`
+    snap_store_name = snap_name.split("_")[0]
+    if snap_name == snap_store_name:
+        logger.debug("Installing snap %r from host (classic=%s)", snap_name, classic)
+    else:
+        logger.debug(
+            "Installing snap %r from host as %r in instance (classic=%s).",
+            snap_name,
+            snap_store_name,
+            classic,
+        )
 
     host_revision = get_host_snap_info(snap_name)["revision"]
     target_revision = _get_snap_revision_ensuring_source(
-        snap_name=snap_name,
+        snap_name=snap_store_name,
         source=SNAP_SRC_HOST,
         executor=executor,
     )
@@ -298,7 +315,7 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
         )
         return
 
-    target_snap_path = pathlib.Path(f"/tmp/{snap_name}.snap")
+    target_snap_path = pathlib.Path(f"/tmp/{snap_store_name}.snap")
     is_dangerous = host_revision.startswith("x")
 
     if not is_dangerous:
@@ -326,14 +343,16 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
         )
     except subprocess.CalledProcessError as error:
         raise SnapInstallationError(
-            brief=f"failed to install snap {snap_name!r}",
+            brief=f"failed to install snap {snap_store_name!r}",
             details=details_from_called_process_error(error),
         ) from error
 
     InstanceConfiguration.update(
         executor=executor,
         data={
-            "snaps": {snap_name: {"revision": host_revision, "source": SNAP_SRC_HOST}}
+            "snaps": {
+                snap_store_name: {"revision": host_revision, "source": SNAP_SRC_HOST}
+            }
         },
     )
 
@@ -352,14 +371,26 @@ def install_from_store(
 
     :raises SnapInstallationError: on unexpected error.
     """
-    logger.debug(
-        "Installing snap %r from store (channel=%r, classic=%s)",
-        snap_name,
-        channel,
-        classic,
-    )
+    # trim the `_name` suffix, if present
+    snap_store_name = snap_name.split("_")[0]
+    if snap_name == snap_store_name:
+        logger.debug(
+            "Installing snap %r from store (channel=%r, classic=%s).",
+            snap_name,
+            channel,
+            classic,
+        )
+    else:
+        logger.debug(
+            "Installing snap %r as %r from store (channel=%r, classic=%s).",
+            snap_name,
+            snap_store_name,
+            channel,
+            classic,
+        )
+
     target_revision = _get_snap_revision_ensuring_source(
-        snap_name=snap_name,
+        snap_name=snap_store_name,
         source=SNAP_SRC_STORE,
         executor=executor,
     )
@@ -368,14 +399,14 @@ def install_from_store(
     if target_revision is None:
         # no snap present in the target environment, just install it
         cmd = snap_cmd.formulate_remote_install_command(
-            snap_name=snap_name,
+            snap_name=snap_store_name,
             channel=channel,
             classic=classic,
         )
     else:
         # refresh the already installed snap
         cmd = snap_cmd.formulate_refresh_command(
-            snap_name=snap_name,
+            snap_name=snap_store_name,
             channel=channel,
         )
 
@@ -383,12 +414,12 @@ def install_from_store(
         executor.execute_run(cmd, check=True, capture_output=True)
     except subprocess.CalledProcessError as error:
         raise SnapInstallationError(
-            brief=f"Failed to install/refresh snap {snap_name!r}.",
+            brief=f"Failed to install/refresh snap {snap_store_name!r}.",
             details=details_from_called_process_error(error),
         ) from error
 
     new_target_revision = _get_target_snap_revision_from_snapd(
-        snap_name=snap_name,
+        snap_name=snap_store_name,
         executor=executor,
     )
     logger.debug("Revision after install/refresh: %r", new_target_revision)
@@ -397,7 +428,10 @@ def install_from_store(
         executor=executor,
         data={
             "snaps": {
-                snap_name: {"revision": new_target_revision, "source": SNAP_SRC_STORE}
+                snap_store_name: {
+                    "revision": new_target_revision,
+                    "source": SNAP_SRC_STORE,
+                }
             }
         },
     )

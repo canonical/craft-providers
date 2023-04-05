@@ -30,6 +30,8 @@ from craft_providers.actions import snap_installer
 from craft_providers.bases.instance_config import InstanceConfiguration
 from craft_providers.errors import ProviderError, details_from_called_process_error
 
+# pylint: disable=too-many-lines
+
 
 @pytest.fixture()
 def mock_requests():
@@ -209,6 +211,56 @@ def test_inject_from_host_strict(
     assert Exact("Installing snap 'test-name' from host (classic=False)") in logs.debug
     assert "Revisions found: host='2', target='1'" in logs.debug
 
+    # check saved config
+    (saved_config_record,) = [
+        x
+        for x in fake_executor.records_of_push_file_io
+        if "craft-instance.conf" in x["destination"]
+    ]
+    config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
+    assert config.snaps is not None
+    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+        "revision": "2",
+        "source": snap_installer.SNAP_SRC_HOST,
+    }
+
+
+def test_inject_from_host_snap_name(
+    config_fixture,
+    mock_get_host_snap_info,
+    mock_requests,
+    fake_executor,
+    fake_process,
+    logs,
+    tmp_path,
+):
+    """Inject a snap installed locally with the `--name` parameter."""
+    # register 'snap known' calls
+    for _ in range(4):
+        fake_process.register_subprocess(["snap", "known", fake_process.any()])
+    fake_process.register_subprocess(
+        ["fake-executor", "snap", "ack", "/tmp/test-name.assert"]
+    )
+    fake_process.register_subprocess(
+        ["fake-executor", "snap", "install", "/tmp/test-name.snap"]
+    )
+
+    snap_installer.inject_from_host(
+        executor=fake_executor, snap_name="test-name_suffix", classic=False
+    )
+
+    mock_requests.get.assert_called_with(
+        "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name_suffix/file"
+    )
+    assert len(fake_process.calls) == 6
+    assert (
+        Exact(
+            "Installing snap 'test-name_suffix' from host as 'test-name' in instance "
+            "(classic=False)."
+        )
+        in logs.debug
+    )
+    assert "Revisions found: host='2', target='1'" in logs.debug
     # check saved config
     (saved_config_record,) = [
         x
@@ -561,7 +613,7 @@ def test_install_from_store_strict(
 
     snap_installer.install_from_store(
         executor=fake_executor,
-        snap_name="test-name",
+        snap_name="test-name_suffix",
         classic=False,
         channel="test-chan",
     )
@@ -569,8 +621,8 @@ def test_install_from_store_strict(
     assert len(fake_process.calls) == 1
     assert (
         Exact(
-            "Installing snap 'test-name' from store"
-            " (channel='test-chan', classic=False)"
+            "Installing snap 'test-name_suffix' as 'test-name' from store "
+            "(channel='test-chan', classic=False).",
         )
         in logs.debug
     )
@@ -621,7 +673,8 @@ def test_install_from_store_classic(
     assert len(fake_process.calls) == 1
     assert (
         Exact(
-            "Installing snap 'test-name' from store (channel='test-chan', classic=True)"
+            "Installing snap 'test-name' from store "
+            "(channel='test-chan', classic=True)."
         )
         in logs.debug
     )
@@ -659,7 +712,7 @@ def test_refresh_from_store(
     assert (
         Exact(
             "Installing snap 'test-name' from store"
-            " (channel='test-chan', classic=False)"
+            " (channel='test-chan', classic=False)."
         )
         in logs.debug
     )
@@ -709,6 +762,61 @@ def test_install_from_store_failure(
             exc_info.value.__cause__  # type: ignore
         ),
     )
+
+
+@pytest.mark.parametrize(
+    "mock_get_snap_revision_ensuring_source", [None], indirect=True
+)
+def test_install_from_store_trim_suffix(
+    config_fixture,
+    mock_get_snap_revision_ensuring_source,
+    fake_executor,
+    fake_process,
+    logs,
+    mock_get_target_snap_revision_from_snapd,
+):
+    """Trim the `_name` suffix from the snap name, if present."""
+    fake_process.register_subprocess(
+        [
+            "fake-executor",
+            "snap",
+            "install",
+            "test-name",
+            "--channel",
+            "test-chan",
+        ],
+    )
+
+    snap_installer.install_from_store(
+        executor=fake_executor,
+        snap_name="test-name",
+        classic=False,
+        channel="test-chan",
+    )
+
+    assert len(fake_process.calls) == 1
+    assert (
+        Exact(
+            "Installing snap 'test-name' from store"
+            " (channel='test-chan', classic=False)."
+        )
+        in logs.debug
+    )
+    assert "Revision found in target: None" in logs.debug
+    assert "Revision after install/refresh: '4'" in logs.debug
+
+    # check saved config
+    (saved_config_record,) = [
+        x
+        for x in fake_executor.records_of_push_file_io
+        if "craft-instance.conf" in x["destination"]
+    ]
+    config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
+    assert config.snaps is not None
+    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+        "revision": "4",
+        "source": snap_installer.SNAP_SRC_STORE,
+    }
 
 
 # -- tests for the helping functions
