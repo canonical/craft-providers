@@ -178,7 +178,7 @@ class LXDInstance(Executor):
         :raises LXDError: On unexpected error.
         """
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            shutil.copyfileobj(content, temp_file)
+            shutil.copyfileobj(content, temp_file)  # type: ignore # mypy #15031
 
         temp_path = pathlib.Path(temp_file.name)
         self.lxc.file_push(
