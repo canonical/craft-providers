@@ -27,8 +27,13 @@ import yaml
 from logassert import Exact  # type: ignore
 
 from craft_providers.actions import snap_installer
+from craft_providers.actions.snap_installer import Snap
 from craft_providers.bases.instance_config import InstanceConfiguration
-from craft_providers.errors import ProviderError, details_from_called_process_error
+from craft_providers.errors import (
+    BaseConfigurationError,
+    ProviderError,
+    details_from_called_process_error,
+)
 
 # pylint: disable=too-many-lines
 
@@ -1075,3 +1080,17 @@ def test_get_snap_revision_ensuring_source_different_source_error(
         ),
     )
     assert exc_info.value.__cause__ is not None
+
+
+# -- tests for the Snap pydantic model
+
+
+def test_snaps_no_channel_raises_errors(fake_executor):
+    """Verify the Snap model raises an error when the channel is an empty string."""
+    with pytest.raises(BaseConfigurationError) as exc_info:
+        Snap(name="snap1", channel="")
+
+    assert exc_info.value == BaseConfigurationError(
+        brief="channel cannot be empty",
+        resolution="set channel to a non-empty string or `None`",
+    )

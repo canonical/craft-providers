@@ -29,11 +29,11 @@ from textwrap import dedent
 from time import sleep
 from typing import Dict, List, Optional, Type
 
-import pydantic
 from pydantic import ValidationError
 
 from craft_providers import Base, Executor, errors
 from craft_providers.actions import snap_installer
+from craft_providers.actions.snap_installer import Snap, SnapInstallationError
 from craft_providers.errors import BaseCompatibilityError, BaseConfigurationError
 from craft_providers.util.os_release import parse_os_release
 
@@ -54,37 +54,6 @@ class BuilddBaseAlias(enum.Enum):
     KINETIC = "22.10"
     LUNAR = "23.04"
     DEVEL = "devel"
-
-
-class Snap(pydantic.BaseModel, extra=pydantic.Extra.forbid):
-    """Details of snap to install in the base.
-
-    :param name: name of snap
-    :param channel: snap store channel to install from (default is stable)
-      If channel is `None`, then the snap is injected from the host instead
-      of being installed from the store.
-    :param classic: true if snap is a classic snap (default is false)
-    """
-
-    name: str
-    channel: Optional[str] = "stable"
-    classic: bool = False
-
-    # pylint: disable=no-self-argument
-    @pydantic.validator("channel")
-    def validate_channel(cls, channel):
-        """Validate that channel is not an empty string.
-
-        :raises BaseConfigurationError: if channel is empty
-        """
-        if channel == "":
-            raise BaseConfigurationError(
-                brief="channel cannot be empty",
-                resolution="set channel to a non-empty string or `None`",
-            )
-        return channel
-
-    # pylint: enable=no-self-argument
 
 
 class BuilddBase(Base):
@@ -574,7 +543,7 @@ class BuilddBase(Base):
                         channel=snap.channel,
                         classic=snap.classic,
                     )
-                except snap_installer.SnapInstallationError as error:
+                except SnapInstallationError as error:
                     raise BaseConfigurationError(
                         brief=(
                             f"failed to install snap {snap.name!r} from store"
@@ -588,7 +557,7 @@ class BuilddBase(Base):
                         snap_name=snap.name,
                         classic=snap.classic,
                     )
-                except snap_installer.SnapInstallationError as error:
+                except SnapInstallationError as error:
                     raise BaseConfigurationError(
                         brief=(
                             f"failed to inject host's snap {snap.name!r} "

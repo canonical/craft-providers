@@ -26,12 +26,17 @@ import subprocess
 import urllib.parse
 from typing import Any, Dict, Iterator, List, Optional
 
+import pydantic
 import requests
 import requests_unixsocket  # type: ignore
 
 from craft_providers import Executor
 from craft_providers.bases.instance_config import InstanceConfiguration
-from craft_providers.errors import ProviderError, details_from_called_process_error
+from craft_providers.errors import (
+    BaseConfigurationError,
+    ProviderError,
+    details_from_called_process_error,
+)
 from craft_providers.util import snap_cmd, temp_paths
 
 logger = logging.getLogger(__name__)
@@ -45,6 +50,37 @@ SNAP_SRC_STORE = "store"
 
 class SnapInstallationError(ProviderError):
     """Unexpected error during snap installation."""
+
+
+class Snap(pydantic.BaseModel, extra=pydantic.Extra.forbid):
+    """Details of snap to install in the base.
+
+    :param name: name of snap
+    :param channel: snap store channel to install from (default is stable)
+      If channel is `None`, then the snap is injected from the host instead
+      of being installed from the store.
+    :param classic: true if snap is a classic snap (default is false)
+    """
+
+    name: str
+    channel: Optional[str] = "stable"
+    classic: bool = False
+
+    # pylint: disable=no-self-argument
+    @pydantic.validator("channel")
+    def validate_channel(cls, channel):
+        """Validate that channel is not an empty string.
+
+        :raises BaseConfigurationError: if channel is empty
+        """
+        if channel == "":
+            raise BaseConfigurationError(
+                brief="channel cannot be empty",
+                resolution="set channel to a non-empty string or `None`",
+            )
+        return channel
+
+    # pylint: enable=no-self-argument
 
 
 def _download_host_snap(

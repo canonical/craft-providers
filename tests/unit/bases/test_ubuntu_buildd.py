@@ -25,7 +25,7 @@ import pytest
 from logassert import Exact  # type: ignore
 from pydantic import ValidationError
 
-from craft_providers.actions.snap_installer import SnapInstallationError
+from craft_providers.actions.snap_installer import Snap, SnapInstallationError
 from craft_providers.bases import ubuntu
 from craft_providers.bases.instance_config import InstanceConfiguration
 from craft_providers.errors import (
@@ -107,7 +107,7 @@ def mock_get_os_release(mocker):
     [
         (None, []),
         (
-            [ubuntu.Snap(name="snap1", channel="edge", classic=True)],
+            [Snap(name="snap1", channel="edge", classic=True)],
             [call(executor=ANY, snap_name="snap1", channel="edge", classic=True)],
         ),
     ],
@@ -409,23 +409,12 @@ def test_setup(
     assert mock_install_from_store.mock_calls == expected_snap_call
 
 
-def test_snaps_no_channel_raises_errors(fake_executor):
-    """Verify the Snap model raises an error when the channel is an empty string."""
-    with pytest.raises(BaseConfigurationError) as exc_info:
-        ubuntu.Snap(name="snap1", channel="")
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="channel cannot be empty",
-        resolution="set channel to a non-empty string or `None`",
-    )
-
-
 def test_install_snaps_install_from_store(fake_executor, mock_install_from_store):
     """Verify installing snaps calls install_from_store()."""
     my_snaps = [
-        ubuntu.Snap(name="snap1"),
-        ubuntu.Snap(name="snap2", channel="edge"),
-        ubuntu.Snap(name="snap3", channel="edge", classic=True),
+        Snap(name="snap1"),
+        Snap(name="snap2", channel="edge"),
+        Snap(name="snap3", channel="edge", classic=True),
     ]
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, snaps=my_snaps)
 
@@ -446,8 +435,8 @@ def test_install_snaps_inject_from_host_valid(
     """Verify installing snaps calls inject_from_host()."""
     mocker.patch("sys.platform", "linux")
     my_snaps = [
-        ubuntu.Snap(name="snap1", channel=None),
-        ubuntu.Snap(name="snap2", channel=None, classic=True),
+        Snap(name="snap1", channel=None),
+        Snap(name="snap2", channel=None, classic=True),
     ]
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, snaps=my_snaps)
 
@@ -463,7 +452,7 @@ def test_install_snaps_inject_from_host_not_linux_error(fake_executor, mocker):
     """Verify install_snaps raises an error when injecting from host on
     a non-linux system."""
     mocker.patch("sys.platform", return_value="darwin")
-    my_snaps = [ubuntu.Snap(name="snap1", channel=None)]
+    my_snaps = [Snap(name="snap1", channel=None)]
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, snaps=my_snaps)
 
     with pytest.raises(BaseConfigurationError) as exc_info:
@@ -481,7 +470,7 @@ def test_install_snaps_install_from_store_error(fake_executor, mocker):
         "craft_providers.actions.snap_installer.install_from_store",
         side_effect=SnapInstallationError(brief="test error"),
     )
-    my_snaps = [ubuntu.Snap(name="snap1", channel="candidate")]
+    my_snaps = [Snap(name="snap1", channel="candidate")]
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, snaps=my_snaps)
 
     with pytest.raises(BaseConfigurationError) as exc_info:
@@ -502,7 +491,7 @@ def test_install_snaps_inject_from_host_error(fake_executor, mocker):
         "craft_providers.actions.snap_installer.inject_from_host",
         side_effect=SnapInstallationError(brief="test error"),
     )
-    my_snaps = [ubuntu.Snap(name="snap1", channel=None)]
+    my_snaps = [Snap(name="snap1", channel=None)]
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, snaps=my_snaps)
 
     with pytest.raises(BaseConfigurationError) as exc_info:
