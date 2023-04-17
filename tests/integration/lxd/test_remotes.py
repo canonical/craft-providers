@@ -29,8 +29,8 @@ from craft_providers.bases import ubuntu
 )
 def test_configure_and_launch_remote(instance_name, alias):
     """Verify remotes are configured and images can be launched."""
-    remote_image = lxd.get_remote_image(alias.value)
     base_configuration = ubuntu.BuilddBase(alias=alias)
+    remote_image = lxd.get_remote_image(base_configuration)
     instance = lxd.launch(
         name=instance_name,
         base_configuration=base_configuration,

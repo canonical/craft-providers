@@ -22,6 +22,7 @@ import os
 import subprocess
 import time
 from abc import ABC, abstractmethod
+from enum import Enum
 from typing import Dict, List, Optional
 
 from craft_providers.errors import BaseConfigurationError, NetworkError
@@ -57,6 +58,7 @@ class Base(ABC):
     """
 
     compatibility_tag: str = "base-v1"
+    alias: Enum
 
     @abstractmethod
     def get_command_environment(
