@@ -33,6 +33,7 @@ def mock_buildd_base_configuration(mocker):
     mock_base_config = mocker.patch(
         "craft_providers.bases.ubuntu.BuilddBase", autospec=True
     )
+    mock_base_config.alias = ubuntu.BuilddBaseAlias.JAMMY
     mock_base_config.compatibility_tag = "buildd-base-v1"
     yield mock_base_config
 
@@ -134,17 +135,16 @@ def test_create_environment(mocker):
 def test_launched_environment(
     build_base,
     remote_image,
-    mock_buildd_base_configuration,
     mock_launch,
     tmp_path,
 ):
     """Verify `launched_environment()` function."""
     provider = MultipassProvider()
+    base_configuration = ubuntu.BuilddBase(alias=build_base)
     with provider.launched_environment(
         project_name="test-project",
         project_path=tmp_path,
-        base_configuration=mock_buildd_base_configuration,
-        build_base=build_base,
+        base_configuration=base_configuration,
         instance_name="test-instance-name",
         allow_unstable=True,
     ) as instance:
@@ -152,7 +152,7 @@ def test_launched_environment(
         assert mock_launch.mock_calls == [
             call(
                 name="test-instance-name",
-                base_configuration=mock_buildd_base_configuration,
+                base_configuration=base_configuration,
                 image_name=remote_image.name,
                 cpus=2,
                 disk_gb=64,
@@ -199,7 +199,6 @@ def test_launched_environment_stable(
         project_name="test-project",
         project_path=tmp_path,
         base_configuration=mock_buildd_base_configuration,
-        build_base=ubuntu.BuilddBaseAlias.JAMMY.value,
         instance_name="test-instance-name",
         allow_unstable=allow_unstable,
     ) as instance:
@@ -243,7 +242,6 @@ def test_launched_environment_unstable_image_error(
             project_name="test-project",
             project_path=tmp_path,
             base_configuration=mock_buildd_base_configuration,
-            build_base=ubuntu.BuilddBaseAlias.JAMMY.value,
             instance_name="test-instance-name",
         ):
             pass
@@ -260,19 +258,17 @@ def test_launched_environment_unstable_image_error(
     )
 
 
-def test_launched_environment_launch_base_configuration_error(
-    mock_buildd_base_configuration, mock_launch, tmp_path
-):
+def test_launched_environment_launch_base_configuration_error(mock_launch, tmp_path):
     error = BaseConfigurationError(brief="fail")
     mock_launch.side_effect = error
     provider = MultipassProvider()
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     with pytest.raises(MultipassError, match="fail") as raised:
         with provider.launched_environment(
             project_name="test-project",
             project_path=tmp_path,
-            base_configuration=mock_buildd_base_configuration,
-            build_base=ubuntu.BuilddBaseAlias.FOCAL.value,
+            base_configuration=base_configuration,
             instance_name="test-instance-name",
         ):
             pass

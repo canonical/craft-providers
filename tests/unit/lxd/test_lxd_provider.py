@@ -46,6 +46,7 @@ def mock_buildd_base_configuration(mocker):
     mock_base_config = mocker.patch(
         "craft_providers.bases.ubuntu.BuilddBase", autospec=True
     )
+    mock_base_config.alias = ubuntu.BuilddBaseAlias.JAMMY
     mock_base_config.compatibility_tag = "buildd-base-v1"
     yield mock_base_config
 
@@ -157,12 +158,11 @@ def test_launched_environment(
         project_name="test-project",
         project_path=tmp_path,
         base_configuration=mock_buildd_base_configuration,
-        build_base="test-build-base",
         instance_name="test-instance-name",
         allow_unstable=allow_unstable,
     ) as instance:
         assert instance is not None
-        mock_get_remote_image.assert_called_once_with("test-build-base")
+        mock_get_remote_image.assert_called_once_with(mock_buildd_base_configuration)
         mock_remote_image.add_remote.assert_called_once_with(lxc=mock_lxc)
         assert mock_launch.mock_calls == [
             call(
@@ -205,7 +205,6 @@ def test_launched_environment_launch_base_configuration_error(
             project_name="test-project",
             project_path=tmp_path,
             base_configuration=mock_buildd_base_configuration,
-            build_base=ubuntu.BuilddBaseAlias.FOCAL.value,
             instance_name="test-instance-name",
         ):
             pass
@@ -229,7 +228,6 @@ def test_launched_environment_unstable_error(
             project_name="test-project",
             project_path=tmp_path,
             base_configuration=mock_buildd_base_configuration,
-            build_base=ubuntu.BuilddBaseAlias.FOCAL.value,
             instance_name="test-instance-name",
         ):
             pass

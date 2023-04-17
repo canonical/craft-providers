@@ -19,9 +19,13 @@
 
 # Backward compatible, will be removed in 2.0
 import sys
+from enum import Enum
+from typing import Dict, Tuple, Type
 
 from craft_providers.errors import BaseCompatibilityError, BaseConfigurationError
 
+from ..base import Base
+from . import ubuntu
 from . import ubuntu as buildd
 from .ubuntu import BuilddBase, BuilddBaseAlias
 
@@ -33,3 +37,33 @@ __all__ = [
     "BaseCompatibilityError",
     "BaseConfigurationError",
 ]
+
+BASE_NAME_TO_BASE_ALIAS: Dict[Tuple[str, str], Enum] = {
+    ("ubuntu", "16.04"): ubuntu.BuilddBaseAlias.XENIAL,
+    ("ubuntu", "18.04"): ubuntu.BuilddBaseAlias.BIONIC,
+    ("ubuntu", "20.04"): ubuntu.BuilddBaseAlias.FOCAL,
+    ("ubuntu", "22.04"): ubuntu.BuilddBaseAlias.JAMMY,
+    ("ubuntu", "22.10"): ubuntu.BuilddBaseAlias.KINETIC,
+    ("ubuntu", "23.04"): ubuntu.BuilddBaseAlias.LUNAR,
+    ("ubuntu", "devel"): ubuntu.BuilddBaseAlias.DEVEL,
+}
+
+
+def get_base_alias(
+    base_name: Tuple[str, str],
+) -> Enum:
+    """Return a Base alias from a base (name, version) tuple."""
+    if base_name in BASE_NAME_TO_BASE_ALIAS:
+        return BASE_NAME_TO_BASE_ALIAS[base_name]
+
+    raise BaseConfigurationError(f"Base alias not found for {base_name}")
+
+
+def get_base_from_alias(
+    alias: Enum,
+) -> Type[Base]:
+    """Return a Base class from a known base alias."""
+    if isinstance(alias, ubuntu.BuilddBaseAlias):
+        return ubuntu.BuilddBase
+
+    raise BaseConfigurationError(f"Base not found for alias {alias}")
