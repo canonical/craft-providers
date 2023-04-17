@@ -25,7 +25,7 @@ from enum import Enum
 from typing import Dict, Union
 
 from craft_providers import Base
-from craft_providers.bases import get_base_alias, ubuntu
+from craft_providers.bases import centos, get_base_alias, ubuntu
 
 from .errors import LXDError
 from .lxc import LXC
@@ -75,10 +75,18 @@ class RemoteImage:
 
         :returns: True if the image is stable.
         """
-        return (
+        if (
             self.remote_name == BUILDD_RELEASES_REMOTE_NAME
             and self.remote_address == BUILDD_RELEASES_REMOTE_ADDRESS
-        )
+        ):
+            # Ubuntu official buildd images
+            return True
+
+        if self.remote_name == "images":
+            # LXD daily images
+            return False
+
+        return False
 
     def add_remote(self, lxc: LXC) -> None:
         """Add the LXD remote for an image.
@@ -152,6 +160,12 @@ _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
         image_name="devel",
         remote_name=DAILY_REMOTE_NAME,
         remote_address=DAILY_REMOTE_ADDRESS,
+        remote_protocol=ProtocolType.SIMPLESTREAMS,
+    ),
+    centos.CentOSBaseAlias.SEVEN: RemoteImage(
+        image_name="centos/7",
+        remote_name="images",
+        remote_address="https://images.linuxcontainers.org/images/",
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
 }

@@ -28,7 +28,7 @@ from logassert import Exact  # type: ignore
 from pydantic import ValidationError
 
 from craft_providers.actions.snap_installer import Snap, SnapInstallationError
-from craft_providers.bases import ubuntu
+from craft_providers.bases import centos
 from craft_providers.bases.instance_config import InstanceConfiguration
 from craft_providers.errors import (
     BaseCompatibilityError,
@@ -46,7 +46,7 @@ DEFAULT_FAKE_CMD = ["fake-executor"]
 def mock_load(mocker):
     return mocker.patch(
         "craft_providers.bases.instance_config.InstanceConfiguration.load",
-        return_value=InstanceConfiguration(compatibility_tag="buildd-base-v1"),
+        return_value=InstanceConfiguration(compatibility_tag="centos-base-v1"),
     )
 
 
@@ -69,17 +69,17 @@ def mock_inject_from_host(mocker):
 @pytest.fixture
 def mock_get_os_release(mocker):
     return mocker.patch.object(
-        ubuntu.BuilddBase,
+        centos.CentOSBase,
         "_get_os_release",
         return_value={
-            "NAME": "Ubuntu",
-            "VERSION_ID": "22.04",
-            "VERSION_CODENAME": "jammy",
+            "NAME": "CentOS Linux",
+            "ID": "centos",
+            "VERSION_ID": "7",
         },
     )
 
 
-@pytest.mark.parametrize("alias", list(ubuntu.BuilddBaseAlias))
+@pytest.mark.parametrize("alias", list(centos.CentOSBaseAlias))
 @pytest.mark.parametrize(
     "environment, etc_environment_content",
     [
@@ -87,7 +87,8 @@ def mock_get_os_release(mocker):
             None,
             (
                 "PATH=/usr/local/sbin:/usr/local/bin:"
-                "/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin\n"
+                "/opt/rh/rh-python38/root/usr/bin:"
+                "/sbin:/bin:/usr/sbin:/usr/bin:/var/lib/snapd/bin/:/snap/bin\n"
             ).encode(),
         ),
         (
@@ -117,12 +118,12 @@ def mock_get_os_release(mocker):
 @pytest.mark.parametrize(
     "packages, expected_packages",
     [
-        (None, ["apt-utils", "curl"]),
-        (["grep", "git"], ["apt-utils", "curl", "grep", "git"]),
+        (None, ["rh-python38-python"]),
+        (["grep", "git"], ["curl", "grep", "git"]),
     ],
 )
 @pytest.mark.parametrize(
-    "tag, expected_tag", [(None, "buildd-base-v1"), ("test-tag", "test-tag")]
+    "tag, expected_tag", [(None, "centos-base-v1"), ("test-tag", "test-tag")]
 )
 # pylint: disable-next=too-many-arguments, too-many-locals, too-many-statements
 def test_setup(
@@ -146,13 +147,13 @@ def test_setup(
 ):
     mock_load.return_value = InstanceConfiguration(compatibility_tag=expected_tag)
 
-    mock_datetime = mocker.patch("craft_providers.bases.ubuntu.datetime")
+    mock_datetime = mocker.patch("craft_providers.bases.centos.datetime")
     mock_datetime.now.return_value = datetime(2022, 1, 2, 3, 4, 5, 6)
     # expected datetime will be 24 hours after the current time
     expected_datetime = "2022-01-03T03:04:05.000006"
 
     if environment is None:
-        environment = ubuntu.BuilddBase.default_command_environment()
+        environment = centos.CentOSBase.default_command_environment()
 
     if no_cdn:
         fake_filesystem.create_file(
@@ -165,7 +166,7 @@ def test_setup(
             ),
         )
 
-    base_config = ubuntu.BuilddBase(
+    base_config = centos.CentOSBase(
         alias=alias,
         compatibility_tag=tag,
         environment=environment,
@@ -178,9 +179,9 @@ def test_setup(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
         stdout=dedent(
             f"""\
-            NAME="Ubuntu"
-            ID=ubuntu
-            ID_LIKE=debian
+            NAME="CentOS Linux"
+            ID="centos"
+            ID_LIKE="rhel fedora"
             VERSION_ID="{alias.value}"
             """
         ),
@@ -205,64 +206,43 @@ def test_setup(
         ]
     )
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "systemd-resolved"]
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "systemctl", "restart", "systemd-resolved"]
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "systemd-networkd"]
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "systemctl", "restart", "systemd-networkd"]
-    )
-    fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "getent", "hosts", "snapcraft.io"]
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
         stdout=dedent(
             f"""\
-            NAME="Ubuntu"
-            ID=ubuntu
-            ID_LIKE=debian
+            NAME="CentOS Linux"
+            ID="centos"
+            ID_LIKE="rhel fedora"
             VERSION_ID="{alias.value}"
             VERSION_CODENAME="test-name"
             """
         ),
     )
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "sed", "-i", "s/test-name/devel/g", "/etc/apt/sources.list"]
-    )
-    fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "test", "-s", "/etc/cloud/cloud.cfg"]
     )
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "yum", "update", "-y"])
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
-            "sed",
-            "-i",
-            "$ aapt_preserve_sources_list: true",
-            "/etc/cloud/cloud.cfg",
+            "yum",
+            "install",
+            "-y",
+            "epel-release",
+            "centos-release-scl",
         ]
     )
     fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "find",
-            "/etc/apt/sources.list.d/",
-            "-type",
-            "f",
-            "-name",
-            "*.list",
-        ]
-    )
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y"] + expected_packages
+        [*DEFAULT_FAKE_CMD, "yum", "install", "-y", "rh-python38-python"]
     )
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "fuse", "udev"]
+        [*DEFAULT_FAKE_CMD, "yum", "install", "-y", "rh-python38-python", "grep", "git"]
+    )
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "yum", "update"])
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "yum", "install", "-y"] + expected_packages
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "enable", "systemd-udevd"]
@@ -275,10 +255,13 @@ def test_setup(
             [*DEFAULT_FAKE_CMD, "mkdir", "-p", "/etc/systemd/system/snapd.service.d"]
         )
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "snapd"]
+        [*DEFAULT_FAKE_CMD, "yum", "install", "-y", "snapd"]
     )
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "systemctl", "start", "snapd.socket"]
+        [*DEFAULT_FAKE_CMD, "ln", "-sf", "/var/lib/snapd/snap", "/snap"]
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "--now", "snapd.socket"]
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "restart", "snapd.service"]
@@ -322,18 +305,6 @@ def test_setup(
             "user": "root",
         },
         {
-            "destination": "/etc/apt/apt.conf.d/20auto-upgrades",
-            "content": dedent(
-                """\
-                APT::Periodic::Update-Package-Lists "10000";
-                APT::Periodic::Unattended-Upgrade "0";
-                """
-            ).encode(),
-            "file_mode": "0644",
-            "group": "root",
-            "user": "root",
-        },
-        {
             "destination": "/etc/environment",
             "content": etc_environment_content,
             "file_mode": "0644",
@@ -350,40 +321,6 @@ def test_setup(
         {
             "destination": "/etc/hostname",
             "content": b"test-hostname\n",
-            "file_mode": "0644",
-            "group": "root",
-            "user": "root",
-        },
-        {
-            "destination": "/etc/systemd/network/10-eth0.network",
-            "content": dedent(
-                """\
-                [Match]
-                Name=eth0
-
-                [Network]
-                DHCP=ipv4
-                LinkLocalAddressing=ipv6
-
-                [DHCP]
-                RouteMetric=100
-                UseMTU=true
-                """
-            ).encode(),
-            "file_mode": "0644",
-            "group": "root",
-            "user": "root",
-        },
-        {
-            "destination": "/etc/apt/apt.conf.d/00no-recommends",
-            "content": b'APT::Install-Recommends "false";\n',
-            "file_mode": "0644",
-            "group": "root",
-            "user": "root",
-        },
-        {
-            "destination": "/etc/apt/apt.conf.d/00update-errors",
-            "content": b'APT::Update::Error-Mode "any";\n',
             "file_mode": "0644",
             "group": "root",
             "user": "root",
@@ -411,6 +348,17 @@ def test_setup(
     assert mock_install_from_store.mock_calls == expected_snap_call
 
 
+def test_snaps_no_channel_raises_errors(fake_executor):
+    """Verify the Snap model raises an error when the channel is an empty string."""
+    with pytest.raises(BaseConfigurationError) as exc_info:
+        Snap(name="snap1", channel="")
+
+    assert exc_info.value == BaseConfigurationError(
+        brief="channel cannot be empty",
+        resolution="set channel to a non-empty string or `None`",
+    )
+
+
 def test_install_snaps_install_from_store(fake_executor, mock_install_from_store):
     """Verify installing snaps calls install_from_store()."""
     my_snaps = [
@@ -418,7 +366,7 @@ def test_install_snaps_install_from_store(fake_executor, mock_install_from_store
         Snap(name="snap2", channel="edge"),
         Snap(name="snap3", channel="edge", classic=True),
     ]
-    base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, snaps=my_snaps)
+    base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN, snaps=my_snaps)
 
     base._install_snaps(executor=fake_executor, deadline=None)
 
@@ -440,7 +388,7 @@ def test_install_snaps_inject_from_host_valid(
         Snap(name="snap1", channel=None),
         Snap(name="snap2", channel=None, classic=True),
     ]
-    base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, snaps=my_snaps)
+    base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN, snaps=my_snaps)
 
     base._install_snaps(executor=fake_executor, deadline=None)
 
@@ -455,7 +403,7 @@ def test_install_snaps_inject_from_host_not_linux_error(fake_executor, mocker):
     a non-linux system."""
     mocker.patch("sys.platform", return_value="darwin")
     my_snaps = [Snap(name="snap1", channel=None)]
-    base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, snaps=my_snaps)
+    base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN, snaps=my_snaps)
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         base._install_snaps(executor=fake_executor, deadline=None)
@@ -473,7 +421,7 @@ def test_install_snaps_install_from_store_error(fake_executor, mocker):
         side_effect=SnapInstallationError(brief="test error"),
     )
     my_snaps = [Snap(name="snap1", channel="candidate")]
-    base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, snaps=my_snaps)
+    base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN, snaps=my_snaps)
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         base._install_snaps(executor=fake_executor, deadline=None)
@@ -494,7 +442,7 @@ def test_install_snaps_inject_from_host_error(fake_executor, mocker):
         side_effect=SnapInstallationError(brief="test error"),
     )
     my_snaps = [Snap(name="snap1", channel=None)]
-    base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, snaps=my_snaps)
+    base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN, snaps=my_snaps)
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         base._install_snaps(executor=fake_executor, deadline=None)
@@ -504,94 +452,83 @@ def test_install_snaps_inject_from_host_error(fake_executor, mocker):
     )
 
 
-def test_setup_apt(fake_executor, fake_process):
-    """Verify packages are installed as expected."""
-    packages = ["grep", "git"]
-    base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, packages=packages)
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
+def test_setup_os_extra_repos(fake_executor, fake_process):
+    base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
-            "apt-get",
+            "yum",
             "install",
             "-y",
-            "apt-utils",
-            "curl",
+            "epel-release",
+            "centos-release-scl",
+        ],
+    )
+
+    base._setup_os_extra_repos(executor=fake_executor, deadline=None)
+
+
+def test_setup_yum(fake_executor, fake_process):
+    """Verify packages are installed as expected."""
+    packages = ["grep", "git"]
+    base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN, packages=packages)
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "yum",
+            "update",
+            "-y",
+        ]
+    )
+
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "yum",
+            "install",
+            "-y",
+            "rh-python38-python",
             "grep",
             "git",
         ]
     )
 
-    base._setup_apt(executor=fake_executor, deadline=None)
+    base._setup_yum(executor=fake_executor, deadline=None)
 
 
-def test_setup_apt_install_default(fake_executor, fake_process):
+def test_setup_yum_install_default(fake_executor, fake_process):
     """Verify only default packages are installed."""
-    base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
+    base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "yum", "update", "-y"])
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "apt-utils", "curl"]
+        [*DEFAULT_FAKE_CMD, "yum", "install", "-y", "rh-python38-python"]
     )
 
-    base._setup_apt(executor=fake_executor, deadline=None)
+    base._setup_yum(executor=fake_executor, deadline=None)
 
 
-def test_setup_apt_install_packages_update_error(mocker, fake_executor):
-    """Verify error is caught from `apt-get update` call."""
+def test_setup_yum_install_packages_install_error(mocker, fake_executor, fake_process):
+    """Verify error is caught from `yum install` call."""
     error = subprocess.CalledProcessError(100, ["error"])
-    base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
-    mocker.patch.object(fake_executor, "execute_run", side_effect=error)
-
-    with pytest.raises(BaseConfigurationError) as exc_info:
-        base._setup_apt(executor=fake_executor, deadline=None)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to update apt cache.",
-        details="* Command that failed: 'error'\n* Command exit code: 100",
-    )
-
-
-def test_setup_apt_install_packages_install_error(mocker, fake_executor):
-    """Verify error is caught from `apt-get install` call."""
-    error = subprocess.CalledProcessError(100, ["error"])
-    base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
 
     side_effects = [
-        None,  # apt-get update, just pass
-        error,  # make apt-get install fail
+        error,  # make yum install fail
         subprocess.CompletedProcess("args", returncode=0),  # network connectivity check
     ]
     mocker.patch.object(fake_executor, "execute_run", side_effect=side_effects)
 
     with pytest.raises(BaseConfigurationError) as exc_info:
-        base._setup_apt(executor=fake_executor, deadline=None)
+        base._setup_yum(executor=fake_executor, deadline=None)
 
     assert exc_info.value == BaseConfigurationError(
-        brief="Failed to install packages.",
+        brief="Failed to update system using yum.",
         details="* Command that failed: 'error'\n* Command exit code: 100",
     )
 
 
-def test_setup_apt_devel(fake_executor, fake_process, mocker):
-    """Verify `update_apt_sources()` is called for devel bases."""
-    mock_update_apt_sources = mocker.patch.object(
-        ubuntu.BuilddBase, "_update_apt_sources"
-    )
-
-    base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.DEVEL)
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "apt-utils", "curl"]
-    )
-
-    base._setup_apt(executor=fake_executor, deadline=None)
-
-    mock_update_apt_sources.assert_called_once()
-
-
 def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
     monkeypatch.setattr(
         InstanceConfiguration,
         "load",
@@ -604,13 +541,13 @@ def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
         )
 
     assert exc_info.value == BaseCompatibilityError(
-        "Expected image compatibility tag 'buildd-base-v1', found 'invalid-tag'"
+        "Expected image compatibility tag 'centos-base-v1', found 'invalid-tag'"
     )
 
 
 @patch("time.time", side_effect=[0.0, 1.0])
 def test_setup_timeout(fake_executor, fake_process, monkeypatch, mock_load):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
     fake_process.register_subprocess([fake_process.any()])
 
     with pytest.raises(BaseConfigurationError) as exc_info:
@@ -623,54 +560,45 @@ def test_setup_timeout(fake_executor, fake_process, monkeypatch, mock_load):
 
 def test_get_os_release(fake_process, fake_executor):
     """`_get_os_release` should parse data from `/etc/os-release` to a dict."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
-        stdout="NAME=Ubuntu\nVERSION_ID=12.04\n",
+        stdout='NAME="CentOS Linux"\nVERSION="7 (Core)"\nID="centos"\n'
+        'ID_LIKE="rhel fedora"\nVERSION_ID="7"\n',
     )
 
     result = base_config._get_os_release(executor=fake_executor, deadline=None)
 
-    assert result == {"NAME": "Ubuntu", "VERSION_ID": "12.04"}
+    assert result == {
+        "NAME": "CentOS Linux",
+        "ID": "centos",
+        "VERSION": "7 (Core)",
+        "VERSION_ID": "7",
+        "ID_LIKE": "rhel fedora",
+    }
 
 
 def test_ensure_os_compatible(fake_executor, fake_process, mock_get_os_release):
     """Do nothing if the OS is compatible."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
 
     base_config._ensure_os_compatible(executor=fake_executor, deadline=None)
 
     mock_get_os_release.assert_called_once()
-
-
-def test_ensure_os_compatible_devel_mismatch(
-    fake_executor, fake_process, logs, mock_get_os_release
-):
-    """Ignore OS version id mismatch when using a devel base."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.DEVEL)
-
-    base_config._ensure_os_compatible(executor=fake_executor, deadline=None)
-
-    mock_get_os_release.assert_called_once()
-
-    assert (
-        "Ignoring OS version mismatch for '22.04' because base is 'devel'."
-        in logs.debug
-    )
 
 
 def test_ensure_os_compatible_name_failure(
     fake_executor, fake_process, mock_get_os_release
 ):
     """Raise an error if the OS name does not match."""
-    mock_get_os_release.return_value = {"NAME": "Fedora", "VERSION_ID": "32"}
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    mock_get_os_release.return_value = {"ID": "ubuntu", "VERSION_ID": "22.04"}
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
 
     with pytest.raises(BaseCompatibilityError) as exc_info:
         base_config._ensure_os_compatible(executor=fake_executor, deadline=None)
 
     assert exc_info.value == BaseCompatibilityError(
-        "Expected OS 'Ubuntu', found 'Fedora'"
+        "Expected OS 'centos', found 'ubuntu'"
     )
 
     mock_get_os_release.assert_called_once()
@@ -680,21 +608,21 @@ def test_ensure_os_compatible_version_failure(
     fake_executor, fake_process, mock_get_os_release
 ):
     """Raise an error if the OS version id does not match."""
-    mock_get_os_release.return_value = {"NAME": "Ubuntu", "VERSION_ID": "12.04"}
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    mock_get_os_release.return_value = {"ID": "centos", "VERSION_ID": "8"}
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
 
     with pytest.raises(BaseCompatibilityError) as exc_info:
         base_config._ensure_os_compatible(executor=fake_executor, deadline=None)
 
     assert exc_info.value == BaseCompatibilityError(
-        "Expected OS version '20.04', found '12.04'"
+        "Expected OS version '7', found '8'"
     )
 
     mock_get_os_release.assert_called_once()
 
 
 def test_setup_hostname_failure(fake_process, fake_executor):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "hostname", "-F", "/etc/hostname"],
         returncode=-1,
@@ -711,110 +639,14 @@ def test_setup_hostname_failure(fake_process, fake_executor):
     )
 
 
-def test_setup_networkd_enable_failure(fake_process, fake_executor):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "systemd-networkd"],
-        returncode=-1,
-    )
-
-    with pytest.raises(BaseConfigurationError) as exc_info:
-        base_config._setup_networkd(executor=fake_executor, deadline=None)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to setup systemd-networkd.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
-
-
-def test_setup_networkd_restart_failure(fake_process, fake_executor):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "systemd-networkd"],
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "systemctl", "restart", "systemd-networkd"],
-        returncode=-1,
-    )
-
-    with pytest.raises(BaseConfigurationError) as exc_info:
-        base_config._setup_networkd(executor=fake_executor, deadline=None)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to setup systemd-networkd.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
-
-
-def test_setup_resolved_enable_failure(fake_process, fake_executor):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "ln",
-            "-sf",
-            "/run/systemd/resolve/resolv.conf",
-            "/etc/resolv.conf",
-        ],
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "systemd-resolved"],
-        returncode=-1,
-    )
-
-    with pytest.raises(BaseConfigurationError) as exc_info:
-        base_config._setup_resolved(executor=fake_executor, deadline=None)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to setup systemd-resolved.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
-
-
-def test_setup_resolved_restart_failure(fake_process, fake_executor):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "ln",
-            "-sf",
-            "/run/systemd/resolve/resolv.conf",
-            "/etc/resolv.conf",
-        ],
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "systemd-resolved"],
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "systemctl", "restart", "systemd-resolved"],
-        returncode=-1,
-    )
-
-    with pytest.raises(BaseConfigurationError) as exc_info:
-        base_config._setup_resolved(executor=fake_executor, deadline=None)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to setup systemd-resolved.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
-
-
 def test_setup_snapd_proxy(fake_executor, fake_process):
     """Verify snapd proxy is set or unset."""
     environment = {
         "http_proxy": "http://foo.bar:8080",
         "https_proxy": "http://foo.bar:8081",
     }
-    base_config = ubuntu.BuilddBase(
-        alias=ubuntu.BuilddBaseAlias.FOCAL,
+    base_config = centos.CentOSBase(
+        alias=centos.CentOSBaseAlias.SEVEN,
         environment=environment,  # type: ignore
     )
     fake_process.keep_last_process(True)
@@ -839,7 +671,7 @@ def test_setup_snapd_proxy(fake_executor, fake_process):
 
 @pytest.mark.parametrize("fail_index", list(range(0, 1)))
 def test_setup_snapd_proxy_failures(fake_process, fake_executor, fail_index):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
 
     return_codes = [0, 0]
     return_codes[fail_index] = 1
@@ -866,7 +698,7 @@ def test_setup_snapd_proxy_failures(fake_process, fake_executor, fail_index):
 
 @pytest.mark.parametrize("fail_index", list(range(0, 7)))
 def test_setup_snapd_failures(fake_process, fake_executor, fail_index):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
 
     return_codes = [0, 0, 0, 0, 0, 0, 0]
     return_codes[fail_index] = 1
@@ -879,23 +711,23 @@ def test_setup_snapd_failures(fake_process, fake_executor, fail_index):
     )
 
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "fuse", "udev"],
+        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "systemd-udevd"],
         returncode=return_codes[0],
     )
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "systemd-udevd"],
+        [*DEFAULT_FAKE_CMD, "systemctl", "start", "systemd-udevd"],
         returncode=return_codes[1],
     )
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "systemctl", "start", "systemd-udevd"],
+        [*DEFAULT_FAKE_CMD, "yum", "install", "-y", "snapd"],
         returncode=return_codes[2],
     )
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "snapd"],
+        [*DEFAULT_FAKE_CMD, "ln", "-sf", "/var/lib/snapd/snap", "/snap"],
         returncode=return_codes[3],
     )
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "systemctl", "start", "snapd.socket"],
+        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "--now", "snapd.socket"],
         returncode=return_codes[4],
     )
     fake_process.register_subprocess(
@@ -918,12 +750,12 @@ def test_setup_snapd_failures(fake_process, fake_executor, fail_index):
     )
 
 
-@pytest.mark.parametrize("alias", list(ubuntu.BuilddBaseAlias))
+@pytest.mark.parametrize("alias", list(centos.CentOSBaseAlias))
 @pytest.mark.parametrize("system_running_ready_stdout", ["degraded", "running"])
 def test_wait_for_system_ready(
     fake_executor, fake_process, alias, system_running_ready_stdout
 ):
-    base_config = ubuntu.BuilddBase(alias=alias)
+    base_config = centos.CentOSBase(alias=alias)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "is-system-running"],
         stdout="not-ready",
@@ -982,9 +814,9 @@ def test_wait_for_system_ready(
 
 
 @patch("time.time", side_effect=[0.0, 0.0, 1.0])
-@pytest.mark.parametrize("alias", list(ubuntu.BuilddBaseAlias))
+@pytest.mark.parametrize("alias", list(centos.CentOSBaseAlias))
 def test_wait_for_system_ready_timeout(fake_executor, fake_process, alias):
-    base_config = ubuntu.BuilddBase(
+    base_config = centos.CentOSBase(
         alias=alias,
     )
     fake_process.register_subprocess(
@@ -1006,11 +838,11 @@ def test_wait_for_system_ready_timeout(fake_executor, fake_process, alias):
 
 
 @patch("time.time", side_effect=[0.0, 0.0, 1.0])
-@pytest.mark.parametrize("alias", list(ubuntu.BuilddBaseAlias))
+@pytest.mark.parametrize("alias", list(centos.CentOSBaseAlias))
 def test_wait_for_system_ready_timeout_in_network(
     fake_executor, fake_process, alias, monkeypatch
 ):
-    base_config = ubuntu.BuilddBase(alias=alias)
+    base_config = centos.CentOSBase(alias=alias)
     monkeypatch.setattr(
         base_config, "_setup_wait_for_system_ready", lambda **kwargs: None
     )
@@ -1032,228 +864,10 @@ def test_wait_for_system_ready_timeout_in_network(
     )
 
 
-def test_update_apt_sources(fake_executor, fake_process, mock_get_os_release, logs):
-    """`update_apt_sources()` should update the apt source config files."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "sed",
-            "-i",
-            "s/jammy/test-codename/g",
-            "/etc/apt/sources.list",
-        ]
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "test", "-s", "/etc/cloud/cloud.cfg"]
-    )
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "sed",
-            "-i",
-            "$ aapt_preserve_sources_list: true",
-            "/etc/cloud/cloud.cfg",
-        ]
-    )
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "find",
-            "/etc/apt/sources.list.d/",
-            "-type",
-            "f",
-            "-name",
-            "*.list",
-        ],
-    )
-
-    base_config._update_apt_sources(
-        executor=fake_executor, deadline=None, codename="test-codename"
-    )
-
-    mock_get_os_release.assert_called_once()
-    assert Exact("Updating apt sources from 'jammy' to 'test-codename'.") in logs.debug
-    assert (
-        Exact("Updating '/etc/cloud/cloud.cfg' to preserve apt sources.") in logs.debug
-    )
-
-
-def test_update_apt_sources_dir(fake_executor, fake_process, mock_get_os_release):
-    """Verify source files in `/etc/apt/sources.list.d/` are updated."""
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "sed",
-            "-i",
-            "s/jammy/test-codename/g",
-            "/etc/apt/sources.list",
-        ]
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "test", "-s", "/etc/cloud/cloud.cfg"]
-    )
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "sed",
-            "-i",
-            "$ aapt_preserve_sources_list: true",
-            "/etc/cloud/cloud.cfg",
-        ]
-    )
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "find",
-            "/etc/apt/sources.list.d/",
-            "-type",
-            "f",
-            "-name",
-            "*.list",
-        ],
-        stdout="/etc/apt/sources.list.d/file1.list\n/etc/apt/sources.list.d/file2.list",
-    )
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "sed",
-            "-i",
-            "s/jammy/test-codename/g",
-            "/etc/apt/sources.list.d/*.list",
-        ]
-    )
-
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
-    base_config._update_apt_sources(
-        executor=fake_executor, deadline=None, codename="test-codename"
-    )
-
-    mock_get_os_release.assert_called_once()
-
-
-def test_update_apt_sources_source_list_sed_error(
-    fake_executor, fake_process, mock_get_os_release
-):
-    """Raise an error when the sed command fails to update apt sources."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
-    # fail on the first `sed` call
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "sed", fake_process.any()], returncode=1
-    )
-
-    with pytest.raises(BaseConfigurationError) as raised:
-        base_config._update_apt_sources(
-            executor=fake_executor, deadline=None, codename="test-codename"
-        )
-
-    assert raised.value.brief == "Failed to update '/etc/apt/sources.list'."
-
-
-def test_update_apt_sources_cloud_cfg_does_not_exist_error(
-    fake_executor, fake_process, mock_get_os_release
-):
-    """Raise an error when cloud.cfg is empty or does not exist."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
-    # fail on the `test` call
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "test", fake_process.any()], returncode=1
-    )
-
-    with pytest.raises(BaseConfigurationError) as raised:
-        base_config._update_apt_sources(
-            executor=fake_executor, deadline=None, codename="test-codename"
-        )
-
-    assert raised.value.brief == (
-        "Could not update '/etc/cloud/cloud.cfg' because it is empty or does not exist."
-    )
-
-
-def test_update_apt_sources_cloud_cfg_sed_error(
-    fake_executor, fake_process, mock_get_os_release
-):
-    """Raise an error when the sed command fails to update cloud.cfg."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
-    # fail on the second `sed` call
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "test", fake_process.any()])
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "sed", fake_process.any()], returncode=1
-    )
-
-    with pytest.raises(BaseConfigurationError) as raised:
-        base_config._update_apt_sources(
-            executor=fake_executor, deadline=None, codename="test-codename"
-        )
-
-    assert raised.value.brief == "Failed to update '/etc/cloud/cloud.cfg'."
-
-
-def test_update_apt_sources_find_error(
-    fake_executor, fake_process, mock_get_os_release
-):
-    """Raise an error when the find command fails to find apt source files."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "test", fake_process.any()])
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
-    # fail on the `find` call
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "find", fake_process.any()], returncode=1
-    )
-
-    with pytest.raises(BaseConfigurationError) as raised:
-        base_config._update_apt_sources(
-            executor=fake_executor, deadline=None, codename="test-codename"
-        )
-
-    assert (
-        raised.value.brief
-        == "Failed to find apt source files in '/etc/apt/sources.list.d/'."
-    )
-
-
-def test_update_apt_sources_dir_sed_error(
-    fake_executor, fake_process, mock_get_os_release
-):
-    """Raise an error when the sed command fails in the `sources.list.d` directory."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "test", fake_process.any()])
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "find", fake_process.any()],
-        stdout="test-output",
-    )
-    # fail on the third `sed` call
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "sed", fake_process.any()],
-        returncode=1,
-    )
-
-    with pytest.raises(BaseConfigurationError) as raised:
-        base_config._update_apt_sources(
-            executor=fake_executor, deadline=None, codename="test-codename"
-        )
-
-    assert (
-        raised.value.brief
-        == "Failed to update apt source files in '/etc/apt/sources.list.d/'."
-    )
-
-
 def test_update_compatibility_tag(fake_executor, mock_load):
     """`update_compatibility_tag()` should update the instance config."""
-    base_config = ubuntu.BuilddBase(
-        alias=ubuntu.BuilddBaseAlias.JAMMY, compatibility_tag="test-tag"
+    base_config = centos.CentOSBase(
+        alias=centos.CentOSBaseAlias.SEVEN, compatibility_tag="test-tag"
     )
 
     base_config._update_compatibility_tag(executor=fake_executor, deadline=None)
@@ -1272,7 +886,7 @@ def test_update_compatibility_tag(fake_executor, mock_load):
 @pytest.mark.parametrize("status", [True, False])
 def test_update_setup_status(fake_executor, mock_load, status):
     """`update_setup_status()` should update the instance config."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
 
     base_config._update_setup_status(
         executor=fake_executor,
@@ -1283,7 +897,7 @@ def test_update_setup_status(fake_executor, mock_load, status):
     assert fake_executor.records_of_push_file_io == [
         {
             "content": (
-                "compatibility_tag: buildd-base-v1\n"
+                "compatibility_tag: centos-base-v1\n"
                 f"setup: {str(status).lower()}\n".encode()
             ),
             "destination": "/etc/craft-instance.conf",
@@ -1297,7 +911,7 @@ def test_update_setup_status(fake_executor, mock_load, status):
 def test_ensure_config_compatible_validation_error(fake_executor, mock_load):
     mock_load.side_effect = ValidationError("foo", InstanceConfiguration)
 
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         base_config._ensure_instance_config_compatible(
@@ -1312,7 +926,7 @@ def test_ensure_config_compatible_validation_error(fake_executor, mock_load):
 def test_ensure_config_compatible_empty_config_returns_none(fake_executor, mock_load):
     mock_load.return_value = None
 
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
 
     assert (
         base_config._ensure_instance_config_compatible(
@@ -1326,7 +940,7 @@ def test_ensure_setup_completed(fake_executor, logs, mock_load):
     """Verify the setup was completed by checking the instance config file."""
     mock_load.return_value = InstanceConfiguration(setup=True)
 
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
 
     assert (
         base_config._ensure_setup_completed(executor=fake_executor, deadline=None)
@@ -1352,7 +966,7 @@ def test_ensure_setup_completed_load_error(
     """Raise an error when the instance config cannot be loaded."""
     mock_load.side_effect = error
 
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
 
     with pytest.raises(BaseCompatibilityError) as raised:
         base_config._ensure_setup_completed(executor=fake_executor, deadline=None)
@@ -1364,7 +978,7 @@ def test_ensure_setup_completed_empty_config(fake_executor, mock_load):
     """Raise an error if the instance config is empty."""
     mock_load.return_value = None
 
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
 
     with pytest.raises(BaseCompatibilityError) as raised:
         base_config._ensure_setup_completed(executor=fake_executor, deadline=None)
@@ -1377,7 +991,7 @@ def test_ensure_setup_completed_not_setup(status, fake_executor, mock_load):
     """Raise an error if the setup was not completed (setup field is None or False)."""
     mock_load.return_value = InstanceConfiguration(setup=status)
 
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
 
     with pytest.raises(BaseCompatibilityError) as raised:
         base_config._ensure_setup_completed(executor=fake_executor, deadline=None)
@@ -1397,27 +1011,27 @@ def test_ensure_setup_completed_not_setup(status, fake_executor, mock_load):
 )
 def test_warmup_overall(environment, fake_process, fake_executor, mock_load, mocker):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v1", setup=True
+        compatibility_tag="centos-base-v1", setup=True
     )
-    mock_datetime = mocker.patch("craft_providers.bases.ubuntu.datetime")
+    mock_datetime = mocker.patch("craft_providers.bases.centos.datetime")
     mock_datetime.now.return_value = datetime(2022, 1, 2, 3, 4, 5, 6)
     # expected datetime will be 24 hours after the current time
     expected_datetime = "2022-01-03T03:04:05.000006"
 
-    alias = ubuntu.BuilddBaseAlias.JAMMY
+    alias = centos.CentOSBaseAlias.SEVEN
 
     if environment is None:
-        environment = ubuntu.BuilddBase.default_command_environment()
+        environment = centos.CentOSBase.default_command_environment()
 
-    base_config = ubuntu.BuilddBase(alias=alias, environment=environment)
+    base_config = centos.CentOSBase(alias=alias, environment=environment)
 
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
         stdout=dedent(
             f"""\
-            NAME="Ubuntu"
-            ID=ubuntu
-            ID_LIKE=debian
+            NAME="CentOS Linux"
+            ID="centos"
+            ID_LIKE="rhel fedora"
             VERSION_ID="{alias.value}"
             """
         ),
@@ -1462,11 +1076,11 @@ def test_warmup_overall(environment, fake_process, fake_executor, mock_load, moc
 
 def test_warmup_bad_os(fake_process, fake_executor, mock_load):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v1", setup=True
+        compatibility_tag="centos-base-v1", setup=True
     )
-    base_config = ubuntu.BuilddBase(
-        alias=ubuntu.BuilddBaseAlias.JAMMY,
-        environment=ubuntu.BuilddBase.default_command_environment(),
+    base_config = centos.CentOSBase(
+        alias=centos.CentOSBaseAlias.SEVEN,
+        environment=centos.CentOSBase.default_command_environment(),
     )
 
     fake_process.register_subprocess(
@@ -1487,12 +1101,12 @@ def test_warmup_bad_os(fake_process, fake_executor, mock_load):
 
 def test_warmup_bad_instance_config(fake_process, fake_executor, mock_load):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v1", setup=True
+        compatibility_tag="centos-base-v1", setup=True
     )
-    alias = ubuntu.BuilddBaseAlias.JAMMY
-    base_config = ubuntu.BuilddBase(
+    alias = centos.CentOSBaseAlias.SEVEN
+    base_config = centos.CentOSBase(
         alias=alias,
-        environment=ubuntu.BuilddBase.default_command_environment(),
+        environment=centos.CentOSBase.default_command_environment(),
     )
     base_config.compatibility_tag = "different-tag"
 
@@ -1500,9 +1114,9 @@ def test_warmup_bad_instance_config(fake_process, fake_executor, mock_load):
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
         stdout=dedent(
             f"""\
-            NAME="Ubuntu"
-            ID=ubuntu
-            ID_LIKE=debian
+            NAME="CentOS Linux"
+            ID="centos"
+            ID_LIKE="rhel fedora"
             VERSION_ID="{alias.value}"
             """
         ),
@@ -1516,21 +1130,21 @@ def test_warmup_bad_instance_config(fake_process, fake_executor, mock_load):
 def test_warmup_not_setup(setup, fake_process, fake_executor, mock_load):
     """Raise a BaseConfigurationError if the instance is not setup."""
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v1", setup=setup
+        compatibility_tag="centos-base-v1", setup=setup
     )
-    alias = ubuntu.BuilddBaseAlias.JAMMY
-    base_config = ubuntu.BuilddBase(
+    alias = centos.CentOSBaseAlias.SEVEN
+    base_config = centos.CentOSBase(
         alias=alias,
-        environment=ubuntu.BuilddBase.default_command_environment(),
+        environment=centos.CentOSBase.default_command_environment(),
     )
 
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
         stdout=dedent(
             f"""\
-            NAME="Ubuntu"
-            ID=ubuntu
-            ID_LIKE=debian
+            NAME="CentOS Linux"
+            ID="centos"
+            ID_LIKE="rhel fedora"
             VERSION_ID="{alias.value}"
             """
         ),
@@ -1544,21 +1158,21 @@ def test_warmup_not_setup(setup, fake_process, fake_executor, mock_load):
 
 def test_warmup_never_ready(fake_process, fake_executor, mock_load):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v1", setup=True
+        compatibility_tag="centos-base-v1", setup=True
     )
-    alias = ubuntu.BuilddBaseAlias.JAMMY
-    base_config = ubuntu.BuilddBase(
+    alias = centos.CentOSBaseAlias.SEVEN
+    base_config = centos.CentOSBase(
         alias=alias,
-        environment=ubuntu.BuilddBase.default_command_environment(),
+        environment=centos.CentOSBase.default_command_environment(),
     )
 
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
         stdout=dedent(
             f"""\
-            NAME="Ubuntu"
-            ID=ubuntu
-            ID_LIKE=debian
+            NAME="CentOS Linux"
+            ID="centos"
+            ID_LIKE="rhel fedora"
             VERSION_ID="{alias.value}"
             """
         ),
@@ -1575,21 +1189,21 @@ def test_warmup_never_ready(fake_process, fake_executor, mock_load):
 
 def test_warmup_never_network(fake_process, fake_executor, mock_load):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v1", setup=True
+        compatibility_tag="centos-base-v1", setup=True
     )
-    alias = ubuntu.BuilddBaseAlias.JAMMY
-    base_config = ubuntu.BuilddBase(
+    alias = centos.CentOSBaseAlias.SEVEN
+    base_config = centos.CentOSBase(
         alias=alias,
-        environment=ubuntu.BuilddBase.default_command_environment(),
+        environment=centos.CentOSBase.default_command_environment(),
     )
 
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
         stdout=dedent(
             f"""\
-            NAME="Ubuntu"
-            ID=ubuntu
-            ID_LIKE=debian
+            NAME="CentOS Linux"
+            ID="centos"
+            ID_LIKE="rhel fedora"
             VERSION_ID="{alias.value}"
             """
         ),
@@ -1620,8 +1234,8 @@ def test_warmup_never_network(fake_process, fake_executor, mock_load):
 )
 def test_set_hostname_unchanged(hostname, logs):
     """Verify hostnames that are already compliant are not changed."""
-    base_config = ubuntu.BuilddBase(
-        alias=ubuntu.BuilddBaseAlias.JAMMY,
+    base_config = centos.CentOSBase(
+        alias=centos.CentOSBaseAlias.SEVEN,
         hostname=hostname,
     )
 
@@ -1668,8 +1282,8 @@ def test_set_hostname_unchanged(hostname, logs):
 )
 def test_set_hostname(hostname, expected_hostname, logs):
     """Verify hostname is compliant with hostname naming conventions."""
-    base_config = ubuntu.BuilddBase(
-        alias=ubuntu.BuilddBaseAlias.JAMMY,
+    base_config = centos.CentOSBase(
+        alias=centos.CentOSBaseAlias.SEVEN,
         hostname=hostname,
     )
 
@@ -1689,7 +1303,7 @@ def test_set_hostname(hostname, expected_hostname, logs):
 def test_set_hostname_invalid(hostname):
     """Verify invalid hostnames raise an error."""
     with pytest.raises(BaseConfigurationError) as error:
-        ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, hostname=hostname)
+        centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN, hostname=hostname)
 
     assert error.value == BaseConfigurationError(
         brief=f"failed to create base with hostname {hostname!r}.",
@@ -1701,7 +1315,7 @@ def test_execute_run_default(fake_executor):
     """Default _execute_run behaviour."""
     command = ["the", "command"]
     with patch.object(fake_executor, "execute_run") as mock:
-        ubuntu.BuilddBase._execute_run(fake_executor, command)
+        centos.CentOSBase._execute_run(fake_executor, command)
 
     mock.assert_called_with(command, check=True, capture_output=True, text=False)
 
@@ -1710,7 +1324,7 @@ def test_execute_run_options_for_run(fake_executor):
     """Different options to control how run is called."""
     command = ["the", "command"]
     with patch.object(fake_executor, "execute_run") as mock:
-        ubuntu.BuilddBase._execute_run(
+        centos.CentOSBase._execute_run(
             fake_executor, command, check=False, capture_output=False, text=True
         )
 
@@ -1725,7 +1339,7 @@ def test_execute_run_command_failed_no_verify_network(fake_process, fake_executo
     # we know that network is not verified because otherwise we'll get
     # a ProcessNotRegisteredError for the verification process
     with pytest.raises(subprocess.CalledProcessError):
-        ubuntu.BuilddBase._execute_run(fake_executor, command)
+        centos.CentOSBase._execute_run(fake_executor, command)
 
 
 @pytest.mark.parametrize("proxy_variable_name", ["HTTPS_PROXY", "https_proxy"])
@@ -1741,7 +1355,7 @@ def test_execute_run_command_failed_verify_network_proxy(
     # we know that network is not verified because otherwise we'll get
     # a ProcessNotRegisteredError for the verification process
     with pytest.raises(subprocess.CalledProcessError):
-        ubuntu.BuilddBase._execute_run(fake_executor, command, verify_network=True)
+        centos.CentOSBase._execute_run(fake_executor, command, verify_network=True)
 
 
 def test_execute_run_verify_network_run_ok(fake_process, fake_executor):
@@ -1751,7 +1365,7 @@ def test_execute_run_verify_network_run_ok(fake_process, fake_executor):
 
     # we know that network is not verified because otherwise we'll get
     # a ProcessNotRegisteredError for the verification process
-    proc = ubuntu.BuilddBase._execute_run(fake_executor, command, verify_network=True)
+    proc = centos.CentOSBase._execute_run(fake_executor, command, verify_network=True)
     assert proc.returncode == 0
 
 
@@ -1766,7 +1380,7 @@ def test_execute_run_verify_network_connectivity_ok(fake_process, fake_executor)
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=1)
 
     with pytest.raises(subprocess.CalledProcessError):
-        ubuntu.BuilddBase._execute_run(fake_executor, command, verify_network=True)
+        centos.CentOSBase._execute_run(fake_executor, command, verify_network=True)
 
 
 def test_execute_run_verify_network_connectivity_missing(fake_process, fake_executor):
@@ -1780,14 +1394,14 @@ def test_execute_run_verify_network_connectivity_missing(fake_process, fake_exec
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=1)
 
     with pytest.raises(NetworkError) as exc_info:
-        ubuntu.BuilddBase._execute_run(fake_executor, command, verify_network=True)
+        centos.CentOSBase._execute_run(fake_executor, command, verify_network=True)
     assert isinstance(exc_info.value.__cause__, subprocess.CalledProcessError)
 
 
 def test_execute_run_bad_check_verifynetwork_combination(fake_executor):
     """Cannot ask for network verification and avoid checking."""
     with pytest.raises(RuntimeError):
-        ubuntu.BuilddBase._execute_run(
+        centos.CentOSBase._execute_run(
             fake_executor, ["cmd"], check=False, verify_network=True
         )
 
@@ -1798,7 +1412,7 @@ def test_network_connectivity_yes(fake_executor, fake_process):
         [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
         returncode=0,
     )
-    assert ubuntu.BuilddBase._network_connected(fake_executor) is True
+    assert centos.CentOSBase._network_connected(fake_executor) is True
 
 
 def test_network_connectivity_no(fake_executor, fake_process):
@@ -1807,7 +1421,7 @@ def test_network_connectivity_no(fake_executor, fake_process):
         [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
         returncode=1,
     )
-    assert ubuntu.BuilddBase._network_connected(fake_executor) is False
+    assert centos.CentOSBase._network_connected(fake_executor) is False
 
 
 def test_network_connectivity_timeouts(fake_executor, fake_process):
@@ -1821,13 +1435,13 @@ def test_network_connectivity_timeouts(fake_executor, fake_process):
     with patch.object(
         fake_executor, "execute_run", side_effect=timeout_expired
     ) as mock:
-        assert ubuntu.BuilddBase._network_connected(fake_executor) is False
+        assert centos.CentOSBase._network_connected(fake_executor) is False
     mock.assert_called_with(cmd, check=False, capture_output=True, timeout=1)
 
 
 def test_disable_and_wait_for_snap_refresh_hold_error(fake_process, fake_executor):
     """Raise BaseConfigurationError when the command to hold snap refreshes fails."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "set", "system", fake_process.any()],
         returncode=-1,
@@ -1849,7 +1463,7 @@ def test_disable_and_wait_for_snap_refresh_hold_error(fake_process, fake_executo
 
 def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executor):
     """Raise BaseConfigurationError when the `snap watch` command fails."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "set", "system", fake_process.any()],
     )
