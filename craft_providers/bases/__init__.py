@@ -25,6 +25,7 @@ from typing import Dict, Tuple, Type
 from craft_providers.errors import BaseCompatibilityError, BaseConfigurationError
 
 from ..base import Base
+from . import centos
 from . import ubuntu
 from . import ubuntu as buildd
 from .ubuntu import BuilddBase, BuilddBaseAlias
@@ -32,6 +33,8 @@ from .ubuntu import BuilddBase, BuilddBaseAlias
 sys.modules["craft_providers.bases.buildd"] = buildd
 
 __all__ = [
+    "ubuntu",
+    "centos",
     "BuilddBase",
     "BuilddBaseAlias",
     "BaseCompatibilityError",
@@ -46,6 +49,7 @@ BASE_NAME_TO_BASE_ALIAS: Dict[Tuple[str, str], Enum] = {
     ("ubuntu", "22.10"): ubuntu.BuilddBaseAlias.KINETIC,
     ("ubuntu", "23.04"): ubuntu.BuilddBaseAlias.LUNAR,
     ("ubuntu", "devel"): ubuntu.BuilddBaseAlias.DEVEL,
+    ("centos", "7"): centos.CentOSBaseAlias.SEVEN,
 }
 
 
