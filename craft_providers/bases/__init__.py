@@ -70,4 +70,7 @@ def get_base_from_alias(
     if isinstance(alias, ubuntu.BuilddBaseAlias):
         return ubuntu.BuilddBase
 
+    if isinstance(alias, centos.CentOSBaseAlias):
+        return centos.CentOSBase
+
     raise BaseConfigurationError(f"Base not found for alias {alias}")
