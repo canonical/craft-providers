@@ -17,11 +17,13 @@
 
 """Base configuration module."""
 
+import enum
 import logging
 import os
 import subprocess
 import time
 from abc import ABC, abstractmethod
+from enum import Enum
 from typing import Dict, List, Optional
 
 from craft_providers.errors import BaseConfigurationError, NetworkError
@@ -57,6 +59,20 @@ class Base(ABC):
     """
 
     compatibility_tag: str = "base-v1"
+    alias: Enum
+
+    @abstractmethod
+    def __init__(
+        self,
+        *,
+        alias: enum.Enum,
+        compatibility_tag: Optional[str] = None,
+        environment: Optional[Dict[str, Optional[str]]] = None,
+        hostname: str = "craft-instance",
+        snaps: Optional[List] = None,
+        packages: Optional[List[str]] = None,
+    ):
+        pass
 
     @abstractmethod
     def get_command_environment(

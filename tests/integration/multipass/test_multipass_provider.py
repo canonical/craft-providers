@@ -64,7 +64,6 @@ def test_launched_environment(alias, installed_multipass, instance_name, tmp_pat
         project_name="test-multipass-project",
         project_path=tmp_path,
         base_configuration=base_configuration,
-        build_base=alias.value,
         instance_name=instance_name,
         allow_unstable=True,
     ) as test_instance:

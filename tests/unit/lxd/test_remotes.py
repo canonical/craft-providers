@@ -22,6 +22,7 @@ import pytest
 
 from craft_providers import lxd
 from craft_providers.bases import ubuntu
+from craft_providers.errors import BaseConfigurationError
 from craft_providers.lxd import remotes
 
 
@@ -140,19 +141,40 @@ def test_add_remote_race_condition_error(fake_remote_image, mock_lxc, logs):
 
 
 @pytest.mark.parametrize(
-    "provider_base, image_name",
+    "provider_base_alias, image_name",
     [
-        (ubuntu.BuilddBaseAlias.BIONIC.value, "core18"),
-        (ubuntu.BuilddBaseAlias.FOCAL.value, "core20"),
-        (ubuntu.BuilddBaseAlias.JAMMY.value, "core22"),
-        (ubuntu.BuilddBaseAlias.KINETIC.value, "kinetic"),
-        (ubuntu.BuilddBaseAlias.LUNAR.value, "lunar"),
-        (ubuntu.BuilddBaseAlias.DEVEL.value, "devel"),
+        (ubuntu.BuilddBaseAlias.BIONIC, "core18"),
+        (ubuntu.BuilddBaseAlias.FOCAL, "core20"),
+        (ubuntu.BuilddBaseAlias.JAMMY, "core22"),
+        (ubuntu.BuilddBaseAlias.KINETIC, "kinetic"),
+        (ubuntu.BuilddBaseAlias.LUNAR, "lunar"),
+        (ubuntu.BuilddBaseAlias.DEVEL, "devel"),
     ],
 )
-def test_get_image_remote(provider_base, image_name):
+def test_get_image_remote(provider_base_alias, image_name):
     """Verify `get_remote_image()` returns a RemoteImage."""
-    remote_image = lxd.remotes.get_remote_image(provider_base)
+    base = ubuntu.BuilddBase(alias=provider_base_alias)
+    remote_image = lxd.remotes.get_remote_image(base)
+
+    assert remote_image.image_name == image_name
+
+
+@pytest.mark.parametrize(
+    "provider_base_alias, image_name",
+    [
+        (ubuntu.BuilddBaseAlias.BIONIC, "core18"),
+        (ubuntu.BuilddBaseAlias.FOCAL, "core20"),
+        (ubuntu.BuilddBaseAlias.JAMMY, "core22"),
+        (ubuntu.BuilddBaseAlias.KINETIC, "kinetic"),
+        (ubuntu.BuilddBaseAlias.LUNAR, "lunar"),
+        (ubuntu.BuilddBaseAlias.DEVEL, "devel"),
+    ],
+)
+def test_get_image_remote_deprecated(provider_base_alias, image_name):
+    """Verify `get_remote_image()` returns a RemoteImage.
+    temporary backward compatibility before 2.0
+    """
+    remote_image = lxd.remotes.get_remote_image(str(provider_base_alias.value))
 
     assert remote_image.image_name == image_name
 
@@ -163,22 +185,32 @@ def test_get_image_remote_xenial_error():
     The remote image for Xenial has not been chosen for craft-providers + LXD, so an
     error is raised.
     """
+    base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.XENIAL)
     with pytest.raises(lxd.LXDError) as raised:
-        lxd.remotes.get_remote_image(ubuntu.BuilddBaseAlias.XENIAL.value)
+        lxd.remotes.get_remote_image(base)
 
-    assert str(raised.value) == (
-        "could not find a lxd remote image for the provider base '16.04'"
+    assert "could not find a lxd remote image for the provider base " in str(
+        raised.value
     )
 
 
 def test_get_image_remote_error():
     """Raise an error for an unknown provider base."""
+    base = ubuntu.BuilddBase(alias=-1)  # type: ignore
     with pytest.raises(lxd.LXDError) as raised:
-        lxd.remotes.get_remote_image("unknown-base")
+        lxd.remotes.get_remote_image(base)
 
-    assert str(raised.value) == (
-        "could not find a lxd remote image for the provider base 'unknown-base'"
+    assert "could not find a lxd remote image for the provider base " in str(
+        raised.value
     )
+
+
+def test_get_image_remote_deprecated_error():
+    """Raise an error for an unknown provider base."""
+    with pytest.raises(BaseConfigurationError) as raised:
+        lxd.remotes.get_remote_image("8.04")
+
+    assert "Base alias not found for ('ubuntu', '8.04')" == str(raised.value)
 
 
 def test_configure_buildd_image_remote(
@@ -193,6 +225,6 @@ def test_configure_buildd_image_remote(
         "configure_buildd_image_remote() is deprecated. "
         "Use configure_image_remote()."
     )
-    mock_get_remote_image.assert_called_once_with(ubuntu.BuilddBaseAlias.JAMMY.value)
+    mock_get_remote_image.assert_called_once()
     mock_remote_image.add_remote.assert_called_once_with(mock_lxc)
     assert name == remotes.BUILDD_RELEASES_REMOTE_NAME

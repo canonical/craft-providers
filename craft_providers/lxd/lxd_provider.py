@@ -20,7 +20,7 @@ import contextlib
 import logging
 import pathlib
 from datetime import timedelta
-from typing import Generator
+from typing import Generator, Optional
 
 from craft_providers import Executor, Provider
 from craft_providers.base import Base
@@ -97,7 +97,7 @@ class LXDProvider(Provider):
         project_name: str,
         project_path: pathlib.Path,
         base_configuration: Base,
-        build_base: str,
+        build_base: Optional[str] = None,
         instance_name: str,
         allow_unstable: bool = False,
     ) -> Generator[Executor, None, None]:
@@ -110,13 +110,20 @@ class LXDProvider(Provider):
         :param project_name: Name of project.
         :param project_path: Path to project.
         :param base_configuration: Base configuration to apply to instance.
-        :param build_base: Base to build from.
+        :param build_base: Base to build from. (Deprecated)
         :param instance_name: Name of the instance to launch.
         :param allow_unstable: If true, allow unstable images to be launched.
 
         :raises LXDError: if instance cannot be configured and launched.
         """
-        image = get_remote_image(build_base)
+        if build_base:
+            logger.warning(
+                "Deprecated: Parameter 'build_base' is deprecated and should "
+                "not be used. The build base now comes from the "
+                "base_configuration's alias."
+            )
+
+        image = get_remote_image(base_configuration)
         image.add_remote(lxc=self.lxc)
 
         # only allow launching unstable images when opted-in with `allow_unstable`

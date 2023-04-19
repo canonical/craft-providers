@@ -21,9 +21,9 @@ import logging
 import pathlib
 from dataclasses import dataclass
 from enum import Enum
-from typing import Generator
+from typing import Dict, Generator, Optional
 
-from craft_providers import Executor, Provider, base
+from craft_providers import Base, Executor, Provider, base
 from craft_providers.bases import ubuntu
 from craft_providers.errors import BaseConfigurationError
 
@@ -86,30 +86,26 @@ class RemoteImage:
 
 
 # mapping of Provider bases to Multipass remote images
-_BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE = {
-    ubuntu.BuilddBaseAlias.BIONIC.value: RemoteImage(
+_BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
+    ubuntu.BuilddBaseAlias.BIONIC: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="18.04"
     ),
-    ubuntu.BuilddBaseAlias.FOCAL.value: RemoteImage(
+    ubuntu.BuilddBaseAlias.FOCAL: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="20.04"
     ),
-    ubuntu.BuilddBaseAlias.JAMMY.value: RemoteImage(
+    ubuntu.BuilddBaseAlias.JAMMY: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="22.04"
     ),
-    ubuntu.BuilddBaseAlias.KINETIC.value: RemoteImage(
+    ubuntu.BuilddBaseAlias.KINETIC: RemoteImage(
         remote=Remote.RELEASE, image_name="kinetic"
     ),
-    ubuntu.BuilddBaseAlias.LUNAR.value: RemoteImage(
-        remote=Remote.DAILY, image_name="lunar"
-    ),
+    ubuntu.BuilddBaseAlias.LUNAR: RemoteImage(remote=Remote.DAILY, image_name="lunar"),
     # XXX: devel image from snapcraft remote is not working (LP #2007419)
-    ubuntu.BuilddBaseAlias.DEVEL.value: RemoteImage(
-        remote=Remote.DAILY, image_name="devel"
-    ),
+    ubuntu.BuilddBaseAlias.DEVEL: RemoteImage(remote=Remote.DAILY, image_name="devel"),
 }
 
 
-def _get_remote_image(provider_base: str) -> RemoteImage:
+def _get_remote_image(provider_base: Base) -> RemoteImage:
     """Get a RemoteImage for a particular provider base.
 
     :param provider_base: String containing the provider base.
@@ -118,7 +114,7 @@ def _get_remote_image(provider_base: str) -> RemoteImage:
 
     :raises MultipassError: If the remote image does not exist.
     """
-    image = _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE.get(provider_base)
+    image = _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE.get(provider_base.alias)
     if not image:
         raise MultipassError(
             brief=(
@@ -176,7 +172,7 @@ class MultipassProvider(Provider):
         project_name: str,
         project_path: pathlib.Path,
         base_configuration: base.Base,
-        build_base: str,
+        build_base: Optional[str] = None,
         instance_name: str,
         allow_unstable: bool = False,
     ) -> Generator[Executor, None, None]:
@@ -189,13 +185,20 @@ class MultipassProvider(Provider):
         :param project_name: Name of the project.
         :param project_path: Path to project.
         :param base_configuration: Base configuration to apply to instance.
-        :param build_base: Base to build from.
+        :param build_base: Base to build from. (Deprecated)
         :param instance_name: Name of the instance to launch.
         :param allow_unstable: If true, allow unstable images to be launched.
 
         :raises MultipassError: If the instance cannot be launched or configured.
         """
-        image = _get_remote_image(build_base)
+        if build_base:
+            logger.warning(
+                "Deprecated: Parameter 'build_base' is deprecated and should "
+                "not be used. The build base now comes from the "
+                "base_configuration's alias."
+            )
+
+        image = _get_remote_image(base_configuration)
 
         # only allow launching unstable images when opted-in with `allow_unstable`
         if not image.is_stable and not allow_unstable:
