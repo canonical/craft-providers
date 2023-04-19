@@ -2,6 +2,16 @@
 Changelog
 *********
 
+1.11.0 (2023-04-19)
+-------------------
+- Move Snap pydantic model from `bases.buildd` to `actions.snap_installer`
+- Rename `bases.buildd` module to `bases.ubuntu`
+- Determine base alias from base configuration in `provider.launched_environment()`
+- Add new functions `get_base_alias()` and `get_base_from_alias()`
+- Add CentOS 7 base
+- Add default for `launched_environment()` parameter `allow_unstable=False`
+- Trim suffixes from snap names when installing snaps.
+
 1.10.0 (2023-03-31)
 -------------------
 - Add support for kinetic, lunar, and devel images with Multipass
