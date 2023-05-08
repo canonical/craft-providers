@@ -25,7 +25,7 @@ from enum import Enum
 from typing import Dict, Union
 
 from craft_providers import Base
-from craft_providers.bases import centos, get_base_alias, ubuntu
+from craft_providers.bases import BaseName, centos, get_base_alias, ubuntu
 
 from .errors import LXDError
 from .lxc import LXC
@@ -180,7 +180,7 @@ def get_remote_image(provider_base: Union[Base, str]) -> RemoteImage:
     """
     # temporary backward compatibility before 2.0
     if isinstance(provider_base, str):
-        alias = get_base_alias(("ubuntu", provider_base))
+        alias = get_base_alias(BaseName("ubuntu", provider_base))
         provider_base = ubuntu.BuilddBase(alias=alias)  # type: ignore
 
     image = _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE.get(provider_base.alias)

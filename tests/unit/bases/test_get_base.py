@@ -30,7 +30,7 @@ def test_get_base_alias_does_not_exist():
         get_base_alias(("ubuntu", "8.04"))
 
     assert exc_info.value == BaseConfigurationError(
-        brief="Base alias not found for ('ubuntu', '8.04')"
+        brief="Base alias not found for BaseName(name='ubuntu', version='8.04')"
     )
 
 
