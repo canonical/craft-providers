@@ -85,6 +85,8 @@ jobs:
           brew install multipass
           multipass version
           sleep 20
+      - Name: Disable MacOS firewall
+        run: sudo defaults write /Library/Preferences/com.apple.alf globalstate -int 0
       - name: Run integration tests on MacOS
         run: |
           export CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL=1
