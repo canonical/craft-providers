@@ -46,6 +46,7 @@ def test_install_darwin(fake_process, monkeypatch):
     monkeypatch.setattr(sys, "platform", "darwin")
 
     fake_process.register_subprocess(["brew", "install", "multipass"])
+    fake_process.register_subprocess(["multipass", "set", "local.driver=qemu"])
     fake_process.register_subprocess(
         ["multipass", "version"], stdout="multipass 1.4.2\nmultipassd 1.4.2\n"
     )
@@ -54,6 +55,7 @@ def test_install_darwin(fake_process, monkeypatch):
 
     assert list(fake_process.calls) == [
         ["brew", "install", "multipass"],
+        ["multipass", "set", "local.driver=qemu"],
         ["multipass", "version"],
     ]
 
