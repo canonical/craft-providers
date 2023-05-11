@@ -372,7 +372,8 @@ class MultipassInstance(Executor):
     def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:
         """Copy a file from the host into the environment.
 
-        The destination file is overwritten if it exists.
+        The destination file is overwritten if it exists. File permissions are retained
+        but the ownership is changed to the default user `ubuntu`.
 
         :param source: Host file to copy.
         :param destination: Target environment file path to copy to.  Parent
@@ -380,7 +381,7 @@ class MultipassInstance(Executor):
 
         :raises FileNotFoundError: If source file or destination's parent
             directory does not exist.
-        :raises MultipassError: On unexpected error copying file.
+        :raises MultipassError: If the file cannot be pushed into the instance.
         """
         if not source.is_file():
             raise FileNotFoundError(f"File not found: {str(source)!r}")
@@ -393,10 +394,29 @@ class MultipassInstance(Executor):
                 f"Directory not found: {str(destination.parent.as_posix())!r}"
             )
 
-        self._multipass.transfer(
-            source=str(source),
-            destination=f"{self.name}:{destination.as_posix()}",
-        )
+        try:
+            tmp_file_path = self._create_temp_file()
+
+            # push the file to a location where the `ubuntu` user has access
+            self._multipass.transfer(
+                source=str(source),
+                destination=f"{self.name}:{tmp_file_path}",
+            )
+
+            # move the file to its final destination
+            self.execute_run(
+                ["mv", tmp_file_path, destination.as_posix()],
+                capture_output=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as error:
+            raise MultipassError(
+                brief=(
+                    f"Failed to push file {destination.as_posix()!r}"
+                    f" into Multipass instance {self.name!r}."
+                ),
+                details=errors.details_from_called_process_error(error),
+            ) from error
 
     def start(self) -> None:
         """Start instance.

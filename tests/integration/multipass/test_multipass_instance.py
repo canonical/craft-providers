@@ -71,6 +71,40 @@ def test_push_file_io(reusable_instance, content, mode, user, group):
     assert proc.stdout.strip() == f"{mode}:{user}:{group}"
 
 
+@pytest.mark.parametrize(
+    "destination",
+    [
+        pathlib.Path("/tmp/push-file.txt"),
+        pathlib.Path("/home/ubuntu/push-file.txt"),
+        pathlib.Path("/root/push-file.txt"),
+    ],
+)
+@pytest.mark.parametrize("mode", ["644", "600", "755"])
+def test_push_file(destination, mode, reusable_instance, home_tmp_path):
+    """Push a file into a Multipass instance."""
+    source = home_tmp_path / "src.txt"
+    source.write_text("this is a test")
+    source.chmod(int(mode, 8))
+
+    reusable_instance.push_file(source=source, destination=destination)
+
+    proc = reusable_instance.execute_run(
+        command=["cat", str(destination)], capture_output=True
+    )
+
+    assert proc.stdout.decode() == "this is a test"
+
+    proc = reusable_instance.execute_run(
+        command=["stat", "--format", "%a:%U:%G", str(destination)],
+        capture_output=True,
+        text=True,
+    )
+
+    assert proc.stdout.strip() == f"{mode}:ubuntu:ubuntu"
+
+    reusable_instance.execute_run(["rm", str(destination)])
+
+
 def test_delete(instance):
     assert instance.exists() is True
 
