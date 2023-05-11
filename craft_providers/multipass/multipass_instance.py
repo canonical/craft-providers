@@ -78,12 +78,12 @@ class MultipassInstance(Executor):
         else:
             self._multipass = Multipass()
 
-    def _create_temp_dir(self) -> str:
-        """Create a temporary directory inside the instance owned by the `ubuntu` user.
+    def _create_temp_file(self) -> str:
+        """Create a temporary file inside the instance owned by the `ubuntu` user.
 
-        :returns: String containing path to temporary directory.
+        :returns: String containing path to temporary file.
 
-        :raises subprocess.CalledProcessError: If the directory cannot be created.
+        :raises subprocess.CalledProcessError: If the file cannot be created.
         """
         tmp_file_path = self.execute_run(
             command=["mktemp"], capture_output=True, check=True, text=True
@@ -97,7 +97,7 @@ class MultipassInstance(Executor):
             check=True,
         )
 
-        logger.debug("Created temporary directory %r inside instance.", tmp_file_path)
+        logger.debug("Created temporary file %r inside instance.", tmp_file_path)
 
         return tmp_file_path
 
@@ -125,7 +125,7 @@ class MultipassInstance(Executor):
         :raises MultipassError: If the content cannot be pushed into the instance.
         """
         try:
-            tmp_file_path = self._create_temp_dir()
+            tmp_file_path = self._create_temp_file()
 
             self._multipass.transfer_source_io(
                 source=content, destination=f"{self.name}:{tmp_file_path}"
