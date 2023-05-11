@@ -210,7 +210,9 @@ def test_get_image_remote_deprecated_error():
     with pytest.raises(BaseConfigurationError) as raised:
         lxd.remotes.get_remote_image("8.04")
 
-    assert "Base alias not found for ('ubuntu', '8.04')" == str(raised.value)
+    assert "Base alias not found for BaseName(name='ubuntu', version='8.04')" == str(
+        raised.value
+    )
 
 
 def test_configure_buildd_image_remote(
