@@ -19,8 +19,7 @@
 
 # Backward compatible, will be removed in 2.0
 import sys
-from enum import Enum
-from typing import Dict, Tuple, Type
+from typing import Dict, NamedTuple, Tuple, Type, Union
 
 from craft_providers.errors import BaseCompatibilityError, BaseConfigurationError
 
@@ -32,31 +31,44 @@ from .ubuntu import BuilddBase, BuilddBaseAlias
 
 sys.modules["craft_providers.bases.buildd"] = buildd
 
+BaseAlias = Union[ubuntu.BuilddBaseAlias, centos.CentOSBaseAlias]
+
 __all__ = [
     "ubuntu",
     "centos",
+    "BaseAlias",
+    "BaseName",
     "BuilddBase",
     "BuilddBaseAlias",
     "BaseCompatibilityError",
     "BaseConfigurationError",
 ]
 
-BASE_NAME_TO_BASE_ALIAS: Dict[Tuple[str, str], Enum] = {
-    ("ubuntu", "16.04"): ubuntu.BuilddBaseAlias.XENIAL,
-    ("ubuntu", "18.04"): ubuntu.BuilddBaseAlias.BIONIC,
-    ("ubuntu", "20.04"): ubuntu.BuilddBaseAlias.FOCAL,
-    ("ubuntu", "22.04"): ubuntu.BuilddBaseAlias.JAMMY,
-    ("ubuntu", "22.10"): ubuntu.BuilddBaseAlias.KINETIC,
-    ("ubuntu", "23.04"): ubuntu.BuilddBaseAlias.LUNAR,
-    ("ubuntu", "devel"): ubuntu.BuilddBaseAlias.DEVEL,
-    ("centos", "7"): centos.CentOSBaseAlias.SEVEN,
+
+class BaseName(NamedTuple):
+    """A base image, by distribution and version."""
+
+    name: str
+    version: str
+
+
+BASE_NAME_TO_BASE_ALIAS: Dict[BaseName, BaseAlias] = {
+    BaseName("ubuntu", "16.04"): ubuntu.BuilddBaseAlias.XENIAL,
+    BaseName("ubuntu", "18.04"): ubuntu.BuilddBaseAlias.BIONIC,
+    BaseName("ubuntu", "20.04"): ubuntu.BuilddBaseAlias.FOCAL,
+    BaseName("ubuntu", "22.04"): ubuntu.BuilddBaseAlias.JAMMY,
+    BaseName("ubuntu", "22.10"): ubuntu.BuilddBaseAlias.KINETIC,
+    BaseName("ubuntu", "23.04"): ubuntu.BuilddBaseAlias.LUNAR,
+    BaseName("ubuntu", "devel"): ubuntu.BuilddBaseAlias.DEVEL,
+    BaseName("centos", "7"): centos.CentOSBaseAlias.SEVEN,
 }
 
 
 def get_base_alias(
     base_name: Tuple[str, str],
-) -> Enum:
+) -> BaseAlias:
     """Return a Base alias from a base (name, version) tuple."""
+    base_name = BaseName(*base_name)
     if base_name in BASE_NAME_TO_BASE_ALIAS:
         return BASE_NAME_TO_BASE_ALIAS[base_name]
 
@@ -64,7 +76,7 @@ def get_base_alias(
 
 
 def get_base_from_alias(
-    alias: Enum,
+    alias: BaseAlias,
 ) -> Type[Base]:
     """Return a Base class from a known base alias."""
     if isinstance(alias, ubuntu.BuilddBaseAlias):
