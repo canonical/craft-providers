@@ -28,6 +28,9 @@ install_requires = [
     "pydantic",
     "pyyaml",
     "requests_unixsocket",
+    # Needed until requests-unixsocket supports urllib3 v2
+    # https://github.com/msabramo/requests-unixsocket/pull/69
+    "urllib3<2",
 ]
 
 dev_requires = [
