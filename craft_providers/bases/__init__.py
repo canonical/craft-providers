@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -24,14 +24,16 @@ from typing import Dict, NamedTuple, Tuple, Type, Union
 from craft_providers.errors import BaseCompatibilityError, BaseConfigurationError
 
 from ..base import Base
-from . import centos
+from . import almalinux, centos
 from . import ubuntu
 from . import ubuntu as buildd
 from .ubuntu import BuilddBase, BuilddBaseAlias
 
 sys.modules["craft_providers.bases.buildd"] = buildd
 
-BaseAlias = Union[ubuntu.BuilddBaseAlias, centos.CentOSBaseAlias]
+BaseAlias = Union[
+    ubuntu.BuilddBaseAlias, almalinux.AlmaLinuxBaseAlias, centos.CentOSBaseAlias
+]
 
 __all__ = [
     "ubuntu",
@@ -61,6 +63,7 @@ BASE_NAME_TO_BASE_ALIAS: Dict[BaseName, BaseAlias] = {
     BaseName("ubuntu", "23.04"): ubuntu.BuilddBaseAlias.LUNAR,
     BaseName("ubuntu", "devel"): ubuntu.BuilddBaseAlias.DEVEL,
     BaseName("centos", "7"): centos.CentOSBaseAlias.SEVEN,
+    BaseName("almalinux", "9"): almalinux.AlmaLinuxBaseAlias.NINE,
 }
 
 
@@ -69,8 +72,13 @@ def get_base_alias(
 ) -> BaseAlias:
     """Return a Base alias from a base (name, version) tuple."""
     base_name = BaseName(*base_name)
-    if base_name in BASE_NAME_TO_BASE_ALIAS:
+    if base_name.name == "ubuntu" and base_name in BASE_NAME_TO_BASE_ALIAS:
         return BASE_NAME_TO_BASE_ALIAS[base_name]
+
+    # match other distributions sub-versions like 9.1 to 9
+    _base_name = BaseName(base_name.name, base_name.version.split(".")[0])
+    if _base_name in BASE_NAME_TO_BASE_ALIAS:
+        return BASE_NAME_TO_BASE_ALIAS[_base_name]
 
     raise BaseConfigurationError(f"Base alias not found for {base_name}")
 
@@ -84,5 +92,8 @@ def get_base_from_alias(
 
     if isinstance(alias, centos.CentOSBaseAlias):
         return centos.CentOSBase
+
+    if isinstance(alias, almalinux.AlmaLinuxBaseAlias):
+        return almalinux.AlmaLinuxBase
 
     raise BaseConfigurationError(f"Base not found for alias {alias}")
