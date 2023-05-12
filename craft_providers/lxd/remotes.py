@@ -25,7 +25,7 @@ from enum import Enum
 from typing import Dict, Union
 
 from craft_providers import Base
-from craft_providers.bases import BaseName, centos, get_base_alias, ubuntu
+from craft_providers.bases import BaseName, almalinux, centos, get_base_alias, ubuntu
 
 from .errors import LXDError
 from .lxc import LXC
@@ -164,6 +164,12 @@ _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
     ),
     centos.CentOSBaseAlias.SEVEN: RemoteImage(
         image_name="centos/7",
+        remote_name="images",
+        remote_address="https://images.linuxcontainers.org/images/",
+        remote_protocol=ProtocolType.SIMPLESTREAMS,
+    ),
+    almalinux.AlmaLinuxBaseAlias.NINE: RemoteImage(
+        image_name="almalinux/9",
         remote_name="images",
         remote_address="https://images.linuxcontainers.org/images/",
         remote_protocol=ProtocolType.SIMPLESTREAMS,
