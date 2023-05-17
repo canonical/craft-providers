@@ -78,6 +78,29 @@ class MultipassInstance(Executor):
         else:
             self._multipass = Multipass()
 
+    def _create_temp_file(self) -> str:
+        """Create a temporary file inside the instance owned by the `ubuntu` user.
+
+        :returns: String containing path to temporary file.
+
+        :raises subprocess.CalledProcessError: If the file cannot be created.
+        """
+        tmp_file_path = self.execute_run(
+            command=["mktemp"], capture_output=True, check=True, text=True
+        ).stdout.strip()
+
+        # mktemp is executed as root, so the ownership of the temp file needs to be
+        # changed back to the default user `ubuntu` before transferring the file
+        self.execute_run(
+            ["chown", "ubuntu:ubuntu", tmp_file_path],
+            capture_output=True,
+            check=True,
+        )
+
+        logger.debug("Created temporary file %r inside instance.", tmp_file_path)
+
+        return tmp_file_path
+
     def push_file_io(
         self,
         *,
@@ -98,22 +121,11 @@ class MultipassInstance(Executor):
         :param file_mode: File mode string (e.g. '0644').
         :param group: File group owner/id.
         :param user: File user owner/id.
+
+        :raises MultipassError: If the content cannot be pushed into the instance.
         """
         try:
-            tmp_file_path = self.execute_run(
-                command=["mktemp"],
-                capture_output=True,
-                check=True,
-                text=True,
-            ).stdout.strip()
-
-            # mktemp is executed as root, so the ownership of the temp file needs to be
-            # changed back to the default user `ubuntu` before transferring the file
-            self.execute_run(
-                ["chown", "ubuntu:ubuntu", tmp_file_path],
-                capture_output=True,
-                check=True,
-            )
+            tmp_file_path = self._create_temp_file()
 
             self._multipass.transfer_source_io(
                 source=content, destination=f"{self.name}:{tmp_file_path}"
@@ -127,9 +139,7 @@ class MultipassInstance(Executor):
             )
 
             self.execute_run(
-                ["chmod", file_mode, tmp_file_path],
-                capture_output=True,
-                check=True,
+                ["chmod", file_mode, tmp_file_path], capture_output=True, check=True
             )
 
             self.execute_run(
