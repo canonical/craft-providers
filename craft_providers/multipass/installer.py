@@ -51,10 +51,11 @@ def install() -> str:
             f"unsupported platform {sys.platform!r}"
         )
 
-    # TODO: Multipass needs time after being installed or errors could happen on
-    # launch, i.e.: "Remote "" is unknown or unreachable." Current guidance is
-    # to sleep 20 seconds after install, but we should have a more reliable and
-    # timely approach. See: https://github.com/canonical/multipass/issues/1995
+    # TODO: Multipass needs time after being installed for `multipassd` to start.
+    # Without a delay, errors could happen on launch, i.e.: "Remote "" is unknown or
+    # unreachable." Current guidance is to sleep 20 seconds after install, but we
+    # should have a more reliable and timely approach.
+    # See: https://github.com/canonical/multipass/issues/1995
     time.sleep(20)
 
     multipass_version, _ = Multipass().wait_until_ready()
@@ -64,6 +65,11 @@ def install() -> str:
 def _install_darwin() -> None:
     try:
         subprocess.run(["brew", "install", "multipass"], check=True)
+        # wait for multipassd to start before changing the driver
+        time.sleep(20)
+        # this can be removed when multipass 1.12 is available on brew, because
+        # qemu will be the new default
+        subprocess.run(["multipass", "set", "local.driver=qemu"], check=True)
     except subprocess.CalledProcessError as error:
         raise errors.MultipassInstallationError(
             "error during brew installation",
