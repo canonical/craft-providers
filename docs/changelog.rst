@@ -2,6 +2,14 @@
 Changelog
 *********
 
+1.12.0 (2023-05-18)
+-------------------
+- Add AlmaLinux 9 base
+- Add stricter typing for base names
+- Refactor CI workflow
+- Refactor Multipass `push_file_io`
+- Pin dependency urllib3<2
+
 1.11.0 (2023-04-19)
 -------------------
 - Move Snap pydantic model from `bases.buildd` to `actions.snap_installer`
