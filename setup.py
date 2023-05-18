@@ -62,6 +62,7 @@ test_requires = [
     "pytest",
     "pytest-mock",
     "pytest-subprocess",
+    "pytest-xdist",
     "responses",
     "types-requests",
     "types-setuptools",

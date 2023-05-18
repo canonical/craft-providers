@@ -15,6 +15,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
+import sys
 
 import pytest
 
@@ -43,15 +44,19 @@ def test_create_environment(installed_multipass, instance_name):
     assert test_instance.exists() is False
 
 
+LINUX_ONLY_ALIASES = [
+    ubuntu.BuilddBaseAlias.XENIAL,
+    ubuntu.BuilddBaseAlias.LUNAR,
+    ubuntu.BuilddBaseAlias.DEVEL,
+]
+
 @pytest.mark.parametrize(
     "alias",
-    set(ubuntu.BuilddBaseAlias)
-    # skip devel images because they are not available on macos
-    - {
-        ubuntu.BuilddBaseAlias.XENIAL,
-        ubuntu.BuilddBaseAlias.LUNAR,
-        ubuntu.BuilddBaseAlias.DEVEL,
-    },
+    [
+        *(alias for alias in ubuntu.BuilddBaseAlias if alias not in LINUX_ONLY_ALIASES),
+        *(pytest.param(alias, marks=pytest.mark.skipif(sys.platform != "Linux"))
+          for alias in LINUX_ONLY_ALIASES),
+    ]
 )
 def test_launched_environment(alias, installed_multipass, instance_name, tmp_path):
     """Verify `launched_environment()` creates and starts an instance then stops

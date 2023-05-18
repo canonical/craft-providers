@@ -35,6 +35,10 @@ from craft_providers import lxd, multipass
 from craft_providers.actions.snap_installer import get_host_snap_info
 from craft_providers.bases import ubuntu
 
+# exclude XENIAL because it is not supported for LXD
+LXD_ALIASES = list(ubuntu.BuilddBaseAlias)
+LXD_ALIASES.remove(ubuntu.BuilddBaseAlias.XENIAL)
+
 
 def generate_instance_name():
     """Generate a random instance name."""
@@ -49,6 +53,11 @@ def snap_exists(snap_name: str) -> bool:
 def is_installed_dangerously(snap_name: str) -> bool:
     """Returns true if a snap is installed dangerously."""
     return get_host_snap_info(snap_name)["revision"].startswith("x")
+
+
+@pytest.fixture(params=LXD_ALIASES)
+def lxd_alias(request):
+    yield request.param
 
 
 @pytest.fixture()

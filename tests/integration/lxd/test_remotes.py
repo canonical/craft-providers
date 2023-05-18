@@ -23,13 +23,9 @@ from craft_providers import lxd
 from craft_providers.bases import ubuntu
 
 
-# exclude XENIAL because it is not supported for LXD
-@pytest.mark.parametrize(
-    "alias", set(ubuntu.BuilddBaseAlias) - {ubuntu.BuilddBaseAlias.XENIAL}
-)
-def test_configure_and_launch_remote(instance_name, alias):
+def test_configure_and_launch_remote(instance_name, lxd_alias):
     """Verify remotes are configured and images can be launched."""
-    base_configuration = ubuntu.BuilddBase(alias=alias)
+    base_configuration = ubuntu.BuilddBase(alias=lxd_alias)
     remote_image = lxd.get_remote_image(base_configuration)
     instance = lxd.launch(
         name=instance_name,

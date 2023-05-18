@@ -42,14 +42,10 @@ def test_create_environment(installed_lxd, instance_name):
     assert test_instance.exists() is False
 
 
-@pytest.mark.parametrize(
-    "alias",
-    set(ubuntu.BuilddBaseAlias) - {ubuntu.BuilddBaseAlias.XENIAL},
-)
-def test_launched_environment(alias, installed_lxd, instance_name, tmp_path):
+def test_launched_environment(lxd_alias, installed_lxd, instance_name, tmp_path):
     provider = LXDProvider()
 
-    base_configuration = get_base_from_alias(alias)(alias=alias)
+    base_configuration = get_base_from_alias(lxd_alias)(alias=lxd_alias)
     with provider.launched_environment(
         project_name="test-project",
         project_path=tmp_path,

@@ -79,7 +79,7 @@ test-flake8:
 
 .PHONY: test-integrations
 test-integrations: ## Run integration tests.
-	pytest tests/integration
+	pytest -n 8 tests/integration
 
 .PHONY: test-isort
 test-isort:
