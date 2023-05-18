@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -37,11 +37,12 @@ def instance(instance_name, project):
         yield instance
 
 
-@pytest.fixture(scope="module")
-def reusable_instance(reusable_instance_name):
+@pytest.fixture(scope="module", params=["18.04", "20.04", "22.04", "23.04"])
+def reusable_instance(reusable_instance_name, request):
     """Reusable instance for tests that don't require a fresh instance."""
     with conftest.tmp_instance(
         name=reusable_instance_name,
+        image=request.param,
         ephemeral=False,
         project="default",
     ):
@@ -54,33 +55,34 @@ def reusable_instance(reusable_instance_name):
 @pytest.mark.parametrize("mode", ["644", "600", "755"])
 @pytest.mark.parametrize("user,group", [("root", "root"), ("ubuntu", "ubuntu")])
 def test_push_file_io(reusable_instance, content, mode, user, group):
-    reusable_instance.push_file_io(
-        destination=pathlib.Path("/tmp/file-test.txt"),
-        content=io.BytesIO(content),
-        file_mode=mode,
-        user=user,
-        group=group,
-    )
+    try:
+        reusable_instance.push_file_io(
+            destination=pathlib.Path("/tmp/file-test.txt"),
+            content=io.BytesIO(content),
+            file_mode=mode,
+            user=user,
+            group=group,
+        )
 
-    proc = reusable_instance.execute_run(
-        command=["cat", "/tmp/file-test.txt"],
-        capture_output=True,
-    )
+        proc = reusable_instance.execute_run(
+            command=["cat", "/tmp/file-test.txt"],
+            capture_output=True,
+        )
 
-    assert proc.stdout == content
+        assert proc.stdout == content
 
-    proc = reusable_instance.execute_run(
-        command=["stat", "--format", "%a:%U:%G", "/tmp/file-test.txt"],
-        capture_output=True,
-        text=True,
-    )
+        proc = reusable_instance.execute_run(
+            command=["stat", "--format", "%a:%U:%G", "/tmp/file-test.txt"],
+            capture_output=True,
+            text=True,
+        )
 
-    assert proc.stdout.strip() == f"{mode}:{user}:{group}"
-
-    reusable_instance.execute_run(
-        command=["rm", "/tmp/file-test.txt"],
-        capture_output=True,
-    )
+        assert proc.stdout.strip() == f"{mode}:{user}:{group}"
+    finally:
+        reusable_instance.execute_run(
+            command=["rm", "-f", "/tmp/file-test.txt"],
+            capture_output=True,
+        )
 
 
 def test_delete(instance):

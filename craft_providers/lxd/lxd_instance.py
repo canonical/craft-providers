@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -177,37 +177,37 @@ class LXDInstance(Executor):
 
         :raises LXDError: On unexpected error.
         """
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile() as temp_file:
             shutil.copyfileobj(content, temp_file)  # type: ignore # mypy #15031
+            # Ensure the file is written to disk.
+            temp_file.flush()
 
-        temp_path = pathlib.Path(temp_file.name)
-        self.lxc.file_push(
-            instance_name=self.instance_name,
-            source=temp_path,
-            destination=destination,
-            mode=file_mode,
-            project=self.project,
-            remote=self.remote,
-        )
-
-        # We don't use gid/uid for file_push() in case we don't know the
-        # user/group IDs in advance.  Just chown it.
-        try:
-            self.execute_run(
-                ["chown", f"{user}:{group}", destination.as_posix()],
-                capture_output=True,
-                check=True,
+            temp_path = pathlib.Path(temp_file.name)
+            self.lxc.file_push(
+                instance_name=self.instance_name,
+                source=temp_path,
+                destination=destination,
+                mode=file_mode,
+                project=self.project,
+                remote=self.remote,
             )
-        except subprocess.CalledProcessError as error:
-            raise LXDError(
-                brief=(
-                    f"Failed to create file {destination.as_posix()!r}"
-                    f" in instance {self.instance_name!r}."
-                ),
-                details=errors.details_from_called_process_error(error),
-            ) from error
 
-        os.unlink(temp_file.name)
+            # We don't use gid/uid for file_push() in case we don't know the
+            # user/group IDs in advance.  Just chown it.
+            try:
+                self.execute_run(
+                    ["chown", f"{user}:{group}", destination.as_posix()],
+                    capture_output=True,
+                    check=True,
+                )
+            except subprocess.CalledProcessError as error:
+                raise LXDError(
+                    brief=(
+                        f"Failed to create file {destination.as_posix()!r}"
+                        f" in instance {self.instance_name!r}."
+                    ),
+                    details=errors.details_from_called_process_error(error),
+                ) from error
 
     def delete(self, force: bool = True) -> None:
         """Delete instance.

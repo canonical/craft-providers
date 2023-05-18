@@ -156,12 +156,12 @@ def test_push_file_io(
 
     assert mock_named_temporary_file.mock_calls == [
         mock.call.__enter__(),
+        mock.call.__enter__().flush(),
         mock.call.__exit__(None, None, None),
     ]
     assert mock_shutil_copyfileobj.mock_calls == [
         mock.call(mock.ANY, mock_named_temporary_file.__enter__.return_value)
     ]
-    assert mock_os_unlink.mock_calls == [mock.call("test-tmp-file")]
 
 
 def test_push_file_io_error(mock_lxc, instance):
