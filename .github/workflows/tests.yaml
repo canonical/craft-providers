@@ -91,9 +91,9 @@ jobs:
       matrix:
         # does not work with python 3.11 (see https://github.com/canonical/craft-providers/issues/272)
         python-version: ["3.8", "3.10"]
-    # does not work ubuntu-22.04 (see https://github.com/canonical/craft-providers/issues/270)
+        os: ["ubuntu-20.04", "ubuntu-22.04"]
     # does not work with canonical/setup-lxd github action (see https://github.com/canonical/craft-providers/issues/271)
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
