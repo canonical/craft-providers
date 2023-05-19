@@ -103,25 +103,19 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: canonical/setup-lxd@main
       - name: Configure environment
         run: |
           echo "::group::pip install"
           python -m pip install -U .[dev]
-          echo "::endgroup::"
-          echo "::group::Configure LXD"
-          sudo groupadd --force --system lxd
-          sudo usermod --append --groups lxd $USER
-          sudo snap start lxd
-          sudo lxd waitready --timeout=30
-          sudo lxd init --auto
           echo "::endgroup::"
       - name: Run integration tests on Linux
         run: |
           export CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL=1
           export CRAFT_PROVIDERS_TESTS_ENABLE_LXD_INSTALL=1
           export CRAFT_PROVIDERS_TESTS_ENABLE_LXD_UNINSTALL=1
-          sg lxd -c "lxc version"
-          sg lxd -c "make test-integrations"
+          lxc version
+          make test-integrations
 
   integration-tests-macos:
     strategy:
