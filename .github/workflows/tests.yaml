@@ -89,8 +89,7 @@ jobs:
   integration-tests-linux:
     strategy:
       matrix:
-        # does not work with python 3.11 (see https://github.com/canonical/craft-providers/issues/272)
-        python-version: ["3.8", "3.10"]
+        python-version: ["3.8", "3.10", "3.11"]
     # does not work ubuntu-22.04 (see https://github.com/canonical/craft-providers/issues/270)
     # does not work with canonical/setup-lxd github action (see https://github.com/canonical/craft-providers/issues/271)
     runs-on: ubuntu-20.04
