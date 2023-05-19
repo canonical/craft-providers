@@ -114,8 +114,8 @@ jobs:
           export CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL=1
           export CRAFT_PROVIDERS_TESTS_ENABLE_LXD_INSTALL=1
           export CRAFT_PROVIDERS_TESTS_ENABLE_LXD_UNINSTALL=1
-          lxc version
-          make test-integrations
+          sg adm -c "lxc version"
+          sg adm -c "make test-integrations"
 
   integration-tests-macos:
     strategy:
