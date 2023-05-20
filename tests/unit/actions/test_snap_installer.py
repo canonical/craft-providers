@@ -28,12 +28,12 @@ from logassert import Exact  # type: ignore
 
 from craft_providers.actions import snap_installer
 from craft_providers.actions.snap_installer import Snap
-from craft_providers.bases.instance_config import InstanceConfiguration
 from craft_providers.errors import (
     BaseConfigurationError,
     ProviderError,
     details_from_called_process_error,
 )
+from craft_providers.instance_config import InstanceConfiguration
 
 # pylint: disable=too-many-lines
 
@@ -73,11 +73,11 @@ def config_fixture(request, tmp_path, mocker):
         return config_file
 
     mocker.patch(
-        "craft_providers.bases.instance_config.temp_paths.home_temporary_file",
+        "craft_providers.instance_config.temp_paths.home_temporary_file",
         side_effect=config_generator,
     )
     mocker.patch(
-        "craft_providers.bases.instance_config.temp_paths.home_temporary_directory",
+        "craft_providers.instance_config.temp_paths.home_temporary_directory",
         return_value=tmp_path,
     )
 
@@ -875,7 +875,7 @@ def test_add_assertions_from_host_error_on_push(
     mock_executor = mock.Mock(spec=fake_executor, wraps=fake_executor)
     mock_executor.push_file.side_effect = ProviderError(brief="foo")
     mocker.patch(
-        "craft_providers.bases.instance_config.temp_paths.home_temporary_file",
+        "craft_providers.instance_config.temp_paths.home_temporary_file",
         return_value=pathlib.Path(tmpdir) / "temp-file",
     )
 
@@ -906,7 +906,7 @@ def test_add_assertions_from_host_error_on_ack(
         returncode=1,
     )
     mocker.patch(
-        "craft_providers.bases.instance_config.temp_paths.home_temporary_file",
+        "craft_providers.instance_config.temp_paths.home_temporary_file",
         return_value=pathlib.Path(tmpdir) / "temp-file",
     )
 

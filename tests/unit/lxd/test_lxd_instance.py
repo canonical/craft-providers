@@ -151,6 +151,7 @@ def test_push_file_io(
             runner=subprocess.run,
             capture_output=True,
             check=True,
+            timeout=60,
         ),
     ]
 
@@ -212,6 +213,7 @@ def test_execute_popen(mock_lxc, instance):
             remote=instance.remote,
             runner=subprocess.Popen,
             input="foo",
+            timeout=None,
         )
     ]
 
@@ -230,6 +232,7 @@ def test_execute_popen_with_cwd(mock_lxc, instance):
             remote=instance.remote,
             runner=subprocess.Popen,
             input="foo",
+            timeout=None,
         )
     ]
 
@@ -245,6 +248,7 @@ def test_execute_popen_with_env(mock_lxc, instance):
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.Popen,
+            timeout=None,
         )
     ]
 
@@ -261,6 +265,7 @@ def test_execute_run(mock_lxc, instance):
             remote=instance.remote,
             runner=subprocess.run,
             input="foo",
+            timeout=None,
         )
     ]
 
@@ -279,6 +284,7 @@ def test_execute_run_with_cwd(mock_lxc, instance):
             remote=instance.remote,
             runner=subprocess.run,
             input="foo",
+            timeout=None,
         )
     ]
 
@@ -300,6 +306,7 @@ def test_execute_run_with_default_command_env(mock_lxc):
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
+            timeout=None,
         )
     ]
 
@@ -323,6 +330,7 @@ def test_execute_run_with_default_command_env_unset(mock_lxc):
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
+            timeout=None,
         )
     ]
 
@@ -338,6 +346,7 @@ def test_execute_run_with_env(mock_lxc, instance):
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
+            timeout=None,
         )
     ]
 
@@ -362,6 +371,7 @@ def test_execute_run_with_env_unset(mock_lxc, instance):
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
+            timeout=None,
         )
     ]
 
@@ -613,6 +623,7 @@ def test_pull_file(mock_lxc, instance, tmp_path):
             remote=instance.remote,
             runner=subprocess.run,
             check=False,
+            timeout=600,
         ),
         mock.call.file_pull(
             instance_name=instance.instance_name,
@@ -645,6 +656,7 @@ def test_pull_file_no_source(mock_lxc, instance, tmp_path):
             remote=instance.remote,
             runner=subprocess.run,
             check=False,
+            timeout=600,
         ),
     ]
     assert str(exc_info.value) == "File not found: '/tmp/src.txt'"
@@ -671,6 +683,7 @@ def test_pull_file_no_parent_directory(mock_lxc, instance, tmp_path):
             remote=instance.remote,
             runner=subprocess.run,
             check=False,
+            timeout=600,
         ),
     ]
     assert str(exc_info.value) == f"Directory not found: {str(destination.parent)!r}"
@@ -697,6 +710,7 @@ def test_push_file(mock_lxc, instance, tmp_path):
             remote=instance.remote,
             runner=subprocess.run,
             check=False,
+            timeout=600,
         ),
         mock.call.file_push(
             instance_name=instance.instance_name,
@@ -746,6 +760,7 @@ def test_push_file_no_parent_directory(mock_lxc, instance, tmp_path):
             remote=instance.remote,
             runner=subprocess.run,
             check=False,
+            timeout=600,
         ),
     ]
     assert str(exc_info.value) == "Directory not found: '/tmp'"

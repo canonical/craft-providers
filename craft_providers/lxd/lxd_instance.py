@@ -28,12 +28,12 @@ import subprocess
 import tempfile
 from typing import Any, Dict, List, Optional
 
-from craft_providers import errors
+from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE
+from craft_providers.errors import details_from_called_process_error
+from craft_providers.executor import Executor
+from craft_providers.lxd.errors import LXDError
+from craft_providers.lxd.lxc import LXC
 from craft_providers.util import env_cmd
-
-from .. import Executor
-from .errors import LXDError
-from .lxc import LXC
 
 logger = logging.getLogger(__name__)
 
@@ -199,6 +199,7 @@ class LXDInstance(Executor):
                     ["chown", f"{user}:{group}", destination.as_posix()],
                     capture_output=True,
                     check=True,
+                    timeout=TIMEOUT_SIMPLE,
                 )
             except subprocess.CalledProcessError as error:
                 raise LXDError(
@@ -206,7 +207,7 @@ class LXDInstance(Executor):
                         f"Failed to create file {destination.as_posix()!r}"
                         f" in instance {self.instance_name!r}."
                     ),
-                    details=errors.details_from_called_process_error(error),
+                    details=details_from_called_process_error(error),
                 ) from error
 
     def delete(self, force: bool = True) -> None:
@@ -229,6 +230,7 @@ class LXDInstance(Executor):
         *,
         cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
+        timeout: Optional[float] = None,
         **kwargs,
     ) -> subprocess.Popen:
         """Execute a command in instance, using subprocess.Popen().
@@ -254,6 +256,7 @@ class LXDInstance(Executor):
             project=self.project,
             remote=self.remote,
             runner=subprocess.Popen,
+            timeout=timeout,
             cwd=cwd_path,
             **kwargs,
         )
@@ -264,6 +267,7 @@ class LXDInstance(Executor):
         *,
         cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
+        timeout: Optional[float] = None,
         **kwargs,
     ) -> subprocess.CompletedProcess:
         """Execute a command using subprocess.run().
@@ -292,6 +296,7 @@ class LXDInstance(Executor):
             project=self.project,
             remote=self.remote,
             runner=subprocess.run,
+            timeout=timeout,
             cwd=cwd_path,
             **kwargs,
         )
@@ -464,7 +469,11 @@ class LXDInstance(Executor):
             directory does not exist.
         :raises LXDError: On unexpected error copying file.
         """
-        proc = self.execute_run(["test", "-f", source.as_posix()], check=False)
+        proc = self.execute_run(
+            ["test", "-f", source.as_posix()],
+            check=False,
+            timeout=TIMEOUT_COMPLEX,
+        )
         if proc.returncode != 0:
             raise FileNotFoundError(f"File not found: {source.as_posix()!r}")
 
@@ -496,7 +505,9 @@ class LXDInstance(Executor):
             raise FileNotFoundError(f"File not found: {str(source)!r}")
 
         proc = self.execute_run(
-            ["test", "-d", destination.parent.as_posix()], check=False
+            ["test", "-d", destination.parent.as_posix()],
+            check=False,
+            timeout=TIMEOUT_COMPLEX,
         )
         if proc.returncode != 0:
             raise FileNotFoundError(

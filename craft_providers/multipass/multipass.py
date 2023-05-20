@@ -34,6 +34,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import pkg_resources
 
 from craft_providers import errors
+from craft_providers.const import RETRY_WAIT
 
 from .errors import MultipassError
 
@@ -92,6 +93,7 @@ class Multipass:
         command: List[str],
         instance_name: str,
         runner: Callable = subprocess.run,
+        timeout: Optional[float] = None,
         **kwargs,
     ):
         """Execute command in instance_name with specified runner.
@@ -116,6 +118,11 @@ class Multipass:
 
         quoted_final_cmd = shlex.join(final_cmd)
         logger.debug("Executing on host: %s", quoted_final_cmd)
+
+        if runner is subprocess.run:
+            return runner(  # pylint: disable=subprocess-run-check
+                final_cmd, timeout=timeout, **kwargs
+            )
 
         return runner(final_cmd, **kwargs)  # pylint: disable=subprocess-run-check
 
@@ -423,11 +430,10 @@ class Multipass:
             ) from error
 
     def wait_until_ready(
-        self, *, retry_wait: float = 0.25, timeout: Optional[float] = None
+        self, *, timeout: Optional[float] = None
     ) -> Tuple[str, Optional[str]]:
         """Wait until Multipass is ready (upon install/startup).
 
-        :param retry_wait: Time to sleep between retries.
         :param timeout: Timeout in seconds.
 
         :returns: Tuple of parsed versions (multipass, multipassd).  multipassd
@@ -447,7 +453,7 @@ class Multipass:
             if deadline is not None and time.time() >= deadline:
                 break
 
-            time.sleep(retry_wait)
+            time.sleep(RETRY_WAIT)
 
         raise MultipassError(
             brief="Timed out waiting for Multipass to become ready.",
