@@ -2,6 +2,10 @@
 Changelog
 *********
 
+1.12.1 (2023-05-26)
+-------------------
+- Push files to any location in Multipass instances
+
 1.12.0 (2023-05-18)
 -------------------
 - Add AlmaLinux 9 base
