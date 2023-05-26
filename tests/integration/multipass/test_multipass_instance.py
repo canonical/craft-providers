@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -43,6 +43,14 @@ def reusable_instance(reusable_instance_name):
         yield MultipassInstance(name=tmp_instance)
 
 
+@pytest.fixture
+def simple_file(home_tmp_path):
+    """Create a file in the home directory (accessible by Multipass)."""
+    file = home_tmp_path / "src.txt"
+    file.write_text("this is a test")
+    return file
+
+
 @pytest.mark.parametrize("content", [b"", b"\x00\xaa\xbb\xcc", "test-string".encode()])
 @pytest.mark.parametrize("mode", ["644", "600", "755"])
 @pytest.mark.parametrize("user,group", [("root", "root"), ("ubuntu", "ubuntu")])
@@ -69,6 +77,111 @@ def test_push_file_io(reusable_instance, content, mode, user, group):
     )
 
     assert proc.stdout.strip() == f"{mode}:{user}:{group}"
+
+
+@pytest.mark.parametrize(
+    "destination",
+    [
+        pathlib.Path("/tmp/push-file.txt"),
+        pathlib.Path("/home/ubuntu/push-file.txt"),
+        pathlib.Path("/root/push-file.txt"),
+        pathlib.Path("/push-file.txt"),
+    ],
+)
+@pytest.mark.parametrize("mode", ["644", "600", "755"])
+def test_push_file(destination, mode, reusable_instance, simple_file):
+    """Push a file into a Multipass instance."""
+    simple_file.chmod(int(mode, 8))
+
+    reusable_instance.push_file(source=simple_file, destination=destination)
+
+    # check file contents
+    proc = reusable_instance.execute_run(
+        command=["cat", str(destination)], capture_output=True
+    )
+    assert proc.stdout.decode() == "this is a test"
+    # check file ownership
+    proc = reusable_instance.execute_run(
+        command=["stat", "--format", "%a:%U:%G", str(destination)],
+        capture_output=True,
+        text=True,
+    )
+    assert proc.stdout.strip() == f"{mode}:ubuntu:ubuntu"
+
+    # clean up before the next test
+    reusable_instance.execute_run(["rm", str(destination)])
+
+
+@pytest.mark.parametrize(
+    "destination",
+    [
+        pathlib.Path("/"),
+        pathlib.Path("/home/ubuntu/"),
+        pathlib.Path("/root/"),
+        pathlib.Path("/tmp/"),
+    ],
+)
+@pytest.mark.parametrize("mode", ["644", "600", "755"])
+def test_push_file_to_directory(destination, mode, reusable_instance, simple_file):
+    """Push a file to a directory in a multipass instance."""
+    simple_file.chmod(int(mode, 8))
+    final_destination = str(destination / simple_file.name)
+
+    reusable_instance.push_file(source=simple_file, destination=destination)
+
+    # check file contents
+    proc = reusable_instance.execute_run(
+        command=["cat", final_destination], capture_output=True
+    )
+    assert proc.stdout.decode() == "this is a test"
+    # check file permissions
+    proc = reusable_instance.execute_run(
+        command=["stat", "--format", "%a:%U:%G", final_destination],
+        capture_output=True,
+        text=True,
+    )
+    assert proc.stdout.strip() == f"{mode}:ubuntu:ubuntu"
+
+    # clean up before the next test
+    reusable_instance.execute_run(["rm", final_destination])
+
+
+def test_push_file_source_directory_error(reusable_instance, home_tmp_path):
+    """Raise an error if the source is a directory."""
+    with pytest.raises(IsADirectoryError) as exc_info:
+        reusable_instance.push_file(
+            source=home_tmp_path,
+            destination=pathlib.Path("/path/to/non/existent/directory"),
+        )
+
+    assert str(exc_info.value) == (
+        f"Source cannot be a directory: {str(home_tmp_path)!r}"
+    )
+
+
+def test_push_file_no_source_error(reusable_instance, home_tmp_path):
+    """Raise an error if the source file does not exist."""
+    source = home_tmp_path / "src.txt"
+
+    with pytest.raises(FileNotFoundError) as exc_info:
+        reusable_instance.push_file(
+            source=source, destination=pathlib.Path("/path/to/non/existent/directory")
+        )
+
+    assert str(exc_info.value) == f"File not found: {str(source)!r}"
+
+
+def test_push_file_no_parent_directory_error(reusable_instance, simple_file):
+    """Raise an error if the parent directory of the destination does not exist."""
+    with pytest.raises(FileNotFoundError) as exc_info:
+        reusable_instance.push_file(
+            source=simple_file,
+            destination=pathlib.Path("/path/to/non/existent/directory"),
+        )
+
+    assert str(exc_info.value) == (
+        "Directory not found in instance: '/path/to/non/existent'"
+    )
 
 
 def test_delete(instance):
