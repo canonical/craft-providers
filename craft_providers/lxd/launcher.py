@@ -107,7 +107,7 @@ def _create_instance(
 
     # now restart and wait for the instance to be ready
     instance.start()
-    base_configuration.wait_until_ready(executor=instance)
+    base_configuration.wait_until_ready()
 
 
 def _ensure_project_exists(

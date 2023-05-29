@@ -189,7 +189,7 @@ def get_remote_image(provider_base: Union[Base, str]) -> RemoteImage:
         alias = get_base_alias(BaseName("ubuntu", provider_base))
         provider_base = ubuntu.BuilddBase(alias=alias)  # type: ignore
 
-    image = _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE.get(provider_base.alias)
+    image = _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE.get(provider_base._alias)
     if not image:
         raise LXDError(
             brief=(

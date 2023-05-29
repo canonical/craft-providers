@@ -332,6 +332,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         project: str = "default",
         remote: str = "local",
         runner: Callable = subprocess.run,
+        timeout: Optional[float] = None,
         **kwargs,
     ):
         """Execute command in instance_name with specified runner.
@@ -346,6 +347,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         :param runner: Execution function to invoke, e.g. subprocess.run or
             Popen.  First argument is finalized command with the attached
             kwargs.
+        :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Additional kwargs for runner.
 
         :returns: Runner's instance.
@@ -367,6 +369,11 @@ class LXC:  # pylint: disable=too-many-public-methods
         final_cmd += ["--", *command]
 
         logger.debug("Executing in container: %s", shlex.join(final_cmd))
+
+        if runner is subprocess.run:
+            return runner(  # pylint: disable=subprocess-run-check
+                final_cmd, timeout=timeout, **kwargs
+            )
 
         return runner(final_cmd, **kwargs)  # pylint: disable=subprocess-run-check
 

@@ -114,7 +114,7 @@ def _get_remote_image(provider_base: Base) -> RemoteImage:
 
     :raises MultipassError: If the remote image does not exist.
     """
-    image = _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE.get(provider_base.alias)
+    image = _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE.get(provider_base._alias)
     if not image:
         raise MultipassError(
             brief=(

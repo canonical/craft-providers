@@ -24,8 +24,8 @@ from typing import Any, Dict, Optional
 import pydantic
 import yaml
 
-from craft_providers import Executor, errors
-from craft_providers.errors import BaseConfigurationError
+from craft_providers.errors import BaseConfigurationError, ProviderError
+from craft_providers.executor import Executor
 from craft_providers.util import temp_paths
 
 
@@ -109,7 +109,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra=pydantic.Extra.forbid):
         with temp_paths.home_temporary_file() as temp_config_file:
             try:
                 executor.pull_file(source=config_path, destination=temp_config_file)
-            except errors.ProviderError as error:
+            except ProviderError as error:
                 raise BaseConfigurationError(
                     brief=(
                         "Failed to read instance config"

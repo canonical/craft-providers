@@ -23,6 +23,7 @@ import subprocess
 from typing import Any, Dict, List, Optional
 
 from craft_providers import errors
+from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE
 from craft_providers.util import env_cmd
 
 from .. import Executor
@@ -86,7 +87,11 @@ class MultipassInstance(Executor):
         :raises subprocess.CalledProcessError: If the file cannot be created.
         """
         tmp_file_path = self.execute_run(
-            command=["mktemp"], capture_output=True, check=True, text=True
+            command=["mktemp"],
+            capture_output=True,
+            check=True,
+            text=True,
+            timeout=TIMEOUT_SIMPLE,
         ).stdout.strip()
 
         # mktemp is executed as root, so the ownership of the temp file needs to be
@@ -95,6 +100,7 @@ class MultipassInstance(Executor):
             ["chown", "ubuntu:ubuntu", tmp_file_path],
             capture_output=True,
             check=True,
+            timeout=TIMEOUT_SIMPLE,
         )
 
         logger.debug("Created temporary file %r inside instance.", tmp_file_path)
@@ -108,7 +114,9 @@ class MultipassInstance(Executor):
 
         :returns: True if the filepath is a valid directory.
         """
-        proc = self.execute_run(["test", "-d", filepath.as_posix()], check=False)
+        proc = self.execute_run(
+            ["test", "-d", filepath.as_posix()], timeout=TIMEOUT_SIMPLE, check=False
+        )
         return proc.returncode == 0
 
     def push_file_io(
@@ -146,16 +154,21 @@ class MultipassInstance(Executor):
                 ["chown", f"{user}:{group}", tmp_file_path],
                 capture_output=True,
                 check=True,
+                timeout=TIMEOUT_SIMPLE,
             )
 
             self.execute_run(
-                ["chmod", file_mode, tmp_file_path], capture_output=True, check=True
+                ["chmod", file_mode, tmp_file_path],
+                capture_output=True,
+                check=True,
+                timeout=TIMEOUT_SIMPLE,
             )
 
             self.execute_run(
                 ["mv", tmp_file_path, destination.as_posix()],
                 capture_output=True,
                 check=True,
+                timeout=TIMEOUT_COMPLEX,
             )
         except subprocess.CalledProcessError as error:
             raise MultipassError(
@@ -179,6 +192,7 @@ class MultipassInstance(Executor):
         *,
         cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
+        timeout: Optional[float] = None,
         **kwargs,
     ) -> subprocess.Popen:
         """Execute a process in the instance using subprocess.Popen().
@@ -195,6 +209,7 @@ class MultipassInstance(Executor):
         :param command: Command to execute.
         :param cwd: working directory to execute the command
         :param env: Additional environment to set for process.
+        :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Additional keyword arguments for subprocess.Popen().
 
         :returns: Popen instance.
@@ -203,6 +218,7 @@ class MultipassInstance(Executor):
             instance_name=self.name,
             command=_rootify_multipass_command(command, cwd=cwd, env=env),
             runner=subprocess.Popen,
+            timeout=timeout,
             **kwargs,
         )
 
@@ -212,6 +228,7 @@ class MultipassInstance(Executor):
         *,
         cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
+        timeout: Optional[float] = None,
         **kwargs,
     ) -> subprocess.CompletedProcess:
         """Execute a command in the instance using subprocess.run().
@@ -228,6 +245,7 @@ class MultipassInstance(Executor):
         :param command: Command to execute.
         :param cwd: working directory to execute the command
         :param env: Additional environment to set for process.
+        :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Keyword args to pass to subprocess.run().
 
         :returns: Completed process.
@@ -238,6 +256,7 @@ class MultipassInstance(Executor):
             instance_name=self.name,
             command=_rootify_multipass_command(command, cwd=cwd, env=env),
             runner=subprocess.run,
+            timeout=timeout,
             **kwargs,
         )
 
@@ -368,7 +387,11 @@ class MultipassInstance(Executor):
             directory does not exist.
         :raises MultipassError: On unexpected error copying file.
         """
-        proc = self.execute_run(["test", "-f", source.as_posix()], check=False)
+        proc = self.execute_run(
+            ["test", "-f", source.as_posix()],
+            check=False,
+            timeout=TIMEOUT_SIMPLE,
+        )
         if proc.returncode != 0:
             raise FileNotFoundError(f"File not found: {source.as_posix()!r}")
 

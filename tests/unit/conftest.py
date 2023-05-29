@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Optional
 import pytest
 import responses as responses_module
 
-from craft_providers import Executor
+from craft_providers.executor import Executor
 from craft_providers.util import env_cmd
 
 
@@ -87,6 +87,7 @@ class FakeExecutor(Executor):
         *,
         cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
+        timeout: Optional[float] = None,
         **kwargs,
     ) -> subprocess.CompletedProcess:
         if env is None:
@@ -97,7 +98,7 @@ class FakeExecutor(Executor):
         final_cmd = ["fake-executor"] + env_args + command
 
         # pylint: disable-next=subprocess-run-check
-        return subprocess.run(final_cmd, **kwargs)
+        return subprocess.run(final_cmd, timeout=timeout, **kwargs)
 
     def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:
         self.records_of_pull_file.append(
