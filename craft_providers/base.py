@@ -83,19 +83,18 @@ class Base(ABC):
         compatibility levels are maintained.
     """
 
-    alias: Enum
+    _alias: Enum
+    _environment: Dict[str, Optional[str]]
+    _hostname: str
+    _instance_config_path: pathlib.Path = pathlib.Path("/etc/craft-instance.conf")
+    _instance_config_class: Type[InstanceConfiguration] = InstanceConfiguration
+    _snaps: Optional[List[Snap]] = None
+    _packages: Optional[List[str]] = None
+    _retry_wait: float = RETRY_WAIT
+    _timeout_simple: Optional[float] = TIMEOUT_SIMPLE
+    _timeout_complex: Optional[float] = TIMEOUT_COMPLEX
+    _timeout_unpredictable: Optional[float] = TIMEOUT_UNPREDICTABLE
     compatibility_tag: str = "base-v1"
-    environment: Dict[str, Optional[str]]
-    executor: Executor
-    hostname: str
-    instance_config_path: pathlib.Path = pathlib.Path("/etc/craft-instance.conf")
-    instance_config_class: Type[InstanceConfiguration] = InstanceConfiguration
-    snaps: Optional[List[Snap]] = None
-    packages: Optional[List[str]] = None
-    retry_wait: float = RETRY_WAIT
-    timeout_simple: Optional[float] = TIMEOUT_SIMPLE
-    timeout_complex: Optional[float] = TIMEOUT_COMPLEX
-    timeout_unpredictable: Optional[float] = TIMEOUT_UNPREDICTABLE
 
     @abstractmethod
     def __init__(
@@ -154,9 +153,9 @@ class Base(ABC):
             )
 
         logger.debug("Using hostname %r", valid_name)
-        self.hostname = valid_name
+        self._hostname = valid_name
 
-    def _ensure_instance_config_compatible(self) -> None:
+    def _ensure_instance_config_compatible(self, executor: Executor) -> None:
         """Ensure instance configuration is compatible.
 
         As long as the config is not incompatible (via a mismatched compatibility tag),
@@ -168,14 +167,16 @@ class Base(ABC):
         """
         try:
             config = InstanceConfiguration.load(
-                executor=self.executor,
-                config_path=self.instance_config_path,
+                executor=executor,
+                config_path=self._instance_config_path,
             )
         except ValidationError as error:
             raise BaseConfigurationError(
                 brief="Failed to parse instance configuration file.",
             ) from error
         # if no config exists, assume base is compatible (likely unfinished setup)
+        # XXX: checking the compatibility_tag should be much more strict when called
+        # by warmup (warmup will continue if the compatibility tag is missing or none!)
         except FileNotFoundError:
             return
 
@@ -194,7 +195,7 @@ class Base(ABC):
             "Instance is compatible with compatibility tag %r", config.compatibility_tag
         )
 
-    def _ensure_setup_completed(self) -> None:
+    def _ensure_setup_completed(self, executor: Executor) -> None:
         """Ensure the instance was fully setup.
 
         The last step of setting up an instance is to set the `setup` key in the
@@ -205,8 +206,8 @@ class Base(ABC):
         """
         try:
             config = InstanceConfiguration.load(
-                executor=self.executor,
-                config_path=self.instance_config_path,
+                executor=executor,
+                config_path=self._instance_config_path,
             )
         except ValidationError as error:
             raise BaseCompatibilityError(
@@ -225,7 +226,7 @@ class Base(ABC):
 
         logger.debug("Instance has already been setup.")
 
-    def _get_os_release(self) -> Dict[str, str]:
+    def _get_os_release(self, executor: Executor) -> Dict[str, str]:
         """Get the OS release information from an instance's /etc/os-release.
 
         :returns: Dictionary of key-mappings found in os-release.
@@ -233,14 +234,14 @@ class Base(ABC):
         try:
             # Replace encoding errors if it somehow occurs with utf-8. This
             # doesn't need to be perfect for checking compatibility.
-            proc = self.executor.execute_run(
+            proc = executor.execute_run(
                 command=["cat", "/etc/os-release"],
                 capture_output=True,
                 check=True,
                 text=True,
                 encoding="utf-8",
                 errors="replace",
-                timeout=self.timeout_simple,
+                timeout=self._timeout_simple,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -251,72 +252,72 @@ class Base(ABC):
         return parse_os_release(proc.stdout)
 
     @abstractmethod
-    def _ensure_os_compatible(self) -> None:
+    def _ensure_os_compatible(self, executor: Executor) -> None:
         """Ensure OS is compatible with Base.
 
         :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.
         """
 
-    def get_command_environment(
-        self,
-    ) -> Dict[str, Optional[str]]:
+    def get_command_environment(self) -> Dict[str, Optional[str]]:
         """Get command environment to use when executing commands.
 
         :returns: Dictionary of environment, allowing None as a value to
                   indicate that a value should be unset.
         """
-        return self.environment.copy()
+        return self._environment.copy()
 
-    def _update_setup_status(self, status: bool) -> None:
+    def _update_setup_status(self, executor: Executor, status: bool) -> None:
         """Update the instance config to indicate the status of the setup.
 
         :param status: True if the setup is complete, False otherwise.
         """
         InstanceConfiguration.update(
-            executor=self.executor,
+            executor=executor,
             data={"setup": status},
-            config_path=self.instance_config_path,
+            config_path=self._instance_config_path,
         )
 
-    def _update_compatibility_tag(self) -> None:
+    def _update_compatibility_tag(self, executor: Executor) -> None:
         """Update the compatibility_tag in the instance config."""
         InstanceConfiguration.update(
-            executor=self.executor,
+            executor=executor,
             data={"compatibility_tag": self.compatibility_tag},
-            config_path=self.instance_config_path,
+            config_path=self._instance_config_path,
         )
 
-    def _setup_environment(self) -> None:
+    def _setup_environment(self, executor: Executor) -> None:
         """Configure /etc/environment.
 
         If environment is None, reset /etc/environment to the default.
         """
         content = (
             "\n".join(
-                [f"{k}={v}" for k, v in self.environment.items() if v is not None]
+                [f"{k}={v}" for k, v in self._environment.items() if v is not None]
             )
             + "\n"
         ).encode()
 
-        self.executor.push_file_io(
+        executor.push_file_io(
             destination=pathlib.Path("/etc/environment"),
             content=io.BytesIO(content),
             file_mode="0644",
         )
 
-    def _setup_wait_for_system_ready(self) -> None:
+    def _setup_wait_for_system_ready(self, executor: Executor) -> None:
         """Wait until system is ready."""
         logger.debug("Waiting for environment to be ready...")
         start_time = time.time()
+        timeout = False
 
-        while True:
+        while not timeout:
             proc = self._execute_run(
                 ["systemctl", "is-system-running"],
+                executor=executor,
                 capture_output=True,
                 check=False,
                 text=True,
-                timeout=self.timeout_simple,
+                timeout=self._timeout_simple,
             )
 
             running_state = proc.stdout.strip()
@@ -325,25 +326,29 @@ class Base(ABC):
 
             logger.debug("systemctl is-system-running status: %s", running_state)
 
-            if self.timeout_simple and self.timeout_simple > 0:
-                if time.time() - start_time > self.timeout_simple:
-                    raise BaseConfigurationError(
-                        brief="Timed out waiting for environment to be ready.",
-                    )
+            sleep(self._retry_wait)
 
-            sleep(self.retry_wait)
+            if self._timeout_simple and self._timeout_simple > 0:
+                if time.time() - start_time > self._timeout_simple:
+                    timeout = True
 
-    def _setup_hostname(self) -> None:
+        raise BaseConfigurationError(
+            brief="Timed out waiting for environment to be ready.",
+        )
+
+    def _setup_hostname(self, executor: Executor) -> None:
         """Configure hostname, installing /etc/hostname."""
-        self.executor.push_file_io(
+        executor.push_file_io(
             destination=pathlib.Path("/etc/hostname"),
-            content=io.BytesIO((self.hostname + "\n").encode()),
+            content=io.BytesIO((self._hostname + "\n").encode()),
             file_mode="0644",
         )
 
         try:
             self._execute_run(
-                ["hostname", "-F", "/etc/hostname"], timeout=self.timeout_simple
+                ["hostname", "-F", "/etc/hostname"],
+                executor=executor,
+                timeout=self._timeout_simple,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -351,12 +356,12 @@ class Base(ABC):
                 details=details_from_called_process_error(error),
             ) from error
 
-    def _setup_networkd(self) -> None:
+    def _setup_networkd(self, executor: Executor) -> None:
         """Configure networkd and start it.
 
         Installs eth0 network configuration using ipv4.
         """
-        self.executor.push_file_io(
+        executor.push_file_io(
             destination=pathlib.Path("/etc/systemd/network/10-eth0.network"),
             content=io.BytesIO(
                 dedent(
@@ -379,11 +384,14 @@ class Base(ABC):
 
         try:
             self._execute_run(
-                ["systemctl", "enable", "systemd-networkd"], timeout=self.timeout_simple
+                ["systemctl", "enable", "systemd-networkd"],
+                executor=executor,
+                timeout=self._timeout_simple,
             )
             self._execute_run(
                 ["systemctl", "restart", "systemd-networkd"],
-                timeout=self.timeout_simple,
+                executor=executor,
+                timeout=self._timeout_simple,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -391,7 +399,7 @@ class Base(ABC):
                 details=details_from_called_process_error(error),
             ) from error
 
-    def _setup_resolved(self) -> None:
+    def _setup_resolved(self, executor: Executor) -> None:
         """Configure system-resolved to manage resolve.conf."""
         try:
             command = [
@@ -400,15 +408,18 @@ class Base(ABC):
                 "/run/systemd/resolve/resolv.conf",
                 "/etc/resolv.conf",
             ]
-            self._execute_run(command, timeout=self.timeout_simple)
+            self._execute_run(command, executor=executor, timeout=self._timeout_simple)
 
             self._execute_run(
-                ["systemctl", "enable", "systemd-resolved"], timeout=self.timeout_simple
+                ["systemctl", "enable", "systemd-resolved"],
+                executor=executor,
+                timeout=self._timeout_simple,
             )
 
             self._execute_run(
                 ["systemctl", "restart", "systemd-resolved"],
-                timeout=self.timeout_simple,
+                executor=executor,
+                timeout=self._timeout_simple,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -416,34 +427,37 @@ class Base(ABC):
                 details=details_from_called_process_error(error),
             ) from error
 
-    def _setup_wait_for_network(self) -> None:
+    def _setup_wait_for_network(self, executor: Executor) -> None:
         """Wait until networking is ready."""
         logger.debug("Waiting for networking to be ready...")
         start_time = time.time()
 
         command = ["getent", "hosts", "snapcraft.io"]
         while True:
-            proc = self._execute_run(command, check=False, timeout=10)
+            proc = self._execute_run(
+                command, executor=executor, check=False, timeout=10
+            )
             if proc.returncode == 0:
                 return
 
-            if self.timeout_simple and self.timeout_simple > 0:
-                if time.time() - start_time > self.timeout_simple:
+            if self._timeout_simple and self._timeout_simple > 0:
+                if time.time() - start_time > self._timeout_simple:
                     raise BaseConfigurationError(
                         brief="Timed out waiting for networking to be ready.",
                     )
 
-            sleep(self.retry_wait)
+            sleep(self._retry_wait)
 
-    def _enable_udevd_service(self) -> None:
+    def _enable_udevd_service(self, executor: Executor) -> None:
         """Enable and start udevd service."""
         try:
             proc = self._execute_run(
                 ["systemctl", "is-active", "systemd-udevd"],
+                executor=executor,
                 capture_output=True,
                 check=False,
                 text=True,
-                timeout=self.timeout_simple,
+                timeout=self._timeout_simple,
             )
 
             state = proc.stdout.strip()
@@ -453,10 +467,12 @@ class Base(ABC):
             # systemd-udevd is not active, enable and start it
             self._execute_run(
                 ["systemctl", "enable", "systemd-udevd"],
+                executor=executor,
                 timeout=TIMEOUT_SIMPLE,
             )
             self._execute_run(
                 ["systemctl", "start", "systemd-udevd"],
+                executor=executor,
                 timeout=TIMEOUT_SIMPLE,
             )
         except subprocess.CalledProcessError as error:
@@ -465,7 +481,7 @@ class Base(ABC):
                 details=details_from_called_process_error(error),
             ) from error
 
-    def _disable_snapd_cdn(self) -> None:
+    def _disable_snapd_cdn(self, executor: Executor) -> None:
         """Disable snapd CDN access if necessary."""
         try:
             # This file is created by launchpad-buildd to stop snapd from
@@ -478,26 +494,29 @@ class Base(ABC):
             if no_cdn.exists():
                 self._execute_run(
                     ["mkdir", "-p", no_cdn.parent.as_posix()],
+                    executor=executor,
                     timeout=TIMEOUT_SIMPLE,
                 )
 
-                self.executor.push_file(source=no_cdn, destination=no_cdn)
+                executor.push_file(source=no_cdn, destination=no_cdn)
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to disable snapd CDN.",
                 details=details_from_called_process_error(error),
             ) from error
 
-    def _enable_snapd_service(self) -> None:
+    def _enable_snapd_service(self, executor: Executor) -> None:
         """Create the symlink to /snap and enable the snapd service."""
         try:
             self._execute_run(
                 ["ln", "-sf", "/var/lib/snapd/snap", "/snap"],
+                executor=executor,
                 timeout=TIMEOUT_SIMPLE,
             )
 
             self._execute_run(
                 ["systemctl", "enable", "--now", "snapd.socket"],
+                executor=executor,
                 timeout=TIMEOUT_SIMPLE,
             )
 
@@ -505,10 +524,12 @@ class Base(ABC):
             # has changed and the service is already running.
             self._execute_run(
                 ["systemctl", "restart", "snapd.service"],
+                executor=executor,
                 timeout=TIMEOUT_SIMPLE,
             )
             self._execute_run(
                 ["snap", "wait", "system", "seed.loaded"],
+                executor=executor,
                 timeout=TIMEOUT_SIMPLE,
             )
         except subprocess.CalledProcessError as error:
@@ -517,22 +538,22 @@ class Base(ABC):
                 details=details_from_called_process_error(error),
             ) from error
 
-    def _setup_snapd_proxy(self) -> None:
+    def _setup_snapd_proxy(self, executor: Executor) -> None:
         """Configure the snapd proxy."""
         try:
-            http_proxy = self.environment.get("http_proxy")
+            http_proxy = self._environment.get("http_proxy")
             if http_proxy:
                 command = ["snap", "set", "system", f"proxy.http={http_proxy}"]
             else:
                 command = ["snap", "unset", "system", "proxy.http"]
-            self._execute_run(command, timeout=self.timeout_simple)
+            self._execute_run(command, executor=executor, timeout=self._timeout_simple)
 
-            https_proxy = self.environment.get("https_proxy")
+            https_proxy = self._environment.get("https_proxy")
             if https_proxy:
                 command = ["snap", "set", "system", f"proxy.https={https_proxy}"]
             else:
                 command = ["snap", "unset", "system", "proxy.https"]
-            self._execute_run(command, timeout=self.timeout_simple)
+            self._execute_run(command, executor=executor, timeout=self._timeout_simple)
 
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -540,7 +561,7 @@ class Base(ABC):
                 details=details_from_called_process_error(error),
             ) from error
 
-    def _disable_and_wait_for_snap_refresh(self) -> None:
+    def _disable_and_wait_for_snap_refresh(self, executor: Executor) -> None:
         """Disable automatic snap refreshes and wait for refreshes to complete.
 
         Craft-providers manages the installation and versions of snaps inside the
@@ -552,11 +573,11 @@ class Base(ABC):
 
         # TODO: run `snap refresh --hold` once during setup (`--hold` is not yet stable)
         try:
-            self.executor.execute_run(
+            executor.execute_run(
                 ["snap", "set", "system", f"refresh.hold={hold_time.isoformat()}Z"],
                 capture_output=True,
                 check=True,
-                timeout=self.timeout_simple,
+                timeout=self._timeout_simple,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -567,11 +588,11 @@ class Base(ABC):
         # a refresh may have started before the hold was set
         logger.debug("Waiting for pending snap refreshes to complete.")
         try:
-            self.executor.execute_run(
+            executor.execute_run(
                 ["snap", "watch", "--last=auto-refresh?"],
                 capture_output=True,
                 check=True,
-                timeout=self.timeout_simple,
+                timeout=self._timeout_simple,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -579,7 +600,7 @@ class Base(ABC):
                 details=details_from_called_process_error(error),
             ) from error
 
-    def _install_snaps(self) -> None:
+    def _install_snaps(self, executor: Executor) -> None:
         """Install snaps.
 
         Snaps will either be installed from the store or injected from the host.
@@ -590,11 +611,11 @@ class Base(ABC):
 
         :raises BaseConfigurationError: if the snap cannot be installed
         """
-        if not self.snaps:
+        if not self._snaps:
             logger.debug("No snaps to install.")
             return
 
-        for snap in self.snaps:
+        for snap in self._snaps:
             logger.debug(
                 "Installing snap %r with channel=%r and classic=%r",
                 snap.name,
@@ -618,7 +639,7 @@ class Base(ABC):
             if snap.channel:
                 try:
                     snap_installer.install_from_store(
-                        executor=self.executor,
+                        executor=executor,
                         snap_name=snap.name,
                         channel=snap.channel,
                         classic=snap.classic,
@@ -633,7 +654,7 @@ class Base(ABC):
             else:
                 try:
                     snap_installer.inject_from_host(
-                        executor=self.executor,
+                        executor=executor,
                         snap_name=snap.name,
                         classic=snap.classic,
                     )
@@ -645,7 +666,7 @@ class Base(ABC):
                         )
                     ) from error
 
-    def wait_until_ready(self) -> None:
+    def wait_until_ready(self, executor: Executor) -> None:
         """Wait until base instance is ready.
 
         Ensure minimum-required boot services are running.  This would be used
@@ -664,32 +685,32 @@ class Base(ABC):
 
         :raises ProviderError: on timeout or unexpected error.
         """
-        self._setup_wait_for_system_ready()
-        self._setup_wait_for_network()
+        self._setup_wait_for_system_ready(executor=executor)
+        self._setup_wait_for_network(executor=executor)
 
-    def _pre_image_check(self) -> None:
+    def _pre_image_check(self, executor: Executor) -> None:
         """Start the setup process and update the status.
 
         This step usually does not need to be overridden.
         """
         return
 
-    def _image_check(self) -> None:
+    def _image_check(self, executor: Executor) -> None:
         """Check that the image compatibility.
 
         This step usually does not need to be overridden.
         """
-        self._ensure_os_compatible()
-        self._ensure_instance_config_compatible()
+        self._ensure_os_compatible(executor=executor)
+        self._ensure_instance_config_compatible(executor=executor)
 
-    def _post_image_check(self) -> None:
+    def _post_image_check(self, executor: Executor) -> None:
         """Do anything extra image checking.
 
         This step should be overridden when needed.
         """
         return
 
-    def _pre_setup_os(self) -> None:
+    def _pre_setup_os(self, executor: Executor) -> None:
         """Do anything before setting up the OS.
 
         e.g.
@@ -700,14 +721,14 @@ class Base(ABC):
         """
         return
 
-    def _setup_os(self) -> None:
+    def _setup_os(self, executor: Executor) -> None:
         """Set up the OS environment.
 
         This step should be overridden when needed.
         """
-        self._setup_environment()
+        self._setup_environment(executor=executor)
 
-    def _post_setup_os(self) -> None:
+    def _post_setup_os(self, executor: Executor) -> None:
         """Do anything after setting up the OS.
 
         e.g.
@@ -717,7 +738,7 @@ class Base(ABC):
         """
         return
 
-    def _pre_setup_network(self) -> None:
+    def _pre_setup_network(self, executor: Executor) -> None:
         """Do anything before setting up the basic network.
 
         e.g.
@@ -727,7 +748,7 @@ class Base(ABC):
         """
         return
 
-    def _setup_network(self) -> None:
+    def _setup_network(self, executor: Executor) -> None:
         """Set up the basic network.
 
         Basic configuration for the systemd and networkd by default.
@@ -738,11 +759,9 @@ class Base(ABC):
 
         This step usually does not need to be overridden.
         """
-        self._setup_hostname()
-        self._setup_resolved()
-        self._setup_networkd()
+        self._setup_hostname(executor=executor)
 
-    def _post_setup_network(self) -> None:
+    def _post_setup_network(self, executor: Executor) -> None:
         """Do anything after setting up the basic network.
 
         e.g.
@@ -752,7 +771,7 @@ class Base(ABC):
         """
         return
 
-    def _pre_setup_packages(self) -> None:
+    def _pre_setup_packages(self, executor: Executor) -> None:
         """Do anything before setting up the packages.
 
         e.g.
@@ -763,20 +782,20 @@ class Base(ABC):
         return
 
     @abstractmethod
-    def _setup_packages(self) -> None:
+    def _setup_packages(self, executor: Executor) -> None:
         """Set up the packages.
 
         This step must be overridden.
         """
 
-    def _post_setup_packages(self) -> None:
+    def _post_setup_packages(self, executor: Executor) -> None:
         """Configure the new installed packages.
 
         This step should be overridden when needed.
         """
         return
 
-    def _pre_setup_snapd(self) -> None:
+    def _pre_setup_snapd(self, executor: Executor) -> None:
         """Do anything before setting up snapd.
 
         e.g.
@@ -785,26 +804,26 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
-        self._enable_udevd_service()
-        self._disable_snapd_cdn()
+        self._enable_udevd_service(executor=executor)
+        self._disable_snapd_cdn(executor=executor)
 
     @abstractmethod
-    def _setup_snapd(self) -> None:
+    def _setup_snapd(self, executor: Executor) -> None:
         """Set up snapd.
 
         This step must be overridden.
         """
 
-    def _post_setup_snapd(self) -> None:
+    def _post_setup_snapd(self, executor: Executor) -> None:
         """Configure the new installed snapd.
 
         This step usually does not need to be overridden.
         """
-        self._enable_snapd_service()
-        self._disable_and_wait_for_snap_refresh()
-        self._setup_snapd_proxy()
+        self._enable_snapd_service(executor=executor)
+        self._disable_and_wait_for_snap_refresh(executor=executor)
+        self._setup_snapd_proxy(executor=executor)
 
-    def _pre_setup_snaps(self) -> None:
+    def _pre_setup_snaps(self, executor: Executor) -> None:
         """Do anything before setting up the snaps.
 
         e.g.
@@ -814,7 +833,7 @@ class Base(ABC):
         """
         return
 
-    def _setup_snaps(self) -> None:
+    def _setup_snaps(self, executor: Executor) -> None:
         """Set up the snaps.
 
         e.g.
@@ -822,16 +841,16 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
-        self._install_snaps()
+        self._install_snaps(executor=executor)
 
-    def _post_setup_snaps(self) -> None:
+    def _post_setup_snaps(self, executor: Executor) -> None:
         """Configure the new installed snaps.
 
         This step should be overridden when needed.
         """
         return
 
-    def _pre_clean_up(self) -> None:
+    def _pre_clean_up(self, executor: Executor) -> None:
         """Do anything before cleaning up.
 
         e.g.
@@ -841,7 +860,7 @@ class Base(ABC):
         """
         return
 
-    def _clean_up(self) -> None:
+    def _clean_up(self, executor: Executor) -> None:
         """Cleanup the OS environment.
 
         e.g.
@@ -852,7 +871,7 @@ class Base(ABC):
         """
         return
 
-    def _post_clean_up(self) -> None:
+    def _post_clean_up(self, executor: Executor) -> None:
         """Do anything needed after cleaning up.
 
         e.g.
@@ -863,7 +882,7 @@ class Base(ABC):
         """
         return
 
-    def _pre_finish(self) -> None:
+    def _pre_finish(self, executor: Executor) -> None:
         """Do anything needed before finishing the setup process.
 
         e.g.
@@ -874,19 +893,19 @@ class Base(ABC):
         return
 
     @final
-    def _finish(self) -> None:
+    def _finish(self, executor: Executor) -> None:
         """Finish the setup process and update the status.
 
         This step cannot be overridden.
         """
-        self._update_setup_status(status=True)
+        self._update_setup_status(executor=executor, status=True)
 
     @final
     def setup(
         self,
         *,
         executor: Executor,
-        timeout: Optional[float] = -1,
+        timeout: Optional[float] = TIMEOUT_UNPREDICTABLE,
     ) -> None:
         """Prepare base instance for use by the application.
 
@@ -906,59 +925,60 @@ class Base(ABC):
         :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.
         """
-        self.executor = executor
         if timeout is None:
-            self.timeout_unpredictable = None
+            self._timeout_simple = None
+            self._timeout_complex = None
+            self._timeout_unpredictable = None
         elif timeout > 0:
-            self.timeout_unpredictable = timeout
+            self._timeout_unpredictable = timeout
         else:
-            self.timeout_unpredictable = TIMEOUT_UNPREDICTABLE
+            raise BaseConfigurationError(f"Invalid timeout value: {timeout}")
 
-        self._update_setup_status(status=False)
+        self._update_setup_status(executor=executor, status=False)
 
-        self._pre_image_check()
-        self._image_check()
-        self._post_image_check()
+        self._pre_image_check(executor=executor)
+        self._image_check(executor=executor)
+        self._post_image_check(executor=executor)
 
-        self._update_compatibility_tag()
+        self._update_compatibility_tag(executor=executor)
 
-        self._pre_setup_os()
-        self._setup_os()
-        self._post_setup_os()
+        self._pre_setup_os(executor=executor)
+        self._setup_os(executor=executor)
+        self._post_setup_os(executor=executor)
 
-        self._setup_wait_for_system_ready()
+        self._setup_wait_for_system_ready(executor=executor)
 
-        self._pre_setup_network()
-        self._setup_network()
-        self._post_setup_network()
+        self._pre_setup_network(executor=executor)
+        self._setup_network(executor=executor)
+        self._post_setup_network(executor=executor)
 
-        self._setup_wait_for_network()
+        self._setup_wait_for_network(executor=executor)
 
-        self._pre_setup_packages()
-        self._setup_packages()
-        self._post_setup_packages()
+        self._pre_setup_packages(executor=executor)
+        self._setup_packages(executor=executor)
+        self._post_setup_packages(executor=executor)
 
-        self._pre_setup_snapd()
-        self._setup_snapd()
-        self._post_setup_snapd()
+        self._pre_setup_snapd(executor=executor)
+        self._setup_snapd(executor=executor)
+        self._post_setup_snapd(executor=executor)
 
-        self._pre_setup_snaps()
-        self._setup_snaps()
-        self._post_setup_snaps()
+        self._pre_setup_snaps(executor=executor)
+        self._setup_snaps(executor=executor)
+        self._post_setup_snaps(executor=executor)
 
-        self._pre_clean_up()
-        self._clean_up()
-        self._post_clean_up()
+        self._pre_clean_up(executor=executor)
+        self._clean_up(executor=executor)
+        self._post_clean_up(executor=executor)
 
-        self._pre_finish()
-        self._finish()
+        self._pre_finish(executor=executor)
+        self._finish(executor=executor)
 
     @final
     def warmup(
         self,
         *,
         executor: Executor,
-        timeout: Optional[float] = -1,
+        timeout: Optional[float] = TIMEOUT_UNPREDICTABLE,
     ) -> None:
         """Prepare a previously created and setup instance for use by the application.
 
@@ -972,31 +992,32 @@ class Base(ABC):
         :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.
         """
-        self.executor = executor
-
         if timeout is None:
-            self.timeout_unpredictable = None
+            self._timeout_simple = None
+            self._timeout_complex = None
+            self._timeout_unpredictable = None
         elif timeout > 0:
-            self.timeout_unpredictable = timeout
+            self._timeout_unpredictable = timeout
         else:
-            self.timeout_unpredictable = TIMEOUT_UNPREDICTABLE
+            raise BaseConfigurationError(f"Invalid timeout value: {timeout}")
 
-        self._ensure_setup_completed()
+        self._ensure_setup_completed(executor=executor)
 
-        self._pre_image_check()
-        self._image_check()
-        self._post_image_check()
+        self._pre_image_check(executor=executor)
+        self._image_check(executor=executor)
+        self._post_image_check(executor=executor)
 
-        self._setup_wait_for_system_ready()
-        self._setup_wait_for_network()
+        self._setup_wait_for_system_ready(executor=executor)
+        self._setup_wait_for_network(executor=executor)
 
-        self._post_setup_snapd()
+        self._post_setup_snapd(executor=executor)
 
-        self._pre_setup_snaps()
-        self._setup_snaps()
-        self._post_setup_snaps()
+        self._pre_setup_snaps(executor=executor)
+        self._setup_snaps(executor=executor)
+        self._post_setup_snaps(executor=executor)
 
-    def _network_connected(self) -> bool:
+    @staticmethod
+    def _network_connected(executor: Executor) -> bool:
         """Check if the network is connected."""
         # bypass the network verification if there is a proxy set for HTTPS
         # (because we're hitting port 443), as bash's TCP functionality will not
@@ -1012,7 +1033,7 @@ class Base(ABC):
             # timeout quickly, so it's representative of current state (we don't
             # want for it to hang a lot and then succeed 45 seconds later if network
             # came back); capture the output just for it to not pollute the terminal
-            proc = self.executor.execute_run(
+            proc = executor.execute_run(
                 command, check=False, timeout=10, capture_output=True
             )
         except subprocess.TimeoutExpired:
@@ -1020,10 +1041,10 @@ class Base(ABC):
         return proc.returncode == 0
 
     def _execute_run(
-        self,
+        cls,
         command: List[str],
         *,
-        executor: Optional[Executor] = None,
+        executor: Executor,
         check: bool = True,
         capture_output: bool = True,
         text: bool = False,
@@ -1057,7 +1078,7 @@ class Base(ABC):
                 timeout=timeout,
             )
         except subprocess.CalledProcessError as exc:
-            if verify_network and not self._network_connected():
+            if verify_network and not cls._network_connected(executor=executor):
                 raise NetworkError() from exc
             raise
         return proc

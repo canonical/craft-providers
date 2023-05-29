@@ -51,6 +51,7 @@ class Executor(ABC):
 
         :param command: Command to execute.
         :param env: Additional environment to set for process.
+        :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Additional keyword arguments to pass.
 
         :returns: Popen instance.
@@ -74,6 +75,7 @@ class Executor(ABC):
 
         :param command: Command to execute.
         :param env: Additional environment to set for process.
+        :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Keyword args to pass to subprocess.run().
 
         :returns: Completed process.

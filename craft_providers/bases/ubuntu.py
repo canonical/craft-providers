@@ -26,12 +26,12 @@ from typing import Dict, List, Optional
 
 from craft_providers.actions.snap_installer import Snap
 from craft_providers.base import Base
-from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE, TIMEOUT_UNPREDICTABLE
 from craft_providers.errors import (
     BaseCompatibilityError,
     BaseConfigurationError,
     details_from_called_process_error,
 )
+from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 
@@ -85,25 +85,25 @@ class BuilddBase(Base):
         snaps: Optional[List[Snap]] = None,
         packages: Optional[List[str]] = None,
     ):
-        self.alias: BuilddBaseAlias = alias
+        self._alias: BuilddBaseAlias = alias
 
         if environment is None:
-            self.environment = self.default_command_environment()
+            self._environment = self.default_command_environment()
         else:
-            self.environment = environment
+            self._environment = environment
 
         if compatibility_tag:
             self.compatibility_tag = compatibility_tag
 
         self._set_hostname(hostname)
 
-        self.packages = ["apt-utils", "build-essential", "curl", "fuse", "udev"]
+        self._packages = ["apt-utils", "build-essential", "curl", "fuse", "udev"]
         if packages:
-            self.packages.extend(packages)
+            self._packages.extend(packages)
 
-        self.snaps = snaps
+        self._snaps = snaps
 
-    def _disable_automatic_apt(self) -> None:
+    def _disable_automatic_apt(self, executor: Executor) -> None:
         """Disable automatic apt actions.
 
         This should happen as soon as possible in the instance overall setup,
@@ -118,15 +118,15 @@ class BuilddBase(Base):
             APT::Periodic::Unattended-Upgrade "0";
         """
         ).encode()
-        self.executor.push_file_io(
+        executor.push_file_io(
             destination=pathlib.Path("/etc/apt/apt.conf.d/20auto-upgrades"),
             content=io.BytesIO(content),
             file_mode="0644",
         )
 
-    def _ensure_os_compatible(self) -> None:
+    def _ensure_os_compatible(self, executor: Executor) -> None:
         """Ensure OS is compatible with Base."""
-        os_release = self._get_os_release()
+        os_release = self._get_os_release(executor=executor)
 
         os_name = os_release.get("NAME")
         if os_name != "Ubuntu":
@@ -134,7 +134,7 @@ class BuilddBase(Base):
                 reason=f"Expected OS 'Ubuntu', found {os_name!r}"
             )
 
-        compat_version_id = self.alias.value
+        compat_version_id = self._alias.value
         version_id = os_release.get("VERSION_ID")
 
         if compat_version_id == BuilddBaseAlias.DEVEL.value:
@@ -153,7 +153,7 @@ class BuilddBase(Base):
                 )
             )
 
-    def _update_apt_sources(self, codename: str) -> None:
+    def _update_apt_sources(self, executor: Executor, codename: str) -> None:
         """Update the codename in the apt source config files.
 
         :param codename: New codename to use in apt source config files (i.e. 'lunar')
@@ -163,14 +163,18 @@ class BuilddBase(Base):
         cloud_config = "/etc/cloud/cloud.cfg"
 
         # get the current ubuntu codename
-        os_release = self._get_os_release()
+        os_release = self._get_os_release(executor=executor)
         version_codename = os_release.get("VERSION_CODENAME")
         logger.debug("Updating apt sources from %r to %r.", version_codename, codename)
 
         # replace all occurrences of the codename in the `sources.list` file
         sed_command = ["sed", "-i", f"s/{version_codename}/{codename}/g"]
         try:
-            self._execute_run(sed_command + [apt_source], timeout=TIMEOUT_SIMPLE)
+            self._execute_run(
+                sed_command + [apt_source],
+                executor=executor,
+                timeout=self._timeout_simple,
+            )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief=f"Failed to update {apt_source!r}.",
@@ -179,7 +183,11 @@ class BuilddBase(Base):
 
         # if cloud-init and cloud.cfg isn't present, then raise an error
         try:
-            self._execute_run(["test", "-s", cloud_config], timeout=TIMEOUT_SIMPLE)
+            self._execute_run(
+                ["test", "-s", cloud_config],
+                executor=executor,
+                timeout=self._timeout_simple,
+            )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief=(
@@ -196,7 +204,8 @@ class BuilddBase(Base):
                 # 'aapt' is not a typo, the first 'a' is the sed command to append
                 # this is a shlex-compatible way to append to a file
                 ["sed", "-i", "$ aapt_preserve_sources_list: true", cloud_config],
-                timeout=TIMEOUT_SIMPLE,
+                executor=executor,
+                timeout=self._timeout_simple,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -212,8 +221,9 @@ class BuilddBase(Base):
         try:
             additional_source_files = self._execute_run(
                 ["find", apt_source_dir, "-type", "f", "-name", "*.list"],
+                executor=executor,
                 text=True,
-                timeout=TIMEOUT_SIMPLE,
+                timeout=self._timeout_simple,
             ).stdout.strip()
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -226,7 +236,8 @@ class BuilddBase(Base):
             try:
                 self._execute_run(
                     sed_command + [apt_source_dir + "*.list"],
-                    timeout=TIMEOUT_SIMPLE,
+                    executor=executor,
+                    timeout=self._timeout_simple,
                 )
             except subprocess.CalledProcessError as error:
                 raise BaseConfigurationError(
@@ -234,35 +245,43 @@ class BuilddBase(Base):
                     details=details_from_called_process_error(error),
                 ) from error
 
-    def _post_setup_os(self) -> None:
+    def _post_setup_os(self, executor: Executor) -> None:
         """Ubuntu specific post-setup OS tasks."""
-        self._disable_automatic_apt()
+        self._disable_automatic_apt(executor=executor)
 
-    def _pre_setup_packages(self) -> None:
+    def _setup_network(self, executor: Executor) -> None:
+        """Set up the basic network with systemd-networkd and systemd-resolved."""
+        self._setup_hostname(executor=executor)
+        self._setup_resolved(executor=executor)
+        self._setup_networkd(executor=executor)
+
+    def _pre_setup_packages(self, executor: Executor) -> None:
         """Configure apt, update database."""
-        self.executor.push_file_io(
+        executor.push_file_io(
             destination=pathlib.Path("/etc/apt/apt.conf.d/00no-recommends"),
             content=io.BytesIO('APT::Install-Recommends "false";\n'.encode()),
             file_mode="0644",
         )
 
-        self.executor.push_file_io(
+        executor.push_file_io(
             destination=pathlib.Path("/etc/apt/apt.conf.d/00update-errors"),
             content=io.BytesIO('APT::Update::Error-Mode "any";\n'.encode()),
             file_mode="0644",
         )
 
         # devel images should use the devel repository
-        if self.alias == BuilddBaseAlias.DEVEL:
+        if self._alias == BuilddBaseAlias.DEVEL:
             self._update_apt_sources(
+                executor=executor,
                 codename=BuilddBaseAlias.DEVEL.value,
             )
 
         try:
             self._execute_run(
                 ["apt-get", "update"],
+                executor=executor,
                 verify_network=True,
-                timeout=TIMEOUT_UNPREDICTABLE,
+                timeout=self._timeout_unpredictable,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -270,16 +289,17 @@ class BuilddBase(Base):
                 details=details_from_called_process_error(error),
             ) from error
 
-    def _setup_packages(self) -> None:
+    def _setup_packages(self, executor: Executor) -> None:
         """Use apt install required packages and user-defined packages."""
-        if not self.packages:
+        if not self._packages:
             return
         try:
-            command = ["apt-get", "install", "-y"] + self.packages
+            command = ["apt-get", "install", "-y"] + self._packages
             self._execute_run(
                 command,
+                executor=executor,
                 verify_network=True,
-                timeout=TIMEOUT_UNPREDICTABLE,
+                timeout=self._timeout_unpredictable,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -287,13 +307,14 @@ class BuilddBase(Base):
                 details=details_from_called_process_error(error),
             ) from error
 
-    def _setup_snapd(self) -> None:
+    def _setup_snapd(self, executor: Executor) -> None:
         """Install snapd and dependencies and wait until ready."""
         try:
             self._execute_run(
                 ["apt-get", "install", "-y", "snapd"],
+                executor=executor,
                 verify_network=True,
-                timeout=TIMEOUT_COMPLEX,
+                timeout=self._timeout_complex,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -301,9 +322,17 @@ class BuilddBase(Base):
                 details=details_from_called_process_error(error),
             ) from error
 
-    def _clean_up(self) -> None:
-        self._execute_run(["apt-get", "autoremove", "-y"], timeout=TIMEOUT_COMPLEX)
-        self._execute_run(["apt-get", "clean", "-y"], timeout=TIMEOUT_COMPLEX)
+    def _clean_up(self, executor: Executor) -> None:
+        self._execute_run(
+            ["apt-get", "autoremove", "-y"],
+            executor=executor,
+            timeout=self._timeout_complex,
+        )
+        self._execute_run(
+            ["apt-get", "clean", "-y"],
+            executor=executor,
+            timeout=self._timeout_complex,
+        )
 
 
 # Backward compatible, will be removed in 2.0

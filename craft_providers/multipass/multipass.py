@@ -110,6 +110,7 @@ class Multipass:
         :param runner: Execution function to invoke, e.g. subprocess.run or
             Popen.  First argument is finalized command with the attached
             kwargs.
+        :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Additional kwargs for runner.
 
         :returns: Runner's instance.
@@ -119,6 +120,7 @@ class Multipass:
         quoted_final_cmd = shlex.join(final_cmd)
         logger.debug("Executing on host: %s", quoted_final_cmd)
 
+        # Only subprocess.run supports timeout
         if runner is subprocess.run:
             return runner(  # pylint: disable=subprocess-run-check
                 final_cmd, timeout=timeout, **kwargs

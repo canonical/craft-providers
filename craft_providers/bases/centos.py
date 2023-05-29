@@ -23,12 +23,12 @@ from typing import Dict, List, Optional
 
 from craft_providers.actions.snap_installer import Snap
 from craft_providers.base import Base
-from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_UNPREDICTABLE
 from craft_providers.errors import (
     BaseCompatibilityError,
     BaseConfigurationError,
     details_from_called_process_error,
 )
+from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 
@@ -78,19 +78,19 @@ class CentOSBase(Base):
         snaps: Optional[List[Snap]] = None,
         packages: Optional[List[str]] = None,
     ):
-        self.alias: CentOSBaseAlias = alias
+        self._alias: CentOSBaseAlias = alias
 
         if environment is None:
-            self.environment = self.default_command_environment()
+            self._environment = self.default_command_environment()
         else:
-            self.environment = environment
+            self._environment = environment
 
         if compatibility_tag:
             self.compatibility_tag = compatibility_tag
 
         self._set_hostname(hostname)
 
-        self.packages = [
+        self._packages = [
             "autoconf",
             "automake",
             "gcc",
@@ -105,9 +105,9 @@ class CentOSBase(Base):
             "rh-python38-python-setuptools",
         ]
         if packages:
-            self.packages.extend(packages)
+            self._packages.extend(packages)
 
-        self.snaps = snaps
+        self._snaps = snaps
 
     @staticmethod
     def default_command_environment() -> Dict[str, Optional[str]]:
@@ -125,13 +125,13 @@ class CentOSBase(Base):
             "/sbin:/bin:/usr/sbin:/usr/bin:/snap/bin"
         }
 
-    def _ensure_os_compatible(self) -> None:
+    def _ensure_os_compatible(self, executor: Executor) -> None:
         """Ensure OS is compatible with Base.
 
         :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.
         """
-        os_release = self._get_os_release()
+        os_release = self._get_os_release(executor=executor)
 
         os_id = os_release.get("ID")
         if os_id not in ("centos", "rhel"):
@@ -139,7 +139,7 @@ class CentOSBase(Base):
                 reason=f"Expected OS 'centos', found {os_id!r}"
             )
 
-        compat_version_id = self.alias.value
+        compat_version_id = self._alias.value
         version_id = os_release.get("VERSION_ID")
 
         if version_id != compat_version_id:
@@ -150,23 +150,39 @@ class CentOSBase(Base):
                 )
             )
 
-    def _setup_resolved(self) -> None:
-        """Empty, CentOS does not use systemd-resolved."""
+    def _enable_yum_extra_repos(self, executor: Executor) -> None:
+        """Configure CentOS special extra repos.
 
-    def _setup_networkd(self) -> None:
-        """Empty, CentOS does not use systemd-networkd."""
+        Enable "epel-release" repo for snapd.
+        Enable "centos-release-scl" for python 3.8.
+        """
+        try:
+            command = ["yum", "install", "-y", "epel-release", "centos-release-scl"]
+            self._execute_run(
+                command,
+                executor=executor,
+                verify_network=True,
+                timeout=self._timeout_complex,
+            )
+        except subprocess.CalledProcessError as error:
+            raise BaseConfigurationError(
+                brief="Failed to enable extra repos.",
+                details=details_from_called_process_error(error),
+            ) from error
 
-    def _pre_setup_packages(self) -> None:
-        self._setup_os_extra_repos()
+    def _pre_setup_packages(self, executor: Executor) -> None:
+        """Configure yum package manager."""
+        self._enable_yum_extra_repos(executor=executor)
 
-    def _setup_packages(self) -> None:
+    def _setup_packages(self, executor: Executor) -> None:
         """Configure yum, update cache and install needed packages."""
         # update system
         try:
             self._execute_run(
                 ["yum", "update", "-y"],
+                executor=executor,
                 verify_network=True,
-                timeout=TIMEOUT_UNPREDICTABLE,
+                timeout=self._timeout_unpredictable,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -175,14 +191,15 @@ class CentOSBase(Base):
             ) from error
 
         # install required packages and user-defined packages
-        if not self.packages:
+        if not self._packages:
             return
         try:
-            command = ["yum", "install", "-y"] + self.packages
+            command = ["yum", "install", "-y"] + self._packages
             self._execute_run(
                 command,
+                executor=executor,
                 verify_network=True,
-                timeout=TIMEOUT_UNPREDICTABLE,
+                timeout=self._timeout_unpredictable,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -190,28 +207,14 @@ class CentOSBase(Base):
                 details=details_from_called_process_error(error),
             ) from error
 
-    def _setup_os_extra_repos(self) -> None:
-        """Configure special OS extra repos.
-
-        Enable "epel-release" repo for snapd.
-        Enable "centos-release-scl" for python 3.8.
-        """
-        try:
-            command = ["yum", "install", "-y", "epel-release", "centos-release-scl"]
-            self._execute_run(command, verify_network=True, timeout=TIMEOUT_COMPLEX)
-        except subprocess.CalledProcessError as error:
-            raise BaseConfigurationError(
-                brief="Failed to enable extra repos.",
-                details=details_from_called_process_error(error),
-            ) from error
-
-    def _setup_snapd(self) -> None:
-        """Install snapd and dependencies and wait until ready."""
+    def _setup_snapd(self, executor: Executor) -> None:
+        """Set up snapd using yum."""
         try:
             self._execute_run(
                 ["yum", "install", "-y", "snapd"],
+                executor=executor,
                 verify_network=True,
-                timeout=TIMEOUT_COMPLEX,
+                timeout=self._timeout_complex,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -219,6 +222,15 @@ class CentOSBase(Base):
                 details=details_from_called_process_error(error),
             ) from error
 
-    def _clean_up(self) -> None:
-        self._execute_run(["yum", "autoremove", "-y"], timeout=TIMEOUT_COMPLEX)
-        self._execute_run(["yum", "clean", "packages", "-y"], timeout=TIMEOUT_COMPLEX)
+    def _clean_up(self, executor: Executor) -> None:
+        """Clean up unused packages and cached package files."""
+        self._execute_run(
+            ["yum", "autoremove", "-y"],
+            executor=executor,
+            timeout=self._timeout_complex,
+        )
+        self._execute_run(
+            ["yum", "clean", "packages", "-y"],
+            executor=executor,
+            timeout=self._timeout_complex,
+        )

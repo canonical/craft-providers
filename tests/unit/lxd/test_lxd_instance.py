@@ -623,7 +623,7 @@ def test_pull_file(mock_lxc, instance, tmp_path):
             remote=instance.remote,
             runner=subprocess.run,
             check=False,
-            timeout=600,
+            timeout=60,
         ),
         mock.call.file_pull(
             instance_name=instance.instance_name,
@@ -656,7 +656,7 @@ def test_pull_file_no_source(mock_lxc, instance, tmp_path):
             remote=instance.remote,
             runner=subprocess.run,
             check=False,
-            timeout=600,
+            timeout=60,
         ),
     ]
     assert str(exc_info.value) == "File not found: '/tmp/src.txt'"
@@ -683,7 +683,7 @@ def test_pull_file_no_parent_directory(mock_lxc, instance, tmp_path):
             remote=instance.remote,
             runner=subprocess.run,
             check=False,
-            timeout=600,
+            timeout=60,
         ),
     ]
     assert str(exc_info.value) == f"Directory not found: {str(destination.parent)!r}"
@@ -710,7 +710,7 @@ def test_push_file(mock_lxc, instance, tmp_path):
             remote=instance.remote,
             runner=subprocess.run,
             check=False,
-            timeout=600,
+            timeout=60,
         ),
         mock.call.file_push(
             instance_name=instance.instance_name,
@@ -760,7 +760,7 @@ def test_push_file_no_parent_directory(mock_lxc, instance, tmp_path):
             remote=instance.remote,
             runner=subprocess.run,
             check=False,
-            timeout=600,
+            timeout=60,
         ),
     ]
     assert str(exc_info.value) == "Directory not found: '/tmp'"

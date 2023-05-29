@@ -444,9 +444,7 @@ def test_install_snaps_install_from_store(fake_executor, mock_install_from_store
     base = almalinux.AlmaLinuxBase(
         alias=almalinux.AlmaLinuxBaseAlias.NINE, snaps=my_snaps
     )
-    base.executor = fake_executor
-
-    base._install_snaps()
+    base._install_snaps(executor=fake_executor)
 
     assert mock_install_from_store.mock_calls == [
         call(
@@ -471,7 +469,7 @@ def test_install_snaps_inject_from_host_valid(
     )
     base.executor = fake_executor
 
-    base._install_snaps()
+    base._install_snaps(executor=fake_executor)
 
     assert mock_inject_from_host.mock_calls == [
         call(executor=fake_executor, snap_name="snap1", classic=False),
@@ -490,7 +488,7 @@ def test_install_snaps_inject_from_host_not_linux_error(fake_executor, mocker):
     base.executor = fake_executor
 
     with pytest.raises(BaseConfigurationError) as exc_info:
-        base._install_snaps()
+        base._install_snaps(executor=fake_executor)
 
     assert exc_info.value == BaseConfigurationError(
         brief="cannot inject snap 'snap1' from host on a non-linux system",
@@ -511,7 +509,7 @@ def test_install_snaps_install_from_store_error(fake_executor, mocker):
     base.executor = fake_executor
 
     with pytest.raises(BaseConfigurationError) as exc_info:
-        base._install_snaps()
+        base._install_snaps(executor=fake_executor)
 
     assert exc_info.value == BaseConfigurationError(
         brief=(
@@ -535,7 +533,7 @@ def test_install_snaps_inject_from_host_error(fake_executor, mocker):
     base.executor = fake_executor
 
     with pytest.raises(BaseConfigurationError) as exc_info:
-        base._install_snaps()
+        base._install_snaps(executor=fake_executor)
 
     assert exc_info.value == BaseConfigurationError(
         brief="failed to inject host's snap 'snap1' into target environment."
@@ -555,7 +553,7 @@ def test_setup_os_extra_repos(fake_executor, fake_process):
         ],
     )
 
-    base._enable_dnf_extra_repos()
+    base._enable_dnf_extra_repos(executor=fake_executor)
 
 
 def test_setup_dnf(fake_executor, fake_process):
@@ -597,7 +595,7 @@ def test_setup_dnf(fake_executor, fake_process):
         ]
     )
 
-    base._setup_packages()
+    base._setup_packages(executor=fake_executor)
 
 
 def test_setup_dnf_install_default(fake_executor, fake_process):
@@ -626,7 +624,7 @@ def test_setup_dnf_install_default(fake_executor, fake_process):
         ]
     )
 
-    base._setup_packages()
+    base._setup_packages(executor=fake_executor)
 
 
 def test_setup_dnf_install_packages_install_error(mocker, fake_executor, fake_process):
@@ -642,7 +640,7 @@ def test_setup_dnf_install_packages_install_error(mocker, fake_executor, fake_pr
     mocker.patch.object(fake_executor, "execute_run", side_effect=side_effects)
 
     with pytest.raises(BaseConfigurationError) as exc_info:
-        base._setup_packages()
+        base._setup_packages(executor=fake_executor)
 
     assert exc_info.value == BaseConfigurationError(
         brief="Failed to update system using dnf.",
@@ -652,7 +650,6 @@ def test_setup_dnf_install_packages_install_error(mocker, fake_executor, fake_pr
 
 def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
     monkeypatch.setattr(
         InstanceConfiguration,
         "load",
@@ -660,7 +657,7 @@ def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
     )
 
     with pytest.raises(BaseCompatibilityError) as exc_info:
-        base_config._ensure_instance_config_compatible()
+        base_config._ensure_instance_config_compatible(executor=fake_executor)
 
     assert exc_info.value == BaseCompatibilityError(
         "Expected image compatibility tag 'almalinux-base-v1', found 'invalid-tag'"
@@ -670,14 +667,13 @@ def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
 def test_get_os_release(fake_process, fake_executor):
     """`_get_os_release` should parse data from `/etc/os-release` to a dict."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
         stdout='NAME="AlmaLinux"\nVERSION="9.1 (Lime Lynx)"\nID="almalinux"\n'
         'ID_LIKE="rhel centos fedora"\nVERSION_ID="9.1"\n',
     )
 
-    result = base_config._get_os_release()
+    result = base_config._get_os_release(executor=fake_executor)
 
     assert result == {
         "NAME": "AlmaLinux",
@@ -691,9 +687,8 @@ def test_get_os_release(fake_process, fake_executor):
 def test_ensure_os_compatible(fake_executor, fake_process, mock_get_os_release):
     """Do nothing if the OS is compatible."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
 
-    base_config._ensure_os_compatible()
+    base_config._ensure_os_compatible(executor=fake_executor)
 
     mock_get_os_release.assert_called_once()
 
@@ -704,10 +699,9 @@ def test_ensure_os_compatible_name_failure(
     """Raise an error if the OS name does not match."""
     mock_get_os_release.return_value = {"ID": "ubuntu", "VERSION_ID": "22.04"}
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
 
     with pytest.raises(BaseCompatibilityError) as exc_info:
-        base_config._ensure_os_compatible()
+        base_config._ensure_os_compatible(executor=fake_executor)
 
     assert exc_info.value == BaseCompatibilityError(
         "Expected OS 'almalinux', found 'ubuntu'"
@@ -722,10 +716,9 @@ def test_ensure_os_compatible_version_failure(
     """Raise an error if the OS version id does not match."""
     mock_get_os_release.return_value = {"ID": "almalinux", "VERSION_ID": "8.4"}
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
 
     with pytest.raises(BaseCompatibilityError) as exc_info:
-        base_config._ensure_os_compatible()
+        base_config._ensure_os_compatible(executor=fake_executor)
 
     assert exc_info.value == BaseCompatibilityError(
         "Expected OS version '9', found '8'"
@@ -736,14 +729,13 @@ def test_ensure_os_compatible_version_failure(
 
 def test_setup_hostname_failure(fake_process, fake_executor):
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "hostname", "-F", "/etc/hostname"],
         returncode=-1,
     )
 
     with pytest.raises(BaseConfigurationError) as exc_info:
-        base_config._setup_hostname()
+        base_config._setup_hostname(executor=fake_executor)
 
     assert exc_info.value == BaseConfigurationError(
         brief="Failed to set hostname.",
@@ -763,11 +755,10 @@ def test_setup_snapd_proxy(fake_executor, fake_process):
         alias=almalinux.AlmaLinuxBaseAlias.NINE,
         environment=environment,  # type: ignore
     )
-    base_config.executor = fake_executor
     fake_process.keep_last_process(True)
     fake_process.register([fake_process.any()])
 
-    base_config._setup_snapd_proxy()
+    base_config._setup_snapd_proxy(executor=fake_executor)
     assert [
         *DEFAULT_FAKE_CMD,
         "snap",
@@ -787,7 +778,6 @@ def test_setup_snapd_proxy(fake_executor, fake_process):
 @pytest.mark.parametrize("fail_index", list(range(0, 1)))
 def test_setup_snapd_proxy_failures(fake_process, fake_executor, fail_index):
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
 
     return_codes = [0, 0]
     return_codes[fail_index] = 1
@@ -802,7 +792,7 @@ def test_setup_snapd_proxy_failures(fake_process, fake_executor, fail_index):
     )
 
     with pytest.raises(BaseConfigurationError) as exc_info:
-        base_config._setup_snapd_proxy()
+        base_config._setup_snapd_proxy(executor=fake_executor)
 
     assert exc_info.value == BaseConfigurationError(
         brief="Failed to set the snapd proxy.",
@@ -815,7 +805,6 @@ def test_setup_snapd_proxy_failures(fake_process, fake_executor, fail_index):
 @pytest.mark.parametrize("fail_index", list(range(0, 2)))
 def test_pre_setup_snapd_failures(fake_process, fake_executor, fail_index):
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
 
     return_codes = [0, 0]
     return_codes[fail_index] = 1
@@ -841,7 +830,7 @@ def test_pre_setup_snapd_failures(fake_process, fake_executor, fail_index):
     )
 
     with pytest.raises(BaseConfigurationError) as exc_info:
-        base_config._pre_setup_snapd()
+        base_config._pre_setup_snapd(executor=fake_executor)
 
     assert exc_info.value == BaseConfigurationError(
         brief="Failed to enable systemd-udevd service.",
@@ -853,7 +842,6 @@ def test_pre_setup_snapd_failures(fake_process, fake_executor, fail_index):
 
 def test_setup_snapd_failures(fake_process, fake_executor):
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
 
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
@@ -865,7 +853,7 @@ def test_setup_snapd_failures(fake_process, fake_executor):
     )
 
     with pytest.raises(BaseConfigurationError) as exc_info:
-        base_config._setup_snapd()
+        base_config._setup_snapd(executor=fake_executor)
 
     assert exc_info.value == BaseConfigurationError(
         brief="Failed to setup snapd.",
@@ -878,7 +866,6 @@ def test_setup_snapd_failures(fake_process, fake_executor):
 @pytest.mark.parametrize("fail_index", list(range(0, 8)))
 def test_post_setup_snapd_failures(fake_process, fake_executor, fail_index, mocker):
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
     mock_datetime = mocker.patch("craft_providers.base.datetime")
     mock_datetime.now.return_value = datetime(2022, 1, 2, 3, 4, 5, 6)
 
@@ -931,7 +918,7 @@ def test_post_setup_snapd_failures(fake_process, fake_executor, fail_index, mock
     )
 
     with pytest.raises(BaseConfigurationError):
-        base_config._post_setup_snapd()
+        base_config._post_setup_snapd(executor=fake_executor)
 
 
 @pytest.mark.parametrize("alias", list(almalinux.AlmaLinuxBaseAlias))
@@ -940,8 +927,7 @@ def test_wait_for_system_ready(
     fake_executor, fake_process, alias, system_running_ready_stdout
 ):
     base_config = almalinux.AlmaLinuxBase(alias=alias)
-    base_config.executor = fake_executor
-    base_config.retry_wait = 0.01
+    base_config._retry_wait = 0.01
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "is-system-running"],
         stdout="not-ready",
@@ -963,7 +949,7 @@ def test_wait_for_system_ready(
         returncode=0,
     )
 
-    base_config.wait_until_ready()
+    base_config.wait_until_ready(executor=fake_executor)
 
     assert fake_executor.records_of_push_file_io == []
     assert fake_executor.records_of_pull_file == []
@@ -1005,9 +991,8 @@ def test_wait_for_system_ready_timeout(fake_executor, fake_process, alias):
     base_config = almalinux.AlmaLinuxBase(
         alias=alias,
     )
-    base_config.executor = fake_executor
-    base_config.timeout_simple = 0.01
-    base_config.retry_wait = 0.01
+    base_config._timeout_simple = 0.01
+    base_config._retry_wait = 0.01
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "is-system-running"],
         stdout="not-ready",
@@ -1015,7 +1000,7 @@ def test_wait_for_system_ready_timeout(fake_executor, fake_process, alias):
     )
 
     with pytest.raises(BaseConfigurationError) as exc_info:
-        base_config.wait_until_ready()
+        base_config.wait_until_ready(executor=fake_executor)
 
     assert exc_info.value == BaseConfigurationError(
         brief="Timed out waiting for environment to be ready."
@@ -1028,9 +1013,8 @@ def test_wait_for_system_ready_timeout_in_network(
     fake_executor, fake_process, alias, monkeypatch
 ):
     base_config = almalinux.AlmaLinuxBase(alias=alias)
-    base_config.executor = fake_executor
-    base_config.timeout_simple = 0.01
-    base_config.retry_wait = 0.01
+    base_config._timeout_simple = 0.01
+    base_config._retry_wait = 0.01
     monkeypatch.setattr(
         base_config, "_setup_wait_for_system_ready", lambda **kwargs: None
     )
@@ -1041,7 +1025,7 @@ def test_wait_for_system_ready_timeout_in_network(
     )
 
     with pytest.raises(BaseConfigurationError) as exc_info:
-        base_config.wait_until_ready()
+        base_config.wait_until_ready(executor=fake_executor)
 
     assert exc_info.value == BaseConfigurationError(
         brief="Timed out waiting for networking to be ready."
@@ -1053,9 +1037,8 @@ def test_update_compatibility_tag(fake_executor, mock_load):
     base_config = almalinux.AlmaLinuxBase(
         alias=almalinux.AlmaLinuxBaseAlias.NINE, compatibility_tag="test-tag"
     )
-    base_config.executor = fake_executor
 
-    base_config._update_compatibility_tag()
+    base_config._update_compatibility_tag(executor=fake_executor)
 
     assert fake_executor.records_of_push_file_io == [
         {
@@ -1072,9 +1055,8 @@ def test_update_compatibility_tag(fake_executor, mock_load):
 def test_update_setup_status(fake_executor, mock_load, status):
     """`update_setup_status()` should update the instance config."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
 
-    base_config._update_setup_status(status=status)
+    base_config._update_setup_status(executor=fake_executor, status=status)
 
     assert fake_executor.records_of_push_file_io == [
         {
@@ -1094,10 +1076,9 @@ def test_ensure_config_compatible_validation_error(fake_executor, mock_load):
     mock_load.side_effect = (ValidationError("foo", InstanceConfiguration),)
 
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
 
     with pytest.raises(BaseConfigurationError) as exc_info:
-        base_config._ensure_instance_config_compatible()
+        base_config._ensure_instance_config_compatible(executor=fake_executor)
 
     assert exc_info.value == BaseConfigurationError(
         brief="Failed to parse instance configuration file."
@@ -1108,9 +1089,10 @@ def test_ensure_config_compatible_empty_config_returns_none(fake_executor, mock_
     mock_load.return_value = None
 
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
 
-    assert base_config._ensure_instance_config_compatible() is None
+    assert (
+        base_config._ensure_instance_config_compatible(executor=fake_executor) is None
+    )
 
 
 def test_ensure_setup_completed(fake_executor, logs, mock_load):
@@ -1118,9 +1100,8 @@ def test_ensure_setup_completed(fake_executor, logs, mock_load):
     mock_load.return_value = InstanceConfiguration(setup=True)
 
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
 
-    assert base_config._ensure_setup_completed() is None
+    assert base_config._ensure_setup_completed(executor=fake_executor) is None
 
     assert "Instance has already been setup." in logs.debug
 
@@ -1142,10 +1123,9 @@ def test_ensure_setup_completed_load_error(
     mock_load.side_effect = error
 
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
 
     with pytest.raises(BaseCompatibilityError) as raised:
-        base_config._ensure_setup_completed()
+        base_config._ensure_setup_completed(executor=fake_executor)
 
     assert raised.value == BaseCompatibilityError(error_message)
 
@@ -1155,10 +1135,9 @@ def test_ensure_setup_completed_empty_config(fake_executor, mock_load):
     mock_load.return_value = None
 
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
 
     with pytest.raises(BaseCompatibilityError) as raised:
-        base_config._ensure_setup_completed()
+        base_config._ensure_setup_completed(executor=fake_executor)
 
     assert raised.value == BaseCompatibilityError("instance config is empty")
 
@@ -1169,10 +1148,9 @@ def test_ensuresetup_completed_not_setup(status, fake_executor, mock_load):
     mock_load.return_value = InstanceConfiguration(setup=status)
 
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
 
     with pytest.raises(BaseCompatibilityError) as raised:
-        base_config._ensure_setup_completed()
+        base_config._ensure_setup_completed(executor=fake_executor)
 
     assert raised.value == BaseCompatibilityError("instance is marked as not setup")
 
@@ -1355,8 +1333,8 @@ def test_warmup_never_ready(fake_process, fake_executor, mock_load):
         alias=alias,
         environment=almalinux.AlmaLinuxBase.default_command_environment(),
     )
-    base_config.timeout_simple = 0.01
-    base_config.retry_wait = 0.02
+    base_config._timeout_simple = 0.01
+    base_config._retry_wait = 0.02
 
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
@@ -1388,8 +1366,8 @@ def test_warmup_never_network(fake_process, fake_executor, mock_load):
         alias=alias,
         environment=almalinux.AlmaLinuxBase.default_command_environment(),
     )
-    base_config.timeout_simple = 0.01
-    base_config.retry_wait = 0.02
+    base_config._timeout_simple = 0.01
+    base_config._retry_wait = 0.02
 
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
@@ -1433,7 +1411,7 @@ def test_set_hostname_unchanged(hostname, logs):
         hostname=hostname,
     )
 
-    assert base_config.hostname == hostname
+    assert base_config._hostname == hostname
     assert Exact(f"Using hostname '{hostname}'") in logs.debug
 
 
@@ -1481,7 +1459,7 @@ def test_set_hostname(hostname, expected_hostname, logs):
         hostname=hostname,
     )
 
-    assert base_config.hostname == expected_hostname
+    assert base_config._hostname == expected_hostname
     assert Exact(f"Using hostname '{expected_hostname}'") in logs.debug
 
 
@@ -1510,10 +1488,9 @@ def test_set_hostname_invalid(hostname):
 def test_execute_run_default(fake_executor):
     """Default _execute_run behaviour."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
     command = ["the", "command"]
-    with patch.object(base_config.executor, "execute_run") as mock:
-        base_config._execute_run(command)
+    with patch.object(fake_executor, "execute_run") as mock:
+        base_config._execute_run(command, executor=fake_executor)
 
     mock.assert_called_with(
         command, check=True, capture_output=True, text=False, timeout=None
@@ -1523,11 +1500,15 @@ def test_execute_run_default(fake_executor):
 def test_execute_run_options_for_run(fake_executor):
     """Different options to control how run is called."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
     command = ["the", "command"]
-    with patch.object(base_config.executor, "execute_run") as mock:
+    with patch.object(fake_executor, "execute_run") as mock:
         base_config._execute_run(
-            command, check=False, capture_output=False, text=True, timeout=None
+            command,
+            executor=fake_executor,
+            check=False,
+            capture_output=False,
+            text=True,
+            timeout=None,
         )
 
     mock.assert_called_with(
@@ -1538,14 +1519,13 @@ def test_execute_run_options_for_run(fake_executor):
 def test_execute_run_command_failed_no_verify_network(fake_process, fake_executor):
     """The command failed but network verification was not asked."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
     command = ["the", "command"]
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=1)
 
     # we know that network is not verified because otherwise we'll get
     # a ProcessNotRegisteredError for the verification process
     with pytest.raises(subprocess.CalledProcessError):
-        base_config._execute_run(command)
+        base_config._execute_run(command, executor=fake_executor)
 
 
 @pytest.mark.parametrize("proxy_variable_name", ["HTTPS_PROXY", "https_proxy"])
@@ -1554,7 +1534,6 @@ def test_execute_run_command_failed_verify_network_proxy(
 ):
     """The command failed, network verification was asked, but there is a proxy."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
     command = ["the", "command"]
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=1)
 
@@ -1563,26 +1542,26 @@ def test_execute_run_command_failed_verify_network_proxy(
     # we know that network is not verified because otherwise we'll get
     # a ProcessNotRegisteredError for the verification process
     with pytest.raises(subprocess.CalledProcessError):
-        base_config._execute_run(command, verify_network=True)
+        base_config._execute_run(command, executor=fake_executor, verify_network=True)
 
 
 def test_execute_run_verify_network_run_ok(fake_process, fake_executor):
     """Indicated network verification but process completed ok."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
     command = ["the", "command"]
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=0)
 
     # we know that network is not verified because otherwise we'll get
     # a ProcessNotRegisteredError for the verification process
-    proc = base_config._execute_run(command, verify_network=True)
+    proc = base_config._execute_run(
+        command, executor=fake_executor, verify_network=True
+    )
     assert proc.returncode == 0
 
 
 def test_execute_run_verify_network_connectivity_ok(fake_process, fake_executor):
     """Network verified after process failure, connectivity ok."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
     command = ["the", "command"]
 
     fake_process.register_subprocess(
@@ -1592,13 +1571,12 @@ def test_execute_run_verify_network_connectivity_ok(fake_process, fake_executor)
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=1)
 
     with pytest.raises(subprocess.CalledProcessError):
-        base_config._execute_run(command, verify_network=True)
+        base_config._execute_run(command, executor=fake_executor, verify_network=True)
 
 
 def test_execute_run_verify_network_connectivity_missing(fake_process, fake_executor):
     """Network verified after process failure, no connectivity."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
     command = ["the", "command"]
 
     fake_process.register_subprocess(
@@ -1608,38 +1586,37 @@ def test_execute_run_verify_network_connectivity_missing(fake_process, fake_exec
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=1)
 
     with pytest.raises(NetworkError) as exc_info:
-        base_config._execute_run(command, verify_network=True)
+        base_config._execute_run(command, executor=fake_executor, verify_network=True)
     assert isinstance(exc_info.value.__cause__, subprocess.CalledProcessError)
 
 
 def test_execute_run_bad_check_verifynetwork_combination(fake_executor):
     """Cannot ask for network verification and avoid checking."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
     with pytest.raises(RuntimeError):
-        base_config._execute_run(["cmd"], check=False, verify_network=True)
+        base_config._execute_run(
+            ["cmd"], executor=fake_executor, check=False, verify_network=True
+        )
 
 
 def test_network_connectivity_yes(fake_executor, fake_process):
     """Connectivity is ok."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
         returncode=0,
     )
-    assert base_config._network_connected() is True
+    assert base_config._network_connected(executor=fake_executor) is True
 
 
 def test_network_connectivity_no(fake_executor, fake_process):
     """Connectivity missing."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
         returncode=1,
     )
-    assert base_config._network_connected() is False
+    assert base_config._network_connected(executor=fake_executor) is False
 
 
 def test_network_connectivity_timeouts(fake_executor, fake_process):
@@ -1649,27 +1626,25 @@ def test_network_connectivity_timeouts(fake_executor, fake_process):
     resilient to CIs it would need a too long waiting.
     """
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
     cmd = ["bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"]
     timeout_expired = subprocess.TimeoutExpired(cmd, timeout=5)
     with patch.object(
-        base_config.executor, "execute_run", side_effect=timeout_expired
+        fake_executor, "execute_run", side_effect=timeout_expired
     ) as mock:
-        assert base_config._network_connected() is False
+        assert base_config._network_connected(executor=fake_executor) is False
     mock.assert_called_with(cmd, check=False, capture_output=True, timeout=10)
 
 
 def test_disable_and_wait_for_snap_refresh_hold_error(fake_process, fake_executor):
     """Raise BaseConfigurationError when the command to hold snap refreshes fails."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "set", "system", fake_process.any()],
         returncode=-1,
     )
 
     with pytest.raises(BaseConfigurationError) as exc_info:
-        base_config._disable_and_wait_for_snap_refresh()
+        base_config._disable_and_wait_for_snap_refresh(executor=fake_executor)
 
     assert exc_info.value == BaseConfigurationError(
         brief="Failed to hold snap refreshes.",
@@ -1682,7 +1657,6 @@ def test_disable_and_wait_for_snap_refresh_hold_error(fake_process, fake_executo
 def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executor):
     """Raise BaseConfigurationError when the `snap watch` command fails."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base_config.executor = fake_executor
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "set", "system", fake_process.any()],
     )
@@ -1692,7 +1666,7 @@ def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executo
     )
 
     with pytest.raises(BaseConfigurationError) as exc_info:
-        base_config._disable_and_wait_for_snap_refresh()
+        base_config._disable_and_wait_for_snap_refresh(executor=fake_executor)
 
     assert exc_info.value == BaseConfigurationError(
         brief="Failed to wait for snap refreshes to complete.",

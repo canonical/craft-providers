@@ -347,6 +347,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         :param runner: Execution function to invoke, e.g. subprocess.run or
             Popen.  First argument is finalized command with the attached
             kwargs.
+        :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Additional kwargs for runner.
 
         :returns: Runner's instance.

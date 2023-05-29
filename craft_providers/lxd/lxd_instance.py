@@ -28,7 +28,7 @@ import subprocess
 import tempfile
 from typing import Any, Dict, List, Optional
 
-from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE
+from craft_providers.const import TIMEOUT_SIMPLE
 from craft_providers.errors import details_from_called_process_error
 from craft_providers.executor import Executor
 from craft_providers.lxd.errors import LXDError
@@ -472,7 +472,7 @@ class LXDInstance(Executor):
         proc = self.execute_run(
             ["test", "-f", source.as_posix()],
             check=False,
-            timeout=TIMEOUT_COMPLEX,
+            timeout=TIMEOUT_SIMPLE,
         )
         if proc.returncode != 0:
             raise FileNotFoundError(f"File not found: {source.as_posix()!r}")
@@ -507,7 +507,7 @@ class LXDInstance(Executor):
         proc = self.execute_run(
             ["test", "-d", destination.parent.as_posix()],
             check=False,
-            timeout=TIMEOUT_COMPLEX,
+            timeout=TIMEOUT_SIMPLE,
         )
         if proc.returncode != 0:
             raise FileNotFoundError(

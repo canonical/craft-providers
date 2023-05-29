@@ -114,7 +114,9 @@ class MultipassInstance(Executor):
 
         :returns: True if the filepath is a valid directory.
         """
-        proc = self.execute_run(["test", "-d", filepath.as_posix()], check=False)
+        proc = self.execute_run(
+            ["test", "-d", filepath.as_posix()], timeout=TIMEOUT_SIMPLE, check=False
+        )
         return proc.returncode == 0
 
     def push_file_io(
@@ -207,6 +209,7 @@ class MultipassInstance(Executor):
         :param command: Command to execute.
         :param cwd: working directory to execute the command
         :param env: Additional environment to set for process.
+        :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Additional keyword arguments for subprocess.Popen().
 
         :returns: Popen instance.
@@ -242,6 +245,7 @@ class MultipassInstance(Executor):
         :param command: Command to execute.
         :param cwd: working directory to execute the command
         :param env: Additional environment to set for process.
+        :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Keyword args to pass to subprocess.run().
 
         :returns: Completed process.
@@ -386,7 +390,7 @@ class MultipassInstance(Executor):
         proc = self.execute_run(
             ["test", "-f", source.as_posix()],
             check=False,
-            timeout=TIMEOUT_COMPLEX,
+            timeout=TIMEOUT_SIMPLE,
         )
         if proc.returncode != 0:
             raise FileNotFoundError(f"File not found: {source.as_posix()!r}")

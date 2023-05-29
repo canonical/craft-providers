@@ -23,12 +23,12 @@ from typing import Dict, List, Optional
 
 from craft_providers.actions.snap_installer import Snap
 from craft_providers.base import Base
-from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_UNPREDICTABLE
 from craft_providers.errors import (
     BaseCompatibilityError,
     BaseConfigurationError,
     details_from_called_process_error,
 )
+from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 
@@ -76,19 +76,19 @@ class AlmaLinuxBase(Base):
         snaps: Optional[List[Snap]] = None,
         packages: Optional[List[str]] = None,
     ) -> None:
-        self.alias: AlmaLinuxBaseAlias = alias
+        self._alias: AlmaLinuxBaseAlias = alias
 
         if environment is None:
-            self.environment = self.default_command_environment()
+            self._environment = self.default_command_environment()
         else:
-            self.environment = environment
+            self._environment = environment
 
         if compatibility_tag:
             self.compatibility_tag = compatibility_tag
 
         self._set_hostname(hostname)
-        self.snaps = snaps
-        self.packages = [
+        self._snaps = snaps
+        self._packages = [
             "autoconf",
             "automake",
             "gcc",
@@ -104,15 +104,15 @@ class AlmaLinuxBase(Base):
         ]
 
         if packages:
-            self.packages.extend(packages)
+            self._packages.extend(packages)
 
-    def _ensure_os_compatible(self) -> None:
+    def _ensure_os_compatible(self, executor: Executor) -> None:
         """Ensure OS is compatible with Base.
 
         :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.
         """
-        os_release = self._get_os_release()
+        os_release = self._get_os_release(executor=executor)
 
         os_id = os_release.get("ID")
         if os_id != "almalinux":
@@ -120,7 +120,7 @@ class AlmaLinuxBase(Base):
                 reason=f"Expected OS 'almalinux', found {os_id!r}"
             )
 
-        compat_version_id = self.alias.value
+        compat_version_id = self._alias.value
         version_id = os_release.get("VERSION_ID", "")
         version_id = version_id.split(".")[0]
 
@@ -132,38 +132,38 @@ class AlmaLinuxBase(Base):
                 )
             )
 
-    def _setup_resolved(self) -> None:
-        """Empty, AlmaLinux does not use systemd-resolved."""
-
-    def _setup_networkd(self) -> None:
-        """Empty, AlmaLinux does not use systemd-networkd."""
-
-    def _enable_dnf_extra_repos(self) -> None:
-        """Configure special OS extra repos.
+    def _enable_dnf_extra_repos(self, executor: Executor) -> None:
+        """Configure AlmaLinux special extra repos.
 
         Enable "epel-release" repo for snapd.
         """
         try:
             command = ["dnf", "install", "-y", "epel-release"]
-            self._execute_run(command, verify_network=True, timeout=TIMEOUT_COMPLEX)
+            self._execute_run(
+                command,
+                executor=executor,
+                verify_network=True,
+                timeout=self._timeout_complex,
+            )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to enable extra repos.",
                 details=details_from_called_process_error(error),
             ) from error
 
-    def _pre_setup_packages(self) -> None:
+    def _pre_setup_packages(self, executor: Executor) -> None:
         """Configure dnf package manager."""
-        self._enable_dnf_extra_repos()
+        self._enable_dnf_extra_repos(executor=executor)
 
-    def _setup_packages(self) -> None:
+    def _setup_packages(self, executor: Executor) -> None:
         """Install needed packages using dnf."""
         # update system
         try:
             self._execute_run(
                 ["dnf", "update", "-y"],
+                executor=executor,
                 verify_network=True,
-                timeout=TIMEOUT_UNPREDICTABLE,
+                timeout=self._timeout_unpredictable,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -172,14 +172,15 @@ class AlmaLinuxBase(Base):
             ) from error
 
         # install required packages and user-defined packages
-        if not self.packages:
+        if not self._packages:
             return
         try:
-            command = ["dnf", "install", "-y"] + self.packages
+            command = ["dnf", "install", "-y"] + self._packages
             self._execute_run(
                 command,
+                executor=executor,
                 verify_network=True,
-                timeout=TIMEOUT_UNPREDICTABLE,
+                timeout=self._timeout_unpredictable,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -187,13 +188,14 @@ class AlmaLinuxBase(Base):
                 details=details_from_called_process_error(error),
             ) from error
 
-    def _setup_snapd(self) -> None:
-        """Install snapd and dependencies and wait until ready."""
+    def _setup_snapd(self, executor: Executor) -> None:
+        """Set up snapd using dnf."""
         try:
             self._execute_run(
                 ["dnf", "install", "-y", "snapd"],
+                executor=executor,
                 verify_network=True,
-                timeout=TIMEOUT_COMPLEX,
+                timeout=self._timeout_complex,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -201,6 +203,15 @@ class AlmaLinuxBase(Base):
                 details=details_from_called_process_error(error),
             ) from error
 
-    def _clean_up(self) -> None:
-        self._execute_run(["dnf", "autoremove", "-y"], timeout=TIMEOUT_COMPLEX)
-        self._execute_run(["dnf", "clean", "packages", "-y"], timeout=TIMEOUT_COMPLEX)
+    def _clean_up(self, executor: Executor) -> None:
+        """Clean up unused packages and cached package files."""
+        self._execute_run(
+            ["dnf", "autoremove", "-y"],
+            executor=executor,
+            timeout=self._timeout_complex,
+        )
+        self._execute_run(
+            ["dnf", "clean", "packages", "-y"],
+            executor=executor,
+            timeout=self._timeout_complex,
+        )
