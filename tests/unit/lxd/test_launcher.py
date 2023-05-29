@@ -192,7 +192,7 @@ def test_launch_use_base_instance(
         call.get_command_environment(),
         call.get_command_environment(),
         call.setup(executor=fake_instance),
-        call.wait_until_ready(),
+        call.wait_until_ready(executor=fake_instance),
     ]
 
 
@@ -337,7 +337,7 @@ def test_launch_existing_base_instance_invalid(
         call.get_command_environment(),
         call.get_command_environment(),
         call.setup(executor=fake_instance),
-        call.wait_until_ready(),
+        call.wait_until_ready(executor=fake_instance),
     ]
 
 
@@ -387,7 +387,7 @@ def test_launch_all_opts(
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.setup(executor=fake_instance),
-        call.wait_until_ready(),
+        call.wait_until_ready(executor=fake_instance),
     ]
 
 
@@ -812,7 +812,7 @@ def test_use_snapshots_deprecated(
         call.get_command_environment(),
         call.get_command_environment(),
         call.setup(executor=fake_instance),
-        call.wait_until_ready(),
+        call.wait_until_ready(executor=fake_instance),
     ]
 
 

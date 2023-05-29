@@ -85,7 +85,7 @@ class BuilddBase(Base):
         snaps: Optional[List[Snap]] = None,
         packages: Optional[List[str]] = None,
     ):
-        self._alias: BuilddBaseAlias = alias
+        self.alias: BuilddBaseAlias = alias
 
         if environment is None:
             self._environment = self.default_command_environment()
@@ -97,7 +97,7 @@ class BuilddBase(Base):
 
         self._set_hostname(hostname)
 
-        self._packages = ["apt-utils", "build-essential", "curl", "fuse", "udev"]
+        self._packages = ["apt-utils", "curl", "fuse", "udev"]
         if packages:
             self._packages.extend(packages)
 
@@ -134,7 +134,7 @@ class BuilddBase(Base):
                 reason=f"Expected OS 'Ubuntu', found {os_name!r}"
             )
 
-        compat_version_id = self._alias.value
+        compat_version_id = self.alias.value
         version_id = os_release.get("VERSION_ID")
 
         if compat_version_id == BuilddBaseAlias.DEVEL.value:
@@ -270,7 +270,7 @@ class BuilddBase(Base):
         )
 
         # devel images should use the devel repository
-        if self._alias == BuilddBaseAlias.DEVEL:
+        if self.alias == BuilddBaseAlias.DEVEL:
             self._update_apt_sources(
                 executor=executor,
                 codename=BuilddBaseAlias.DEVEL.value,
@@ -321,18 +321,6 @@ class BuilddBase(Base):
                 brief="Failed to setup snapd.",
                 details=details_from_called_process_error(error),
             ) from error
-
-    def _clean_up(self, executor: Executor) -> None:
-        self._execute_run(
-            ["apt-get", "autoremove", "-y"],
-            executor=executor,
-            timeout=self._timeout_complex,
-        )
-        self._execute_run(
-            ["apt-get", "clean", "-y"],
-            executor=executor,
-            timeout=self._timeout_complex,
-        )
 
 
 # Backward compatible, will be removed in 2.0

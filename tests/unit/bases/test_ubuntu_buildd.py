@@ -117,10 +117,10 @@ def mock_get_os_release(mocker):
 @pytest.mark.parametrize(
     "packages, expected_packages",
     [
-        (None, ["apt-utils", "build-essential", "curl", "fuse", "udev"]),
+        (None, ["apt-utils", "curl", "fuse", "udev"]),
         (
             ["grep", "git"],
-            ["apt-utils", "build-essential", "curl", "fuse", "udev", "grep", "git"],
+            ["apt-utils", "curl", "fuse", "udev", "grep", "git"],
         ),
     ],
 )
@@ -434,7 +434,6 @@ def test_install_snaps_install_from_store(fake_executor, mock_install_from_store
         Snap(name="snap3", channel="edge", classic=True),
     ]
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, snaps=my_snaps)
-    base.executor = fake_executor
 
     base._install_snaps(executor=fake_executor)
 
@@ -457,7 +456,6 @@ def test_install_snaps_inject_from_host_valid(
         Snap(name="snap2", channel=None, classic=True),
     ]
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, snaps=my_snaps)
-    base.executor = fake_executor
 
     base._install_snaps(executor=fake_executor)
 
@@ -473,7 +471,6 @@ def test_install_snaps_inject_from_host_not_linux_error(fake_executor, mocker):
     mocker.patch("sys.platform", return_value="darwin")
     my_snaps = [Snap(name="snap1", channel=None)]
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, snaps=my_snaps)
-    base.executor = fake_executor
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         base._install_snaps(executor=fake_executor)
@@ -492,7 +489,6 @@ def test_install_snaps_install_from_store_error(fake_executor, mocker):
     )
     my_snaps = [Snap(name="snap1", channel="candidate")]
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, snaps=my_snaps)
-    base.executor = fake_executor
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         base._install_snaps(executor=fake_executor)
@@ -514,7 +510,6 @@ def test_install_snaps_inject_from_host_error(fake_executor, mocker):
     )
     my_snaps = [Snap(name="snap1", channel=None)]
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, snaps=my_snaps)
-    base.executor = fake_executor
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         base._install_snaps(executor=fake_executor)
@@ -528,7 +523,6 @@ def test_setup_apt(fake_executor, fake_process):
     """Verify packages are installed as expected."""
     packages = ["grep", "git"]
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, packages=packages)
-    base.executor = fake_executor
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
     fake_process.register_subprocess(
         [
@@ -537,7 +531,6 @@ def test_setup_apt(fake_executor, fake_process):
             "install",
             "-y",
             "apt-utils",
-            "build-essential",
             "curl",
             "fuse",
             "udev",
@@ -552,7 +545,6 @@ def test_setup_apt(fake_executor, fake_process):
 def test_setup_apt_install_default(fake_executor, fake_process):
     """Verify only default packages are installed."""
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-    base.executor = fake_executor
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
     fake_process.register_subprocess(
         [
@@ -561,7 +553,6 @@ def test_setup_apt_install_default(fake_executor, fake_process):
             "install",
             "-y",
             "apt-utils",
-            "build-essential",
             "curl",
             "fuse",
             "udev",
@@ -575,7 +566,6 @@ def test_setup_apt_install_packages_update_error(mocker, fake_executor):
     """Verify error is caught from `apt-get update` call."""
     error = subprocess.CalledProcessError(100, ["error"])
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-    base.executor = fake_executor
 
     mocker.patch.object(fake_executor, "execute_run", side_effect=error)
 
@@ -592,13 +582,12 @@ def test_setup_apt_install_packages_install_error(mocker, fake_executor):
     """Verify error is caught from `apt-get install` call."""
     error = subprocess.CalledProcessError(100, ["error"])
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-    base.executor = fake_executor
 
     side_effects = [
         error,  # make apt-get install fail
         subprocess.CompletedProcess("args", returncode=0),  # network connectivity check
     ]
-    mocker.patch.object(base.executor, "execute_run", side_effect=side_effects)
+    mocker.patch.object(fake_executor, "execute_run", side_effect=side_effects)
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         base._setup_packages(executor=fake_executor)
@@ -616,7 +605,6 @@ def test_pre_setup_packages_devel(fake_executor, fake_process, mocker):
     )
 
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.DEVEL)
-    base.executor = fake_executor
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
     fake_process.register_subprocess(
         [
@@ -625,7 +613,6 @@ def test_pre_setup_packages_devel(fake_executor, fake_process, mocker):
             "install",
             "-y",
             "apt-utils",
-            "build-essential",
             "curl",
             "fuse",
             "udev",

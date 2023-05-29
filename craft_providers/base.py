@@ -83,7 +83,6 @@ class Base(ABC):
         compatibility levels are maintained.
     """
 
-    _alias: Enum
     _environment: Dict[str, Optional[str]]
     _hostname: str
     _instance_config_path: pathlib.Path = pathlib.Path("/etc/craft-instance.conf")
@@ -94,6 +93,7 @@ class Base(ABC):
     _timeout_simple: Optional[float] = TIMEOUT_SIMPLE
     _timeout_complex: Optional[float] = TIMEOUT_COMPLEX
     _timeout_unpredictable: Optional[float] = TIMEOUT_UNPREDICTABLE
+    alias: Enum
     compatibility_tag: str = "base-v1"
 
     @abstractmethod
@@ -693,6 +693,7 @@ class Base(ABC):
 
         This step usually does not need to be overridden.
         """
+        # pylint: disable=unused-argument
         return
 
     def _image_check(self, executor: Executor) -> None:
@@ -708,6 +709,7 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
+        # pylint: disable=unused-argument
         return
 
     def _pre_setup_os(self, executor: Executor) -> None:
@@ -719,6 +721,7 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
+        # pylint: disable=unused-argument
         return
 
     def _setup_os(self, executor: Executor) -> None:
@@ -736,6 +739,7 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
+        # pylint: disable=unused-argument
         return
 
     def _pre_setup_network(self, executor: Executor) -> None:
@@ -746,6 +750,7 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
+        # pylint: disable=unused-argument
         return
 
     def _setup_network(self, executor: Executor) -> None:
@@ -769,6 +774,7 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
+        # pylint: disable=unused-argument
         return
 
     def _pre_setup_packages(self, executor: Executor) -> None:
@@ -779,6 +785,7 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
+        # pylint: disable=unused-argument
         return
 
     @abstractmethod
@@ -793,6 +800,7 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
+        # pylint: disable=unused-argument
         return
 
     def _pre_setup_snapd(self, executor: Executor) -> None:
@@ -831,6 +839,7 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
+        # pylint: disable=unused-argument
         return
 
     def _setup_snaps(self, executor: Executor) -> None:
@@ -848,6 +857,7 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
+        # pylint: disable=unused-argument
         return
 
     def _pre_clean_up(self, executor: Executor) -> None:
@@ -858,6 +868,7 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
+        # pylint: disable=unused-argument
         return
 
     def _clean_up(self, executor: Executor) -> None:
@@ -869,6 +880,7 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
+        # pylint: disable=unused-argument
         return
 
     def _post_clean_up(self, executor: Executor) -> None:
@@ -880,6 +892,7 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
+        # pylint: disable=unused-argument
         return
 
     def _pre_finish(self, executor: Executor) -> None:
@@ -890,6 +903,7 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
+        # pylint: disable=unused-argument
         return
 
     @final
@@ -1040,6 +1054,7 @@ class Base(ABC):
             return False
         return proc.returncode == 0
 
+    @classmethod
     def _execute_run(
         cls,
         command: List[str],
@@ -1060,9 +1075,6 @@ class Base(ABC):
         (if the command failed) even if the output is not really wanted as a result
         of the execution.
         """
-        if executor is None:
-            executor = self.executor
-
         if not check and verify_network:
             # if check is False, the caller needs the process result no matter
             # what, it's wrong to also request to verify network, which may

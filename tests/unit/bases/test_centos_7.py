@@ -88,7 +88,7 @@ def mock_get_os_release(mocker):
             (
                 "PATH=/usr/local/sbin:/usr/local/bin:"
                 "/opt/rh/rh-python38/root/usr/bin:"
-                "/sbin:/bin:/usr/sbin:/usr/bin:/snap/bin\n"
+                "/sbin:/bin:/usr/sbin:/usr/bin:/var/lib/snapd/bin:/snap/bin\n"
             ).encode(),
         ),
         (
@@ -120,39 +120,11 @@ def mock_get_os_release(mocker):
     [
         (
             None,
-            [
-                "autoconf",
-                "automake",
-                "gcc",
-                "gcc-c++",
-                "git",
-                "make",
-                "patch",
-                "rh-python38-python",
-                "rh-python38-python-devel",
-                "rh-python38-python-pip",
-                "rh-python38-python-pip-wheel",
-                "rh-python38-python-setuptools",
-            ],
+            [],
         ),
         (
             ["go", "clang"],
-            [
-                "autoconf",
-                "automake",
-                "gcc",
-                "gcc-c++",
-                "git",
-                "make",
-                "patch",
-                "rh-python38-python",
-                "rh-python38-python-devel",
-                "rh-python38-python-pip",
-                "rh-python38-python-pip-wheel",
-                "rh-python38-python-setuptools",
-                "go",
-                "clang",
-            ],
+            ["go", "clang"],
         ),
     ],
 )
@@ -403,7 +375,6 @@ def test_install_snaps_install_from_store(fake_executor, mock_install_from_store
         Snap(name="snap3", channel="edge", classic=True),
     ]
     base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN, snaps=my_snaps)
-    base.executor = fake_executor
 
     base._install_snaps(executor=fake_executor)
 
@@ -426,7 +397,6 @@ def test_install_snaps_inject_from_host_valid(
         Snap(name="snap2", channel=None, classic=True),
     ]
     base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN, snaps=my_snaps)
-    base.executor = fake_executor
 
     base._install_snaps(executor=fake_executor)
 
@@ -442,7 +412,6 @@ def test_install_snaps_inject_from_host_not_linux_error(fake_executor, mocker):
     mocker.patch("sys.platform", return_value="darwin")
     my_snaps = [Snap(name="snap1", channel=None)]
     base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN, snaps=my_snaps)
-    base.executor = fake_executor
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         base._install_snaps(executor=fake_executor)
@@ -461,7 +430,6 @@ def test_install_snaps_install_from_store_error(fake_executor, mocker):
     )
     my_snaps = [Snap(name="snap1", channel="candidate")]
     base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN, snaps=my_snaps)
-    base.executor = fake_executor
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         base._install_snaps(executor=fake_executor)
@@ -483,7 +451,6 @@ def test_install_snaps_inject_from_host_error(fake_executor, mocker):
     )
     my_snaps = [Snap(name="snap1", channel=None)]
     base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN, snaps=my_snaps)
-    base.executor = fake_executor
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         base._install_snaps(executor=fake_executor)
@@ -495,7 +462,6 @@ def test_install_snaps_inject_from_host_error(fake_executor, mocker):
 
 def test_enable_yum_extra_repos(fake_executor, fake_process):
     base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
-    base.executor = fake_executor
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
@@ -514,7 +480,6 @@ def test_setup_packages(fake_executor, fake_process):
     """Verify packages are installed as expected."""
     packages = ["grep", "git"]
     base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN, packages=packages)
-    base.executor = fake_executor
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
@@ -530,18 +495,6 @@ def test_setup_packages(fake_executor, fake_process):
             "yum",
             "install",
             "-y",
-            "autoconf",
-            "automake",
-            "gcc",
-            "gcc-c++",
-            "git",
-            "make",
-            "patch",
-            "rh-python38-python",
-            "rh-python38-python-devel",
-            "rh-python38-python-pip",
-            "rh-python38-python-pip-wheel",
-            "rh-python38-python-setuptools",
             "grep",
             "git",
         ]
@@ -553,7 +506,6 @@ def test_setup_packages(fake_executor, fake_process):
 def test_setup_yum_install_default(fake_executor, fake_process):
     """Verify only default packages are installed."""
     base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
-    base.executor = fake_executor
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "yum", "update", "-y"])
     fake_process.register_subprocess(
         [
@@ -561,18 +513,6 @@ def test_setup_yum_install_default(fake_executor, fake_process):
             "yum",
             "install",
             "-y",
-            "autoconf",
-            "automake",
-            "gcc",
-            "gcc-c++",
-            "git",
-            "make",
-            "patch",
-            "rh-python38-python",
-            "rh-python38-python-devel",
-            "rh-python38-python-pip",
-            "rh-python38-python-pip-wheel",
-            "rh-python38-python-setuptools",
         ]
     )
 
@@ -583,13 +523,12 @@ def test_setup_yum_install_packages_install_error(mocker, fake_executor, fake_pr
     """Verify error is caught from `yum install` call."""
     error = subprocess.CalledProcessError(100, ["error"])
     base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
-    base.executor = fake_executor
 
     side_effects = [
         error,  # make yum install fail
         subprocess.CompletedProcess("args", returncode=0),  # network connectivity check
     ]
-    mocker.patch.object(base.executor, "execute_run", side_effect=side_effects)
+    mocker.patch.object(fake_executor, "execute_run", side_effect=side_effects)
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         base._setup_packages(executor=fake_executor)

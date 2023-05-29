@@ -46,7 +46,7 @@ def mock_buildd_base_configuration(mocker):
     mock_base_config = mocker.patch(
         "craft_providers.bases.ubuntu.BuilddBase", autospec=True
     )
-    mock_base_config._alias = ubuntu.BuilddBaseAlias.JAMMY
+    mock_base_config.alias = ubuntu.BuilddBaseAlias.JAMMY
     mock_base_config.compatibility_tag = "buildd-base-v1"
     yield mock_base_config
 

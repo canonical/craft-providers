@@ -118,39 +118,11 @@ def mock_get_os_release(mocker):
     [
         (
             None,
-            [
-                "autoconf",
-                "automake",
-                "gcc",
-                "gcc-c++",
-                "git",
-                "make",
-                "patch",
-                "python3",
-                "python3-devel",
-                "python3-pip",
-                "python3-pip-wheel",
-                "python3-setuptools",
-            ],
+            [],
         ),
         (
             ["clang", "go"],
-            [
-                "autoconf",
-                "automake",
-                "gcc",
-                "gcc-c++",
-                "git",
-                "make",
-                "patch",
-                "python3",
-                "python3-devel",
-                "python3-pip",
-                "python3-pip-wheel",
-                "python3-setuptools",
-                "clang",
-                "go",
-            ],
+            ["clang", "go"],
         ),
     ],
 )
@@ -271,18 +243,6 @@ def test_setup(
             "dnf",
             "install",
             "-y",
-            "autoconf",
-            "automake",
-            "gcc",
-            "gcc-c++",
-            "git",
-            "make",
-            "patch",
-            "python3",
-            "python3-devel",
-            "python3-pip",
-            "python3-pip-wheel",
-            "python3-setuptools",
         ]
     )
     fake_process.register_subprocess(
@@ -291,18 +251,6 @@ def test_setup(
             "dnf",
             "install",
             "-y",
-            "autoconf",
-            "automake",
-            "gcc",
-            "gcc-c++",
-            "git",
-            "make",
-            "patch",
-            "python3",
-            "python3-devel",
-            "python3-pip",
-            "python3-pip-wheel",
-            "python3-setuptools",
             "clang",
             "go",
         ]
@@ -467,7 +415,6 @@ def test_install_snaps_inject_from_host_valid(
     base = almalinux.AlmaLinuxBase(
         alias=almalinux.AlmaLinuxBaseAlias.NINE, snaps=my_snaps
     )
-    base.executor = fake_executor
 
     base._install_snaps(executor=fake_executor)
 
@@ -485,7 +432,6 @@ def test_install_snaps_inject_from_host_not_linux_error(fake_executor, mocker):
     base = almalinux.AlmaLinuxBase(
         alias=almalinux.AlmaLinuxBaseAlias.NINE, snaps=my_snaps
     )
-    base.executor = fake_executor
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         base._install_snaps(executor=fake_executor)
@@ -506,7 +452,6 @@ def test_install_snaps_install_from_store_error(fake_executor, mocker):
     base = almalinux.AlmaLinuxBase(
         alias=almalinux.AlmaLinuxBaseAlias.NINE, snaps=my_snaps
     )
-    base.executor = fake_executor
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         base._install_snaps(executor=fake_executor)
@@ -530,7 +475,6 @@ def test_install_snaps_inject_from_host_error(fake_executor, mocker):
     base = almalinux.AlmaLinuxBase(
         alias=almalinux.AlmaLinuxBaseAlias.NINE, snaps=my_snaps
     )
-    base.executor = fake_executor
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         base._install_snaps(executor=fake_executor)
@@ -542,7 +486,6 @@ def test_install_snaps_inject_from_host_error(fake_executor, mocker):
 
 def test_setup_os_extra_repos(fake_executor, fake_process):
     base = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base.executor = fake_executor
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
@@ -562,7 +505,6 @@ def test_setup_dnf(fake_executor, fake_process):
     base = almalinux.AlmaLinuxBase(
         alias=almalinux.AlmaLinuxBaseAlias.NINE, packages=packages
     )
-    base.executor = fake_executor
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
@@ -578,18 +520,6 @@ def test_setup_dnf(fake_executor, fake_process):
             "dnf",
             "install",
             "-y",
-            "autoconf",
-            "automake",
-            "gcc",
-            "gcc-c++",
-            "git",
-            "make",
-            "patch",
-            "python3",
-            "python3-devel",
-            "python3-pip",
-            "python3-pip-wheel",
-            "python3-setuptools",
             "clang",
             "go",
         ]
@@ -601,7 +531,6 @@ def test_setup_dnf(fake_executor, fake_process):
 def test_setup_dnf_install_default(fake_executor, fake_process):
     """Verify only default packages are installed."""
     base = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base.executor = fake_executor
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "dnf", "update", "-y"])
     fake_process.register_subprocess(
         [
@@ -631,7 +560,6 @@ def test_setup_dnf_install_packages_install_error(mocker, fake_executor, fake_pr
     """Verify error is caught from `dnf install` call."""
     error = subprocess.CalledProcessError(100, ["error"])
     base = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    base.executor = fake_executor
 
     side_effects = [
         error,  # make dnf install fail

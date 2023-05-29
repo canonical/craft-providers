@@ -76,7 +76,7 @@ class AlmaLinuxBase(Base):
         snaps: Optional[List[Snap]] = None,
         packages: Optional[List[str]] = None,
     ) -> None:
-        self._alias: AlmaLinuxBaseAlias = alias
+        self.alias: AlmaLinuxBaseAlias = alias
 
         if environment is None:
             self._environment = self.default_command_environment()
@@ -88,20 +88,7 @@ class AlmaLinuxBase(Base):
 
         self._set_hostname(hostname)
         self._snaps = snaps
-        self._packages = [
-            "autoconf",
-            "automake",
-            "gcc",
-            "gcc-c++",
-            "git",
-            "make",
-            "patch",
-            "python3",
-            "python3-devel",
-            "python3-pip",
-            "python3-pip-wheel",
-            "python3-setuptools",
-        ]
+        self._packages = []
 
         if packages:
             self._packages.extend(packages)
@@ -120,7 +107,7 @@ class AlmaLinuxBase(Base):
                 reason=f"Expected OS 'almalinux', found {os_id!r}"
             )
 
-        compat_version_id = self._alias.value
+        compat_version_id = self.alias.value
         version_id = os_release.get("VERSION_ID", "")
         version_id = version_id.split(".")[0]
 
@@ -202,16 +189,3 @@ class AlmaLinuxBase(Base):
                 brief="Failed to setup snapd.",
                 details=details_from_called_process_error(error),
             ) from error
-
-    def _clean_up(self, executor: Executor) -> None:
-        """Clean up unused packages and cached package files."""
-        self._execute_run(
-            ["dnf", "autoremove", "-y"],
-            executor=executor,
-            timeout=self._timeout_complex,
-        )
-        self._execute_run(
-            ["dnf", "clean", "packages", "-y"],
-            executor=executor,
-            timeout=self._timeout_complex,
-        )

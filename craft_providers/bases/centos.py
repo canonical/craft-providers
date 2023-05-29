@@ -78,7 +78,7 @@ class CentOSBase(Base):
         snaps: Optional[List[Snap]] = None,
         packages: Optional[List[str]] = None,
     ):
-        self._alias: CentOSBaseAlias = alias
+        self.alias: CentOSBaseAlias = alias
 
         if environment is None:
             self._environment = self.default_command_environment()
@@ -90,20 +90,7 @@ class CentOSBase(Base):
 
         self._set_hostname(hostname)
 
-        self._packages = [
-            "autoconf",
-            "automake",
-            "gcc",
-            "gcc-c++",
-            "git",
-            "make",
-            "patch",
-            "rh-python38-python",
-            "rh-python38-python-devel",
-            "rh-python38-python-pip",
-            "rh-python38-python-pip-wheel",
-            "rh-python38-python-setuptools",
-        ]
+        self._packages = []
         if packages:
             self._packages.extend(packages)
 
@@ -122,7 +109,7 @@ class CentOSBase(Base):
         return {
             "PATH": "/usr/local/sbin:/usr/local/bin:"
             "/opt/rh/rh-python38/root/usr/bin:"
-            "/sbin:/bin:/usr/sbin:/usr/bin:/snap/bin"
+            "/sbin:/bin:/usr/sbin:/usr/bin:/var/lib/snapd/bin:/snap/bin",
         }
 
     def _ensure_os_compatible(self, executor: Executor) -> None:
@@ -139,7 +126,7 @@ class CentOSBase(Base):
                 reason=f"Expected OS 'centos', found {os_id!r}"
             )
 
-        compat_version_id = self._alias.value
+        compat_version_id = self.alias.value
         version_id = os_release.get("VERSION_ID")
 
         if version_id != compat_version_id:
@@ -221,16 +208,3 @@ class CentOSBase(Base):
                 brief="Failed to setup snapd.",
                 details=details_from_called_process_error(error),
             ) from error
-
-    def _clean_up(self, executor: Executor) -> None:
-        """Clean up unused packages and cached package files."""
-        self._execute_run(
-            ["yum", "autoremove", "-y"],
-            executor=executor,
-            timeout=self._timeout_complex,
-        )
-        self._execute_run(
-            ["yum", "clean", "packages", "-y"],
-            executor=executor,
-            timeout=self._timeout_complex,
-        )
