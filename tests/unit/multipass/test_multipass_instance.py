@@ -136,6 +136,7 @@ def test_push_file_io(mock_multipass, instance):
             capture_output=True,
             check=True,
             text=True,
+            timeout=60,
         ),
         mock.call.exec(
             instance_name="test-instance",
@@ -150,6 +151,7 @@ def test_push_file_io(mock_multipass, instance):
             runner=subprocess.run,
             capture_output=True,
             check=True,
+            timeout=60,
         ),
         mock.call.transfer_source_io(
             source=mock.ANY, destination="test-instance:/tmp/mktemp-result"
@@ -167,6 +169,7 @@ def test_push_file_io(mock_multipass, instance):
             runner=subprocess.run,
             capture_output=True,
             check=True,
+            timeout=60,
         ),
         mock.call.exec(
             instance_name="test-instance",
@@ -174,6 +177,7 @@ def test_push_file_io(mock_multipass, instance):
             runner=subprocess.run,
             capture_output=True,
             check=True,
+            timeout=60,
         ),
         mock.call.exec(
             instance_name="test-instance",
@@ -188,6 +192,7 @@ def test_push_file_io(mock_multipass, instance):
             runner=subprocess.run,
             capture_output=True,
             check=True,
+            timeout=600,
         ),
     ]
 
@@ -230,6 +235,7 @@ def test_execute_popen(mock_multipass, instance):
             command=["sudo", "-H", "--", "test-command", "flags"],
             runner=subprocess.Popen,
             input="foo",
+            timeout=None,
         )
     ]
 
@@ -253,6 +259,7 @@ def test_execute_popen_with_cwd(mock_multipass, instance):
             ],
             runner=subprocess.Popen,
             input="foo",
+            timeout=None,
         )
     ]
 
@@ -265,6 +272,7 @@ def test_execute_popen_with_env(mock_multipass, instance):
             instance_name="test-instance",
             command=["sudo", "-H", "--", "env", "foo=bar", "test-command", "flags"],
             runner=subprocess.Popen,
+            timeout=None,
         )
     ]
 
@@ -278,6 +286,7 @@ def test_execute_run(mock_multipass, instance):
             command=["sudo", "-H", "--", "test-command", "flags"],
             runner=subprocess.run,
             input="foo",
+            timeout=None,
         )
     ]
 
@@ -298,6 +307,7 @@ def test_execute_run_with_cwd(mock_multipass, instance, tmp_path):
                 "flags",
             ],
             runner=subprocess.run,
+            timeout=None,
         )
     ]
 
@@ -310,6 +320,7 @@ def test_execute_run_with_env(mock_multipass, instance):
             instance_name="test-instance",
             command=["sudo", "-H", "--", "env", "foo=bar", "test-command", "flags"],
             runner=subprocess.run,
+            timeout=None,
         )
     ]
 
@@ -334,6 +345,7 @@ def test_execute_run_with_env_unset(mock_multipass, instance):
                 "flags",
             ],
             runner=subprocess.run,
+            timeout=None,
         )
     ]
 
@@ -465,6 +477,7 @@ def test_pull_file(mock_multipass, instance, tmp_path):
             command=["sudo", "-H", "--", "test", "-f", "/tmp/src.txt"],
             runner=subprocess.run,
             check=False,
+            timeout=60,
         ),
         mock.call.transfer(
             source="test-instance:/tmp/src.txt", destination=str(destination)
@@ -490,6 +503,7 @@ def test_pull_file_no_source(mock_multipass, instance, tmp_path):
             command=["sudo", "-H", "--", "test", "-f", "/tmp/src.txt"],
             runner=subprocess.run,
             check=False,
+            timeout=60,
         ),
     ]
     assert str(exc_info.value) == "File not found: '/tmp/src.txt'"
@@ -513,6 +527,7 @@ def test_pull_file_no_parent_directory(mock_multipass, instance, tmp_path):
             command=["sudo", "-H", "--", "test", "-f", "/tmp/src.txt"],
             runner=subprocess.run,
             check=False,
+            timeout=60,
         ),
     ]
     assert str(exc_info.value) == f"Directory not found: {str(destination.parent)!r}"
@@ -543,6 +558,7 @@ def test_push_file(mock_multipass, instance, simple_file):
             command=["sudo", "-H", "--", "test", "-d", "/tmp"],
             runner=subprocess.run,
             check=False,
+            timeout=60,
         ),
         mock.call.exec(
             instance_name="test-instance",
@@ -551,6 +567,7 @@ def test_push_file(mock_multipass, instance, simple_file):
             capture_output=True,
             check=True,
             text=True,
+            timeout=60,
         ),
         mock.call.exec(
             instance_name="test-instance",
@@ -558,6 +575,7 @@ def test_push_file(mock_multipass, instance, simple_file):
             runner=subprocess.run,
             capture_output=True,
             check=True,
+            timeout=60,
         ),
         mock.call.transfer(
             source=str(simple_file), destination="test-instance:/tmp/mktemp-file"
@@ -567,6 +585,7 @@ def test_push_file(mock_multipass, instance, simple_file):
             command=["sudo", "-H", "--", "test", "-d", "/tmp/dst.txt"],
             runner=subprocess.run,
             check=False,
+            timeout=60,
         ),
         mock.call.exec(
             instance_name="test-instance",
@@ -574,6 +593,7 @@ def test_push_file(mock_multipass, instance, simple_file):
             runner=subprocess.run,
             capture_output=True,
             check=True,
+            timeout=None,
         ),
     ]
 
@@ -602,12 +622,14 @@ def test_push_file_to_directory(mock_multipass, instance, simple_file):
             instance_name="test-instance",
             command=["sudo", "-H", "--", "test", "-d", "/"],
             runner=subprocess.run,
+            timeout=60,
             check=False,
         ),
         mock.call.exec(
             instance_name="test-instance",
             command=["sudo", "-H", "--", "mktemp"],
             runner=subprocess.run,
+            timeout=60,
             capture_output=True,
             check=True,
             text=True,
@@ -616,6 +638,7 @@ def test_push_file_to_directory(mock_multipass, instance, simple_file):
             instance_name="test-instance",
             command=["sudo", "-H", "--", "chown", "ubuntu:ubuntu", "/tmp/mktemp-file"],
             runner=subprocess.run,
+            timeout=60,
             capture_output=True,
             check=True,
         ),
@@ -626,12 +649,14 @@ def test_push_file_to_directory(mock_multipass, instance, simple_file):
             instance_name="test-instance",
             command=["sudo", "-H", "--", "test", "-d", "/tmp"],
             runner=subprocess.run,
+            timeout=60,
             check=False,
         ),
         mock.call.exec(
             instance_name="test-instance",
             command=["sudo", "-H", "--", "mv", "/tmp/mktemp-file", "/tmp/src.txt"],
             runner=subprocess.run,
+            timeout=None,
             capture_output=True,
             check=True,
         ),
@@ -674,6 +699,7 @@ def test_push_file_no_parent_directory_error(mock_multipass, instance, simple_fi
             command=["sudo", "-H", "--", "test", "-d", "/tmp"],
             runner=subprocess.run,
             check=False,
+            timeout=60,
         ),
     ]
     assert str(exc_info.value) == "Directory not found in instance: '/tmp'"

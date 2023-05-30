@@ -23,8 +23,8 @@ import yaml
 from pydantic import ValidationError
 
 from craft_providers import Executor
-from craft_providers.bases.instance_config import InstanceConfiguration
 from craft_providers.errors import BaseConfigurationError, ProviderError
+from craft_providers.instance_config import InstanceConfiguration
 
 
 @pytest.fixture
@@ -56,7 +56,7 @@ def config_fixture(mocker, tmpdir):
         config_file.write_text(**kwargs)
 
         mocker.patch(
-            "craft_providers.bases.instance_config.temp_paths.home_temporary_file",
+            "craft_providers.instance_config.temp_paths.home_temporary_file",
             return_value=config_file,
         )
 
@@ -126,7 +126,8 @@ def test_load_with_valid_config(mock_executor, config_fixture, default_config_da
         ),
     ]
 
-    assert config_instance == {
+    assert config_instance is not None
+    assert dict(config_instance) == {
         "compatibility_tag": "tag-foo-v1",
         "setup": True,
         "snaps": {"charmcraft": {"revision": 834}, "core22": {"revision": 147}},
@@ -144,7 +145,7 @@ def test_load_with_invalid_config_raises_error(mock_executor, config_fixture):
     error = exc_info.value.errors()
     assert len(error) == 1
     assert error[0]["loc"] == ("invalid",)
-    assert error[0]["type"] == "value_error.extra"
+    assert error[0]["type"] in ("value_error.extra", "extra_forbidden")
 
 
 def test_load_failure_to_pull_file_raises_error(mock_executor):
@@ -163,7 +164,7 @@ def test_load_failure_to_pull_file_raises_error(mock_executor):
 def test_update_single_value(default_config_data, mock_executor, mocker, tmpdir):
     """Test that a single value in a config is properly updated."""
     mocker.patch(
-        "craft_providers.bases.instance_config.InstanceConfiguration.load",
+        "craft_providers.instance_config.InstanceConfiguration.load",
         return_value=InstanceConfiguration(**default_config_data),
     )
 
@@ -181,7 +182,7 @@ def test_update_update_nested_values(
 ):
     """Test updating a config by updating an existing nested value."""
     mocker.patch(
-        "craft_providers.bases.instance_config.InstanceConfiguration.load",
+        "craft_providers.instance_config.InstanceConfiguration.load",
         return_value=InstanceConfiguration(**default_config_data),
     )
 
@@ -204,7 +205,7 @@ def test_update_update_nested_values(
 def test_update_add_nested_values(default_config_data, mock_executor, mocker, tmpdir):
     """Test updating a config by adding a new nested value."""
     mocker.patch(
-        "craft_providers.bases.instance_config.InstanceConfiguration.load",
+        "craft_providers.instance_config.InstanceConfiguration.load",
         return_value=InstanceConfiguration(**default_config_data),
     )
 

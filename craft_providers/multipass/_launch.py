@@ -20,8 +20,7 @@
 import logging
 
 from craft_providers import Base, bases
-
-from .multipass_instance import MultipassInstance
+from craft_providers.multipass.multipass_instance import MultipassInstance
 
 logger = logging.getLogger(__name__)
 
