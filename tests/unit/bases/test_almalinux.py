@@ -118,11 +118,39 @@ def mock_get_os_release(mocker):
     [
         (
             None,
-            [],
+            [
+                "autoconf",
+                "automake",
+                "gcc",
+                "gcc-c++",
+                "git",
+                "make",
+                "patch",
+                "python3",
+                "python3-devel",
+                "python3-pip",
+                "python3-pip-wheel",
+                "python3-setuptools",
+            ],
         ),
         (
             ["clang", "go"],
-            ["clang", "go"],
+            [
+                "autoconf",
+                "automake",
+                "gcc",
+                "gcc-c++",
+                "git",
+                "make",
+                "patch",
+                "python3",
+                "python3-devel",
+                "python3-pip",
+                "python3-pip-wheel",
+                "python3-setuptools",
+                "clang",
+                "go",
+            ],
         ),
     ],
 )
@@ -243,6 +271,18 @@ def test_setup(
             "dnf",
             "install",
             "-y",
+            "autoconf",
+            "automake",
+            "gcc",
+            "gcc-c++",
+            "git",
+            "make",
+            "patch",
+            "python3",
+            "python3-devel",
+            "python3-pip",
+            "python3-pip-wheel",
+            "python3-setuptools",
         ]
     )
     fake_process.register_subprocess(
@@ -251,6 +291,18 @@ def test_setup(
             "dnf",
             "install",
             "-y",
+            "autoconf",
+            "automake",
+            "gcc",
+            "gcc-c++",
+            "git",
+            "make",
+            "patch",
+            "python3",
+            "python3-devel",
+            "python3-pip",
+            "python3-pip-wheel",
+            "python3-setuptools",
             "clang",
             "go",
         ]
@@ -520,6 +572,18 @@ def test_setup_dnf(fake_executor, fake_process):
             "dnf",
             "install",
             "-y",
+            "autoconf",
+            "automake",
+            "gcc",
+            "gcc-c++",
+            "git",
+            "make",
+            "patch",
+            "python3",
+            "python3-devel",
+            "python3-pip",
+            "python3-pip-wheel",
+            "python3-setuptools",
             "clang",
             "go",
         ]
@@ -550,6 +614,27 @@ def test_setup_dnf_install_default(fake_executor, fake_process):
             "python3-pip",
             "python3-pip-wheel",
             "python3-setuptools",
+        ]
+    )
+
+    base._setup_packages(executor=fake_executor)
+
+
+def test_setup_dnf_install_override_system(fake_executor, fake_process):
+    """Verify override default packages."""
+    base = almalinux.AlmaLinuxBase(
+        alias=almalinux.AlmaLinuxBaseAlias.NINE,
+        packages=["clang"],
+        use_default_packages=False,
+    )
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "dnf", "update", "-y"])
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "dnf",
+            "install",
+            "-y",
+            "clang",
         ]
     )
 
