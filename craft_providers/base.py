@@ -106,6 +106,7 @@ class Base(ABC):
         hostname: str = "craft-instance",
         snaps: Optional[List] = None,
         packages: Optional[List[str]] = None,
+        use_default_packages: bool = True,
     ):
         pass
 

@@ -71,6 +71,7 @@ class BuilddBase(Base):
     :param hostname: Hostname to configure.
     :param snaps: Optional list of snaps to install on the base image.
     :param packages: Optional list of system packages to install on the base image.
+    :param use_default_packages: Optional bool to enable/disable default packages.
     """
 
     compatibility_tag: str = f"buildd-{Base.compatibility_tag}"
@@ -84,6 +85,7 @@ class BuilddBase(Base):
         hostname: str = "craft-buildd-instance",
         snaps: Optional[List[Snap]] = None,
         packages: Optional[List[str]] = None,
+        use_default_packages: bool = True,
     ):
         self.alias: BuilddBaseAlias = alias
 
@@ -97,7 +99,23 @@ class BuilddBase(Base):
 
         self._set_hostname(hostname)
 
-        self._packages = ["apt-utils", "curl", "fuse", "udev"]
+        self._packages: List[str] = []
+        if use_default_packages:
+            self._packages.extend(
+                [
+                    "apt-utils",
+                    "build-essential",
+                    "curl",
+                    "fuse",
+                    "udev",
+                    "python3",
+                    "python3-dev",
+                    "python3-pip",
+                    "python3-wheel",
+                    "python3-setuptools",
+                ]
+            )
+
         if packages:
             self._packages.extend(packages)
 

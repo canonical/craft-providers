@@ -62,6 +62,7 @@ class AlmaLinuxBase(Base):
     :param hostname: Hostname to configure.
     :param snaps: Optional list of snaps to install on the base image.
     :param packages: Optional list of system packages to install on the base image.
+    :param use_default_packages: Optional bool to enable/disable default packages.
     """
 
     compatibility_tag: str = f"almalinux-{Base.compatibility_tag}"
@@ -75,6 +76,7 @@ class AlmaLinuxBase(Base):
         hostname: str = "craft-almalinux-instance",
         snaps: Optional[List[Snap]] = None,
         packages: Optional[List[str]] = None,
+        use_default_packages: bool = True,
     ) -> None:
         self.alias: AlmaLinuxBaseAlias = alias
 
@@ -87,11 +89,30 @@ class AlmaLinuxBase(Base):
             self.compatibility_tag = compatibility_tag
 
         self._set_hostname(hostname)
-        self._snaps = snaps
-        self._packages = []
+
+        self._packages: List[str] = []
+        if use_default_packages:
+            self._packages.extend(
+                [
+                    "autoconf",
+                    "automake",
+                    "gcc",
+                    "gcc-c++",
+                    "git",
+                    "make",
+                    "patch",
+                    "python3",
+                    "python3-devel",
+                    "python3-pip",
+                    "python3-pip-wheel",
+                    "python3-setuptools",
+                ]
+            )
 
         if packages:
             self._packages.extend(packages)
+
+        self._snaps = snaps
 
     def _ensure_os_compatible(self, executor: Executor) -> None:
         """Ensure OS is compatible with Base.
