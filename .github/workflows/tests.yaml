@@ -13,86 +13,83 @@ on:
   workflow_dispatch:
 
 jobs:
-#  linters:
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v3
-#        with:
-#          fetch-depth: 0
-#      - name: Setup Python
-#        uses: actions/setup-python@v4
-#        with:
-#          python-version: '3.10'
-#      - name: Configure environment
-#        run: |
-#          echo "::group::Begin snap install"
-#          echo "Installing snaps in the background while running apt and pip..."
-#          sudo snap install --no-wait --classic pyright
-#          echo "::endgroup::"
-#          echo "::group::pip install"
-#          python -m pip install -U .[dev]
-#          echo "::endgroup::"
-#          echo "::group::Wait for snap to complete"
-#          snap watch --last=install
-#          echo "::endgroup::"
-#      - name: Run black
-#        run: |
-#          make test-black
-#      - name: Run codespell
-#        run: |
-#          make test-codespell
-#      - name: Run flake8
-#        run: |
-#          make test-flake8
-#      - name: Run isort
-#        run: |
-#          make test-isort
-#      - name: Run mypy
-#        run: |
-#          make test-mypy
-#      - name: Run pydocstyle
-#        run: |
-#          make test-pydocstyle
-#      - name: Run pylint
-#        run: |
-#          make test-pylint
-#      - name: Run pyright
-#        run: |
-#          make test-pyright
-#
-#  unit-tests:
-#    strategy:
-#      matrix:
-#        os: [ubuntu-latest, macos-latest, windows-latest]
-#        # does not work with python 3.11 (see https://github.com/canonical/craft-providers/issues/272)
-#        python-version: ["3.8", "3.10"]
-#    runs-on: ${{ matrix.os }}
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v3
-#        with:
-#          fetch-depth: 0
-#      - name: Set up Python on ${{ matrix.platform }}
-#        uses: actions/setup-python@v4
-#        with:
-#          python-version: ${{ matrix.python-version }}
-#      - name: Configure environment
-#        run: |
-#          echo "::group::pip install"
-#          python -m pip install -U .[dev]
-#          python -m pip install -U -e .
-#          echo "::endgroup::"
-#      - name: Run unit tests
-#        run: make test-units
+  linters:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Configure environment
+        run: |
+          echo "::group::Begin snap install"
+          echo "Installing snaps in the background while running apt and pip..."
+          sudo snap install --no-wait --classic pyright
+          echo "::endgroup::"
+          echo "::group::pip install"
+          python -m pip install -U .[dev]
+          echo "::endgroup::"
+          echo "::group::Wait for snap to complete"
+          snap watch --last=install
+          echo "::endgroup::"
+      - name: Run black
+        run: |
+          make test-black
+      - name: Run codespell
+        run: |
+          make test-codespell
+      - name: Run flake8
+        run: |
+          make test-flake8
+      - name: Run isort
+        run: |
+          make test-isort
+      - name: Run mypy
+        run: |
+          make test-mypy
+      - name: Run pydocstyle
+        run: |
+          make test-pydocstyle
+      - name: Run pylint
+        run: |
+          make test-pylint
+      - name: Run pyright
+        run: |
+          make test-pyright
+
+  unit-tests:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.8", "3.10", "3.11", "3.12-dev"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up Python on ${{ matrix.platform }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Configure environment
+        run: |
+          echo "::group::pip install"
+          python -m pip install -U .[dev]
+          python -m pip install -U -e .
+          echo "::endgroup::"
+      - name: Run unit tests
+        run: make test-units
 
   integration-tests-linux:
     strategy:
       matrix:
-        # does not work with python 3.11 (see https://github.com/canonical/craft-providers/issues/272)
-        python-version: ["3.8", "3.10"]
-#        os: ["ubuntu-20.04", "ubuntu-22.04"]
-        os: ["ubuntu-22.04"]
+        python-version: ["3.8", "3.10", "3.11", "3.12-dev"]
+        os: ["ubuntu-20.04", "ubuntu-22.04"]
         exclude:
           - os: "ubuntu-22.04"
             python-version: "3.8"
@@ -126,39 +123,38 @@ jobs:
           export CRAFT_PROVIDERS_TESTS_ENABLE_LXD_UNINSTALL=1
           sg lxd -c "lxc version"
           sg lxd -c "make test-integrations"
-#
-#  integration-tests-macos:
-#    strategy:
-#      matrix:
-#        # does not work with python 3.11 (see https://github.com/canonical/craft-providers/issues/272)
-#        python-version: ["3.8", "3.10"]
-#    runs-on: macos-latest
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v3
-#        with:
-#          fetch-depth: 0
-#      - name: Setup Python
-#        uses: actions/setup-python@v4
-#        with:
-#          python-version: ${{ matrix.python-version }}
-#      - name: Configure environment
-#        run: |
-#          echo "::group::pip install"
-#          python -m pip install -U -e .[dev]
-#          echo "::endgroup::"
-#          echo "::group::Install Multipass"
-#          brew update
-#          brew install multipass
-#          # wait 20 seconds for multipassd to start (see https://github.com/canonical/multipass/issues/1995)
-#          sleep 20
-#          # this can be removed when multipass 1.12 is available on brew, because qemu will be the new default
-#          multipass set local.driver=qemu
-#          sleep 20
-#          multipass version
-#          echo "::endgroup::"
-#      - name: Run integration tests on MacOS
-#        run: |
-#          export CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL=1
-#          export CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL=1
-#          make test-integrations
+
+  integration-tests-macos:
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.10", "3.11", "3.12-dev"]
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Configure environment
+        run: |
+          echo "::group::pip install"
+          python -m pip install -U -e .[dev]
+          echo "::endgroup::"
+          echo "::group::Install Multipass"
+          brew update
+          brew install multipass
+          # wait 20 seconds for multipassd to start (see https://github.com/canonical/multipass/issues/1995)
+          sleep 20
+          # this can be removed when multipass 1.12 is available on brew, because qemu will be the new default
+          multipass set local.driver=qemu
+          sleep 20
+          multipass version
+          echo "::endgroup::"
+      - name: Run integration tests on MacOS
+        run: |
+          export CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL=1
+          export CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL=1
+          make test-integrations

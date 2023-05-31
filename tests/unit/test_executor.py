@@ -46,7 +46,7 @@ def mock_home_temp_file(mocker, tmp_path):
             tmp_file.unlink()
 
     yield mocker.patch(
-        "craft_providers.executor.temp_paths.home_temporary_file",
+        "craft_providers.util.temp_paths.home_temporary_file",
         wraps=_mock_home_temp_file,
     )
 

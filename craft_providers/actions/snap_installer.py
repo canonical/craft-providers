@@ -30,13 +30,14 @@ import pydantic
 import requests
 import requests_unixsocket  # type: ignore
 
-from craft_providers import Executor
-from craft_providers.bases.instance_config import InstanceConfiguration
+from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE
 from craft_providers.errors import (
     BaseConfigurationError,
     ProviderError,
     details_from_called_process_error,
 )
+from craft_providers.executor import Executor
+from craft_providers.instance_config import InstanceConfiguration
 from craft_providers.util import snap_cmd, temp_paths
 
 logger = logging.getLogger(__name__)
@@ -143,7 +144,9 @@ def _get_target_snap_revision_from_snapd(
     url = f"http://localhost/v2/snaps/{quoted_name}"
     cmd = ["curl", "--silent", "--unix-socket", "/run/snapd.socket", url]
     try:
-        proc = executor.execute_run(cmd, check=True, capture_output=True)
+        proc = executor.execute_run(
+            cmd, check=True, capture_output=True, timeout=TIMEOUT_SIMPLE
+        )
     except subprocess.CalledProcessError as error:
         raise SnapInstallationError(
             brief="Unable to get target snap revision."
@@ -183,7 +186,9 @@ def _get_snap_revision_ensuring_source(
     )
     cmd = snap_cmd.formulate_remove_command(snap_name)
     try:
-        executor.execute_run(cmd, check=True, capture_output=True)
+        executor.execute_run(
+            cmd, check=True, capture_output=True, timeout=TIMEOUT_SIMPLE
+        )
     except subprocess.CalledProcessError as error:
         raise SnapInstallationError(
             brief=f"Failed to remove snap {snap_name!r}.",
@@ -302,6 +307,7 @@ def _add_assertions_from_host(executor: Executor, snap_name: str) -> None:
             snap_cmd.formulate_ack_command(snap_assert_path=target_assert_path),
             check=True,
             capture_output=True,
+            timeout=TIMEOUT_COMPLEX,
         )
     except subprocess.CalledProcessError as error:
         raise SnapInstallationError(
@@ -376,6 +382,7 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
             ),
             check=True,
             capture_output=True,
+            timeout=TIMEOUT_COMPLEX,
         )
     except subprocess.CalledProcessError as error:
         raise SnapInstallationError(
@@ -447,7 +454,12 @@ def install_from_store(
         )
 
     try:
-        executor.execute_run(cmd, check=True, capture_output=True)
+        executor.execute_run(
+            cmd,
+            check=True,
+            capture_output=True,
+            timeout=TIMEOUT_COMPLEX,
+        )
     except subprocess.CalledProcessError as error:
         raise SnapInstallationError(
             brief=f"Failed to install/refresh snap {snap_store_name!r}.",

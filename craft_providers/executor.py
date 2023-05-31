@@ -25,7 +25,7 @@ import subprocess
 from abc import ABC, abstractmethod
 from typing import Dict, Generator, List, Optional
 
-from .util import temp_paths
+import craft_providers.util.temp_paths
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,7 @@ class Executor(ABC):
         *,
         cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
+        timeout: Optional[float] = None,
         **kwargs,
     ) -> subprocess.Popen:
         """Execute a command in instance, using subprocess.Popen().
@@ -50,6 +51,7 @@ class Executor(ABC):
 
         :param command: Command to execute.
         :param env: Additional environment to set for process.
+        :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Additional keyword arguments to pass.
 
         :returns: Popen instance.
@@ -62,6 +64,7 @@ class Executor(ABC):
         *,
         cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
+        timeout: Optional[float] = None,
         **kwargs,
     ) -> subprocess.CompletedProcess:
         """Execute a command using subprocess.run().
@@ -72,6 +75,7 @@ class Executor(ABC):
 
         :param command: Command to execute.
         :param env: Additional environment to set for process.
+        :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Keyword args to pass to subprocess.run().
 
         :returns: Completed process.
@@ -114,7 +118,7 @@ class Executor(ABC):
             directory does not exist (and `missing_ok` is False).
         :raises ProviderError: On error copying file content.
         """
-        with temp_paths.home_temporary_file() as tmp_file:
+        with craft_providers.util.temp_paths.home_temporary_file() as tmp_file:
             try:
                 self.pull_file(source=source, destination=tmp_file)
             except FileNotFoundError:
