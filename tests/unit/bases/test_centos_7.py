@@ -88,7 +88,7 @@ def mock_get_os_release(mocker):
             (
                 "PATH=/usr/local/sbin:/usr/local/bin:"
                 "/opt/rh/rh-python38/root/usr/bin:"
-                "/sbin:/bin:/usr/sbin:/usr/bin:/var/lib/snapd/bin:/snap/bin\n"
+                "/sbin:/bin:/usr/sbin:/usr/bin:/snap/bin\n"
             ).encode(),
         ),
         (
@@ -120,11 +120,39 @@ def mock_get_os_release(mocker):
     [
         (
             None,
-            [],
+            [
+                "autoconf",
+                "automake",
+                "gcc",
+                "gcc-c++",
+                "git",
+                "make",
+                "patch",
+                "rh-python38-python",
+                "rh-python38-python-devel",
+                "rh-python38-python-pip",
+                "rh-python38-python-pip-wheel",
+                "rh-python38-python-setuptools",
+            ],
         ),
         (
             ["go", "clang"],
-            ["go", "clang"],
+            [
+                "autoconf",
+                "automake",
+                "gcc",
+                "gcc-c++",
+                "git",
+                "make",
+                "patch",
+                "rh-python38-python",
+                "rh-python38-python-devel",
+                "rh-python38-python-pip",
+                "rh-python38-python-pip-wheel",
+                "rh-python38-python-setuptools",
+                "go",
+                "clang",
+            ],
         ),
     ],
 )
@@ -495,6 +523,18 @@ def test_setup_packages(fake_executor, fake_process):
             "yum",
             "install",
             "-y",
+            "autoconf",
+            "automake",
+            "gcc",
+            "gcc-c++",
+            "git",
+            "make",
+            "patch",
+            "rh-python38-python",
+            "rh-python38-python-devel",
+            "rh-python38-python-pip",
+            "rh-python38-python-pip-wheel",
+            "rh-python38-python-setuptools",
             "grep",
             "git",
         ]
@@ -513,6 +553,39 @@ def test_setup_yum_install_default(fake_executor, fake_process):
             "yum",
             "install",
             "-y",
+            "autoconf",
+            "automake",
+            "gcc",
+            "gcc-c++",
+            "git",
+            "make",
+            "patch",
+            "rh-python38-python",
+            "rh-python38-python-devel",
+            "rh-python38-python-pip",
+            "rh-python38-python-pip-wheel",
+            "rh-python38-python-setuptools",
+        ]
+    )
+
+    base._setup_packages(executor=fake_executor)
+
+
+def test_setup_yum_install_override_system(fake_executor, fake_process):
+    """Verify override default packages."""
+    base = centos.CentOSBase(
+        alias=centos.CentOSBaseAlias.SEVEN,
+        packages=["clang"],
+        use_default_packages=False,
+    )
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "yum", "update", "-y"])
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "yum",
+            "install",
+            "-y",
+            "clang",
         ]
     )
 

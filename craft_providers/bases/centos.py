@@ -64,6 +64,7 @@ class CentOSBase(Base):
     :param hostname: Hostname to configure.
     :param snaps: Optional list of snaps to install on the base image.
     :param packages: Optional list of system packages to install on the base image.
+    :param use_default_packages: Optional bool to enable/disable default packages.
     """
 
     compatibility_tag: str = f"centos-{Base.compatibility_tag}"
@@ -77,6 +78,7 @@ class CentOSBase(Base):
         hostname: str = "craft-centos-instance",
         snaps: Optional[List[Snap]] = None,
         packages: Optional[List[str]] = None,
+        use_default_packages: bool = True,
     ):
         self.alias: CentOSBaseAlias = alias
 
@@ -90,7 +92,25 @@ class CentOSBase(Base):
 
         self._set_hostname(hostname)
 
-        self._packages = []
+        self._packages: List[str] = []
+        if use_default_packages:
+            self._packages.extend(
+                [
+                    "autoconf",
+                    "automake",
+                    "gcc",
+                    "gcc-c++",
+                    "git",
+                    "make",
+                    "patch",
+                    "rh-python38-python",
+                    "rh-python38-python-devel",
+                    "rh-python38-python-pip",
+                    "rh-python38-python-pip-wheel",
+                    "rh-python38-python-setuptools",
+                ]
+            )
+
         if packages:
             self._packages.extend(packages)
 
@@ -109,7 +129,7 @@ class CentOSBase(Base):
         return {
             "PATH": "/usr/local/sbin:/usr/local/bin:"
             "/opt/rh/rh-python38/root/usr/bin:"
-            "/sbin:/bin:/usr/sbin:/usr/bin:/var/lib/snapd/bin:/snap/bin",
+            "/sbin:/bin:/usr/sbin:/usr/bin:/snap/bin"
         }
 
     def _ensure_os_compatible(self, executor: Executor) -> None:

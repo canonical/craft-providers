@@ -117,10 +117,37 @@ def mock_get_os_release(mocker):
 @pytest.mark.parametrize(
     "packages, expected_packages",
     [
-        (None, ["apt-utils", "curl", "fuse", "udev"]),
+        (
+            None,
+            [
+                "apt-utils",
+                "build-essential",
+                "curl",
+                "fuse",
+                "udev",
+                "python3",
+                "python3-dev",
+                "python3-pip",
+                "python3-wheel",
+                "python3-setuptools",
+            ],
+        ),
         (
             ["grep", "git"],
-            ["apt-utils", "curl", "fuse", "udev", "grep", "git"],
+            [
+                "apt-utils",
+                "build-essential",
+                "curl",
+                "fuse",
+                "udev",
+                "python3",
+                "python3-dev",
+                "python3-pip",
+                "python3-wheel",
+                "python3-setuptools",
+                "grep",
+                "git",
+            ],
         ),
     ],
 )
@@ -531,9 +558,15 @@ def test_setup_apt(fake_executor, fake_process):
             "install",
             "-y",
             "apt-utils",
+            "build-essential",
             "curl",
             "fuse",
             "udev",
+            "python3",
+            "python3-dev",
+            "python3-pip",
+            "python3-wheel",
+            "python3-setuptools",
             "grep",
             "git",
         ]
@@ -553,9 +586,36 @@ def test_setup_apt_install_default(fake_executor, fake_process):
             "install",
             "-y",
             "apt-utils",
+            "build-essential",
             "curl",
             "fuse",
             "udev",
+            "python3",
+            "python3-dev",
+            "python3-pip",
+            "python3-wheel",
+            "python3-setuptools",
+        ]
+    )
+
+    base._setup_packages(executor=fake_executor)
+
+
+def test_setup_apt_install_override_system(fake_executor, fake_process):
+    """Verify override default packages."""
+    base = ubuntu.BuilddBase(
+        alias=ubuntu.BuilddBaseAlias.JAMMY,
+        packages=["clang"],
+        use_default_packages=False,
+    )
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "apt-get",
+            "install",
+            "-y",
+            "clang",
         ]
     )
 
@@ -613,6 +673,12 @@ def test_pre_setup_packages_devel(fake_executor, fake_process, mocker):
             "install",
             "-y",
             "apt-utils",
+            "build-essential",
+            "python3",
+            "python3-dev",
+            "python3-pip",
+            "python3-wheel",
+            "python3-setuptools",
             "curl",
             "fuse",
             "udev",
