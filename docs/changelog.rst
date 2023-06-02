@@ -2,6 +2,15 @@
 Changelog
 *********
 
+1.13.0 (2023-05-31)
+-------------------
+- Push files to any location in Multipass instances
+- Refactor base setup and warmup
+- Replace timeout for entire base setup with granular per-step timeouts
+- Add option to not install default packages during base setup
+- Install build-essentials and python3 in CentOS and AlmaLinux
+- Update PATH for CentOS
+
 1.12.0 (2023-05-18)
 -------------------
 - Add AlmaLinux 9 base
