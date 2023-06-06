@@ -18,7 +18,6 @@
 import subprocess
 
 import pytest
-
 from craft_providers import lxd
 from craft_providers.bases import ubuntu
 

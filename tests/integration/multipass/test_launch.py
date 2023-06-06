@@ -20,7 +20,6 @@ import pathlib
 import subprocess
 
 import pytest
-
 from craft_providers import multipass
 from craft_providers.bases import ubuntu
 from craft_providers.errors import BaseCompatibilityError

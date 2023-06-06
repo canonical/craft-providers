@@ -18,7 +18,6 @@
 import shutil
 
 import pytest
-
 from craft_providers import lxd
 
 

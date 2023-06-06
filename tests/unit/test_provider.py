@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import pytest
-
 from craft_providers import ProviderError
 from craft_providers.lxd import LXDError, LXDProvider
 from craft_providers.multipass import MultipassError, MultipassProvider
@@ -30,36 +29,36 @@ def provider_class(request):
 
 @pytest.fixture(autouse=True)
 def mock_lxd_delete(mocker):
-    yield mocker.patch("craft_providers.lxd.LXDInstance.delete")
+    return mocker.patch("craft_providers.lxd.LXDInstance.delete")
 
 
 @pytest.fixture(autouse=True)
 def mock_lxd_exists(mocker):
-    yield mocker.patch("craft_providers.lxd.LXDInstance.exists", return_value=True)
+    return mocker.patch("craft_providers.lxd.LXDInstance.exists", return_value=True)
 
 
 @pytest.fixture(autouse=True)
 def mock_lxd_is_installed(mocker):
-    yield mocker.patch(
+    return mocker.patch(
         "craft_providers.lxd.lxd_provider.is_installed", return_value=True
     )
 
 
 @pytest.fixture(autouse=True)
 def mock_multipass_delete(mocker):
-    yield mocker.patch("craft_providers.multipass.MultipassInstance.delete")
+    return mocker.patch("craft_providers.multipass.MultipassInstance.delete")
 
 
 @pytest.fixture(autouse=True)
 def mock_multipass_exists(mocker):
-    yield mocker.patch(
+    return mocker.patch(
         "craft_providers.multipass.MultipassInstance.exists", return_value=True
     )
 
 
 @pytest.fixture(autouse=True)
 def mock_multipass_is_installed(mocker):
-    yield mocker.patch(
+    return mocker.patch(
         "craft_providers.multipass.multipass_provider.is_installed", return_value=True
     )
 

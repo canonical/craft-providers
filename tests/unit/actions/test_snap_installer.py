@@ -24,8 +24,6 @@ from unittest import mock
 import pytest
 import requests
 import yaml
-from logassert import Exact  # type: ignore
-
 from craft_providers.actions import snap_installer
 from craft_providers.actions.snap_installer import Snap
 from craft_providers.errors import (
@@ -34,6 +32,7 @@ from craft_providers.errors import (
     details_from_called_process_error,
 )
 from craft_providers.instance_config import InstanceConfiguration
+from logassert import Exact  # type: ignore
 
 
 @pytest.fixture()
@@ -160,11 +159,11 @@ def test_inject_from_host_classic(
     assert "Revisions found: host='2', target='1'" in logs.debug
 
     # check saved config
-    (saved_config_record,) = [
+    (saved_config_record,) = (
         x
         for x in fake_executor.records_of_push_file_io
         if "craft-instance.conf" in x["destination"]
-    ]
+    )
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
     assert config.snaps["test-name"] == {
@@ -215,11 +214,11 @@ def test_inject_from_host_strict(
     assert "Revisions found: host='2', target='1'" in logs.debug
 
     # check saved config
-    (saved_config_record,) = [
+    (saved_config_record,) = (
         x
         for x in fake_executor.records_of_push_file_io
         if "craft-instance.conf" in x["destination"]
-    ]
+    )
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
     assert config.snaps["test-name"] == {
@@ -265,11 +264,11 @@ def test_inject_from_host_snap_name(
     )
     assert "Revisions found: host='2', target='1'" in logs.debug
     # check saved config
-    (saved_config_record,) = [
+    (saved_config_record,) = (
         x
         for x in fake_executor.records_of_push_file_io
         if "craft-instance.conf" in x["destination"]
-    ]
+    )
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
     assert config.snaps["test-name"] == {
@@ -311,11 +310,11 @@ def test_inject_from_host_dangerous(
     assert "Revisions found: host='x3', target='1'" in logs.debug
 
     # check saved config
-    (saved_config_record,) = [
+    (saved_config_record,) = (
         x
         for x in fake_executor.records_of_push_file_io
         if "craft-instance.conf" in x["destination"]
-    ]
+    )
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
     assert config.snaps["test-name"] == {
@@ -397,11 +396,11 @@ def test_inject_from_host_not_dangerous(
     assert "Revisions found: host='2', target='1'" in logs.debug
 
     # check saved config
-    (saved_config_record,) = [
+    (saved_config_record,) = (
         x
         for x in fake_executor.records_of_push_file_io
         if "craft-instance.conf" in x["destination"]
-    ]
+    )
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
     assert config.snaps["test-name"] == {
@@ -633,11 +632,11 @@ def test_install_from_store_strict(
     assert "Revision after install/refresh: '4'" in logs.debug
 
     # check saved config
-    (saved_config_record,) = [
+    (saved_config_record,) = (
         x
         for x in fake_executor.records_of_push_file_io
         if "craft-instance.conf" in x["destination"]
-    ]
+    )
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
     assert config.snaps["test-name"] == {
@@ -723,11 +722,11 @@ def test_refresh_from_store(
     assert "Revision after install/refresh: '4'" in logs.debug
 
     # check saved config
-    (saved_config_record,) = [
+    (saved_config_record,) = (
         x
         for x in fake_executor.records_of_push_file_io
         if "craft-instance.conf" in x["destination"]
-    ]
+    )
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
     assert config.snaps["test-name"] == {
@@ -809,11 +808,11 @@ def test_install_from_store_trim_suffix(
     assert "Revision after install/refresh: '4'" in logs.debug
 
     # check saved config
-    (saved_config_record,) = [
+    (saved_config_record,) = (
         x
         for x in fake_executor.records_of_push_file_io
         if "craft-instance.conf" in x["destination"]
-    ]
+    )
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
     assert config.snaps["test-name"] == {

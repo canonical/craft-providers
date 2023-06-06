@@ -23,9 +23,6 @@ from textwrap import dedent
 from unittest.mock import ANY, call, patch
 
 import pytest
-from logassert import Exact  # type: ignore
-from pydantic import ValidationError
-
 from craft_providers.actions.snap_installer import Snap, SnapInstallationError
 from craft_providers.bases import centos
 from craft_providers.errors import (
@@ -35,7 +32,8 @@ from craft_providers.errors import (
     details_from_called_process_error,
 )
 from craft_providers.instance_config import InstanceConfiguration
-
+from logassert import Exact  # type: ignore
+from pydantic import ValidationError
 
 DEFAULT_FAKE_CMD = ["fake-executor"]
 
@@ -48,22 +46,22 @@ def mock_load(mocker):
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def fake_filesystem(fs):
-    yield fs
+    return fs
 
 
 @pytest.fixture()
 def mock_install_from_store(mocker):
-    yield mocker.patch("craft_providers.actions.snap_installer.install_from_store")
+    return mocker.patch("craft_providers.actions.snap_installer.install_from_store")
 
 
 @pytest.fixture()
 def mock_inject_from_host(mocker):
-    yield mocker.patch("craft_providers.actions.snap_installer.inject_from_host")
+    return mocker.patch("craft_providers.actions.snap_installer.inject_from_host")
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_get_os_release(mocker):
     return mocker.patch.object(
         centos.CentOSBase,
@@ -78,15 +76,15 @@ def mock_get_os_release(mocker):
 
 @pytest.mark.parametrize("alias", list(centos.CentOSBaseAlias))
 @pytest.mark.parametrize(
-    "environment, etc_environment_content",
+    ("environment", "etc_environment_content"),
     [
         (
             None,
             (
-                "PATH=/usr/local/sbin:/usr/local/bin:"
-                "/opt/rh/rh-python38/root/usr/bin:"
-                "/sbin:/bin:/usr/sbin:/usr/bin:/snap/bin\n"
-            ).encode(),
+                b"PATH=/usr/local/sbin:/usr/local/bin:"
+                b"/opt/rh/rh-python38/root/usr/bin:"
+                b"/sbin:/bin:/usr/sbin:/usr/bin:/snap/bin\n"
+            ),
         ),
         (
             {
@@ -95,15 +93,15 @@ def mock_get_os_release(mocker):
                 "http_proxy": "http://foo.bar:8080",
             },
             (
-                "https_proxy=http://foo.bar:8081\n"
-                "PATH=/snap\nhttp_proxy=http://foo.bar:8080\n"
-            ).encode(),
+                b"https_proxy=http://foo.bar:8081\n"
+                b"PATH=/snap\nhttp_proxy=http://foo.bar:8080\n"
+            ),
         ),
     ],
 )
 @pytest.mark.parametrize("no_cdn", [False, True])
 @pytest.mark.parametrize(
-    "snaps, expected_snap_call",
+    ("snaps", "expected_snap_call"),
     [
         (None, []),
         (
@@ -113,7 +111,7 @@ def mock_get_os_release(mocker):
     ],
 )
 @pytest.mark.parametrize(
-    "packages, expected_packages",
+    ("packages", "expected_packages"),
     [
         (
             None,
@@ -154,7 +152,7 @@ def mock_get_os_release(mocker):
     ],
 )
 @pytest.mark.parametrize(
-    "tag, expected_tag", [(None, "centos-base-v1"), ("test-tag", "test-tag")]
+    ("tag", "expected_tag"), [(None, "centos-base-v1"), ("test-tag", "test-tag")]
 )
 def test_setup(
     fake_process,
@@ -266,7 +264,7 @@ def test_setup(
     )
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "yum", "update"])
     fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "yum", "install", "-y"] + expected_packages
+        [*DEFAULT_FAKE_CMD, "yum", "install", "-y", *expected_packages]
     )
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "yum", "autoremove", "-y"])
     fake_process.register_subprocess(
@@ -1069,7 +1067,7 @@ def test_ensure_setup_completed(fake_executor, logs, mock_load):
 
 
 @pytest.mark.parametrize(
-    "error, error_message",
+    ("error", "error_message"),
     [
         (
             ValidationError("foo", InstanceConfiguration),
@@ -1378,7 +1376,7 @@ def test_set_hostname_unchanged(hostname, logs):
 
 
 @pytest.mark.parametrize(
-    "hostname, expected_hostname",
+    ("hostname", "expected_hostname"),
     [
         # trim away invalid beginning characters
         ("-test", "test"),
@@ -1480,7 +1478,7 @@ def test_execute_run_command_failed_no_verify_network(fake_process, fake_executo
     """The command failed but network verification was not asked."""
     base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
     command = ["the", "command"]
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=1)
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, *command], returncode=1)
 
     # we know that network is not verified because otherwise we'll get
     # a ProcessNotRegisteredError for the verification process
@@ -1495,7 +1493,7 @@ def test_execute_run_command_failed_verify_network_proxy(
     """The command failed, network verification was asked, but there is a proxy."""
     base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
     command = ["the", "command"]
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=1)
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, *command], returncode=1)
 
     monkeypatch.setenv(proxy_variable_name, "https://someproxy.net:8080/")
 
@@ -1509,7 +1507,7 @@ def test_execute_run_verify_network_run_ok(fake_process, fake_executor):
     """Indicated network verification but process completed ok."""
     base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
     command = ["the", "command"]
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=0)
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, *command], returncode=0)
 
     # we know that network is not verified because otherwise we'll get
     # a ProcessNotRegisteredError for the verification process
@@ -1528,7 +1526,7 @@ def test_execute_run_verify_network_connectivity_ok(fake_process, fake_executor)
         [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
         returncode=0,
     )
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=1)
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, *command], returncode=1)
 
     with pytest.raises(subprocess.CalledProcessError):
         base_config._execute_run(command, executor=fake_executor, verify_network=True)
@@ -1543,7 +1541,7 @@ def test_execute_run_verify_network_connectivity_missing(fake_process, fake_exec
         [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
         returncode=1,
     )
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD] + command, returncode=1)
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, *command], returncode=1)
 
     with pytest.raises(NetworkError) as exc_info:
         base_config._execute_run(command, executor=fake_executor, verify_network=True)

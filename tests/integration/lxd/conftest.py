@@ -25,7 +25,6 @@ from contextlib import contextmanager
 from typing import Any, Dict, Optional
 
 import pytest
-
 from craft_providers.lxd import LXC
 from craft_providers.lxd import project as lxc_project
 from craft_providers.lxd.lxd_instance import LXDInstance
@@ -36,7 +35,7 @@ def installed_lxd_required(installed_lxd):
     """All LXD integration tests required LXD to be installed."""
 
 
-@pytest.fixture
+@pytest.fixture()
 def installed_lxd_without_init(uninstalled_lxd):
     """Ensure lxd is installed, but not initialized.
 
@@ -116,13 +115,13 @@ def tmp_instance(
 
 @pytest.fixture()
 def lxc():
-    yield LXC()
+    return LXC()
 
 
 @pytest.fixture()
 def project_name():
     """Create temporary LXD project and assert expected properties."""
-    yield "ptest-" + "".join(random.choices(string.ascii_uppercase, k=4))
+    return "ptest-" + "".join(random.choices(string.ascii_uppercase, k=4))
 
 
 @pytest.fixture()

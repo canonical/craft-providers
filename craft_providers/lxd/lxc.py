@@ -56,7 +56,7 @@ class LXC:
         self,
         *,
         lxc_path: pathlib.Path = pathlib.Path("lxc"),
-    ):
+    ) -> None:
         self.lxc_path = lxc_path
 
     def _run_lxc(

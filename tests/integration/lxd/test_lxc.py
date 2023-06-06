@@ -19,7 +19,6 @@ import pathlib
 import subprocess
 
 import pytest
-
 from craft_providers.lxd import LXDError
 
 from . import conftest

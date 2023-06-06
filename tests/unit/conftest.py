@@ -22,7 +22,6 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 import responses as responses_module
-
 from craft_providers.executor import Executor
 from craft_providers.util import env_cmd
 
@@ -73,12 +72,9 @@ class FakeExecutor(Executor):
         env: Optional[Dict[str, Optional[str]]] = None,
         **kwargs,
     ) -> subprocess.Popen:
-        if env is None:
-            env_args = []
-        else:
-            env_args = env_cmd.formulate_command(env, chdir=cwd)
+        env_args = [] if env is None else env_cmd.formulate_command(env, chdir=cwd)
 
-        final_cmd = ["fake-executor"] + env_args + command
+        final_cmd = ["fake-executor", *env_args, *command]
         return subprocess.Popen(final_cmd, **kwargs)
 
     def execute_run(
@@ -90,12 +86,9 @@ class FakeExecutor(Executor):
         timeout: Optional[float] = None,
         **kwargs,
     ) -> subprocess.CompletedProcess:
-        if env is None:
-            env_args = []
-        else:
-            env_args = env_cmd.formulate_command(env, chdir=cwd)
+        env_args = [] if env is None else env_cmd.formulate_command(env, chdir=cwd)
 
-        final_cmd = ["fake-executor"] + env_args + command
+        final_cmd = ["fake-executor", *env_args, *command]
 
         return subprocess.run(final_cmd, timeout=timeout, **kwargs)
 
@@ -130,12 +123,12 @@ class FakeExecutor(Executor):
         return True
 
 
-@pytest.fixture
+@pytest.fixture()
 def fake_executor():
-    yield FakeExecutor()
+    return FakeExecutor()
 
 
-@pytest.fixture
+@pytest.fixture()
 def responses():
     """Simple helper to use responses module as a fixture.
 

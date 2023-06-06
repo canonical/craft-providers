@@ -23,12 +23,11 @@ import subprocess
 from datetime import datetime, timedelta
 
 import pytest
-from freezegun import freeze_time
-
 from craft_providers import lxd
 from craft_providers.bases import ubuntu
 from craft_providers.errors import BaseCompatibilityError
 from craft_providers.lxd import project as lxd_project
+from freezegun import freeze_time
 
 from . import conftest
 
@@ -50,7 +49,7 @@ def get_base_instance():
         instance = lxd.LXDInstance(name=base_instance_name, project=project)
         return instance
 
-    yield _base_instance
+    return _base_instance
 
 
 @pytest.fixture()

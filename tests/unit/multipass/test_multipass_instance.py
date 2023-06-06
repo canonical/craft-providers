@@ -22,7 +22,6 @@ import sys
 from unittest import mock
 
 import pytest
-
 from craft_providers import errors
 from craft_providers.multipass import Multipass, MultipassInstance
 from craft_providers.multipass.errors import MultipassError
@@ -77,11 +76,11 @@ EXAMPLE_INFO = {
 }
 
 
-@pytest.fixture
+@pytest.fixture()
 def project_path(tmp_path):
     project_path = tmp_path / "git" / "project"
     project_path.mkdir(parents=True)
-    yield project_path
+    return project_path
 
 
 @pytest.fixture(autouse=True)
@@ -100,12 +99,12 @@ def mock_multipass(project_path):
         yield multipass_mock
 
 
-@pytest.fixture
+@pytest.fixture()
 def instance(mock_multipass):
-    yield MultipassInstance(name="test-instance", multipass=mock_multipass)
+    return MultipassInstance(name="test-instance", multipass=mock_multipass)
 
 
-@pytest.fixture
+@pytest.fixture()
 def simple_file(tmp_path):
     """Create a file in the test directory."""
     file = tmp_path / "src.txt"

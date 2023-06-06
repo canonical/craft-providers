@@ -19,7 +19,6 @@ import io
 import subprocess
 
 import pytest
-
 from craft_providers.multipass import Multipass
 
 from . import conftest
@@ -33,9 +32,9 @@ def instance(instance_name):
         yield tmp_instance
 
 
-@pytest.fixture
+@pytest.fixture()
 def multipass():
-    yield Multipass()
+    return Multipass()
 
 
 def test_delete(instance, multipass):

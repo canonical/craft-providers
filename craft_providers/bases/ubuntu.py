@@ -86,7 +86,7 @@ class BuilddBase(Base):
         snaps: Optional[List[Snap]] = None,
         packages: Optional[List[str]] = None,
         use_default_packages: bool = True,
-    ):
+    ) -> None:
         self.alias: BuilddBaseAlias = alias
 
         if environment is None:
@@ -189,7 +189,7 @@ class BuilddBase(Base):
         sed_command = ["sed", "-i", f"s/{version_codename}/{codename}/g"]
         try:
             self._execute_run(
-                sed_command + [apt_source],
+                [*sed_command, apt_source],
                 executor=executor,
                 timeout=self._timeout_simple,
             )
@@ -253,7 +253,7 @@ class BuilddBase(Base):
         if additional_source_files:
             try:
                 self._execute_run(
-                    sed_command + [apt_source_dir + "*.list"],
+                    [*sed_command, apt_source_dir + "*.list"],
                     executor=executor,
                     timeout=self._timeout_simple,
                 )
@@ -277,13 +277,13 @@ class BuilddBase(Base):
         """Configure apt, update database."""
         executor.push_file_io(
             destination=pathlib.Path("/etc/apt/apt.conf.d/00no-recommends"),
-            content=io.BytesIO('APT::Install-Recommends "false";\n'.encode()),
+            content=io.BytesIO(b'APT::Install-Recommends "false";\n'),
             file_mode="0644",
         )
 
         executor.push_file_io(
             destination=pathlib.Path("/etc/apt/apt.conf.d/00update-errors"),
-            content=io.BytesIO('APT::Update::Error-Mode "any";\n'.encode()),
+            content=io.BytesIO(b'APT::Update::Error-Mode "any";\n'),
             file_mode="0644",
         )
 
@@ -312,7 +312,7 @@ class BuilddBase(Base):
         if not self._packages:
             return
         try:
-            command = ["apt-get", "install", "-y"] + self._packages
+            command = ["apt-get", "install", "-y", *self._packages]
             self._execute_run(
                 command,
                 executor=executor,

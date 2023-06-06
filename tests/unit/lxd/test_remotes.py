@@ -19,19 +19,18 @@
 from unittest.mock import call
 
 import pytest
-
 from craft_providers import lxd
 from craft_providers.bases import ubuntu
 from craft_providers.errors import BaseConfigurationError
 from craft_providers.lxd import remotes
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_lxc(mocker):
-    yield mocker.patch("craft_providers.lxd.launcher.LXC", spec=lxd.LXC)
+    return mocker.patch("craft_providers.lxd.launcher.LXC", spec=lxd.LXC)
 
 
-@pytest.fixture
+@pytest.fixture()
 def fake_remote_image(mocker):
     return remotes.RemoteImage(
         image_name="test-image-name",
@@ -41,22 +40,22 @@ def fake_remote_image(mocker):
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_remote_image(mocker):
-    yield mocker.patch(
+    return mocker.patch(
         "craft_providers.lxd.remotes.RemoteImage", spec=remotes.RemoteImage
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_get_remote_image(mocker, mock_remote_image):
-    yield mocker.patch(
+    return mocker.patch(
         "craft_providers.lxd.remotes.get_remote_image", return_value=mock_remote_image
     )
 
 
 @pytest.mark.parametrize(
-    "remote_name, remote_address, is_stable",
+    ("remote_name", "remote_address", "is_stable"),
     [
         (
             remotes.BUILDD_RELEASES_REMOTE_NAME,
@@ -141,7 +140,7 @@ def test_add_remote_race_condition_error(fake_remote_image, mock_lxc, logs):
 
 
 @pytest.mark.parametrize(
-    "provider_base_alias, image_name",
+    ("provider_base_alias", "image_name"),
     [
         (ubuntu.BuilddBaseAlias.BIONIC, "core18"),
         (ubuntu.BuilddBaseAlias.FOCAL, "core20"),
@@ -160,7 +159,7 @@ def test_get_image_remote(provider_base_alias, image_name):
 
 
 @pytest.mark.parametrize(
-    "provider_base_alias, image_name",
+    ("provider_base_alias", "image_name"),
     [
         (ubuntu.BuilddBaseAlias.BIONIC, "core18"),
         (ubuntu.BuilddBaseAlias.FOCAL, "core20"),
@@ -210,8 +209,9 @@ def test_get_image_remote_deprecated_error():
     with pytest.raises(BaseConfigurationError) as raised:
         lxd.remotes.get_remote_image("8.04")
 
-    assert "Base alias not found for BaseName(name='ubuntu', version='8.04')" == str(
-        raised.value
+    assert (
+        str(raised.value)
+        == "Base alias not found for BaseName(name='ubuntu', version='8.04')"
     )
 
 

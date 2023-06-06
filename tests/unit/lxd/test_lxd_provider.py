@@ -18,66 +18,65 @@ from datetime import timedelta
 from unittest.mock import call
 
 import pytest
-
 from craft_providers.bases import ubuntu
 from craft_providers.errors import BaseConfigurationError
 from craft_providers.lxd import LXDError, LXDProvider, LXDUnstableImageError
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_remote_image(mocker):
     _mock_remote_image = mocker.patch("craft_providers.lxd.remotes.RemoteImage")
     _mock_remote_image.image_name = "test-image-name"
     _mock_remote_image.remote_name = "test-remote-name"
-    yield _mock_remote_image
+    return _mock_remote_image
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_get_remote_image(mock_remote_image, mocker):
     _mock_get_remote_image = mocker.patch(
         "craft_providers.lxd.lxd_provider.get_remote_image",
         return_value=mock_remote_image,
     )
-    yield _mock_get_remote_image
+    return _mock_get_remote_image
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_buildd_base_configuration(mocker):
     mock_base_config = mocker.patch(
         "craft_providers.bases.ubuntu.BuilddBase", autospec=True
     )
     mock_base_config.alias = ubuntu.BuilddBaseAlias.JAMMY
     mock_base_config.compatibility_tag = "buildd-base-v1"
-    yield mock_base_config
+    return mock_base_config
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_lxc(mocker):
-    yield mocker.patch("craft_providers.lxd.LXC", autospec=True)
+    return mocker.patch("craft_providers.lxd.LXC", autospec=True)
 
 
 @pytest.fixture(autouse=True)
 def mock_ensure_lxd_is_ready(mocker):
-    yield mocker.patch(
+    return mocker.patch(
         "craft_providers.lxd.lxd_provider.ensure_lxd_is_ready", return_value=None
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_install(mocker):
-    yield mocker.patch("craft_providers.lxd.lxd_provider.install")
+    return mocker.patch("craft_providers.lxd.lxd_provider.install")
 
 
 @pytest.fixture(autouse=True)
 def mock_is_installed(mocker):
-    yield mocker.patch(
+    return mocker.patch(
         "craft_providers.lxd.lxd_provider.is_installed", return_value=True
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_launch(mocker):
-    yield mocker.patch("craft_providers.lxd.lxd_provider.launch", autospec=True)
+    return mocker.patch("craft_providers.lxd.lxd_provider.launch", autospec=True)
 
 
 def test_ensure_provider_is_available_installed(
@@ -127,7 +126,7 @@ def test_create_environment(mocker):
 
 
 @pytest.mark.parametrize(
-    "allow_unstable, is_stable",
+    ("allow_unstable", "is_stable"),
     [
         # all permutations are valid except allow_unstable=False and is_stable=False
         (True, True),
@@ -149,10 +148,7 @@ def test_launched_environment(
     provider = LXDProvider(lxc=mock_lxc)
 
     # set the expected expiration time
-    if is_stable:
-        expiration = timedelta(days=90)
-    else:
-        expiration = timedelta(days=14)
+    expiration = timedelta(days=90) if is_stable else timedelta(days=14)
 
     with provider.launched_environment(
         project_name="test-project",
@@ -200,14 +196,13 @@ def test_launched_environment_launch_base_configuration_error(
     mock_launch.side_effect = error
     provider = LXDProvider()
 
-    with pytest.raises(LXDError, match="fail") as raised:
-        with provider.launched_environment(
-            project_name="test-project",
-            project_path=tmp_path,
-            base_configuration=mock_buildd_base_configuration,
-            instance_name="test-instance-name",
-        ):
-            pass
+    with pytest.raises(LXDError, match="fail") as raised, provider.launched_environment(
+        project_name="test-project",
+        project_path=tmp_path,
+        base_configuration=mock_buildd_base_configuration,
+        instance_name="test-instance-name",
+    ):
+        pass
 
     assert raised.value.__cause__ is error
 
@@ -223,14 +218,13 @@ def test_launched_environment_unstable_error(
     mock_remote_image.is_stable = False
     provider = LXDProvider()
 
-    with pytest.raises(LXDUnstableImageError) as raised:
-        with provider.launched_environment(
-            project_name="test-project",
-            project_path=tmp_path,
-            base_configuration=mock_buildd_base_configuration,
-            instance_name="test-instance-name",
-        ):
-            pass
+    with pytest.raises(LXDUnstableImageError) as raised, provider.launched_environment(
+        project_name="test-project",
+        project_path=tmp_path,
+        base_configuration=mock_buildd_base_configuration,
+        instance_name="test-instance-name",
+    ):
+        pass
 
     assert raised.value.brief == (
         "Cannot launch an unstable image 'test-image-name' from remote "

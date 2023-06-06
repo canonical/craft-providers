@@ -69,7 +69,7 @@ class MultipassInstance(Executor):
         *,
         name: str,
         multipass: Optional[Multipass] = None,
-    ):
+    ) -> None:
         super().__init__()
 
         self.name = name
@@ -306,7 +306,7 @@ class MultipassInstance(Executor):
 
         for mount_point, mount_config in mounts.items():
             # Even on Windows, Multipass writes source_path as posix, e.g.:
-            # 'C:/Users/chris/tmpbat91bwz.tmp-pytest'
+            # 'C:/Users/chris/tmpbat91bwz.tmp-pytest' # noqa: ERA001
             if (
                 mount_point == target.as_posix()
                 and mount_config.get("source_path") == host_source.as_posix()

@@ -20,7 +20,6 @@ import pathlib
 import subprocess
 
 import pytest
-
 from craft_providers.multipass import MultipassInstance
 
 from . import conftest
@@ -43,7 +42,7 @@ def reusable_instance(reusable_instance_name):
         yield MultipassInstance(name=tmp_instance)
 
 
-@pytest.fixture
+@pytest.fixture()
 def simple_file(home_tmp_path):
     """Create a file in the home directory (accessible by Multipass)."""
     file = home_tmp_path / "src.txt"
@@ -51,9 +50,9 @@ def simple_file(home_tmp_path):
     return file
 
 
-@pytest.mark.parametrize("content", [b"", b"\x00\xaa\xbb\xcc", "test-string".encode()])
+@pytest.mark.parametrize("content", [b"", b"\x00\xaa\xbb\xcc", b"test-string"])
 @pytest.mark.parametrize("mode", ["644", "600", "755"])
-@pytest.mark.parametrize("user,group", [("root", "root"), ("ubuntu", "ubuntu")])
+@pytest.mark.parametrize(("user", "group"), [("root", "root"), ("ubuntu", "ubuntu")])
 def test_push_file_io(reusable_instance, content, mode, user, group):
     reusable_instance.push_file_io(
         destination=pathlib.Path("/tmp/create-file-test.txt"),

@@ -21,7 +21,6 @@ import subprocess
 from unittest import mock
 
 import pytest
-
 from craft_providers.errors import details_from_command_error
 from craft_providers.multipass import Multipass
 from craft_providers.multipass.errors import MultipassError
@@ -84,7 +83,7 @@ EXAMPLE_LIST = """\
 """
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_details_from_process_error():
     details = "<details>"
     with mock.patch(
@@ -94,7 +93,7 @@ def mock_details_from_process_error():
         yield mock_details
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_details_from_command_error():
     details = "<details>"
     with mock.patch(
@@ -502,11 +501,10 @@ def test_transfer_destination_io_error(fake_process):
         stderr=stderr,
     )
 
-    with io.BytesIO() as stream:
-        with pytest.raises(MultipassError) as exc_info:
-            Multipass().transfer_destination_io(
-                source="test-instance:/test1", destination=stream
-            )
+    with io.BytesIO() as stream, pytest.raises(MultipassError) as exc_info:
+        Multipass().transfer_destination_io(
+            source="test-instance:/test1", destination=stream
+        )
 
     assert exc_info.value == MultipassError(
         brief="Failed to transfer file 'test-instance:/test1'.",
@@ -668,7 +666,7 @@ def test_wait_until_ready_with_retries(fake_process, wait_count, mocker):
 
 
 @pytest.mark.parametrize(
-    "time_values,timeout,version_calls",
+    ("time_values", "timeout", "version_calls"),
     [
         ([9.0, 9.5], 0.5, 1),
         ([9.0, 9.4, 9.5], 0.5, 2),
@@ -702,7 +700,7 @@ def test_wait_until_ready_timeout_error(
 
 
 @pytest.mark.parametrize(
-    "output,expected",
+    ("output", "expected"),
     [
         ("multipass  1.6.2\n", ("1.6.2", None)),
         ("multipass  1.6.2+mac\n", ("1.6.2", None)),

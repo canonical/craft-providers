@@ -26,10 +26,9 @@ import tempfile
 from unittest import mock
 
 import pytest
-from logassert import Exact  # type: ignore
-
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, LXDInstance
+from logassert import Exact  # type: ignore
 
 # These names include invalid characters so a lxd-compatible instance_name
 # is generated. This ensures an Instance's `name` and `instance_name` are
@@ -50,11 +49,11 @@ _INVALID_INSTANCE = {
 }
 
 
-@pytest.fixture
+@pytest.fixture()
 def project_path(tmp_path):
     project_path = tmp_path / "git" / "project"
     project_path.mkdir(parents=True)
-    yield project_path
+    return project_path
 
 
 @pytest.fixture(autouse=True)
@@ -82,7 +81,7 @@ def mock_lxc(project_path):
         yield lxc
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_named_temporary_file():
     with mock.patch(
         "craft_providers.lxd.lxd_instance.tempfile.NamedTemporaryFile",
@@ -92,21 +91,21 @@ def mock_named_temporary_file():
         yield mock_tf.return_value
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_shutil_copyfileobj():
     with mock.patch.object(shutil, "copyfileobj") as mock_copyfileobj:
         yield mock_copyfileobj
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_os_unlink():
     with mock.patch.object(os, "unlink") as mock_unlink:
         yield mock_unlink
 
 
-@pytest.fixture
+@pytest.fixture()
 def instance(mock_lxc):
-    yield LXDInstance(name=_TEST_INSTANCE["name"], lxc=mock_lxc)
+    return LXDInstance(name=_TEST_INSTANCE["name"], lxc=mock_lxc)
 
 
 def test_push_file_io(
@@ -889,7 +888,7 @@ def test_set_instance_name_unchanged(logs, mock_lxc, name):
 
 
 @pytest.mark.parametrize(
-    "name, expected_name",
+    ("name", "expected_name"),
     [
         # trim away invalid beginning characters
         ("1test", "test"),

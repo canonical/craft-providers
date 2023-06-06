@@ -17,7 +17,6 @@
 #
 
 import pytest
-
 from craft_providers.bases import get_base_from_alias, ubuntu
 from craft_providers.lxd import LXDProvider, is_installed
 
