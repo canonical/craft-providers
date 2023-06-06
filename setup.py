@@ -60,6 +60,7 @@ test_requires = [
     "types-requests",
     "types-setuptools",
     "types-pyyaml",
+    "yamllint",
 ]
 
 extras_requires = {
