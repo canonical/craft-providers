@@ -1,7 +1,7 @@
 [tool.ruff]
 line-length = 88
 target-version = "py38"
-src = ["starcraft", "tests"]
+src = ["craft_providers", "tests"]
 extend-exclude = [
     "docs",
     "__pycache__",
