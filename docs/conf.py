@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -36,11 +36,8 @@ sys.path.insert(0, os.path.abspath(".."))
 # -- Project information -----------------------------------------------------
 
 project = "Craft Providers"
-copyright = "2021, Canonical Ltd."
+copyright = "2021-2023, Canonical Ltd."
 author = "Canonical Ltd."
-
-# The full version, including alpha/beta/rc tags
-release = "1.13.0"
 
 
 # -- General configuration ---------------------------------------------------
