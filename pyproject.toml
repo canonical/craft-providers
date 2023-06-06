@@ -1,3 +1,39 @@
+[tool.distutils.bdist_wheel]
+universal = true
+
+[tool.codespell]
+ignore-words-list = "buildd,crate,keyserver,comandos,ro,dedent,dedented"
+skip = ".tox,.git,build,.*_cache,__pycache__,*.tar,*.snap,*.png,./node_modules,./docs/_build,.direnv,.venv,venv,.vscode"
+quiet-level = 3
+check-filenames = true
+
+[tool.mypy]
+python_version = "3.8"
+warn_unused_configs = true
+warn_redundant_casts = true
+strict_equality = true
+strict_concatenate = true
+disallow_subclassing_any = true
+# Ignored while syncing craft-providers with starbase (see https://github.com/canonical/craft-providers/issues/287)
+#warn_return_any = true
+#disallow_untyped_decorators = true
+#disallow_any_generics = true
+
+[[tool.mypy.overrides]]
+module = ["craft_providers"]
+disallow_untyped_defs = true
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+strict = false
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+warn_untyped_fields = true
+
 [tool.ruff]
 line-length = 88
 target-version = "py38"
