@@ -17,7 +17,6 @@
 
 """Base configuration module."""
 
-# pylint: disable=too-many-lines
 
 import enum
 import io
@@ -694,7 +693,6 @@ class Base(ABC):
 
         This step usually does not need to be overridden.
         """
-        # pylint: disable=unused-argument
         return
 
     def _image_check(self, executor: Executor) -> None:
@@ -710,7 +708,6 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
-        # pylint: disable=unused-argument
         return
 
     def _pre_setup_os(self, executor: Executor) -> None:
@@ -722,7 +719,6 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
-        # pylint: disable=unused-argument
         return
 
     def _setup_os(self, executor: Executor) -> None:
@@ -740,7 +736,6 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
-        # pylint: disable=unused-argument
         return
 
     def _pre_setup_network(self, executor: Executor) -> None:
@@ -751,7 +746,6 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
-        # pylint: disable=unused-argument
         return
 
     def _setup_network(self, executor: Executor) -> None:
@@ -775,7 +769,6 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
-        # pylint: disable=unused-argument
         return
 
     def _pre_setup_packages(self, executor: Executor) -> None:
@@ -786,7 +779,6 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
-        # pylint: disable=unused-argument
         return
 
     @abstractmethod
@@ -801,7 +793,6 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
-        # pylint: disable=unused-argument
         return
 
     def _pre_setup_snapd(self, executor: Executor) -> None:
@@ -840,7 +831,6 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
-        # pylint: disable=unused-argument
         return
 
     def _setup_snaps(self, executor: Executor) -> None:
@@ -858,7 +848,6 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
-        # pylint: disable=unused-argument
         return
 
     def _pre_clean_up(self, executor: Executor) -> None:
@@ -869,7 +858,6 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
-        # pylint: disable=unused-argument
         return
 
     def _clean_up(self, executor: Executor) -> None:
@@ -881,7 +869,6 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
-        # pylint: disable=unused-argument
         return
 
     def _post_clean_up(self, executor: Executor) -> None:
@@ -893,7 +880,6 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
-        # pylint: disable=unused-argument
         return
 
     def _pre_finish(self, executor: Executor) -> None:
@@ -904,7 +890,6 @@ class Base(ABC):
 
         This step should be overridden when needed.
         """
-        # pylint: disable=unused-argument
         return
 
     @final

@@ -34,7 +34,6 @@ install_requires = [
 ]
 
 dev_requires = [
-    "autoflake",
     "twine",
 ]
 
@@ -49,20 +48,15 @@ test_requires = [
     "coverage",
     "black",
     "codespell",
-    "flake8",
     "freezegun",
-    "isort",
     "mypy",
     "logassert",
-    "pydocstyle",
     "pyfakefs",
-    "pylint",
-    "pylint-fixme-info",
-    "pylint-pytest",
     "pytest",
     "pytest-mock",
     "pytest-subprocess",
     "responses",
+    "ruff==0.0.270",
     "types-requests",
     "types-setuptools",
     "types-pyyaml",

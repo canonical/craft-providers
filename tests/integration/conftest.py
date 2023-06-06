@@ -258,7 +258,6 @@ def dangerously_installed_snap(tmpdir):
             # collect the file name
             match = re.search(f"{snap_name}_\\d+.snap", str(output))
             if not match:
-                # pylint: disable-next=broad-exception-raised
                 raise Exception(
                     "could not parse snap file name from output of "
                     f"'snap download {snap_name}' (output = {output!r})"

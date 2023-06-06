@@ -35,8 +35,6 @@ from craft_providers.errors import (
 )
 from craft_providers.instance_config import InstanceConfiguration
 
-# pylint: disable=too-many-lines
-
 
 @pytest.fixture()
 def mock_requests():
@@ -169,7 +167,7 @@ def test_inject_from_host_classic(
     ]
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
-    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+    assert config.snaps["test-name"] == {
         "revision": "2",
         "source": snap_installer.SNAP_SRC_HOST,
     }
@@ -224,7 +222,7 @@ def test_inject_from_host_strict(
     ]
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
-    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+    assert config.snaps["test-name"] == {
         "revision": "2",
         "source": snap_installer.SNAP_SRC_HOST,
     }
@@ -274,7 +272,7 @@ def test_inject_from_host_snap_name(
     ]
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
-    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+    assert config.snaps["test-name"] == {
         "revision": "2",
         "source": snap_installer.SNAP_SRC_HOST,
     }
@@ -320,7 +318,7 @@ def test_inject_from_host_dangerous(
     ]
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
-    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+    assert config.snaps["test-name"] == {
         "revision": "x3",
         "source": snap_installer.SNAP_SRC_HOST,
     }
@@ -406,7 +404,7 @@ def test_inject_from_host_not_dangerous(
     ]
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
-    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+    assert config.snaps["test-name"] == {
         "revision": "2",
         "source": snap_installer.SNAP_SRC_HOST,
     }
@@ -642,7 +640,7 @@ def test_install_from_store_strict(
     ]
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
-    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+    assert config.snaps["test-name"] == {
         "revision": "4",
         "source": snap_installer.SNAP_SRC_STORE,
     }
@@ -732,7 +730,7 @@ def test_refresh_from_store(
     ]
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
-    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+    assert config.snaps["test-name"] == {
         "revision": "4",
         "source": snap_installer.SNAP_SRC_STORE,
     }
@@ -818,7 +816,7 @@ def test_install_from_store_trim_suffix(
     ]
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
-    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+    assert config.snaps["test-name"] == {
         "revision": "4",
         "source": snap_installer.SNAP_SRC_STORE,
     }

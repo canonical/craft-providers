@@ -26,7 +26,6 @@ from craft_providers.util.os_release import parse_os_release
     "config,expected_dict",
     [
         (
-            # pylint: disable=line-too-long
             textwrap.dedent(
                 """\
                 NAME="Ubuntu"
@@ -58,7 +57,6 @@ from craft_providers.util.os_release import parse_os_release
             },
         ),
         (
-            # pylint: disable=line-too-long
             textwrap.dedent(
                 """\
                 NAME=Fedora

@@ -97,7 +97,6 @@ class FakeExecutor(Executor):
 
         final_cmd = ["fake-executor"] + env_args + command
 
-        # pylint: disable-next=subprocess-run-check
         return subprocess.run(final_cmd, timeout=timeout, **kwargs)
 
     def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:

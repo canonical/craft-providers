@@ -49,7 +49,7 @@ def load_yaml(data):
     return yaml.load(data, Loader=yaml.BaseLoader)
 
 
-class LXC:  # pylint: disable=too-many-public-methods
+class LXC:
     """Wrapper for lxc command-line interface."""
 
     def __init__(
@@ -371,11 +371,9 @@ class LXC:  # pylint: disable=too-many-public-methods
         logger.debug("Executing in container: %s", shlex.join(final_cmd))
 
         if runner is subprocess.run:
-            return runner(  # pylint: disable=subprocess-run-check
-                final_cmd, timeout=timeout, **kwargs
-            )
+            return runner(final_cmd, timeout=timeout, **kwargs)
 
-        return runner(final_cmd, **kwargs)  # pylint: disable=subprocess-run-check
+        return runner(final_cmd, **kwargs)
 
     def file_pull(
         self,
