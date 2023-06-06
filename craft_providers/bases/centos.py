@@ -226,3 +226,16 @@ class CentOSBase(Base):
                 brief="Failed to setup snapd.",
                 details=details_from_called_process_error(error),
             ) from error
+
+    def _clean_up(self, executor: Executor) -> None:
+        """Clean up unused packages and cached package files."""
+        self._execute_run(
+            ["yum", "autoremove", "-y"],
+            executor=executor,
+            timeout=self._timeout_complex,
+        )
+        self._execute_run(
+            ["yum", "clean", "packages", "-y"],
+            executor=executor,
+            timeout=self._timeout_complex,
+        )
