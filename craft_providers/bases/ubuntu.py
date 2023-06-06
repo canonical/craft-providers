@@ -340,6 +340,18 @@ class BuilddBase(Base):
                 details=details_from_called_process_error(error),
             ) from error
 
+    def _clean_up(self, executor: Executor) -> None:
+        self._execute_run(
+            ["apt-get", "autoremove", "-y"],
+            executor=executor,
+            timeout=self._timeout_complex,
+        )
+        self._execute_run(
+            ["apt-get", "clean", "-y"],
+            executor=executor,
+            timeout=self._timeout_complex,
+        )
+
 
 # Backward compatible, will be removed in 2.0
 default_command_environment = BuilddBase.default_command_environment

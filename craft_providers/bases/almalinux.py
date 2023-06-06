@@ -210,3 +210,16 @@ class AlmaLinuxBase(Base):
                 brief="Failed to setup snapd.",
                 details=details_from_called_process_error(error),
             ) from error
+
+    def _clean_up(self, executor: Executor) -> None:
+        """Clean up unused packages and cached package files."""
+        self._execute_run(
+            ["dnf", "autoremove", "-y"],
+            executor=executor,
+            timeout=self._timeout_complex,
+        )
+        self._execute_run(
+            ["dnf", "clean", "packages", "-y"],
+            executor=executor,
+            timeout=self._timeout_complex,
+        )
