@@ -29,6 +29,7 @@ jobs:
           echo "::group::Begin snap install"
           echo "Installing snaps in the background while running apt and pip..."
           sudo snap install --no-wait --classic pyright
+          sudo snap install --no-wait shellcheck
           echo "::endgroup::"
           echo "::group::pip install"
           python -m pip install -U .[dev]
@@ -51,6 +52,12 @@ jobs:
       - name: Run pyright
         run: |
           make test-pyright
+      - name: Run shellcheck
+        run: |
+          make test-shellcheck
+      - name: Run yamllint
+        run: |
+          make test-yaml
 
   unit-tests:
     strategy:

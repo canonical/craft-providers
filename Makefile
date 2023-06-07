@@ -58,7 +58,7 @@ install: clean ## Install python package.
 	python setup.py install
 
 .PHONY: lint
-lint: test-black test-ruff test-codespell test-mypy test-pyright ## Run all linting tests.
+lint: test-black test-ruff test-codespell test-mypy test-pyright test-shellcheck test-yaml ## Run all linting tests.
 
 .PHONY: release
 release: dist ## Release with twine.
@@ -87,6 +87,14 @@ test-pyright:
 .PHONY: test-ruff
 test-ruff:
 	ruff check --respect-gitignore .
+
+.PHONY: test-shellcheck
+test-shellcheck:
+	git ls-files | file --mime-type -Nnf- | grep shellscript | cut -f1 -d: | xargs shellcheck
+
+.PHONY: test-yaml
+test-yaml:
+	yamllint .
 
 .PHONY: test-units
 test-units: ## Run unit tests.
