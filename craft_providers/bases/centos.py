@@ -32,8 +32,6 @@ from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 
-# pylint: disable=duplicate-code
-
 
 class CentOSBaseAlias(enum.Enum):
     """Mappings for supported CentOS images."""

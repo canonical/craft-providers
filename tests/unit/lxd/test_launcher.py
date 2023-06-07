@@ -16,7 +16,6 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
-# pylint: disable=too-many-lines
 
 import sys
 from datetime import timedelta

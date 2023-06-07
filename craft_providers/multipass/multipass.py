@@ -122,11 +122,9 @@ class Multipass:
 
         # Only subprocess.run supports timeout
         if runner is subprocess.run:
-            return runner(  # pylint: disable=subprocess-run-check
-                final_cmd, timeout=timeout, **kwargs
-            )
+            return runner(final_cmd, timeout=timeout, **kwargs)
 
-        return runner(final_cmd, **kwargs)  # pylint: disable=subprocess-run-check
+        return runner(final_cmd, **kwargs)
 
     def info(self, *, instance_name: str) -> Dict[str, Any]:
         """Get information/state for instance.

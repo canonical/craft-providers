@@ -67,7 +67,6 @@ class Snap(pydantic.BaseModel, extra=pydantic.Extra.forbid):
     channel: Optional[str] = "stable"
     classic: bool = False
 
-    # pylint: disable=no-self-argument
     @pydantic.validator("channel")
     def validate_channel(cls, channel):
         """Validate that channel is not an empty string.
@@ -80,8 +79,6 @@ class Snap(pydantic.BaseModel, extra=pydantic.Extra.forbid):
                 resolution="set channel to a non-empty string or `None`",
             )
         return channel
-
-    # pylint: enable=no-self-argument
 
 
 def _download_host_snap(

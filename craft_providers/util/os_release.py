@@ -20,7 +20,6 @@ from typing import Dict
 
 
 def parse_os_release(content: str) -> Dict[str, str]:
-    # pylint: disable=line-too-long
     """Parser for /etc/os-release.
 
     Format documentation at:

@@ -15,8 +15,6 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
-# pylint: disable=duplicate-code
-# pylint: disable=too-many-lines
 
 import subprocess
 from datetime import datetime
@@ -49,9 +47,8 @@ def mock_load(mocker):
     )
 
 
-# The variable name "fs" causes a pylint warning.  Provide a longer name.
 @pytest.fixture
-def fake_filesystem(fs):  # pylint: disable=invalid-name
+def fake_filesystem(fs):
     yield fs
 
 
@@ -157,7 +154,6 @@ def mock_get_os_release(mocker):
 @pytest.mark.parametrize(
     "tag, expected_tag", [(None, "almalinux-base-v1"), ("test-tag", "test-tag")]
 )
-# pylint: disable-next=too-many-arguments, too-many-locals, too-many-statements
 def test_setup(
     fake_process,
     fake_executor,
