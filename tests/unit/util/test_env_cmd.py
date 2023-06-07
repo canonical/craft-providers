@@ -18,12 +18,11 @@
 import pathlib
 
 import pytest
-
 from craft_providers.util import env_cmd
 
 
 @pytest.mark.parametrize(
-    "env,expected",
+    ("env", "expected"),
     [
         ({}, ["env"]),
         ({"foo": "bar"}, ["env", "foo=bar"]),
@@ -40,7 +39,7 @@ def test_formulate_command(env, expected):
 
 
 @pytest.mark.parametrize(
-    "env,expected",
+    ("env", "expected"),
     [
         ({}, ["env", "-i"]),
         ({"foo": "bar"}, ["env", "-i", "foo=bar"]),

@@ -16,7 +16,6 @@
 #
 
 import pytest
-
 from craft_providers import errors
 from craft_providers.lxd import LXD, LXDError
 
@@ -73,7 +72,7 @@ def test_init_error(fake_process):
 
 
 @pytest.mark.parametrize(
-    "version,compatible",
+    ("version", "compatible"),
     [
         ("3.0", False),
         ("3.1.4", False),

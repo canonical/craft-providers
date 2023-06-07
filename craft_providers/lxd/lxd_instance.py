@@ -49,7 +49,7 @@ class LXDInstance(Executor):
         project: str = "default",
         remote: str = "local",
         lxc: Optional[LXC] = None,
-    ):
+    ) -> None:
         """Create an LXD executor.
 
         To comply with LXD naming conventions, the supplied name is converted to a
@@ -245,10 +245,7 @@ class LXDInstance(Executor):
 
         :returns: Popen instance.
         """
-        if cwd is None:
-            cwd_path = None
-        else:
-            cwd_path = cwd.as_posix()
+        cwd_path = None if cwd is None else cwd.as_posix()
 
         return self.lxc.exec(
             instance_name=self.instance_name,
@@ -285,10 +282,7 @@ class LXDInstance(Executor):
         :raises subprocess.CalledProcessError: if command fails and check is
             True.
         """
-        if cwd is None:
-            cwd_path = None
-        else:
-            cwd_path = cwd.as_posix()
+        cwd_path = None if cwd is None else cwd.as_posix()
 
         return self.lxc.exec(
             instance_name=self.instance_name,

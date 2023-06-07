@@ -48,10 +48,7 @@ def install(sudo: bool = True) -> str:
     if not sudo and os.geteuid() != 0:
         raise errors.LXDInstallationError("sudo required if not running as root")
 
-    if sudo:
-        cmd = ["sudo"]
-    else:
-        cmd = []
+    cmd = ["sudo"] if sudo else []
 
     cmd += ["snap", "install", "lxd"]
 

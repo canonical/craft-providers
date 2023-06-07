@@ -17,13 +17,12 @@
 
 
 import pytest
-
 from craft_providers.lxd import LXD
 
 
 @pytest.fixture()
 def lxd():
-    yield LXD()
+    return LXD()
 
 
 def test_init(lxd):

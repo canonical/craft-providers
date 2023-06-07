@@ -17,7 +17,6 @@
 #
 
 import pytest
-
 from craft_providers.bases import ubuntu
 from craft_providers.multipass import MultipassProvider, is_installed
 

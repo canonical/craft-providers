@@ -510,11 +510,11 @@ class Multipass:
         #   SOME NOTICE INFORMATION....
         #
         # After stripping and splitting:
-        #    - ['multipass', '1.5.0']
-        #    - ['multipass', '1.5.0', 'multipassd', '1.5.0']
-        #    - ['multipass', '1.5.0+mac', 'multipassd', '1.5.0+mac']
-        #    - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win']
-        #    - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win', ...]
+        #    - ['multipass', '1.5.0'] # noqa: ERA001
+        #    - ['multipass', '1.5.0', 'multipassd', '1.5.0'] # noqa: ERA001
+        #    - ['multipass', '1.5.0+mac', 'multipassd', '1.5.0+mac'] # noqa: ERA001
+        #    - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win'] # noqa: ERA001
+        #    - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win', ...] # noqa: ERA001
         output_split = output.strip().split()
         if len(output_split) < 2 or output_split[0] != "multipass":
             raise MultipassError(

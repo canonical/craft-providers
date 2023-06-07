@@ -183,7 +183,7 @@ class AlmaLinuxBase(Base):
         if not self._packages:
             return
         try:
-            command = ["dnf", "install", "-y"] + self._packages
+            command = ["dnf", "install", "-y", *self._packages]
             self._execute_run(
                 command,
                 executor=executor,

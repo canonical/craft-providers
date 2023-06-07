@@ -77,7 +77,7 @@ class CentOSBase(Base):
         snaps: Optional[List[Snap]] = None,
         packages: Optional[List[str]] = None,
         use_default_packages: bool = True,
-    ):
+    ) -> None:
         self.alias: CentOSBaseAlias = alias
 
         if environment is None:
@@ -199,7 +199,7 @@ class CentOSBase(Base):
         if not self._packages:
             return
         try:
-            command = ["yum", "install", "-y"] + self._packages
+            command = ["yum", "install", "-y", *self._packages]
             self._execute_run(
                 command,
                 executor=executor,

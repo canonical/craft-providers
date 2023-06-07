@@ -20,14 +20,13 @@ from unittest import mock
 
 import pytest
 import yaml
-from pydantic import ValidationError
-
 from craft_providers import Executor
 from craft_providers.errors import BaseConfigurationError, ProviderError
 from craft_providers.instance_config import InstanceConfiguration
+from pydantic import ValidationError
 
 
-@pytest.fixture
+@pytest.fixture()
 def default_config_data():
     return {
         "compatibility_tag": "tag-foo-v1",
@@ -39,10 +38,10 @@ def default_config_data():
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_executor():
     executor_mock = mock.Mock(spec=Executor)
-    yield executor_mock
+    return executor_mock
 
 
 @pytest.fixture()
@@ -62,7 +61,7 @@ def config_fixture(mocker, tmpdir):
 
         return config_file
 
-    yield _config_fixture
+    return _config_fixture
 
 
 def test_instance_config_defaults():

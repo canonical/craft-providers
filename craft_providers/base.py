@@ -106,7 +106,7 @@ class Base(ABC):
         snaps: Optional[List] = None,
         packages: Optional[List[str]] = None,
         use_default_packages: bool = True,
-    ):
+    ) -> None:
         pass
 
     @staticmethod
@@ -1077,6 +1077,6 @@ class Base(ABC):
             )
         except subprocess.CalledProcessError as exc:
             if verify_network and not cls._network_connected(executor=executor):
-                raise NetworkError() from exc
+                raise NetworkError from exc
             raise
         return proc
