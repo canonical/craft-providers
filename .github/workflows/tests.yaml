@@ -1,16 +1,13 @@
-name: Tests
+name: tests
 
 on:
   push:
     branches:
       - "main"
       - "feature/*"
-      - "release/*"
       - "hotfix/*"
+      - "release/*"
   pull_request:
-
-  # Allows triggering the workflow manually from the Actions tab
-  workflow_dispatch:
 
 jobs:
   linters:
@@ -23,7 +20,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.10'
       - name: Configure environment
         run: |
           echo "::group::Begin snap install"
@@ -32,57 +29,55 @@ jobs:
           sudo snap install --no-wait shellcheck
           echo "::endgroup::"
           echo "::group::pip install"
-          python -m pip install -U .[dev,lint,types]
+          python -m pip install 'tox>=4' tox-gh
+          echo "::endgroup::"
+          echo "::group::Create virtual environments for linting processes."
+          tox run -m lint --notest
           echo "::endgroup::"
           echo "::group::Wait for snap to complete"
           snap watch --last=install
           echo "::endgroup::"
-      - name: Run black
-        run: |
-          make test-black
-      - name: Run ruff
-        run: |
-          make test-ruff
-      - name: Run codespell
-        run: |
-          make test-codespell
-      - name: Run mypy
-        run: |
-          make test-mypy
-      - name: Run pyright
-        run: |
-          make test-pyright
-      - name: Run shellcheck
-        run: |
-          make test-shellcheck
-      - name: Run yamllint
-        run: |
-          make test-yaml
-
-  unit-tests:
+      - name: Run Linters
+        run: tox run -m lint
+  tests:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.8", "3.10", "3.11", "3.12-dev"]
-    runs-on: ${{ matrix.os }}
+        platform: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.platform }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Set up Python on ${{ matrix.platform }}
+      - name: Set up Python versions on ${{ matrix.platform }}
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: |
+            3.8
+            3.9
+            3.10
+            3.11
+            3.12-dev
       - name: Configure environment
         run: |
           echo "::group::pip install"
-          python -m pip install -U .[dev]
-          python -m pip install -U -e .
+          python -m pip install 'tox>=4' tox-gh
           echo "::endgroup::"
-      - name: Run unit tests
-        run: make test-units
-
+          mkdir -p results
+      - name: Setup Tox environments
+        run: tox run -m unit-tests --notest
+      - name: Test with tox
+        run: tox run-parallel --parallel all --parallel-no-spinner --skip-pkg-install --result-json results/tox-${{ matrix.platform }}.json -m unit-tests -- --no-header --quiet -rN
+      - name: Upload code coverage
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./results/
+          files: coverage*.xml
+      - name: Upload test results
+        if: success() || failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-${{ matrix.platform }}
+          path: results/
   integration-tests-linux:
     strategy:
       matrix:
@@ -102,7 +97,7 @@ jobs:
       - name: Configure environment
         run: |
           echo "::group::pip install"
-          python -m pip install -U .[dev]
+          python -m pip install 'tox>=4' tox-gh
           echo "::endgroup::"
           echo "::group::Configure LXD"
           sudo groupadd --force --system lxd
@@ -117,8 +112,7 @@ jobs:
           export CRAFT_PROVIDERS_TESTS_ENABLE_LXD_INSTALL=1
           export CRAFT_PROVIDERS_TESTS_ENABLE_LXD_UNINSTALL=1
           sg lxd -c "lxc version"
-          sg lxd -c "make test-integrations"
-
+          sg lxd -c "tox run -m integration-tests"
   integration-tests-macos:
     strategy:
       matrix:
@@ -136,7 +130,7 @@ jobs:
       - name: Configure environment
         run: |
           echo "::group::pip install"
-          python -m pip install -U -e .[dev]
+          python -m pip install 'tox>=4' tox-gh
           echo "::endgroup::"
           echo "::group::Install Multipass"
           brew update
@@ -152,4 +146,4 @@ jobs:
         run: |
           export CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL=1
           export CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL=1
-          make test-integrations
+          tox run -m integration-tests

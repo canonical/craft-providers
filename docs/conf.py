@@ -88,7 +88,7 @@ napoleon_use_ivar = True
 
 
 def run_apidoc(_):
-    from sphinx.ext.apidoc import main
+    from sphinx.ext.apidoc import main  # type: ignore
     import os
     import sys
 
