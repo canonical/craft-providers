@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -17,12 +17,20 @@
 
 """Craft Providers base package."""
 
-__version__ = "1.13.0"
-
 from .base import Base
 from .errors import ProviderError
 from .executor import Executor
 from .provider import Provider
+
+try:
+    from ._version import __version__
+except ImportError:  # pragma: no cover
+    from importlib.metadata import version, PackageNotFoundError
+
+    try:
+        __version__ = version("craft_providers")
+    except PackageNotFoundError:
+        __version__ = "dev"
 
 __all__ = [
     "Base",

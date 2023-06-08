@@ -1,3 +1,87 @@
+[project]
+name = "craft-providers"
+dynamic = ["version", "readme"]
+dependencies = [
+    "pydantic",
+    "pyyaml",
+    "requests_unixsocket",
+    # Needed until requests-unixsocket supports urllib3 v2
+    # https://github.com/msabramo/requests-unixsocket/pull/69
+    "urllib3<2",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.8"
+
+[project.scripts]
+craft-providers = "craft_providers.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "twine",
+    "coverage",
+    "freezegun",
+    "logassert",
+    "pyfakefs",
+    "pytest",
+    "pytest-mock",
+    "pytest-subprocess",
+    "responses",
+    "types-requests",
+    "types-setuptools",
+    "types-pyyaml",
+]
+lint = [
+    "black",
+    "codespell",
+    "ruff==0.0.270",
+    "yamllint",
+]
+types = [
+    "mypy",
+    "pyright",
+]
+docs = [
+    "sphinx",
+    "sphinx-autodoc-typehints",
+    "sphinx-pydantic",
+    "sphinx-rtd-theme",
+]
+
+[build-system]
+requires = [
+    "setuptools==67.7.2",
+    "setuptools_scm[toml]>=7.1"
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+readme = {file = "README.md"}
+
+[tool.setuptools_scm]
+write_to = "craft_providers/_version.py"
+
+[tool.setuptools.packages.find]
+exclude = [
+    "dist",
+    "docs",
+    "results",
+    "tests",
+]
+
+
+
 [tool.distutils.bdist_wheel]
 universal = true
 
