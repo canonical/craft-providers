@@ -53,10 +53,14 @@ types = [
     "pyright==1.1.311",
 ]
 docs = [
-    "sphinx",
-    "sphinx-autodoc-typehints",
-    "sphinx-pydantic",
-    "sphinx-rtd-theme",
+    "furo==2023.5.20",
+    "sphinx>=6.2.1,<7.0",
+    "sphinx-autobuild==2021.3.14",
+    "sphinx-copybutton==0.5.2",
+    "sphinx-design==0.4.1",
+    "sphinx-pydantic==0.1.1",
+    "sphinx-toolbox==3.4.0",
+    "sphinx-lint==0.6.7",
 ]
 
 [build-system]
