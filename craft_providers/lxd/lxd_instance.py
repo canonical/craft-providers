@@ -97,7 +97,7 @@ class LXDInstance(Executor):
         """
         # remove anything that is not an alphanumeric characters or hyphen
         name_with_valid_chars = re.sub(r"[^\w-]", "", self.name)
-        if name_with_valid_chars == "":
+        if not name_with_valid_chars:
             raise LXDError(
                 brief=f"failed to create LXD instance with name {self.name!r}.",
                 details="name must contain at least one alphanumeric character",
@@ -107,7 +107,7 @@ class LXDInstance(Executor):
         trimmed_name = re.compile(r"^[0-9-]*(?P<valid_name>.*?)[-]*$").search(
             name_with_valid_chars
         )
-        if not trimmed_name or trimmed_name.group("valid_name") == "":
+        if not trimmed_name or not trimmed_name.group("valid_name"):
             raise LXDError(
                 brief=f"failed to create LXD instance with name {self.name!r}.",
                 details="name must contain at least one alphanumeric character",

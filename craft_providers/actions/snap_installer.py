@@ -73,7 +73,7 @@ class Snap(pydantic.BaseModel, extra=pydantic.Extra.forbid):
 
         :raises BaseConfigurationError: if channel is empty
         """
-        if channel == "":
+        if channel == "":  # noqa: PLC1901
             raise BaseConfigurationError(
                 brief="channel cannot be empty",
                 resolution="set channel to a non-empty string or `None`",
