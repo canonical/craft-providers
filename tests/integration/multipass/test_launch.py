@@ -28,8 +28,8 @@ from . import conftest
 
 
 @pytest.fixture()
-def core20_instance(instance_name):
-    """Yields a minimally setup core20 instance.
+def core22_instance(instance_name):
+    """Yields a minimally setup core22 instance.
 
     The yielded instance will be launched, started, and marked as setup, even though
     most of the setup is skipped to speed up test execution.
@@ -38,7 +38,7 @@ def core20_instance(instance_name):
     """
     with conftest.tmp_instance(
         instance_name=instance_name,
-        image_name="snapcraft:core20",
+        image_name="snapcraft:core22",
     ) as tmp_instance:
         instance = multipass.MultipassInstance(name=tmp_instance)
 
@@ -80,13 +80,13 @@ def test_launch(instance_name):
         instance.delete()
 
 
-def test_launch_existing_instance(core20_instance):
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+def test_launch_existing_instance(core22_instance):
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     instance = multipass.launch(
-        name=core20_instance.name,
+        name=core22_instance.name,
         base_configuration=base_configuration,
-        image_name="snapcraft:core20",
+        image_name="snapcraft:core22",
     )
 
     assert isinstance(instance, multipass.MultipassInstance)
@@ -98,10 +98,10 @@ def test_launch_existing_instance(core20_instance):
     assert proc.stdout == b"hi\n"
 
 
-def test_launch_os_incompatible_instance(core20_instance):
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+def test_launch_os_incompatible_instance(core22_instance):
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
-    core20_instance.push_file_io(
+    core22_instance.push_file_io(
         destination=pathlib.Path("/etc/os-release"),
         content=io.BytesIO(b"NAME=Fedora\nVERSION_ID=32\n"),
         file_mode="0644",
@@ -110,9 +110,9 @@ def test_launch_os_incompatible_instance(core20_instance):
     # Should raise compatibility error with auto_clean=False.
     with pytest.raises(BaseCompatibilityError) as exc_info:
         multipass.launch(
-            name=core20_instance.name,
+            name=core22_instance.name,
             base_configuration=base_configuration,
-            image_name="snapcraft:core20",
+            image_name="snapcraft:core22",
         )
 
     assert (
@@ -122,20 +122,20 @@ def test_launch_os_incompatible_instance(core20_instance):
 
     # Retry with auto_clean=True.
     multipass.launch(
-        name=core20_instance.name,
+        name=core22_instance.name,
         base_configuration=base_configuration,
-        image_name="snapcraft:core20",
+        image_name="snapcraft:core22",
         auto_clean=True,
     )
 
-    assert core20_instance.exists() is True
-    assert core20_instance.is_running() is True
+    assert core22_instance.exists() is True
+    assert core22_instance.is_running() is True
 
 
-def test_launch_instance_config_incompatible_instance(core20_instance):
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+def test_launch_instance_config_incompatible_instance(core22_instance):
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
-    core20_instance.push_file_io(
+    core22_instance.push_file_io(
         destination=base_configuration._instance_config_path,
         content=io.BytesIO(b"compatibility_tag: invalid\nsetup: true\n"),
         file_mode="0644",
@@ -144,9 +144,9 @@ def test_launch_instance_config_incompatible_instance(core20_instance):
     # Should raise compatibility error with auto_clean=False.
     with pytest.raises(BaseCompatibilityError) as exc_info:
         multipass.launch(
-            name=core20_instance.name,
+            name=core22_instance.name,
             base_configuration=base_configuration,
-            image_name="snapcraft:core20",
+            image_name="snapcraft:core22",
         )
 
     assert exc_info.value.brief == (
@@ -156,21 +156,21 @@ def test_launch_instance_config_incompatible_instance(core20_instance):
 
     # Retry with auto_clean=True.
     multipass.launch(
-        name=core20_instance.name,
+        name=core22_instance.name,
         base_configuration=base_configuration,
-        image_name="snapcraft:core20",
+        image_name="snapcraft:core22",
         auto_clean=True,
     )
 
-    assert core20_instance.exists() is True
-    assert core20_instance.is_running() is True
+    assert core22_instance.exists() is True
+    assert core22_instance.is_running() is True
 
 
-def test_launch_instance_not_setup_without_auto_clean(core20_instance):
+def test_launch_instance_not_setup_without_auto_clean(core22_instance):
     """Raise an error if an existing instance is not setup and auto_clean is False."""
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
-    core20_instance.push_file_io(
+    core22_instance.push_file_io(
         destination=base_configuration._instance_config_path,
         content=io.BytesIO(b"compatibility_tag: buildd-base-v1\nsetup: false\n"),
         file_mode="0644",
@@ -179,20 +179,20 @@ def test_launch_instance_not_setup_without_auto_clean(core20_instance):
     # will raise a compatibility error
     with pytest.raises(BaseCompatibilityError) as exc_info:
         multipass.launch(
-            name=core20_instance.name,
+            name=core22_instance.name,
             base_configuration=base_configuration,
-            image_name="snapcraft:core20",
+            image_name="snapcraft:core22",
             auto_clean=False,
         )
 
     assert exc_info.value == BaseCompatibilityError("instance is marked as not setup")
 
 
-def test_launch_instance_not_setup_with_auto_clean(core20_instance):
+def test_launch_instance_not_setup_with_auto_clean(core22_instance):
     """Clean the instance if it is not setup and auto_clean is True."""
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
-    core20_instance.push_file_io(
+    core22_instance.push_file_io(
         destination=base_configuration._instance_config_path,
         content=io.BytesIO(b"compatibility_tag: buildd-base-v1\nsetup: false\n"),
         file_mode="0644",
@@ -200,11 +200,11 @@ def test_launch_instance_not_setup_with_auto_clean(core20_instance):
 
     # when auto_clean is true, the instance will be deleted and recreated
     multipass.launch(
-        name=core20_instance.name,
+        name=core22_instance.name,
         base_configuration=base_configuration,
-        image_name="snapcraft:core20",
+        image_name="snapcraft:core22",
         auto_clean=True,
     )
 
-    assert core20_instance.exists() is True
-    assert core20_instance.is_running() is True
+    assert core22_instance.exists() is True
+    assert core22_instance.is_running() is True

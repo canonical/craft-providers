@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -170,14 +170,14 @@ def uninstalled_multipass():
 
 
 @pytest.fixture()
-def core20_lxd_instance(installed_lxd, instance_name):
-    """Fully configured buildd-based core20 LXD instance."""
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+def core22_lxd_instance(installed_lxd, instance_name):
+    """Fully configured buildd-based core22 LXD instance."""
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     instance = lxd.launch(
         name=instance_name,
         base_configuration=base_configuration,
-        image_name="20.04",
+        image_name="22.04",
         image_remote="ubuntu",
         ephemeral=True,
     )

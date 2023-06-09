@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -124,9 +124,9 @@ def test_delete_force(instance, lxc, project):
 
 def test_image_copy(lxc, project):
     lxc.image_copy(
-        image="16.04",
+        image="22.04",
         image_remote="ubuntu",
-        alias="test-1604",
+        alias="test-2204",
         project=project,
     )
 
@@ -136,13 +136,13 @@ def test_image_copy(lxc, project):
 
 def test_image_delete(lxc, project):
     lxc.image_copy(
-        image="16.04",
+        image="22.04",
         image_remote="ubuntu",
-        alias="test-1604",
+        alias="test-2204",
         project=project,
     )
 
-    lxc.image_delete(image="test-1604", project=project)
+    lxc.image_delete(image="test-2204", project=project)
 
     images = lxc.image_list(project=project)
     assert images == []

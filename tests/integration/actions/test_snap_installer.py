@@ -23,20 +23,20 @@ from textwrap import dedent
 from craft_providers.actions import snap_installer
 
 
-def test_inject_from_host(core20_lxd_instance, installed_snap, caplog):
+def test_inject_from_host(core22_lxd_instance, installed_snap, caplog):
     """Verify a snap can be injected from the host."""
-    core20_lxd_instance.execute_run(
+    core22_lxd_instance.execute_run(
         ["test", "!", "-d", "/snap/hello-world"], check=True
     )
 
     with installed_snap("hello-world"):
         snap_installer.inject_from_host(
-            executor=core20_lxd_instance, snap_name="hello-world", classic=False
+            executor=core22_lxd_instance, snap_name="hello-world", classic=False
         )
 
-    core20_lxd_instance.execute_run(["test", "-d", "/snap/hello-world"], check=True)
+    core22_lxd_instance.execute_run(["test", "-d", "/snap/hello-world"], check=True)
 
-    config = core20_lxd_instance.execute_run(
+    config = core22_lxd_instance.execute_run(
         ["cat", "/etc/craft-instance.conf"], check=True, capture_output=True
     ).stdout.decode()
 
@@ -63,21 +63,21 @@ def test_inject_from_host(core20_lxd_instance, installed_snap, caplog):
 
 
 def test_inject_from_host_dangerous(
-    core20_lxd_instance, dangerously_installed_snap, caplog
+    core22_lxd_instance, dangerously_installed_snap, caplog
 ):
     """Verify a dangerously installed snap can be injected from the host."""
-    core20_lxd_instance.execute_run(
+    core22_lxd_instance.execute_run(
         ["test", "!", "-d", "/snap/hello-world"], check=True
     )
 
     with dangerously_installed_snap("hello-world"):
         snap_installer.inject_from_host(
-            executor=core20_lxd_instance, snap_name="hello-world", classic=False
+            executor=core22_lxd_instance, snap_name="hello-world", classic=False
         )
 
-    core20_lxd_instance.execute_run(["test", "-d", "/snap/hello-world"], check=True)
+    core22_lxd_instance.execute_run(["test", "-d", "/snap/hello-world"], check=True)
 
-    config = core20_lxd_instance.execute_run(
+    config = core22_lxd_instance.execute_run(
         ["cat", "/etc/craft-instance.conf"], check=True, capture_output=True
     ).stdout.decode()
 
@@ -104,16 +104,16 @@ def test_inject_from_host_dangerous(
 
 
 def test_inject_from_host_using_pack_fallback(
-    core20_lxd_instance, empty_test_snap, caplog
+    core22_lxd_instance, empty_test_snap, caplog
 ):
     """Verify a snap is packed if the local download fails."""
     snap_installer.inject_from_host(
-        executor=core20_lxd_instance,
+        executor=core22_lxd_instance,
         snap_name=empty_test_snap,
         classic=False,
     )
 
-    core20_lxd_instance.execute_run(
+    core22_lxd_instance.execute_run(
         ["test", "-d", f"/snap/{empty_test_snap}"], check=True
     )
 
@@ -123,22 +123,22 @@ def test_inject_from_host_using_pack_fallback(
     ]
 
 
-def test_install_from_store_strict(core20_lxd_instance, installed_snap, caplog):
+def test_install_from_store_strict(core22_lxd_instance, installed_snap, caplog):
     """Verify a strictly confined snap from the store can be installed."""
-    core20_lxd_instance.execute_run(
+    core22_lxd_instance.execute_run(
         ["test", "!", "-d", "/snap/hello-world"], check=True
     )
 
     snap_installer.install_from_store(
-        executor=core20_lxd_instance,
+        executor=core22_lxd_instance,
         snap_name="hello-world",
         channel="latest/stable",
         classic=False,
     )
 
-    core20_lxd_instance.execute_run(["test", "-f", "/snap/bin/hello-world"], check=True)
+    core22_lxd_instance.execute_run(["test", "-f", "/snap/bin/hello-world"], check=True)
 
-    config = core20_lxd_instance.execute_run(
+    config = core22_lxd_instance.execute_run(
         ["cat", "/etc/craft-instance.conf"], check=True, capture_output=True
     ).stdout.decode()
 
@@ -164,20 +164,20 @@ def test_install_from_store_strict(core20_lxd_instance, installed_snap, caplog):
     assert caplog.records == []
 
 
-def test_install_from_store_classic(core20_lxd_instance, installed_snap, caplog):
+def test_install_from_store_classic(core22_lxd_instance, installed_snap, caplog):
     """Verify a classicly confined snap from the store can be installed."""
-    core20_lxd_instance.execute_run(["test", "!", "-d", "/snap/charmcraft"], check=True)
+    core22_lxd_instance.execute_run(["test", "!", "-d", "/snap/charmcraft"], check=True)
 
     snap_installer.install_from_store(
-        executor=core20_lxd_instance,
+        executor=core22_lxd_instance,
         snap_name="charmcraft",
         channel="latest/stable",
         classic=True,
     )
 
-    core20_lxd_instance.execute_run(["test", "-f", "/snap/bin/charmcraft"], check=True)
+    core22_lxd_instance.execute_run(["test", "-f", "/snap/bin/charmcraft"], check=True)
 
-    config = core20_lxd_instance.execute_run(
+    config = core22_lxd_instance.execute_run(
         ["cat", "/etc/craft-instance.conf"], check=True, capture_output=True
     ).stdout.decode()
 
@@ -203,24 +203,24 @@ def test_install_from_store_classic(core20_lxd_instance, installed_snap, caplog)
     assert caplog.records == []
 
 
-def test_install_from_store_channel(core20_lxd_instance, installed_snap, caplog):
+def test_install_from_store_channel(core22_lxd_instance, installed_snap, caplog):
     """Verify a channel can be specified when installing from the store"""
-    core20_lxd_instance.execute_run(["test", "!", "-d", "/snap/go"], check=True)
+    core22_lxd_instance.execute_run(["test", "!", "-d", "/snap/go"], check=True)
 
     snap_installer.install_from_store(
-        executor=core20_lxd_instance,
+        executor=core22_lxd_instance,
         snap_name="go",
         channel="1.15/stable",
         classic=True,
     )
 
-    proc = core20_lxd_instance.execute_run(
+    proc = core22_lxd_instance.execute_run(
         ["/snap/bin/go", "version"], capture_output=True, check=True, text=True
     )
 
     assert "go1.15" in proc.stdout
 
-    config = core20_lxd_instance.execute_run(
+    config = core22_lxd_instance.execute_run(
         ["cat", "/etc/craft-instance.conf"], check=True, capture_output=True
     ).stdout.decode()
 
@@ -247,23 +247,23 @@ def test_install_from_store_channel(core20_lxd_instance, installed_snap, caplog)
 
 
 def test_install_from_store_snap_name_suffix(
-    core20_lxd_instance, installed_snap, caplog
+    core22_lxd_instance, installed_snap, caplog
 ):
     """Verify a snap can be installed from the store when the snap name has a suffix."""
-    core20_lxd_instance.execute_run(
+    core22_lxd_instance.execute_run(
         ["test", "!", "-d", "/snap/hello-world"], check=True
     )
 
     snap_installer.install_from_store(
-        executor=core20_lxd_instance,
+        executor=core22_lxd_instance,
         snap_name="hello-world_suffix",
         channel="latest/stable",
         classic=False,
     )
 
-    core20_lxd_instance.execute_run(["test", "-f", "/snap/bin/hello-world"], check=True)
+    core22_lxd_instance.execute_run(["test", "-f", "/snap/bin/hello-world"], check=True)
 
-    config = core20_lxd_instance.execute_run(
+    config = core22_lxd_instance.execute_run(
         ["cat", "/etc/craft-instance.conf"], check=True, capture_output=True
     ).stdout.decode()
 

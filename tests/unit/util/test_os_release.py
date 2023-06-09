@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -28,17 +28,17 @@ from craft_providers.util.os_release import parse_os_release
             textwrap.dedent(
                 """\
                 NAME="Ubuntu"
-                VERSION="20.10 (Groovy Gorilla)"
+                VERSION="22.04 (Jammy Jellyfish)"
                 ID=ubuntu
                 ID_LIKE=debian
-                PRETTY_NAME="Ubuntu 20.10"
-                VERSION_ID="20.10"
+                PRETTY_NAME="Ubuntu 22.04"
+                VERSION_ID="22.04"
                 HOME_URL="https://www.ubuntu.com/"
                 SUPPORT_URL="https://help.ubuntu.com/"
                 BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
                 PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
-                VERSION_CODENAME=groovy
-                UBUNTU_CODENAME=groovy"""
+                VERSION_CODENAME=jammy
+                UBUNTU_CODENAME=jammy"""
             ),
             {
                 "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
@@ -46,13 +46,13 @@ from craft_providers.util.os_release import parse_os_release
                 "ID": "ubuntu",
                 "ID_LIKE": "debian",
                 "NAME": "Ubuntu",
-                "PRETTY_NAME": "Ubuntu 20.10",
+                "PRETTY_NAME": "Ubuntu 22.04",
                 "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
                 "SUPPORT_URL": "https://help.ubuntu.com/",
-                "UBUNTU_CODENAME": "groovy",
-                "VERSION": "20.10 (Groovy Gorilla)",
-                "VERSION_CODENAME": "groovy",
-                "VERSION_ID": "20.10",
+                "UBUNTU_CODENAME": "jammy",
+                "VERSION": "22.04 (Jammy Jellyfish)",
+                "VERSION_CODENAME": "jammy",
+                "VERSION_ID": "22.04",
             },
         ),
         (

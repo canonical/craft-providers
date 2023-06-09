@@ -51,7 +51,7 @@ EXAMPLE_INFO = {
             "image_hash": (
                 "c5f2f08c6a1adee1f2f96d84856bf0162d33ea182dae0e8ed45768a86182d110"
             ),
-            "image_release": "20.04 LTS",
+            "image_release": "22.04 LTS",
             "ipv4": [],
             "load": [],
             "memory": {},
@@ -64,12 +64,12 @@ EXAMPLE_INFO = {
             "image_hash": (
                 "7c5c8f24046ca7b82897e0ca49fbd4dbdc771c2abd616991d10e6e09cc43002f"
             ),
-            "image_release": "Snapcraft builder for Core 18",
+            "image_release": "Snapcraft builder for Core 22",
             "ipv4": ["10.114.154.133"],
             "load": [1.53, 0.84, 0.33],
             "memory": {"total": 2089697280, "used": 153190400},
             "mounts": EXAMPLE_MOUNTS,
-            "release": "Ubuntu 18.04.5 LTS",
+            "release": "Ubuntu 22.04.2 LTS",
             "state": "Running",
         },
     },

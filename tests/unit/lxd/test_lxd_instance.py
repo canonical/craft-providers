@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -500,7 +500,7 @@ def test_is_running_error(mock_lxc):
 
 def test_launch(mock_lxc, instance):
     instance.launch(
-        image="20.04",
+        image="22.04",
         image_remote="ubuntu",
     )
 
@@ -510,7 +510,7 @@ def test_launch(mock_lxc, instance):
             config_keys={},
             ephemeral=False,
             instance_name=instance.instance_name,
-            image="20.04",
+            image="22.04",
             image_remote="ubuntu",
             project=instance.project,
             remote=instance.remote,
@@ -521,7 +521,7 @@ def test_launch(mock_lxc, instance):
 @pytest.mark.skipif(sys.platform == "win32", reason="unsupported on windows")
 def test_launch_all_opts(mock_lxc, instance):
     instance.launch(
-        image="20.04",
+        image="22.04",
         image_remote="ubuntu",
         ephemeral=True,
         map_user_uid=True,
@@ -534,7 +534,7 @@ def test_launch_all_opts(mock_lxc, instance):
             config_keys={"raw.idmap": f"both {uid} 0"},
             ephemeral=True,
             instance_name=instance.instance_name,
-            image="20.04",
+            image="22.04",
             image_remote="ubuntu",
             project=instance.project,
             remote=instance.remote,
@@ -548,7 +548,7 @@ def test_launch_with_mknod(mock_lxc, instance):
     }
 
     instance.launch(
-        image="20.04",
+        image="22.04",
         image_remote="ubuntu",
     )
 
@@ -560,7 +560,7 @@ def test_launch_with_mknod(mock_lxc, instance):
             },
             ephemeral=False,
             instance_name=instance.instance_name,
-            image="20.04",
+            image="22.04",
             image_remote="ubuntu",
             project=instance.project,
             remote=instance.remote,
