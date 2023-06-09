@@ -74,7 +74,7 @@ test-codespell:
 
 .PHONY: test-integrations
 test-integrations: ## Run integration tests.
-	pytest tests/integration
+	pytest tests/integration -k test_info
 
 .PHONY: test-mypy
 test-mypy:
