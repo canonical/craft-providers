@@ -475,22 +475,21 @@ def launch(
         remote,
     )
 
-    if instance.exists():
-        # if the existing instance could not be launched, then continue on so a new
-        # instance can be created (this can occur when `auto_clean` triggers the
-        # instance to be deleted or if the instance is supposed to be ephemeral)
-        if _launch_existing_instance(
-            instance=instance,
-            lxc=lxc,
-            project=project,
-            remote=remote,
-            auto_clean=auto_clean,
-            base_configuration=base_configuration,
-            ephemeral=ephemeral,
-            map_user_uid=map_user_uid,
-            uid=uid,
-        ):
-            return instance
+    # if the existing instance could not be launched, then continue on so a new
+    # instance can be created (this can occur when `auto_clean` triggers the
+    # instance to be deleted or if the instance is supposed to be ephemeral)
+    if instance.exists() and _launch_existing_instance(
+        instance=instance,
+        lxc=lxc,
+        project=project,
+        remote=remote,
+        auto_clean=auto_clean,
+        base_configuration=base_configuration,
+        ephemeral=ephemeral,
+        map_user_uid=map_user_uid,
+        uid=uid,
+    ):
+        return instance
 
     logger.warning("Instance %r does not exist.", instance.instance_name)
 
