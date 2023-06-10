@@ -217,7 +217,6 @@ ignore = [
     "FBT003", # Boolean positional value in function call
     "N805", # First argument of a method should be named `self`
     "PGH003", # Use specific rule codes when ignoring type issues
-    "PLC1901", # channel == ""` can be simplified to `not channel` as an empty string is falsey
     "PLR0913", # Too many arguments to function call
     "PLR0915", # Too many statements
     "PLR2004", # Magic value used in comparison

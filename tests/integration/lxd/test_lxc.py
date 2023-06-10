@@ -61,7 +61,7 @@ def test_config_get_non_existent_key(instance, instance_name, lxc, project):
         instance_name=instance, key="non-existant-key", project=project
     )
 
-    assert value == ""
+    assert not value
 
 
 def test_copy(instance, instance_name, lxc, project):
