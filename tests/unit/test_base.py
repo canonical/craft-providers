@@ -135,3 +135,20 @@ def test_wait_for_network_timeout(fake_base, fake_executor, fake_process, callba
 
     with pytest.raises(BaseConfigurationError):
         fake_base._setup_wait_for_system_ready(fake_executor)
+
+
+def test_clear_hostname(fake_base, fake_executor, fake_process):
+    fake_process.register([*FAKE_EXECUTOR_CMD, "rm", "-f", "/etc/hostname"])
+
+    fake_base.clear_hostname(fake_executor)
+
+
+def test_clear_hostname_failure(fake_base, fake_executor, fake_process):
+    fake_process.register(
+        [*FAKE_EXECUTOR_CMD, "rm", "-f", "/etc/hostname"], returncode=1
+    )
+
+    with pytest.raises(BaseConfigurationError) as raised:
+        fake_base.clear_hostname(fake_executor)
+
+    assert raised.value.brief == "Failed to clear hostname."

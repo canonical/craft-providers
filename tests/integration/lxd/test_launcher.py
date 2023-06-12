@@ -214,8 +214,32 @@ def test_launch_use_base_instance(get_instance_and_base_instance, instance_name)
     instance.execute_run(["stat", "/base-instance"], check=True)
     instance.execute_run(["stat", "/instance"], check=True)
 
+    # collect the hostname of the base instance
+    base_instance.start()
+    base_instance_hostname = (
+        base_instance.execute_run(
+            ["cat", "/etc/hostname"], check=True, capture_output=True
+        )
+        .stdout.decode()
+        .rstrip("\n")
+    )
+    base_instance.stop()
+
+    # `/etc/hostname` was removed during the creation of the base instance, so lxc will
+    # set the hostname to the instance name
+    assert base_instance_hostname == base_instance.instance_name
+
     assert instance.exists()
     assert instance.is_running()
+
+    # collect the hostname of the instance
+    instance_hostname = (
+        instance.execute_run(["cat", "/etc/hostname"], check=True, capture_output=True)
+        .stdout.decode()
+        .rstrip("\n")
+    )
+
+    assert instance_hostname == "test-hostname"
 
 
 def test_launch_create_base_instance_with_correct_image_description(

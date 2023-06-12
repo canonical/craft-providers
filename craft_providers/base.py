@@ -332,6 +332,20 @@ class Base(ABC):
             error=error,
         )
 
+    def clear_hostname(self, executor: Executor) -> None:
+        """Clear hostname by removing /etc/hostname."""
+        try:
+            self._execute_run(
+                ["rm", "-f", "/etc/hostname"],
+                executor=executor,
+                timeout=self._timeout_simple,
+            )
+        except subprocess.CalledProcessError as error:
+            raise BaseConfigurationError(
+                brief="Failed to clear hostname.",
+                details=details_from_called_process_error(error),
+            ) from error
+
     def _setup_hostname(self, executor: Executor) -> None:
         """Configure hostname, installing /etc/hostname."""
         executor.push_file_io(

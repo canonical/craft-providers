@@ -77,6 +77,11 @@ def _create_instance(
     if not base_instance and not map_user_uid:
         return
 
+    if base_instance:
+        # unset instance hostname before copying to base instance and before stopping
+        # the instance
+        base_configuration.clear_hostname(executor=instance)
+
     # the instance needs to be stopped before copying or updating the id map
     instance.stop()
 
@@ -107,6 +112,11 @@ def _create_instance(
 
     # now restart and wait for the instance to be ready
     instance.start()
+
+    if base_instance:
+        # re-set the hostname after startup
+        base_configuration._setup_hostname(executor=instance)
+
     base_configuration.wait_until_ready(executor=instance)
 
 
@@ -614,5 +624,9 @@ def launch(
     # instance is now ready to be started and warmed up
     logger.warning("Starting instance.")
     instance.start()
+
+    # set the hostname because the base instance does not have a hostname
+    base_configuration._setup_hostname(executor=instance)
+
     base_configuration.warmup(executor=instance)
     return instance
