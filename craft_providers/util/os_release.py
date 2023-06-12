@@ -64,9 +64,7 @@ def parse_os_release(content: str) -> Dict[str, str]:
             key, value = line.split("=", maxsplit=1)
 
             # Strip encapsulating quotes, single or double.
-            if (value.startswith('"') and value.endswith('"')) or (
-                value.startswith("'") and value.endswith("'")
-            ):
+            if value[0] == value[-1] and value[0] in ("'", '"'):
                 value = value[1:-1]
 
             mappings[key] = value
