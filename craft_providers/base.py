@@ -329,8 +329,7 @@ class Base(ABC):
             sleep(self._retry_wait)
 
             if self._timeout_simple and self._timeout_simple > 0:
-                if time.time() - start_time > self._timeout_simple:
-                    timeout = True
+                timeout = time.time() - start_time > self._timeout_simple
 
         raise BaseConfigurationError(
             brief="Timed out waiting for environment to be ready.",
@@ -440,11 +439,14 @@ class Base(ABC):
             if proc.returncode == 0:
                 return
 
-            if self._timeout_simple and self._timeout_simple > 0:
-                if time.time() - start_time > self._timeout_simple:
-                    raise BaseConfigurationError(
-                        brief="Timed out waiting for networking to be ready.",
-                    )
+            if (
+                self._timeout_simple
+                and self._timeout_simple > 0
+                and time.time() - start_time > self._timeout_simple
+            ):
+                raise BaseConfigurationError(
+                    brief="Timed out waiting for networking to be ready.",
+                )
 
             sleep(self._retry_wait)
 
