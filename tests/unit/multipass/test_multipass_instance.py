@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -22,7 +22,6 @@ import sys
 from unittest import mock
 
 import pytest
-
 from craft_providers import errors
 from craft_providers.multipass import Multipass, MultipassInstance
 from craft_providers.multipass.errors import MultipassError
@@ -77,11 +76,11 @@ EXAMPLE_INFO = {
 }
 
 
-@pytest.fixture
+@pytest.fixture()
 def project_path(tmp_path):
     project_path = tmp_path / "git" / "project"
     project_path.mkdir(parents=True)
-    yield project_path
+    return project_path
 
 
 @pytest.fixture(autouse=True)
@@ -100,9 +99,17 @@ def mock_multipass(project_path):
         yield multipass_mock
 
 
-@pytest.fixture
+@pytest.fixture()
 def instance(mock_multipass):
-    yield MultipassInstance(name="test-instance", multipass=mock_multipass)
+    return MultipassInstance(name="test-instance", multipass=mock_multipass)
+
+
+@pytest.fixture()
+def simple_file(tmp_path):
+    """Create a file in the test directory."""
+    file = tmp_path / "src.txt"
+    file.write_text("this is a test")
+    return file
 
 
 def test_push_file_io(mock_multipass, instance):
@@ -128,6 +135,7 @@ def test_push_file_io(mock_multipass, instance):
             capture_output=True,
             check=True,
             text=True,
+            timeout=60,
         ),
         mock.call.exec(
             instance_name="test-instance",
@@ -142,6 +150,7 @@ def test_push_file_io(mock_multipass, instance):
             runner=subprocess.run,
             capture_output=True,
             check=True,
+            timeout=60,
         ),
         mock.call.transfer_source_io(
             source=mock.ANY, destination="test-instance:/tmp/mktemp-result"
@@ -159,6 +168,7 @@ def test_push_file_io(mock_multipass, instance):
             runner=subprocess.run,
             capture_output=True,
             check=True,
+            timeout=60,
         ),
         mock.call.exec(
             instance_name="test-instance",
@@ -166,6 +176,7 @@ def test_push_file_io(mock_multipass, instance):
             runner=subprocess.run,
             capture_output=True,
             check=True,
+            timeout=60,
         ),
         mock.call.exec(
             instance_name="test-instance",
@@ -180,6 +191,7 @@ def test_push_file_io(mock_multipass, instance):
             runner=subprocess.run,
             capture_output=True,
             check=True,
+            timeout=600,
         ),
     ]
 
@@ -222,6 +234,7 @@ def test_execute_popen(mock_multipass, instance):
             command=["sudo", "-H", "--", "test-command", "flags"],
             runner=subprocess.Popen,
             input="foo",
+            timeout=None,
         )
     ]
 
@@ -245,6 +258,7 @@ def test_execute_popen_with_cwd(mock_multipass, instance):
             ],
             runner=subprocess.Popen,
             input="foo",
+            timeout=None,
         )
     ]
 
@@ -257,6 +271,7 @@ def test_execute_popen_with_env(mock_multipass, instance):
             instance_name="test-instance",
             command=["sudo", "-H", "--", "env", "foo=bar", "test-command", "flags"],
             runner=subprocess.Popen,
+            timeout=None,
         )
     ]
 
@@ -270,6 +285,7 @@ def test_execute_run(mock_multipass, instance):
             command=["sudo", "-H", "--", "test-command", "flags"],
             runner=subprocess.run,
             input="foo",
+            timeout=None,
         )
     ]
 
@@ -290,6 +306,7 @@ def test_execute_run_with_cwd(mock_multipass, instance, tmp_path):
                 "flags",
             ],
             runner=subprocess.run,
+            timeout=None,
         )
     ]
 
@@ -302,6 +319,7 @@ def test_execute_run_with_env(mock_multipass, instance):
             instance_name="test-instance",
             command=["sudo", "-H", "--", "env", "foo=bar", "test-command", "flags"],
             runner=subprocess.run,
+            timeout=None,
         )
     ]
 
@@ -326,6 +344,7 @@ def test_execute_run_with_env_unset(mock_multipass, instance):
                 "flags",
             ],
             runner=subprocess.run,
+            timeout=None,
         )
     ]
 
@@ -457,6 +476,7 @@ def test_pull_file(mock_multipass, instance, tmp_path):
             command=["sudo", "-H", "--", "test", "-f", "/tmp/src.txt"],
             runner=subprocess.run,
             check=False,
+            timeout=60,
         ),
         mock.call.transfer(
             source="test-instance:/tmp/src.txt", destination=str(destination)
@@ -482,6 +502,7 @@ def test_pull_file_no_source(mock_multipass, instance, tmp_path):
             command=["sudo", "-H", "--", "test", "-f", "/tmp/src.txt"],
             runner=subprocess.run,
             check=False,
+            timeout=60,
         ),
     ]
     assert str(exc_info.value) == "File not found: '/tmp/src.txt'"
@@ -505,22 +526,30 @@ def test_pull_file_no_parent_directory(mock_multipass, instance, tmp_path):
             command=["sudo", "-H", "--", "test", "-f", "/tmp/src.txt"],
             runner=subprocess.run,
             check=False,
+            timeout=60,
         ),
     ]
     assert str(exc_info.value) == f"Directory not found: {str(destination.parent)!r}"
 
 
-def test_push_file(mock_multipass, instance, tmp_path):
-    mock_multipass.exec.return_value = mock.Mock(returncode=0)
+def test_push_file(mock_multipass, instance, simple_file):
+    """Push a file into a Multipass instance."""
+    mock_multipass.exec.side_effect = [
+        # test call
+        mock.Mock(returncode=0),
+        # mktemp call
+        mock.Mock(stdout="/tmp/mktemp-file\n", returncode=0),
+        # chown call
+        None,
+        # test call (returncode=1 means the destination is not a directory)
+        mock.Mock(returncode=1),
+        # mv call
+        None,
+    ]
 
-    source = tmp_path / "src.txt"
-    source.write_text("this is a test")
     destination = pathlib.Path("/tmp/dst.txt")
 
-    instance.push_file(
-        source=source,
-        destination=destination,
-    )
+    instance.push_file(source=simple_file, destination=destination)
 
     assert mock_multipass.mock_calls == [
         mock.call.exec(
@@ -528,38 +557,139 @@ def test_push_file(mock_multipass, instance, tmp_path):
             command=["sudo", "-H", "--", "test", "-d", "/tmp"],
             runner=subprocess.run,
             check=False,
+            timeout=60,
+        ),
+        mock.call.exec(
+            instance_name="test-instance",
+            command=["sudo", "-H", "--", "mktemp"],
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            text=True,
+            timeout=60,
+        ),
+        mock.call.exec(
+            instance_name="test-instance",
+            command=["sudo", "-H", "--", "chown", "ubuntu:ubuntu", "/tmp/mktemp-file"],
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=60,
         ),
         mock.call.transfer(
-            source=str(source), destination="test-instance:/tmp/dst.txt"
+            source=str(simple_file), destination="test-instance:/tmp/mktemp-file"
+        ),
+        mock.call.exec(
+            instance_name="test-instance",
+            command=["sudo", "-H", "--", "test", "-d", "/tmp/dst.txt"],
+            runner=subprocess.run,
+            check=False,
+            timeout=60,
+        ),
+        mock.call.exec(
+            instance_name="test-instance",
+            command=["sudo", "-H", "--", "mv", "/tmp/mktemp-file", "/tmp/dst.txt"],
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=None,
         ),
     ]
 
 
-def test_push_file_no_source(mock_multipass, instance, tmp_path):
-    source = tmp_path / "src.txt"
-    destination = pathlib.Path("/tmp/dst.txt")
+def test_push_file_to_directory(mock_multipass, instance, simple_file):
+    """Push a file to a directory in a multipass instance."""
+    mock_multipass.exec.side_effect = [
+        # test call
+        mock.Mock(returncode=0),
+        # mktemp call
+        mock.Mock(stdout="/tmp/mktemp-file\n", returncode=0),
+        # chown call
+        None,
+        # test call (returncode=0 means the destination is a directory)
+        mock.Mock(returncode=0),
+        # mv call
+        None,
+    ]
+
+    destination = pathlib.Path("/tmp")
+
+    instance.push_file(source=simple_file, destination=destination)
+
+    assert mock_multipass.mock_calls == [
+        mock.call.exec(
+            instance_name="test-instance",
+            command=["sudo", "-H", "--", "test", "-d", "/"],
+            runner=subprocess.run,
+            timeout=60,
+            check=False,
+        ),
+        mock.call.exec(
+            instance_name="test-instance",
+            command=["sudo", "-H", "--", "mktemp"],
+            runner=subprocess.run,
+            timeout=60,
+            capture_output=True,
+            check=True,
+            text=True,
+        ),
+        mock.call.exec(
+            instance_name="test-instance",
+            command=["sudo", "-H", "--", "chown", "ubuntu:ubuntu", "/tmp/mktemp-file"],
+            runner=subprocess.run,
+            timeout=60,
+            capture_output=True,
+            check=True,
+        ),
+        mock.call.transfer(
+            source=str(simple_file), destination="test-instance:/tmp/mktemp-file"
+        ),
+        mock.call.exec(
+            instance_name="test-instance",
+            command=["sudo", "-H", "--", "test", "-d", "/tmp"],
+            runner=subprocess.run,
+            timeout=60,
+            check=False,
+        ),
+        mock.call.exec(
+            instance_name="test-instance",
+            command=["sudo", "-H", "--", "mv", "/tmp/mktemp-file", "/tmp/src.txt"],
+            runner=subprocess.run,
+            timeout=None,
+            capture_output=True,
+            check=True,
+        ),
+    ]
+
+
+def test_push_file_source_directory_error(mock_multipass, instance, tmp_path):
+    """Raise an error if the source is a directory."""
+    with pytest.raises(IsADirectoryError) as exc_info:
+        instance.push_file(source=tmp_path, destination=pathlib.Path("/tmp/dst.txt"))
+
+    assert mock_multipass.mock_calls == []
+    assert str(exc_info.value) == f"Source cannot be a directory: {str(tmp_path)!r}"
+
+
+def test_push_file_no_source_error(mock_multipass, instance, tmp_path):
+    """Raise an error if the source file does not exist."""
+    source = tmp_path / "does-not-exist.txt"
 
     with pytest.raises(FileNotFoundError) as exc_info:
-        instance.push_file(
-            source=source,
-            destination=destination,
-        )
+        instance.push_file(source=source, destination=pathlib.Path("/tmp/dst.txt"))
 
     assert mock_multipass.mock_calls == []
     assert str(exc_info.value) == f"File not found: {str(source)!r}"
 
 
-def test_push_file_no_parent_directory(mock_multipass, instance, tmp_path):
+def test_push_file_no_parent_directory_error(mock_multipass, instance, simple_file):
+    """Raise an error if the parent directory of the destination does not exist."""
     mock_multipass.exec.return_value = mock.Mock(returncode=1)
-
-    source = tmp_path / "src.txt"
-    source.write_text("this is a test")
-    destination = pathlib.Path("/tmp/dst.txt")
 
     with pytest.raises(FileNotFoundError) as exc_info:
         instance.push_file(
-            source=source,
-            destination=destination,
+            source=simple_file,
+            destination=pathlib.Path("/tmp/dst.txt"),
         )
 
     assert mock_multipass.mock_calls == [
@@ -568,9 +698,92 @@ def test_push_file_no_parent_directory(mock_multipass, instance, tmp_path):
             command=["sudo", "-H", "--", "test", "-d", "/tmp"],
             runner=subprocess.run,
             check=False,
+            timeout=60,
         ),
     ]
-    assert str(exc_info.value) == "Directory not found: '/tmp'"
+    assert str(exc_info.value) == "Directory not found in instance: '/tmp'"
+
+
+def test_push_file_mktemp_error(mock_multipass, instance, simple_file):
+    """Raise an error if the temporary file cannot be created."""
+    error = subprocess.CalledProcessError(-1, ["mktemp"], "test stdout", "test stderr")
+
+    mock_multipass.exec.side_effect = [
+        # test call
+        mock.Mock(returncode=0),
+        # mktemp call
+        error,
+    ]
+
+    with pytest.raises(MultipassError) as exc_info:
+        instance.push_file(
+            source=simple_file, destination=pathlib.Path("/etc/test.conf")
+        )
+
+    assert exc_info.value == MultipassError(
+        brief=(
+            "Failed to push file '/etc/test.conf' into Multipass instance "
+            "'test-instance'."
+        ),
+        details=errors.details_from_called_process_error(error),
+    )
+
+
+def test_push_file_chmod_error(mock_multipass, instance, simple_file):
+    """Raise an error if the chmod call fails"""
+    error = subprocess.CalledProcessError(-1, ["chmod"], "test stdout", "test stderr")
+
+    mock_multipass.exec.side_effect = [
+        # test call
+        mock.Mock(returncode=0),
+        # mktemp call
+        mock.Mock(stdout="/tmp/mktemp-file\n", returncode=0),
+        # chmod call
+        error,
+    ]
+
+    with pytest.raises(MultipassError) as exc_info:
+        instance.push_file(
+            source=simple_file, destination=pathlib.Path("/etc/test.conf")
+        )
+
+    assert exc_info.value == MultipassError(
+        brief=(
+            "Failed to push file '/etc/test.conf' into Multipass instance "
+            "'test-instance'."
+        ),
+        details=errors.details_from_called_process_error(error),
+    )
+
+
+def test_push_file_mv_error(mock_multipass, instance, simple_file):
+    """Raise an error if the mv call fails"""
+    error = subprocess.CalledProcessError(-1, ["mv"], "test stdout", "test stderr")
+
+    mock_multipass.exec.side_effect = [
+        # test call
+        mock.Mock(returncode=0),
+        # mktemp call
+        mock.Mock(stdout="/tmp/mktemp-file\n", returncode=0),
+        # chmod call
+        None,
+        # mv call
+        error,
+    ]
+    mock_multipass.transfer.side_effect = error
+
+    with pytest.raises(MultipassError) as exc_info:
+        instance.push_file(
+            source=simple_file, destination=pathlib.Path("/etc/test.conf")
+        )
+
+    assert exc_info.value == MultipassError(
+        brief=(
+            "Failed to push file '/etc/test.conf' into Multipass instance "
+            "'test-instance'."
+        ),
+        details=errors.details_from_called_process_error(error),
+    )
 
 
 def test_start(mock_multipass, instance):

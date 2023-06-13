@@ -16,9 +16,10 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
-import pytest
+import sys
 
-from craft_providers.bases import ubuntu
+import pytest
+from craft_providers.bases.ubuntu import BuilddBase, BuilddBaseAlias
 from craft_providers.multipass import MultipassProvider, is_installed
 
 
@@ -43,22 +44,19 @@ def test_create_environment(installed_multipass, instance_name):
     assert test_instance.exists() is False
 
 
-@pytest.mark.parametrize(
-    "alias",
-    set(ubuntu.BuilddBaseAlias)
-    # skip devel images because they are not available on macos
-    - {
-        ubuntu.BuilddBaseAlias.XENIAL,
-        ubuntu.BuilddBaseAlias.LUNAR,
-        ubuntu.BuilddBaseAlias.DEVEL,
-    },
-)
+@pytest.mark.parametrize("alias", set(BuilddBaseAlias) - {BuilddBaseAlias.XENIAL})
 def test_launched_environment(alias, installed_multipass, instance_name, tmp_path):
     """Verify `launched_environment()` creates and starts an instance then stops
     the instance when the method loses context."""
+    if sys.platform == "darwin" and alias == BuilddBaseAlias.KINETIC:
+        pytest.skip(reason="previous interim releases are not available on MacOS")
+
+    if sys.platform == "darwin" and alias == BuilddBaseAlias.DEVEL:
+        pytest.skip(reason="snapcraft:devel is not working on MacOS (LP #2007419)")
+
     provider = MultipassProvider()
 
-    base_configuration = ubuntu.BuilddBase(alias=alias)
+    base_configuration = BuilddBase(alias=alias)
 
     with provider.launched_environment(
         project_name="test-multipass-project",

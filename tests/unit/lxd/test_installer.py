@@ -21,7 +21,6 @@ import sys
 from unittest import mock
 
 import pytest
-
 from craft_providers.lxd import (
     LXC,
     LXD,
@@ -35,7 +34,7 @@ from craft_providers.lxd import (
 )
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_is_installed():
     with mock.patch(
         "craft_providers.lxd.installer.is_installed", return_value=True
@@ -43,7 +42,7 @@ def mock_is_installed():
         yield mock_is_installed
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_is_user_permitted():
     with mock.patch(
         "craft_providers.lxd.installer.is_user_permitted", return_value=True
@@ -51,7 +50,7 @@ def mock_is_user_permitted():
         yield mock_is_user_permitted
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_is_initialized():
     with mock.patch(
         "craft_providers.lxd.installer.is_initialized", return_value=True
@@ -59,17 +58,17 @@ def mock_is_initialized():
         yield mock_is_initialized
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_lxd():
     mock_lxd = mock.Mock(spec=LXD)
     mock_lxd.is_supported_version.return_value = True
     mock_lxd.version.return_value = "4.4"
     mock_lxd.minimum_required_version = LXD.minimum_required_version
 
-    yield mock_lxd
+    return mock_lxd
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_os_geteuid():
     with mock.patch.object(
         os, "geteuid", return_value=500, create=True
@@ -77,7 +76,7 @@ def mock_os_geteuid():
         yield mock_os_geteuid
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_os_getgroups():
     with mock.patch.object(
         os, "getgroups", return_value=[], create=True
@@ -85,7 +84,7 @@ def mock_os_getgroups():
         yield mock_os_getgroups
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_os_access():
     with mock.patch.object(
         os, "access", return_value=True, create=True
@@ -251,7 +250,9 @@ def test_is_initialized():
     ]
 
 
-@pytest.mark.parametrize("which,installed", [("/path/to/lxd", True), (None, False)])
+@pytest.mark.parametrize(
+    ("which", "installed"), [("/path/to/lxd", True), (None, False)]
+)
 def test_is_installed(which, installed, monkeypatch):
     monkeypatch.setattr(shutil, "which", lambda x: which)
 

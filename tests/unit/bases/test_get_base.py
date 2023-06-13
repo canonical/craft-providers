@@ -16,7 +16,6 @@
 #
 
 import pytest
-
 from craft_providers.bases import get_base_alias, get_base_from_alias, ubuntu
 from craft_providers.errors import BaseConfigurationError
 

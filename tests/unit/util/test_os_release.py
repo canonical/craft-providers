@@ -18,15 +18,13 @@
 import textwrap
 
 import pytest
-
 from craft_providers.util.os_release import parse_os_release
 
 
 @pytest.mark.parametrize(
-    "config,expected_dict",
+    ("config", "expected_dict"),
     [
         (
-            # pylint: disable=line-too-long
             textwrap.dedent(
                 """\
                 NAME="Ubuntu"
@@ -58,7 +56,6 @@ from craft_providers.util.os_release import parse_os_release
             },
         ),
         (
-            # pylint: disable=line-too-long
             textwrap.dedent(
                 """\
                 NAME=Fedora

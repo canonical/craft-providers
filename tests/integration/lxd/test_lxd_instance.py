@@ -20,7 +20,6 @@ import pathlib
 import subprocess
 
 import pytest
-
 from craft_providers.lxd import LXDInstance
 
 from . import conftest
@@ -51,9 +50,9 @@ def reusable_instance(reusable_instance_name, request):
         yield instance
 
 
-@pytest.mark.parametrize("content", [b"", b"\x00\xaa\xbb\xcc", "test-string".encode()])
+@pytest.mark.parametrize("content", [b"", b"\x00\xaa\xbb\xcc", b"test-string"])
 @pytest.mark.parametrize("mode", ["644", "600", "755"])
-@pytest.mark.parametrize("user,group", [("root", "root"), ("ubuntu", "ubuntu")])
+@pytest.mark.parametrize(("user", "group"), [("root", "root"), ("ubuntu", "ubuntu")])
 def test_push_file_io(reusable_instance, content, mode, user, group):
     try:
         reusable_instance.push_file_io(

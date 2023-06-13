@@ -50,10 +50,7 @@ class LXD:
         :param auto: Use default settings.
         :param sudo: Use sudo to invoke init.
         """
-        if sudo:
-            cmd = ["sudo"]
-        else:
-            cmd = []
+        cmd = ["sudo"] if sudo else []
 
         cmd += [str(self.lxd_path), "init"]
 
@@ -126,10 +123,7 @@ class LXD:
         :param sudo: Use sudo to invoke waitready.
         :param timeout: Timeout in seconds.
         """
-        if sudo:
-            cmd = ["sudo"]
-        else:
-            cmd = []
+        cmd = ["sudo"] if sudo else []
 
         cmd += [str(self.lxd_path), "waitready"]
 

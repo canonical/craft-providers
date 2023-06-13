@@ -8,8 +8,7 @@ help: ## Show this help.
 
 .PHONY: autoformat
 autoformat: ## Run automatic code formatters.
-	isort $(SOURCES)
-	autoflake --remove-all-unused-imports --ignore-init-module-imports -ri $(SOURCES)
+	ruff --fix --respect-gitignore .
 	black $(SOURCES)
 
 .PHONY: clean
@@ -59,7 +58,7 @@ install: clean ## Install python package.
 	python setup.py install
 
 .PHONY: lint
-lint: test-black test-codespell test-flake8 test-isort test-mypy test-pydocstyle test-pylint test-pyright ## Run all linting tests.
+lint: test-black test-ruff test-codespell test-mypy test-pyright test-shellcheck test-yaml ## Run all linting tests.
 
 .PHONY: release
 release: dist ## Release with twine.
@@ -73,34 +72,29 @@ test-black:
 test-codespell:
 	codespell $(SOURCES)
 
-.PHONY: test-flake8
-test-flake8:
-	flake8 $(SOURCES)
-
 .PHONY: test-integrations
 test-integrations: ## Run integration tests.
 	pytest tests/integration
-
-.PHONY: test-isort
-test-isort:
-	isort --check $(SOURCES)
 
 .PHONY: test-mypy
 test-mypy:
 	mypy $(SOURCES)
 
-.PHONY: test-pydocstyle
-test-pydocstyle:
-	pydocstyle craft_providers
-
-.PHONY: test-pylint
-test-pylint:
-	pylint craft_providers
-	pylint tests --disable=missing-module-docstring,missing-function-docstring,redefined-outer-name,protected-access,too-many-arguments,unnecessary-dunder-call
-
 .PHONY: test-pyright
 test-pyright:
 	pyright $(SOURCES)
+
+.PHONY: test-ruff
+test-ruff:
+	ruff check --respect-gitignore .
+
+.PHONY: test-shellcheck
+test-shellcheck:
+	git ls-files | file --mime-type -Nnf- | grep shellscript | cut -f1 -d: | xargs shellcheck
+
+.PHONY: test-yaml
+test-yaml:
+	yamllint .
 
 .PHONY: test-units
 test-units: ## Run unit tests.

@@ -26,10 +26,9 @@ import tempfile
 from unittest import mock
 
 import pytest
-from logassert import Exact  # type: ignore
-
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, LXDInstance
+from logassert import Exact  # type: ignore
 
 # These names include invalid characters so a lxd-compatible instance_name
 # is generated. This ensures an Instance's `name` and `instance_name` are
@@ -50,11 +49,11 @@ _INVALID_INSTANCE = {
 }
 
 
-@pytest.fixture
+@pytest.fixture()
 def project_path(tmp_path):
     project_path = tmp_path / "git" / "project"
     project_path.mkdir(parents=True)
-    yield project_path
+    return project_path
 
 
 @pytest.fixture(autouse=True)
@@ -82,7 +81,7 @@ def mock_lxc(project_path):
         yield lxc
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_named_temporary_file():
     with mock.patch(
         "craft_providers.lxd.lxd_instance.tempfile.NamedTemporaryFile",
@@ -92,21 +91,21 @@ def mock_named_temporary_file():
         yield mock_tf.return_value
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_shutil_copyfileobj():
     with mock.patch.object(shutil, "copyfileobj") as mock_copyfileobj:
         yield mock_copyfileobj
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_os_unlink():
     with mock.patch.object(os, "unlink") as mock_unlink:
         yield mock_unlink
 
 
-@pytest.fixture
+@pytest.fixture()
 def instance(mock_lxc):
-    yield LXDInstance(name=_TEST_INSTANCE["name"], lxc=mock_lxc)
+    return LXDInstance(name=_TEST_INSTANCE["name"], lxc=mock_lxc)
 
 
 def test_push_file_io(
@@ -151,6 +150,7 @@ def test_push_file_io(
             runner=subprocess.run,
             capture_output=True,
             check=True,
+            timeout=60,
         ),
     ]
 
@@ -212,6 +212,7 @@ def test_execute_popen(mock_lxc, instance):
             remote=instance.remote,
             runner=subprocess.Popen,
             input="foo",
+            timeout=None,
         )
     ]
 
@@ -230,6 +231,7 @@ def test_execute_popen_with_cwd(mock_lxc, instance):
             remote=instance.remote,
             runner=subprocess.Popen,
             input="foo",
+            timeout=None,
         )
     ]
 
@@ -245,6 +247,7 @@ def test_execute_popen_with_env(mock_lxc, instance):
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.Popen,
+            timeout=None,
         )
     ]
 
@@ -261,6 +264,7 @@ def test_execute_run(mock_lxc, instance):
             remote=instance.remote,
             runner=subprocess.run,
             input="foo",
+            timeout=None,
         )
     ]
 
@@ -279,6 +283,7 @@ def test_execute_run_with_cwd(mock_lxc, instance):
             remote=instance.remote,
             runner=subprocess.run,
             input="foo",
+            timeout=None,
         )
     ]
 
@@ -300,6 +305,7 @@ def test_execute_run_with_default_command_env(mock_lxc):
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
+            timeout=None,
         )
     ]
 
@@ -323,6 +329,7 @@ def test_execute_run_with_default_command_env_unset(mock_lxc):
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
+            timeout=None,
         )
     ]
 
@@ -338,6 +345,7 @@ def test_execute_run_with_env(mock_lxc, instance):
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
+            timeout=None,
         )
     ]
 
@@ -362,6 +370,7 @@ def test_execute_run_with_env_unset(mock_lxc, instance):
             project=instance.project,
             remote=instance.remote,
             runner=subprocess.run,
+            timeout=None,
         )
     ]
 
@@ -613,6 +622,7 @@ def test_pull_file(mock_lxc, instance, tmp_path):
             remote=instance.remote,
             runner=subprocess.run,
             check=False,
+            timeout=60,
         ),
         mock.call.file_pull(
             instance_name=instance.instance_name,
@@ -645,6 +655,7 @@ def test_pull_file_no_source(mock_lxc, instance, tmp_path):
             remote=instance.remote,
             runner=subprocess.run,
             check=False,
+            timeout=60,
         ),
     ]
     assert str(exc_info.value) == "File not found: '/tmp/src.txt'"
@@ -671,6 +682,7 @@ def test_pull_file_no_parent_directory(mock_lxc, instance, tmp_path):
             remote=instance.remote,
             runner=subprocess.run,
             check=False,
+            timeout=60,
         ),
     ]
     assert str(exc_info.value) == f"Directory not found: {str(destination.parent)!r}"
@@ -697,6 +709,7 @@ def test_push_file(mock_lxc, instance, tmp_path):
             remote=instance.remote,
             runner=subprocess.run,
             check=False,
+            timeout=60,
         ),
         mock.call.file_push(
             instance_name=instance.instance_name,
@@ -746,6 +759,7 @@ def test_push_file_no_parent_directory(mock_lxc, instance, tmp_path):
             remote=instance.remote,
             runner=subprocess.run,
             check=False,
+            timeout=60,
         ),
     ]
     assert str(exc_info.value) == "Directory not found: '/tmp'"
@@ -874,7 +888,7 @@ def test_set_instance_name_unchanged(logs, mock_lxc, name):
 
 
 @pytest.mark.parametrize(
-    "name, expected_name",
+    ("name", "expected_name"),
     [
         # trim away invalid beginning characters
         ("1test", "test"),

@@ -16,35 +16,33 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
-# pylint: disable=too-many-lines
 
 import sys
 from datetime import timedelta
 from unittest.mock import MagicMock, Mock, call
 
 import pytest
+from craft_providers import Base, ProviderError, bases, lxd
 from freezegun import freeze_time
 from logassert import Exact  # type: ignore
 
-from craft_providers import Base, ProviderError, bases, lxd
 
-
-@pytest.fixture
+@pytest.fixture()
 def mock_base_configuration():
     mock_base = Mock(spec=Base)
     mock_base.compatibility_tag = "mock-compat-tag-v100"
     mock_base.get_command_environment.return_value = {"foo": "bar"}
-    yield mock_base
+    return mock_base
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_lxc(mocker):
     _mock_lxc = mocker.patch("craft_providers.lxd.launcher.LXC", spec=lxd.LXC)
     _mock_lxc.return_value.project_list.return_value = ["default", "test-project"]
-    yield _mock_lxc.return_value
+    return _mock_lxc.return_value
 
 
-@pytest.fixture
+@pytest.fixture()
 def fake_instance():
     """Returns a fake LXD Instance"""
     instance = MagicMock()
@@ -59,7 +57,7 @@ def fake_instance():
     return instance
 
 
-@pytest.fixture
+@pytest.fixture()
 def fake_base_instance():
     """Returns a fake base LXD Instance"""
     base_instance = MagicMock()
@@ -74,24 +72,24 @@ def fake_base_instance():
     return base_instance
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_lxd_instance(fake_instance, fake_base_instance, mocker):
     """Mock LXD instance to return fake_instance then fake_base_instance."""
-    yield mocker.patch(
+    return mocker.patch(
         "craft_providers.lxd.launcher.LXDInstance",
         spec=lxd.LXDInstance,
         side_effect=[fake_instance, fake_base_instance],
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_is_valid(mocker):
-    yield mocker.patch("craft_providers.lxd.launcher._is_valid", return_value=True)
+    return mocker.patch("craft_providers.lxd.launcher._is_valid", return_value=True)
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_check_id_map(mocker):
-    yield mocker.patch("craft_providers.lxd.launcher._check_id_map", return_value=True)
+    return mocker.patch("craft_providers.lxd.launcher._check_id_map", return_value=True)
 
 
 def test_launch_no_base_instance(
@@ -196,7 +194,7 @@ def test_launch_use_base_instance(
     ]
 
 
-@pytest.mark.parametrize("map_user_uid, uid", [(True, 1234), (False, None)])
+@pytest.mark.parametrize(("map_user_uid", "uid"), [(True, 1234), (False, None)])
 def test_launch_use_existing_base_instance(
     fake_instance,
     fake_base_instance,
@@ -955,7 +953,7 @@ def test_set_id_map_all_options(fake_base_instance, mock_lxc, mocker):
 
 @pytest.mark.skipif(sys.platform == "win32", reason="unsupported on windows")
 @pytest.mark.parametrize(
-    "map_user_uid, actual_uid, expected_uid, expected_result",
+    ("map_user_uid", "actual_uid", "expected_uid", "expected_result"),
     [
         # return True if an id map is not expected and there is no id map
         (False, None, None, True),

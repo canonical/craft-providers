@@ -21,7 +21,6 @@ import subprocess
 from unittest import mock
 
 import pytest
-
 from craft_providers.errors import details_from_command_error
 from craft_providers.multipass import Multipass
 from craft_providers.multipass.errors import MultipassError
@@ -84,7 +83,7 @@ EXAMPLE_LIST = """\
 """
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_details_from_process_error():
     details = "<details>"
     with mock.patch(
@@ -94,7 +93,7 @@ def mock_details_from_process_error():
         yield mock_details
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_details_from_command_error():
     details = "<details>"
     with mock.patch(
@@ -502,11 +501,10 @@ def test_transfer_destination_io_error(fake_process):
         stderr=stderr,
     )
 
-    with io.BytesIO() as stream:
-        with pytest.raises(MultipassError) as exc_info:
-            Multipass().transfer_destination_io(
-                source="test-instance:/test1", destination=stream
-            )
+    with io.BytesIO() as stream, pytest.raises(MultipassError) as exc_info:
+        Multipass().transfer_destination_io(
+            source="test-instance:/test1", destination=stream
+        )
 
     assert exc_info.value == MultipassError(
         brief="Failed to transfer file 'test-instance:/test1'.",
@@ -622,16 +620,18 @@ def test_umount_error(fake_process, mock_details_from_process_error):
     )
 
 
-def test_wait_until_ready(fake_process):
+def test_wait_until_ready(fake_process, mocker):
     fake_process.register_subprocess(
         ["multipass", "version"],
         returncode=0,
         stdout="multipass  1.6.2\nmultipassd 1.6.3\n",
     )
-
-    multipass_version, multipassd_version = Multipass().wait_until_ready(
-        retry_wait=0.00001
+    multipass = Multipass()
+    mocker.patch(
+        "craft_providers.const.RETRY_WAIT",
+        return_value=0.01,
     )
+    multipass_version, multipassd_version = multipass.wait_until_ready()
 
     assert len(fake_process.calls) == 1
 
@@ -640,7 +640,7 @@ def test_wait_until_ready(fake_process):
 
 
 @pytest.mark.parametrize("wait_count", [0, 1, 2, 3, 4, 5])
-def test_wait_until_ready_with_retries(fake_process, wait_count):
+def test_wait_until_ready_with_retries(fake_process, wait_count, mocker):
     for _ in range(0, wait_count):
         fake_process.register_subprocess(
             ["multipass", "version"], returncode=0, stdout="multipass  1.6.2\n"
@@ -652,9 +652,12 @@ def test_wait_until_ready_with_retries(fake_process, wait_count):
         stdout="multipass  1.6.2\nmultipassd 1.6.3\n",
     )
 
-    multipass_version, multipassd_version = Multipass().wait_until_ready(
-        retry_wait=0.00001
+    mocker.patch(
+        "craft_providers.const.RETRY_WAIT",
+        return_value=0.01,
     )
+    multipass = Multipass()
+    multipass_version, multipassd_version = multipass.wait_until_ready()
 
     assert len(fake_process.calls) == wait_count + 1
 
@@ -663,7 +666,7 @@ def test_wait_until_ready_with_retries(fake_process, wait_count):
 
 
 @pytest.mark.parametrize(
-    "time_values,timeout,version_calls",
+    ("time_values", "timeout", "version_calls"),
     [
         ([9.0, 9.5], 0.5, 1),
         ([9.0, 9.4, 9.5], 0.5, 2),
@@ -671,7 +674,7 @@ def test_wait_until_ready_with_retries(fake_process, wait_count):
     ],
 )
 def test_wait_until_ready_timeout_error(
-    fake_process, time_values, timeout, version_calls
+    fake_process, time_values, timeout, version_calls, mocker
 ):
     fake_process.register_subprocess(
         ["multipass", "version"],
@@ -679,10 +682,15 @@ def test_wait_until_ready_timeout_error(
         stdout="multipass  1.6.2\n",
         occurrences=version_calls,
     )
+    mocker.patch(
+        "craft_providers.const.RETRY_WAIT",
+        return_value=0.01,
+    )
 
     with mock.patch("time.time", side_effect=time_values):
         with pytest.raises(MultipassError) as exc_info:
-            Multipass().wait_until_ready(retry_wait=0.01, timeout=timeout)
+            multipass = Multipass()
+            multipass.wait_until_ready(timeout=timeout)
 
     assert exc_info.value == MultipassError(
         "Timed out waiting for Multipass to become ready."
@@ -692,7 +700,7 @@ def test_wait_until_ready_timeout_error(
 
 
 @pytest.mark.parametrize(
-    "output,expected",
+    ("output", "expected"),
     [
         ("multipass  1.6.2\n", ("1.6.2", None)),
         ("multipass  1.6.2+mac\n", ("1.6.2", None)),

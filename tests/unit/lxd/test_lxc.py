@@ -18,11 +18,8 @@ import pathlib
 import subprocess
 
 import pytest
-
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, lxc
-
-# pylint: disable=too-many-lines
 
 
 def test_lxc_run_default(mocker, tmp_path):

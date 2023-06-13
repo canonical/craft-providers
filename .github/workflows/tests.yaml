@@ -29,9 +29,10 @@ jobs:
           echo "::group::Begin snap install"
           echo "Installing snaps in the background while running apt and pip..."
           sudo snap install --no-wait --classic pyright
+          sudo snap install --no-wait shellcheck
           echo "::endgroup::"
           echo "::group::pip install"
-          python -m pip install -U .[dev]
+          python -m pip install -U .[dev,lint,types]
           echo "::endgroup::"
           echo "::group::Wait for snap to complete"
           snap watch --last=install
@@ -39,27 +40,24 @@ jobs:
       - name: Run black
         run: |
           make test-black
+      - name: Run ruff
+        run: |
+          make test-ruff
       - name: Run codespell
         run: |
           make test-codespell
-      - name: Run flake8
-        run: |
-          make test-flake8
-      - name: Run isort
-        run: |
-          make test-isort
       - name: Run mypy
         run: |
           make test-mypy
-      - name: Run pydocstyle
-        run: |
-          make test-pydocstyle
-      - name: Run pylint
-        run: |
-          make test-pylint
       - name: Run pyright
         run: |
           make test-pyright
+      - name: Run shellcheck
+        run: |
+          make test-shellcheck
+      - name: Run yamllint
+        run: |
+          make test-yaml
 
   unit-tests:
     strategy:

@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -23,6 +23,7 @@ import subprocess
 from typing import Any, Dict, List, Optional
 
 from craft_providers import errors
+from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE
 from craft_providers.util import env_cmd
 
 from .. import Executor
@@ -68,7 +69,7 @@ class MultipassInstance(Executor):
         *,
         name: str,
         multipass: Optional[Multipass] = None,
-    ):
+    ) -> None:
         super().__init__()
 
         self.name = name
@@ -86,7 +87,11 @@ class MultipassInstance(Executor):
         :raises subprocess.CalledProcessError: If the file cannot be created.
         """
         tmp_file_path = self.execute_run(
-            command=["mktemp"], capture_output=True, check=True, text=True
+            command=["mktemp"],
+            capture_output=True,
+            check=True,
+            text=True,
+            timeout=TIMEOUT_SIMPLE,
         ).stdout.strip()
 
         # mktemp is executed as root, so the ownership of the temp file needs to be
@@ -95,11 +100,24 @@ class MultipassInstance(Executor):
             ["chown", "ubuntu:ubuntu", tmp_file_path],
             capture_output=True,
             check=True,
+            timeout=TIMEOUT_SIMPLE,
         )
 
         logger.debug("Created temporary file %r inside instance.", tmp_file_path)
 
         return tmp_file_path
+
+    def _is_dir_in_instance(self, filepath: pathlib.PurePath) -> bool:
+        """Check if a filepath inside a Multipass instance is a valid directory.
+
+        :param filepath: filepath to check
+
+        :returns: True if the filepath is a valid directory.
+        """
+        proc = self.execute_run(
+            ["test", "-d", filepath.as_posix()], timeout=TIMEOUT_SIMPLE, check=False
+        )
+        return proc.returncode == 0
 
     def push_file_io(
         self,
@@ -136,16 +154,21 @@ class MultipassInstance(Executor):
                 ["chown", f"{user}:{group}", tmp_file_path],
                 capture_output=True,
                 check=True,
+                timeout=TIMEOUT_SIMPLE,
             )
 
             self.execute_run(
-                ["chmod", file_mode, tmp_file_path], capture_output=True, check=True
+                ["chmod", file_mode, tmp_file_path],
+                capture_output=True,
+                check=True,
+                timeout=TIMEOUT_SIMPLE,
             )
 
             self.execute_run(
                 ["mv", tmp_file_path, destination.as_posix()],
                 capture_output=True,
                 check=True,
+                timeout=TIMEOUT_COMPLEX,
             )
         except subprocess.CalledProcessError as error:
             raise MultipassError(
@@ -169,6 +192,7 @@ class MultipassInstance(Executor):
         *,
         cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
+        timeout: Optional[float] = None,
         **kwargs,
     ) -> subprocess.Popen:
         """Execute a process in the instance using subprocess.Popen().
@@ -185,6 +209,7 @@ class MultipassInstance(Executor):
         :param command: Command to execute.
         :param cwd: working directory to execute the command
         :param env: Additional environment to set for process.
+        :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Additional keyword arguments for subprocess.Popen().
 
         :returns: Popen instance.
@@ -193,6 +218,7 @@ class MultipassInstance(Executor):
             instance_name=self.name,
             command=_rootify_multipass_command(command, cwd=cwd, env=env),
             runner=subprocess.Popen,
+            timeout=timeout,
             **kwargs,
         )
 
@@ -202,6 +228,7 @@ class MultipassInstance(Executor):
         *,
         cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
+        timeout: Optional[float] = None,
         **kwargs,
     ) -> subprocess.CompletedProcess:
         """Execute a command in the instance using subprocess.run().
@@ -218,6 +245,7 @@ class MultipassInstance(Executor):
         :param command: Command to execute.
         :param cwd: working directory to execute the command
         :param env: Additional environment to set for process.
+        :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Keyword args to pass to subprocess.run().
 
         :returns: Completed process.
@@ -228,6 +256,7 @@ class MultipassInstance(Executor):
             instance_name=self.name,
             command=_rootify_multipass_command(command, cwd=cwd, env=env),
             runner=subprocess.run,
+            timeout=timeout,
             **kwargs,
         )
 
@@ -277,7 +306,7 @@ class MultipassInstance(Executor):
 
         for mount_point, mount_config in mounts.items():
             # Even on Windows, Multipass writes source_path as posix, e.g.:
-            # 'C:/Users/chris/tmpbat91bwz.tmp-pytest'
+            # 'C:/Users/chris/tmpbat91bwz.tmp-pytest' # noqa: ERA001
             if (
                 mount_point == target.as_posix()
                 and mount_config.get("source_path") == host_source.as_posix()
@@ -358,7 +387,11 @@ class MultipassInstance(Executor):
             directory does not exist.
         :raises MultipassError: On unexpected error copying file.
         """
-        proc = self.execute_run(["test", "-f", source.as_posix()], check=False)
+        proc = self.execute_run(
+            ["test", "-f", source.as_posix()],
+            check=False,
+            timeout=TIMEOUT_SIMPLE,
+        )
         if proc.returncode != 0:
             raise FileNotFoundError(f"File not found: {source.as_posix()!r}")
 
@@ -372,31 +405,63 @@ class MultipassInstance(Executor):
     def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:
         """Copy a file from the host into the environment.
 
-        The destination file is overwritten if it exists.
+        The destination file is overwritten if it exists. File permissions are retained
+        but the ownership is changed to the default user `ubuntu`.
+
+        The source cannot be a directory because `multipass transfer --recursive` is not
+        supported. The parent directories of the destination must exist because
+        `multipass transfer --parents` is not supported.
 
         :param source: Host file to copy.
         :param destination: Target environment file path to copy to.  Parent
             directory (destination.parent) must exist.
 
         :raises FileNotFoundError: If source file or destination's parent
-            directory does not exist.
-        :raises MultipassError: On unexpected error copying file.
+            directory does not exist or if the source is not a regular file.
+        :raises IsADirectoryError: If source is a directory.
+        :raises MultipassError: If the file cannot be pushed into the instance.
         """
+        if source.is_dir():
+            raise IsADirectoryError(f"Source cannot be a directory: {str(source)!r}")
+
         if not source.is_file():
             raise FileNotFoundError(f"File not found: {str(source)!r}")
 
-        proc = self.execute_run(
-            ["test", "-d", destination.parent.as_posix()], check=False
-        )
-        if proc.returncode != 0:
+        if not self._is_dir_in_instance(destination.parent):
             raise FileNotFoundError(
-                f"Directory not found: {str(destination.parent.as_posix())!r}"
+                "Directory not found in instance: "
+                f"{str(destination.parent.as_posix())!r}"
             )
 
-        self._multipass.transfer(
-            source=str(source),
-            destination=f"{self.name}:{destination.as_posix()}",
-        )
+        try:
+            tmp_file_path = self._create_temp_file()
+
+            # push the file to a location where the `ubuntu` user has access
+            self._multipass.transfer(
+                source=str(source), destination=f"{self.name}:{tmp_file_path}"
+            )
+
+            # if the destination was a directory, then we need to specify the filename
+            # to prevent using the random name generated by mktemp
+            if self._is_dir_in_instance(destination):
+                final_destination = destination / source.name
+            else:
+                final_destination = destination
+
+            # move the file to its final destination
+            self.execute_run(
+                ["mv", tmp_file_path, final_destination.as_posix()],
+                capture_output=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as error:
+            raise MultipassError(
+                brief=(
+                    f"Failed to push file {destination.as_posix()!r}"
+                    f" into Multipass instance {self.name!r}."
+                ),
+                details=errors.details_from_called_process_error(error),
+            ) from error
 
     def start(self) -> None:
         """Start instance.

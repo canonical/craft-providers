@@ -23,12 +23,11 @@ import subprocess
 from datetime import datetime, timedelta
 
 import pytest
-from freezegun import freeze_time
-
 from craft_providers import lxd
 from craft_providers.bases import ubuntu
 from craft_providers.errors import BaseCompatibilityError
 from craft_providers.lxd import project as lxd_project
+from freezegun import freeze_time
 
 from . import conftest
 
@@ -50,7 +49,7 @@ def get_base_instance():
         instance = lxd.LXDInstance(name=base_instance_name, project=project)
         return instance
 
-    yield _base_instance
+    return _base_instance
 
 
 @pytest.fixture()
@@ -72,7 +71,7 @@ def core20_instance(instance_name):
 
         # mark instance as setup in the config file
         instance.push_file_io(
-            destination=ubuntu.BuilddBase.instance_config_path,
+            destination=ubuntu.BuilddBase._instance_config_path,
             content=io.BytesIO(
                 f"compatibility_tag: {ubuntu.BuilddBase.compatibility_tag}"
                 "\nsetup: true\n".encode()
@@ -597,7 +596,7 @@ def test_launch_instance_config_incompatible_without_auto_clean(core20_instance)
     base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     core20_instance.push_file_io(
-        destination=base_configuration.instance_config_path,
+        destination=base_configuration._instance_config_path,
         content=io.BytesIO(b"compatibility_tag: invalid\nsetup: true\n"),
         file_mode="0644",
     )
@@ -622,7 +621,7 @@ def test_launch_instance_config_incompatible_with_auto_clean(core20_instance):
     base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     core20_instance.push_file_io(
-        destination=base_configuration.instance_config_path,
+        destination=base_configuration._instance_config_path,
         content=io.BytesIO(b"compatibility_tag: invalid\nsetup: true\n"),
         file_mode="0644",
     )
@@ -645,7 +644,7 @@ def test_launch_instance_not_setup_without_auto_clean(core20_instance):
     base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     core20_instance.push_file_io(
-        destination=base_configuration.instance_config_path,
+        destination=base_configuration._instance_config_path,
         content=io.BytesIO(b"compatibility_tag: buildd-base-v1\nsetup: false\n"),
         file_mode="0644",
     )
@@ -668,7 +667,7 @@ def test_launch_instance_not_setup_with_auto_clean(core20_instance):
     base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
 
     core20_instance.push_file_io(
-        destination=base_configuration.instance_config_path,
+        destination=base_configuration._instance_config_path,
         content=io.BytesIO(b"compatibility_tag: buildd-base-v1\nsetup: false\n"),
         file_mode="0644",
     )

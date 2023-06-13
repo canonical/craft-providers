@@ -24,18 +24,15 @@ from unittest import mock
 import pytest
 import requests
 import yaml
-from logassert import Exact  # type: ignore
-
 from craft_providers.actions import snap_installer
 from craft_providers.actions.snap_installer import Snap
-from craft_providers.bases.instance_config import InstanceConfiguration
 from craft_providers.errors import (
     BaseConfigurationError,
     ProviderError,
     details_from_called_process_error,
 )
-
-# pylint: disable=too-many-lines
+from craft_providers.instance_config import InstanceConfiguration
+from logassert import Exact  # type: ignore
 
 
 @pytest.fixture()
@@ -73,11 +70,11 @@ def config_fixture(request, tmp_path, mocker):
         return config_file
 
     mocker.patch(
-        "craft_providers.bases.instance_config.temp_paths.home_temporary_file",
+        "craft_providers.instance_config.temp_paths.home_temporary_file",
         side_effect=config_generator,
     )
     mocker.patch(
-        "craft_providers.bases.instance_config.temp_paths.home_temporary_directory",
+        "craft_providers.instance_config.temp_paths.home_temporary_directory",
         return_value=tmp_path,
     )
 
@@ -162,14 +159,14 @@ def test_inject_from_host_classic(
     assert "Revisions found: host='2', target='1'" in logs.debug
 
     # check saved config
-    (saved_config_record,) = [
+    (saved_config_record,) = (
         x
         for x in fake_executor.records_of_push_file_io
         if "craft-instance.conf" in x["destination"]
-    ]
+    )
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
-    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+    assert config.snaps["test-name"] == {
         "revision": "2",
         "source": snap_installer.SNAP_SRC_HOST,
     }
@@ -217,14 +214,14 @@ def test_inject_from_host_strict(
     assert "Revisions found: host='2', target='1'" in logs.debug
 
     # check saved config
-    (saved_config_record,) = [
+    (saved_config_record,) = (
         x
         for x in fake_executor.records_of_push_file_io
         if "craft-instance.conf" in x["destination"]
-    ]
+    )
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
-    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+    assert config.snaps["test-name"] == {
         "revision": "2",
         "source": snap_installer.SNAP_SRC_HOST,
     }
@@ -267,14 +264,14 @@ def test_inject_from_host_snap_name(
     )
     assert "Revisions found: host='2', target='1'" in logs.debug
     # check saved config
-    (saved_config_record,) = [
+    (saved_config_record,) = (
         x
         for x in fake_executor.records_of_push_file_io
         if "craft-instance.conf" in x["destination"]
-    ]
+    )
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
-    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+    assert config.snaps["test-name"] == {
         "revision": "2",
         "source": snap_installer.SNAP_SRC_HOST,
     }
@@ -313,14 +310,14 @@ def test_inject_from_host_dangerous(
     assert "Revisions found: host='x3', target='1'" in logs.debug
 
     # check saved config
-    (saved_config_record,) = [
+    (saved_config_record,) = (
         x
         for x in fake_executor.records_of_push_file_io
         if "craft-instance.conf" in x["destination"]
-    ]
+    )
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
-    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+    assert config.snaps["test-name"] == {
         "revision": "x3",
         "source": snap_installer.SNAP_SRC_HOST,
     }
@@ -399,14 +396,14 @@ def test_inject_from_host_not_dangerous(
     assert "Revisions found: host='2', target='1'" in logs.debug
 
     # check saved config
-    (saved_config_record,) = [
+    (saved_config_record,) = (
         x
         for x in fake_executor.records_of_push_file_io
         if "craft-instance.conf" in x["destination"]
-    ]
+    )
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
-    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+    assert config.snaps["test-name"] == {
         "revision": "2",
         "source": snap_installer.SNAP_SRC_HOST,
     }
@@ -635,14 +632,14 @@ def test_install_from_store_strict(
     assert "Revision after install/refresh: '4'" in logs.debug
 
     # check saved config
-    (saved_config_record,) = [
+    (saved_config_record,) = (
         x
         for x in fake_executor.records_of_push_file_io
         if "craft-instance.conf" in x["destination"]
-    ]
+    )
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
-    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+    assert config.snaps["test-name"] == {
         "revision": "4",
         "source": snap_installer.SNAP_SRC_STORE,
     }
@@ -725,14 +722,14 @@ def test_refresh_from_store(
     assert "Revision after install/refresh: '4'" in logs.debug
 
     # check saved config
-    (saved_config_record,) = [
+    (saved_config_record,) = (
         x
         for x in fake_executor.records_of_push_file_io
         if "craft-instance.conf" in x["destination"]
-    ]
+    )
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
-    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+    assert config.snaps["test-name"] == {
         "revision": "4",
         "source": snap_installer.SNAP_SRC_STORE,
     }
@@ -811,14 +808,14 @@ def test_install_from_store_trim_suffix(
     assert "Revision after install/refresh: '4'" in logs.debug
 
     # check saved config
-    (saved_config_record,) = [
+    (saved_config_record,) = (
         x
         for x in fake_executor.records_of_push_file_io
         if "craft-instance.conf" in x["destination"]
-    ]
+    )
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
-    assert config.snaps["test-name"] == {  # pylint: disable=unsubscriptable-object
+    assert config.snaps["test-name"] == {
         "revision": "4",
         "source": snap_installer.SNAP_SRC_STORE,
     }
@@ -875,7 +872,7 @@ def test_add_assertions_from_host_error_on_push(
     mock_executor = mock.Mock(spec=fake_executor, wraps=fake_executor)
     mock_executor.push_file.side_effect = ProviderError(brief="foo")
     mocker.patch(
-        "craft_providers.bases.instance_config.temp_paths.home_temporary_file",
+        "craft_providers.instance_config.temp_paths.home_temporary_file",
         return_value=pathlib.Path(tmpdir) / "temp-file",
     )
 
@@ -906,7 +903,7 @@ def test_add_assertions_from_host_error_on_ack(
         returncode=1,
     )
     mocker.patch(
-        "craft_providers.bases.instance_config.temp_paths.home_temporary_file",
+        "craft_providers.instance_config.temp_paths.home_temporary_file",
         return_value=pathlib.Path(tmpdir) / "temp-file",
     )
 

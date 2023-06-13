@@ -106,7 +106,7 @@ class RemoteImage:
                     protocol=self.remote_protocol.value,
                 )
 
-            except Exception as exc:  # pylint: disable=broad-except
+            except Exception as exc:
                 # the remote adding failed, no matter really how: if it was because a
                 # race condition on remote creation (it's not idempotent) and now the
                 # remote is there, the purpose of this function is done (otherwise we

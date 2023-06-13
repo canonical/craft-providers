@@ -30,7 +30,6 @@ import tempfile
 from typing import Optional
 
 import pytest
-
 from craft_providers import lxd, multipass
 from craft_providers.actions.snap_installer import get_host_snap_info
 from craft_providers.bases import ubuntu
@@ -67,13 +66,13 @@ def home_tmp_path():
 @pytest.fixture()
 def instance_name():
     """Provide a random name for an instance to launch."""
-    yield generate_instance_name()
+    return generate_instance_name()
 
 
 @pytest.fixture(scope="module")
 def reusable_instance_name():
     """Provide a random name for an instance to launch with scope=module."""
-    yield generate_instance_name()
+    return generate_instance_name()
 
 
 @pytest.fixture(scope="module")
@@ -95,7 +94,7 @@ def installed_lxd():
         pytest.skip("lxd not installed, skipped")
 
 
-@pytest.fixture
+@pytest.fixture()
 def uninstalled_lxd():
     """Uninstall Lxd prior to test, if environment allows it.
 
@@ -111,7 +110,7 @@ def uninstalled_lxd():
     if not lxd.is_installed():
         pytest.skip("lxd not installed, skipped")
 
-    if not os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_LXD_UNINSTALL") == "1":
+    if os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_LXD_UNINSTALL") != "1":
         pytest.skip("not configured to uninstall lxd, skipped")
 
     if sys.platform == "linux":
@@ -140,7 +139,7 @@ def installed_multipass():
         pytest.skip("multipass not installed, skipped")
 
 
-@pytest.fixture
+@pytest.fixture()
 def uninstalled_multipass():
     """Uninstall Multipass prior to test, if environment allows it.
 
@@ -153,7 +152,7 @@ def uninstalled_multipass():
     if not multipass.is_installed():
         pytest.skip("multipass not installed, skipped")
 
-    if not os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL") == "1":
+    if os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL") != "1":
         pytest.skip("not configured to uninstall multipass, skipped")
 
     if sys.platform == "linux":
@@ -208,7 +207,7 @@ def installed_snap():
             yield
         else:
             # Install it, if enabled to do so by environment.
-            if not os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL") == "1":
+            if os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL") != "1":
                 pytest.skip(f"{snap_name!r} snap not installed, skipped")
 
             if try_path:
@@ -245,7 +244,7 @@ def dangerously_installed_snap(tmpdir):
         if snap_exists(snap_name) and is_installed_dangerously(snap_name):
             yield
         else:
-            if not os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL") == "1":
+            if os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL") != "1":
                 pytest.skip(f"{snap_name!r} snap not installed, skipped")
 
             # download the snap
@@ -258,7 +257,6 @@ def dangerously_installed_snap(tmpdir):
             # collect the file name
             match = re.search(f"{snap_name}_\\d+.snap", str(output))
             if not match:
-                # pylint: disable-next=broad-exception-raised
                 raise Exception(
                     "could not parse snap file name from output of "
                     f"'snap download {snap_name}' (output = {output!r})"

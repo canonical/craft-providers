@@ -20,7 +20,6 @@ import sys
 from unittest import mock
 
 import pytest
-
 from craft_providers import multipass
 
 
@@ -32,7 +31,7 @@ def mock_time_sleep():
         yield mock_sleep
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_details_from_process_error():
     details = "<details>"
     with mock.patch(
@@ -124,7 +123,7 @@ def test_install_windows_error(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "which,is_installed", [("/path/to/multipass", True), (None, False)]
+    ("which", "is_installed"), [("/path/to/multipass", True), (None, False)]
 )
 def test_is_installed(which, is_installed, monkeypatch):
     monkeypatch.setattr(shutil, "which", lambda x: which)

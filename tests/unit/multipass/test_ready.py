@@ -19,7 +19,6 @@ import re
 from unittest import mock
 
 import pytest
-
 from craft_providers.multipass import (
     Multipass,
     MultipassError,
@@ -27,7 +26,7 @@ from craft_providers.multipass import (
 )
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_is_installed():
     with mock.patch(
         "craft_providers.multipass._ready.is_installed", return_value=True
@@ -35,13 +34,13 @@ def mock_is_installed():
         yield mock_is_installed
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_multipass():
     mock_client = mock.Mock(spec=Multipass)
     mock_client.is_supported_version.return_value = True
     mock_client.version.return_value = "actual-version.0"
     mock_client.minimum_required_version = "min-required-version.0"
-    yield mock_client
+    return mock_client
 
 
 def test_ensure_multipass_is_ready(mock_is_installed, mock_multipass):

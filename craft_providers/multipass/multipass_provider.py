@@ -96,11 +96,15 @@ _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
     ubuntu.BuilddBaseAlias.JAMMY: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="22.04"
     ),
+    # kinetic image is not available on macos
     ubuntu.BuilddBaseAlias.KINETIC: RemoteImage(
         remote=Remote.RELEASE, image_name="kinetic"
     ),
-    ubuntu.BuilddBaseAlias.LUNAR: RemoteImage(remote=Remote.DAILY, image_name="lunar"),
-    # XXX: devel image from snapcraft remote is not working (LP #2007419)
+    ubuntu.BuilddBaseAlias.LUNAR: RemoteImage(
+        remote=Remote.RELEASE, image_name="lunar"
+    ),
+    # XXX: snapcraft:devel image is not working (LP #2007419)
+    # daily:devel image is not available on macos
     ubuntu.BuilddBaseAlias.DEVEL: RemoteImage(remote=Remote.DAILY, image_name="devel"),
 }
 

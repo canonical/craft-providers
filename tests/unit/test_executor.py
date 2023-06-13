@@ -22,7 +22,7 @@ from pathlib import Path
 import pytest
 
 
-@pytest.fixture
+@pytest.fixture()
 def fake_executor_local_pull(fake_executor):
     """Provide an executor that copies the file locally on 'pull'."""
 
@@ -33,7 +33,7 @@ def fake_executor_local_pull(fake_executor):
     return fake_executor
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_home_temp_file(mocker, tmp_path):
     """Mock `home_temporary_file()`."""
 
@@ -45,8 +45,8 @@ def mock_home_temp_file(mocker, tmp_path):
         finally:
             tmp_file.unlink()
 
-    yield mocker.patch(
-        "craft_providers.executor.temp_paths.home_temporary_file",
+    return mocker.patch(
+        "craft_providers.util.temp_paths.home_temporary_file",
         wraps=_mock_home_temp_file,
     )
 
@@ -95,12 +95,11 @@ def test_temporarypull_temp_file_cleaned(
     source = tmp_path / "source.txt"
     source.write_text("test content")
 
-    with pytest.raises(ValueError):
-        with fake_executor_local_pull.temporarily_pull_file(
-            source=source
-        ) as localfilepath:
-            # internal crash
-            raise ValueError("boom")
+    with pytest.raises(ValueError), fake_executor_local_pull.temporarily_pull_file(
+        source=source
+    ) as localfilepath:
+        # internal crash
+        raise ValueError("boom")
 
     # file is removed afterwards
     assert not localfilepath.exists()  # pyright: ignore [reportUnboundVariable]

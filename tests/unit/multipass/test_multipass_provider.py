@@ -17,7 +17,6 @@
 from unittest.mock import call
 
 import pytest
-
 from craft_providers.bases import ubuntu
 from craft_providers.errors import BaseConfigurationError
 from craft_providers.multipass import MultipassError, MultipassProvider
@@ -28,49 +27,49 @@ from craft_providers.multipass.multipass_provider import (
 )
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_buildd_base_configuration(mocker):
     mock_base_config = mocker.patch(
         "craft_providers.bases.ubuntu.BuilddBase", autospec=True
     )
     mock_base_config.alias = ubuntu.BuilddBaseAlias.JAMMY
     mock_base_config.compatibility_tag = "buildd-base-v1"
-    yield mock_base_config
+    return mock_base_config
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_multipass(mocker):
-    yield mocker.patch("craft_providers.multipass.Multipass", autospec=True)
+    return mocker.patch("craft_providers.multipass.Multipass", autospec=True)
 
 
 @pytest.fixture(autouse=True)
 def mock_ensure_multipass_is_ready(mocker):
-    yield mocker.patch(
+    return mocker.patch(
         "craft_providers.multipass.multipass_provider.ensure_multipass_is_ready",
         return_value=None,
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_install(mocker):
-    yield mocker.patch("craft_providers.multipass.multipass_provider.install")
+    return mocker.patch("craft_providers.multipass.multipass_provider.install")
 
 
 @pytest.fixture(autouse=True)
 def mock_is_installed(mocker):
-    yield mocker.patch(
+    return mocker.patch(
         "craft_providers.multipass.multipass_provider.is_installed", return_value=True
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_launch(mocker):
-    yield mocker.patch(
+    return mocker.patch(
         "craft_providers.multipass.multipass_provider.launch", autospec=True
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_remote_image(mocker):
     """Returns a mock RemoteImage object."""
     _mock_remote_image = mocker.patch(
@@ -130,7 +129,7 @@ def test_create_environment(mocker):
 
 
 @pytest.mark.parametrize(
-    "build_base, remote_image", _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE.items()
+    ("build_base", "remote_image"), _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE.items()
 )
 def test_launched_environment(
     build_base,
@@ -169,7 +168,7 @@ def test_launched_environment(
 
 
 @pytest.mark.parametrize(
-    "is_stable, allow_unstable",
+    ("is_stable", "allow_unstable"),
     [
         # unstable images can only be launched when `allow_unstable=True`
         (False, True),
@@ -237,14 +236,13 @@ def test_launched_environment_unstable_image_error(
     )
 
     provider = MultipassProvider()
-    with pytest.raises(MultipassError) as raised:
-        with provider.launched_environment(
-            project_name="test-project",
-            project_path=tmp_path,
-            base_configuration=mock_buildd_base_configuration,
-            instance_name="test-instance-name",
-        ):
-            pass
+    with pytest.raises(MultipassError) as raised, provider.launched_environment(
+        project_name="test-project",
+        project_path=tmp_path,
+        base_configuration=mock_buildd_base_configuration,
+        instance_name="test-instance-name",
+    ):
+        pass
 
     assert raised.value == MultipassError(
         brief="Cannot launch unstable image 'test-remote:test-image'.",
@@ -284,7 +282,7 @@ def test_remote_image_name(remote):
 
 
 @pytest.mark.parametrize(
-    "remote_image, is_stable",
+    ("remote_image", "is_stable"),
     [
         # 'release' and 'snapcraft' remotes are stable
         (RemoteImage(remote=Remote.RELEASE, image_name="test-name"), True),

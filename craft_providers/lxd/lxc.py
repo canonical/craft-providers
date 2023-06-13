@@ -49,14 +49,14 @@ def load_yaml(data):
     return yaml.load(data, Loader=yaml.BaseLoader)
 
 
-class LXC:  # pylint: disable=too-many-public-methods
+class LXC:
     """Wrapper for lxc command-line interface."""
 
     def __init__(
         self,
         *,
         lxc_path: pathlib.Path = pathlib.Path("lxc"),
-    ):
+    ) -> None:
         self.lxc_path = lxc_path
 
     def _run_lxc(
@@ -332,6 +332,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         project: str = "default",
         remote: str = "local",
         runner: Callable = subprocess.run,
+        timeout: Optional[float] = None,
         **kwargs,
     ):
         """Execute command in instance_name with specified runner.
@@ -346,6 +347,7 @@ class LXC:  # pylint: disable=too-many-public-methods
         :param runner: Execution function to invoke, e.g. subprocess.run or
             Popen.  First argument is finalized command with the attached
             kwargs.
+        :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Additional kwargs for runner.
 
         :returns: Runner's instance.
@@ -368,7 +370,10 @@ class LXC:  # pylint: disable=too-many-public-methods
 
         logger.debug("Executing in container: %s", shlex.join(final_cmd))
 
-        return runner(final_cmd, **kwargs)  # pylint: disable=subprocess-run-check
+        if runner is subprocess.run:
+            return runner(final_cmd, timeout=timeout, **kwargs)
+
+        return runner(final_cmd, **kwargs)
 
     def file_pull(
         self,
