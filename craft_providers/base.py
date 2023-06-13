@@ -328,12 +328,8 @@ class Base(ABC):
 
             sleep(self._retry_wait)
 
-            if (
-                self._timeout_simple
-                and self._timeout_simple > 0
-                and time.time() - start_time > self._timeout_simple
-            ):
-                timeout = True
+            if self._timeout_simple and self._timeout_simple > 0:
+                timeout = time.time() - start_time > self._timeout_simple
 
         raise BaseConfigurationError(
             brief="Timed out waiting for environment to be ready.",
