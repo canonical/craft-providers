@@ -53,6 +53,15 @@ def get_base_instance():
 
 
 @pytest.fixture()
+def base_configuration():
+    """Returns a simple base configuration."""
+    return ubuntu.BuilddBase(
+        alias=ubuntu.BuilddBaseAlias.JAMMY,
+        hostname="test-hostname",
+    )
+
+
+@pytest.fixture()
 def core22_instance(instance_name):
     """Yields a minimally setup core22 instance.
 
@@ -86,13 +95,14 @@ def core22_instance(instance_name):
 
 
 @pytest.fixture()
-def get_instance_and_base_instance(get_base_instance, instance_name):
+def get_instance_and_base_instance(
+    base_configuration, get_base_instance, instance_name
+):
     """Create and return an instance and base instance as a tuple.
 
     Delete instances on fixture teardown.
     """
     base_instance = get_base_instance()
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     # launch an instance from an image and create a base instance
     instance = lxd.launch(
@@ -141,10 +151,11 @@ def test_launch_and_run(instance_name):
         instance.delete()
 
 
-def test_launch_use_snapshots_deprecated(get_base_instance, instance_name):
+def test_launch_use_snapshots_deprecated(
+    base_configuration, get_base_instance, instance_name
+):
     """Launch an instance with the deprecated parameter `use_snapshots`."""
     base_instance = get_base_instance()
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     instance = lxd.launch(
         name=instance_name,
@@ -164,7 +175,9 @@ def test_launch_use_snapshots_deprecated(get_base_instance, instance_name):
             base_instance.delete()
 
 
-def test_launch_use_base_instance(get_instance_and_base_instance, instance_name):
+def test_launch_use_base_instance(
+    base_configuration, get_instance_and_base_instance, instance_name
+):
     """Launch an instance using base instances.
 
     First, launch an instance from an image and create a base instance.
@@ -174,7 +187,6 @@ def test_launch_use_base_instance(get_instance_and_base_instance, instance_name)
     The parameter `use_base_instance` and the deprecated parameter `use_snapshots`
     should both result in the same behavior.
     """
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
     instance, base_instance = get_instance_and_base_instance
 
     # fingerprint the base instance
@@ -219,11 +231,10 @@ def test_launch_use_base_instance(get_instance_and_base_instance, instance_name)
 
 
 def test_launch_create_base_instance_with_correct_image_description(
-    get_base_instance, instance_name
+    base_configuration, get_base_instance, instance_name
 ):
     """Create a base instance and check the image description"""
     base_instance = get_base_instance()
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     # launch an instance from an image and create a base instance
     lxd.launch(
@@ -256,7 +267,7 @@ def test_launch_create_base_instance_with_correct_image_description(
 
 @freeze_time(datetime.now() + timedelta(days=91))
 def test_launch_use_base_instance_expired(
-    get_instance_and_base_instance, instance_name
+    base_configuration, get_instance_and_base_instance, instance_name
 ):
     """Launch an instance using an expired base instance.
 
@@ -267,7 +278,6 @@ def test_launch_use_base_instance_expired(
     The LXD instance is created via subprocess, so the creation date the instance is
     out of freezegun's scope and can't be modified.
     """
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
     instance, base_instance = get_instance_and_base_instance
 
     # fingerprint the expired base instance
@@ -305,9 +315,8 @@ def test_launch_use_base_instance_expired(
     assert "'/base-instance': No such file or directory" in proc.stderr
 
 
-def test_launch_create_project(instance_name, project_name):
+def test_launch_create_project(base_configuration, instance_name, project_name):
     """Create a project if it does not exist and `auto_create_project` is true."""
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
     lxc = lxd.LXC()
 
     assert project_name not in lxc.project_list()
@@ -330,11 +339,10 @@ def test_launch_create_project(instance_name, project_name):
 
 
 def test_launch_with_project_and_use_base_instance(
-    get_base_instance, instance_name, project
+    base_configuration, get_base_instance, instance_name, project
 ):
     """With a LXD project specified, launch an instance and use base instances."""
     base_instance = get_base_instance(project=project)
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     # launch an instance from an image and create a base instance
     instance = lxd.launch(
@@ -391,9 +399,8 @@ def test_launch_with_project_and_use_base_instance(
             base_instance.delete()
 
 
-def test_launch_ephemeral(instance_name):
+def test_launch_ephemeral(base_configuration, instance_name):
     """Launch an ephemeral instance and verify it is deleted after it is stopped."""
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     instance = lxd.launch(
         name=instance_name,
@@ -413,9 +420,8 @@ def test_launch_ephemeral(instance_name):
             instance.delete()
 
 
-def test_launch_ephemeral_existing(instance_name):
+def test_launch_ephemeral_existing(base_configuration, instance_name):
     """If an ephemeral instance already exists, delete it and create a new instance."""
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     # create a non-ephemeral instance
     instance = lxd.launch(
@@ -450,11 +456,9 @@ def test_launch_ephemeral_existing(instance_name):
             instance.delete()
 
 
-def test_launch_map_user_uid_true(instance_name, tmp_path):
+def test_launch_map_user_uid_true(base_configuration, instance_name, tmp_path):
     """Enable and map the the UID of the test account."""
     tmp_path.chmod(0o755)
-
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     instance = lxd.launch(
         name=instance_name,
@@ -475,11 +479,9 @@ def test_launch_map_user_uid_true(instance_name, tmp_path):
             instance.delete()
 
 
-def test_launch_map_user_uid_true_no_uid(instance_name, tmp_path):
+def test_launch_map_user_uid_true_no_uid(base_configuration, instance_name, tmp_path):
     """Enable UID mapping without specifying a UID."""
     tmp_path.chmod(0o755)
-
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     instance = lxd.launch(
         name=instance_name,
@@ -499,11 +501,9 @@ def test_launch_map_user_uid_true_no_uid(instance_name, tmp_path):
             instance.delete()
 
 
-def test_launch_map_user_uid_false(instance_name, tmp_path):
+def test_launch_map_user_uid_false(base_configuration, instance_name, tmp_path):
     """If UID mapping is not enabled, access to a mounted directory will be denied."""
     tmp_path.chmod(0o755)
-
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     instance = lxd.launch(
         name=instance_name,
@@ -524,10 +524,8 @@ def test_launch_map_user_uid_false(instance_name, tmp_path):
             instance.delete()
 
 
-def test_launch_existing_instance(core22_instance):
+def test_launch_existing_instance(base_configuration, core22_instance):
     """Launch an existing instance and run a command."""
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
     instance = lxd.launch(
         name=core22_instance.name,
         base_configuration=base_configuration,
@@ -543,10 +541,8 @@ def test_launch_existing_instance(core22_instance):
     assert proc.stdout == b"hi\n"
 
 
-def test_launch_os_incompatible_without_auto_clean(core22_instance):
+def test_launch_os_incompatible_without_auto_clean(base_configuration, core22_instance):
     """Raise an error if the OS is incompatible and auto_clean is False."""
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
     core22_instance.push_file_io(
         destination=pathlib.PurePosixPath("/etc/os-release"),
         content=io.BytesIO(b"NAME=Fedora\nVERSION_ID=32\n"),
@@ -568,10 +564,8 @@ def test_launch_os_incompatible_without_auto_clean(core22_instance):
     )
 
 
-def test_launch_os_incompatible_with_auto_clean(core22_instance):
+def test_launch_os_incompatible_with_auto_clean(base_configuration, core22_instance):
     """Clean the instance if the OS is incompatible and auto_clean is True."""
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
     core22_instance.push_file_io(
         destination=pathlib.PurePosixPath("/etc/os-release"),
         content=io.BytesIO(b"NAME=Fedora\nVERSION_ID=32\n"),
@@ -591,10 +585,10 @@ def test_launch_os_incompatible_with_auto_clean(core22_instance):
     assert core22_instance.is_running()
 
 
-def test_launch_instance_config_incompatible_without_auto_clean(core22_instance):
+def test_launch_instance_config_incompatible_without_auto_clean(
+    base_configuration, core22_instance
+):
     """Raise an error if the config file is incompatible and auto_clean is False."""
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
     core22_instance.push_file_io(
         destination=base_configuration._instance_config_path,
         content=io.BytesIO(b"compatibility_tag: invalid\nsetup: true\n"),
@@ -616,10 +610,10 @@ def test_launch_instance_config_incompatible_without_auto_clean(core22_instance)
     )
 
 
-def test_launch_instance_config_incompatible_with_auto_clean(core22_instance):
+def test_launch_instance_config_incompatible_with_auto_clean(
+    base_configuration, core22_instance
+):
     """Clean the instance if the config is incompatible and auto_clean is True."""
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
     core22_instance.push_file_io(
         destination=base_configuration._instance_config_path,
         content=io.BytesIO(b"compatibility_tag: invalid\nsetup: true\n"),
@@ -639,10 +633,10 @@ def test_launch_instance_config_incompatible_with_auto_clean(core22_instance):
     assert core22_instance.is_running()
 
 
-def test_launch_instance_not_setup_without_auto_clean(core22_instance):
+def test_launch_instance_not_setup_without_auto_clean(
+    base_configuration, core22_instance
+):
     """Raise an error if an existing instance is not setup and auto_clean is False."""
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
     core22_instance.push_file_io(
         destination=base_configuration._instance_config_path,
         content=io.BytesIO(b"compatibility_tag: buildd-base-v1\nsetup: false\n"),
@@ -662,10 +656,8 @@ def test_launch_instance_not_setup_without_auto_clean(core22_instance):
     assert exc_info.value == BaseCompatibilityError("instance is marked as not setup")
 
 
-def test_launch_instance_not_setup_with_auto_clean(core22_instance):
+def test_launch_instance_not_setup_with_auto_clean(base_configuration, core22_instance):
     """Clean the instance if it is not setup and auto_clean is True."""
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
     core22_instance.push_file_io(
         destination=base_configuration._instance_config_path,
         content=io.BytesIO(b"compatibility_tag: buildd-base-v1\nsetup: false\n"),
@@ -685,10 +677,10 @@ def test_launch_instance_not_setup_with_auto_clean(core22_instance):
     assert core22_instance.is_running()
 
 
-def test_launch_instance_id_map_incompatible_without_auto_clean(core22_instance):
+def test_launch_instance_id_map_incompatible_without_auto_clean(
+    base_configuration, core22_instance
+):
     """Raise an error if the id map is incompatible and auto_clean is False."""
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
     lxc = lxd.LXC()
     lxc.config_set(
         instance_name=core22_instance.instance_name,
@@ -712,10 +704,10 @@ def test_launch_instance_id_map_incompatible_without_auto_clean(core22_instance)
     )
 
 
-def test_launch_instance_id_map_incompatible_with_auto_clean(core22_instance):
+def test_launch_instance_id_map_incompatible_with_auto_clean(
+    base_configuration, core22_instance
+):
     """Clean the instance if the id map is incompatible and auto_clean is True."""
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
     lxc = lxd.LXC()
     lxc.config_set(
         instance_name=core22_instance.instance_name,
