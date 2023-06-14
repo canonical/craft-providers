@@ -8,6 +8,15 @@ on:
       - "release/*"
   pull_request:
 
+  # Allows triggering the workflow manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      enable_ssh_access:
+        type: boolean
+        description: 'Enable ssh access'
+        required: false
+        default: false
+
 jobs:
   linters:
     runs-on: ubuntu-latest
@@ -37,6 +46,9 @@ jobs:
           echo "::group::Wait for snap to complete"
           snap watch --last=install
           echo "::endgroup::"
+      - name: Enable ssh access
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ inputs.enable_ssh_access }}
       - name: Run Linters
         run: tox run --skip-pkg-install --no-list-dependencies -m lint
   unit-tests:
@@ -66,6 +78,9 @@ jobs:
           mkdir -p results
       - name: Setup Tox environments
         run: tox run -m unit-tests --notest
+      - name: Enable ssh access
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ inputs.enable_ssh_access }}
       - name: Test with tox
         # use `tox` instead of `.tox/.tox/bin/tox` to support Windows
         run: tox run --skip-pkg-install --no-list-dependencies --result-json results/tox-${{ matrix.platform }}.json -m unit-tests
@@ -121,6 +136,9 @@ jobs:
           echo "::endgroup::"
       - name: Setup Tox environments
         run: tox run -e integration-${{ matrix.python.tox-version }} --notest
+      - name: Enable ssh access
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ inputs.enable_ssh_access }}
       - name: Run integration tests on Linux
         env:
           CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL: 1
@@ -164,6 +182,9 @@ jobs:
           echo "::endgroup::"
       - name: Setup Tox environments
         run: tox run -e integration-${{ matrix.python.tox-version }} --notest
+      - name: Enable ssh access
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ inputs.enable_ssh_access }}
       - name: Run integration tests on MacOS
         env:
           CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL: 1

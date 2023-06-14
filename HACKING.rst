@@ -89,6 +89,19 @@ You can also see all the environments by simply running ``tox list``
 Running ``tox run -m format`` and ``tox run -m lint`` before committing code is
 recommended.
 
+GitHub Actions
+##############
+
+GitHub Actions is used for CI/CD. There are workflows for building
+documentation, linting, releasing, and running unit and integration tests.
+The workflows run on Linux, MacOS, and Windows. You can get ssh access
+into a runner using action-tmate_. To get ssh access:
+
+#. Go to Actions_
+#. Choose the test suite (e.g. ``tests``)
+#. Choose a branch
+#. Press ``Run workflow`` and select ``Enable ssh access`` in the dropdown
+#. Open the workflow's logs and use the ssh address provided by ``action-tmate``
 
 Contributing code
 #################
@@ -104,6 +117,8 @@ Please follow these guidelines when committing code for this project:
 * Wrap the body at 72 characters
 * Use the body to explain what and why (instead of how)
 
+.. _Actions: https://github.com/canonical/craft-providers/actions
+.. _action-tmate: https://mxschmitt.github.io/action-tmate/
 .. _Black: https://black.readthedocs.io
 .. _`Canonical contributor licence agreement`: http://www.ubuntu.com/legal/contributors/
 .. _deadsnakes: https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa
