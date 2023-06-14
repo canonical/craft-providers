@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -58,7 +58,7 @@ def tmp_instance(
     name: str,
     config_keys: Optional[Dict[str, Any]] = None,
     ephemeral: bool = True,
-    image: str = "16.04",
+    image: str = "22.04",
     image_remote: str = "ubuntu",
     project: str,
     remote: str = "local",

@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -42,7 +42,7 @@ def launch(
 
     :param name: Name of instance.
     :param base_configuration: Base configuration to apply to instance.
-    :param image_name: Multipass image to use, e.g. snapcraft:core20.
+    :param image_name: Multipass image to use, e.g. snapcraft:core22.
     :param cpus: Number of CPUs.
     :param disk_gb: Disk allocation in gigabytes.
     :param mem_gb: Memory allocation in gigabytes.

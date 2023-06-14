@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -38,7 +38,7 @@ EXAMPLE_INFO = """\
                 }
             },
             "image_hash": "c5f2f08c6a1adee1f2f96d84856bf0162d33ea182dae0e8ed45768a86182d110",
-            "image_release": "20.04 LTS",
+            "image_release": "22.04 LTS",
             "ipv4": [
                 "10.114.154.206"
             ],
@@ -53,7 +53,7 @@ EXAMPLE_INFO = """\
             },
             "mounts": {
             },
-            "release": "Ubuntu 20.04.2 LTS",
+            "release": "Ubuntu 22.04.2 LTS",
             "state": "Running"
         }
     }
@@ -67,7 +67,7 @@ EXAMPLE_LIST = """\
             "ipv4": [
             ],
             "name": "manageable-snipe",
-            "release": "20.04 LTS",
+            "release": "22.04 LTS",
             "state": "Starting"
         },
         {
@@ -75,7 +75,7 @@ EXAMPLE_LIST = """\
                 "10.114.154.206"
             ],
             "name": "flowing-hawfinch",
-            "release": "20.04 LTS",
+            "release": "22.04 LTS",
             "state": "Running"
         }
     ]
