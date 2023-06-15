@@ -37,18 +37,20 @@ def retry_until_timeout(
 
     :param timeout: The length of time (in seconds) before timeout.
     :param retry_wait: The length of time (in seconds) before retrying.
-    :param func: The callable. May only take a timeout parameter
+    :param func: The callable. May only take a timeout parameter.
+        Must raise an exception on failure, may return anything on success.
     :param error: Exception to raise on timeout
     :returns: The result of the function
-    :raises: TimeoutError from the last exception
+    :raises: the passed error from the last exception
     """
     deadline = time.monotonic() + timeout
+    soft_deadline = deadline - retry_wait
 
-    while time.monotonic() < deadline:
+    while (now := time.monotonic()) < soft_deadline:
         try:
-            return func(deadline - time.monotonic())
+            return func(deadline - now)
         except Exception:
-            if time.monotonic() < deadline - retry_wait:
+            if time.monotonic() < soft_deadline:
                 time.sleep(retry_wait)
     try:
         return func(retry_wait)
