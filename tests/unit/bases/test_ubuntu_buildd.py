@@ -685,7 +685,7 @@ def test_pre_setup_packages_devel(fake_executor, fake_process, mocker):
 
 
 def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
     monkeypatch.setattr(
         InstanceConfiguration,
         "load",
@@ -702,7 +702,7 @@ def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
 
 def test_get_os_release(fake_process, fake_executor):
     """`_get_os_release` should parse data from `/etc/os-release` to a dict."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
         stdout="NAME=Ubuntu\nVERSION_ID=12.04\n",
@@ -743,7 +743,7 @@ def test_ensure_os_compatible_name_failure(
 ):
     """Raise an error if the OS name does not match."""
     mock_get_os_release.return_value = {"NAME": "Fedora", "VERSION_ID": "32"}
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     with pytest.raises(BaseCompatibilityError) as exc_info:
         base_config._ensure_os_compatible(executor=fake_executor)
@@ -760,20 +760,20 @@ def test_ensure_os_compatible_version_failure(
 ):
     """Raise an error if the OS version id does not match."""
     mock_get_os_release.return_value = {"NAME": "Ubuntu", "VERSION_ID": "12.04"}
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     with pytest.raises(BaseCompatibilityError) as exc_info:
         base_config._ensure_os_compatible(executor=fake_executor)
 
     assert exc_info.value == BaseCompatibilityError(
-        "Expected OS version '20.04', found '12.04'"
+        "Expected OS version '22.04', found '12.04'"
     )
 
     mock_get_os_release.assert_called_once()
 
 
 def test_setup_hostname_failure(fake_process, fake_executor):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "hostname", "-F", "/etc/hostname"],
         returncode=-1,
@@ -791,7 +791,7 @@ def test_setup_hostname_failure(fake_process, fake_executor):
 
 
 def test_setup_networkd_enable_failure(fake_process, fake_executor):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "enable", "systemd-networkd"],
         returncode=-1,
@@ -809,7 +809,7 @@ def test_setup_networkd_enable_failure(fake_process, fake_executor):
 
 
 def test_setup_networkd_restart_failure(fake_process, fake_executor):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "enable", "systemd-networkd"],
     )
@@ -830,7 +830,7 @@ def test_setup_networkd_restart_failure(fake_process, fake_executor):
 
 
 def test_setup_resolved_enable_failure(fake_process, fake_executor):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
@@ -857,7 +857,7 @@ def test_setup_resolved_enable_failure(fake_process, fake_executor):
 
 
 def test_setup_resolved_restart_failure(fake_process, fake_executor):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
@@ -893,7 +893,7 @@ def test_setup_snapd_proxy(fake_executor, fake_process):
         "https_proxy": "http://foo.bar:8081",
     }
     base_config = ubuntu.BuilddBase(
-        alias=ubuntu.BuilddBaseAlias.FOCAL,
+        alias=ubuntu.BuilddBaseAlias.JAMMY,
         environment=environment,  # type: ignore
     )
     fake_process.keep_last_process(True)
@@ -918,7 +918,7 @@ def test_setup_snapd_proxy(fake_executor, fake_process):
 
 @pytest.mark.parametrize("fail_index", list(range(0, 1)))
 def test_setup_snapd_proxy_failures(fake_process, fake_executor, fail_index):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     return_codes = [0, 0]
     return_codes[fail_index] = 1
@@ -945,7 +945,7 @@ def test_setup_snapd_proxy_failures(fake_process, fake_executor, fail_index):
 
 @pytest.mark.parametrize("fail_index", list(range(0, 2)))
 def test_pre_setup_snapd_failures(fake_process, fake_executor, fail_index):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     return_codes = [0, 0]
     return_codes[fail_index] = 1
@@ -982,7 +982,7 @@ def test_pre_setup_snapd_failures(fake_process, fake_executor, fail_index):
 
 
 def test_setup_snapd_failures(fake_process, fake_executor):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
@@ -1006,7 +1006,7 @@ def test_setup_snapd_failures(fake_process, fake_executor):
 
 @pytest.mark.parametrize("fail_index", list(range(0, 8)))
 def test_post_setup_snapd_failures(fake_process, fake_executor, fail_index, mocker):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
     mock_datetime = mocker.patch("craft_providers.base.datetime")
     mock_datetime.now.return_value = datetime(2022, 1, 2, 3, 4, 5, 6)
 
@@ -1430,7 +1430,7 @@ def test_update_setup_status(fake_executor, mock_load, status):
 def test_ensure_config_compatible_validation_error(fake_executor, mock_load):
     mock_load.side_effect = ValidationError("foo", InstanceConfiguration)
 
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         base_config._ensure_instance_config_compatible(executor=fake_executor)
@@ -1443,7 +1443,7 @@ def test_ensure_config_compatible_validation_error(fake_executor, mock_load):
 def test_ensure_config_compatible_empty_config_returns_none(fake_executor, mock_load):
     mock_load.return_value = None
 
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     assert (
         base_config._ensure_instance_config_compatible(executor=fake_executor) is None

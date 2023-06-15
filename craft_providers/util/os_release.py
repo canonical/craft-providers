@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -29,17 +29,17 @@ def parse_os_release(content: str) -> Dict[str, str]:
     Example os-release contents::
 
         NAME="Ubuntu"
-        VERSION="20.10 (Groovy Gorilla)"
+        VERSION="22.04 (Jammy Jellyfish)"
         ID=ubuntu
         ID_LIKE=debian
-        PRETTY_NAME="Ubuntu 20.10"
-        VERSION_ID="20.10"
+        PRETTY_NAME="Ubuntu 22.04"
+        VERSION_ID="22.04"
         HOME_URL="https://www.ubuntu.com/"
         SUPPORT_URL="https://help.ubuntu.com/"
         BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
         PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
-        VERSION_CODENAME=groovy
-        UBUNTU_CODENAME=groovy
+        VERSION_CODENAME=jammy
+        UBUNTU_CODENAME=jammy
 
     :param content: String contents of os-release file.
 
@@ -64,9 +64,7 @@ def parse_os_release(content: str) -> Dict[str, str]:
             key, value = line.split("=", maxsplit=1)
 
             # Strip encapsulating quotes, single or double.
-            if value.startswith('"') and value.endswith('"'):
-                value = value[1:-1]
-            elif value.startswith("'") and value.endswith("'"):
+            if value[0] == value[-1] and value[0] in ("'", '"'):
                 value = value[1:-1]
 
             mappings[key] = value

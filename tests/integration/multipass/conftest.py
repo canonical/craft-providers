@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -32,7 +32,7 @@ def installed_multipass_required(installed_multipass):
 def tmp_instance(
     *,
     instance_name: str,
-    image_name: str = "20.04",
+    image_name: str = "22.04",
     cpus: str = "2",
     disk: str = "64G",
     mem: str = "1G",

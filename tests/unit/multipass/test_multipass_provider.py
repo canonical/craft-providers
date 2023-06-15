@@ -260,7 +260,7 @@ def test_launched_environment_launch_base_configuration_error(mock_launch, tmp_p
     error = BaseConfigurationError(brief="fail")
     mock_launch.side_effect = error
     provider = MultipassProvider()
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     with pytest.raises(MultipassError, match="fail") as raised:
         with provider.launched_environment(
