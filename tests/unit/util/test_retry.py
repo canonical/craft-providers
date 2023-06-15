@@ -33,7 +33,9 @@ def retry_wait(request):
     return request.param * 0.000_001
 
 
-def test_retry_until_timeout_success(failure_count, retry_wait, timeout, mock_time_sleep):
+def test_retry_until_timeout_success(
+    failure_count, retry_wait, timeout, mock_time_sleep
+):
     failures = [Exception()] * failure_count
     mock_function = mock.Mock(side_effect=[*failures, None])
 
@@ -83,12 +85,16 @@ def test_retry_until_timeout_times_out(retry_wait, timeout, mock_time_sleep, err
 
 @pytest.mark.parametrize("error_cls", [TimeoutError, Exception, ValueError])
 @pytest.mark.parametrize("retry_multiplier", [1.0, 1.1, 2.0])
-def test_retry_until_timeout_times_out_long_retry(timeout, mock_time_sleep, error_cls, retry_multiplier):
+def test_retry_until_timeout_times_out_long_retry(
+    timeout, mock_time_sleep, error_cls, retry_multiplier
+):
     """Here the retry time is always at least as long as the timeout."""
     mock_function = mock.Mock(side_effect=Exception())
 
     with pytest.raises(error_cls):
-        retry.retry_until_timeout(timeout, timeout * retry_multiplier, mock_function, error=error_cls())
+        retry.retry_until_timeout(
+            timeout, timeout * retry_multiplier, mock_function, error=error_cls()
+        )
 
     mock_function.assert_called_once()
 
