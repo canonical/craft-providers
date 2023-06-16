@@ -55,7 +55,7 @@ def simple_file(home_tmp_path):
 @pytest.mark.parametrize(("user", "group"), [("root", "root"), ("ubuntu", "ubuntu")])
 def test_push_file_io(reusable_instance, content, mode, user, group):
     reusable_instance.push_file_io(
-        destination=pathlib.Path("/tmp/create-file-test.txt"),
+        destination=pathlib.PurePosixPath("/tmp/create-file-test.txt"),
         content=io.BytesIO(content),
         file_mode=mode,
         user=user,
@@ -81,10 +81,10 @@ def test_push_file_io(reusable_instance, content, mode, user, group):
 @pytest.mark.parametrize(
     "destination",
     [
-        pathlib.Path("/tmp/push-file.txt"),
-        pathlib.Path("/home/ubuntu/push-file.txt"),
-        pathlib.Path("/root/push-file.txt"),
-        pathlib.Path("/push-file.txt"),
+        pathlib.PurePosixPath("/tmp/push-file.txt"),
+        pathlib.PurePosixPath("/home/ubuntu/push-file.txt"),
+        pathlib.PurePosixPath("/root/push-file.txt"),
+        pathlib.PurePosixPath("/push-file.txt"),
     ],
 )
 @pytest.mark.parametrize("mode", ["644", "600", "755"])
@@ -114,10 +114,10 @@ def test_push_file(destination, mode, reusable_instance, simple_file):
 @pytest.mark.parametrize(
     "destination",
     [
-        pathlib.Path("/"),
-        pathlib.Path("/home/ubuntu/"),
-        pathlib.Path("/root/"),
-        pathlib.Path("/tmp/"),
+        pathlib.PurePosixPath("/"),
+        pathlib.PurePosixPath("/home/ubuntu/"),
+        pathlib.PurePosixPath("/root/"),
+        pathlib.PurePosixPath("/tmp/"),
     ],
 )
 @pytest.mark.parametrize("mode", ["644", "600", "755"])
@@ -150,7 +150,7 @@ def test_push_file_source_directory_error(reusable_instance, home_tmp_path):
     with pytest.raises(IsADirectoryError) as exc_info:
         reusable_instance.push_file(
             source=home_tmp_path,
-            destination=pathlib.Path("/path/to/non/existent/directory"),
+            destination=pathlib.PurePosixPath("/path/to/non/existent/directory"),
         )
 
     assert str(exc_info.value) == (
@@ -164,7 +164,8 @@ def test_push_file_no_source_error(reusable_instance, home_tmp_path):
 
     with pytest.raises(FileNotFoundError) as exc_info:
         reusable_instance.push_file(
-            source=source, destination=pathlib.Path("/path/to/non/existent/directory")
+            source=source,
+            destination=pathlib.PurePosixPath("/path/to/non/existent/directory"),
         )
 
     assert str(exc_info.value) == f"File not found: {str(source)!r}"
@@ -175,7 +176,7 @@ def test_push_file_no_parent_directory_error(reusable_instance, simple_file):
     with pytest.raises(FileNotFoundError) as exc_info:
         reusable_instance.push_file(
             source=simple_file,
-            destination=pathlib.Path("/path/to/non/existent/directory"),
+            destination=pathlib.PurePosixPath("/path/to/non/existent/directory"),
         )
 
     assert str(exc_info.value) == (
@@ -205,7 +206,7 @@ def test_execute_popen(reusable_instance):
 def test_execute_popen_cwd(reusable_instance):
     with reusable_instance.execute_popen(
         command=["pwd"],
-        cwd=pathlib.Path("/"),
+        cwd=pathlib.PurePosixPath("/"),
         stdout=subprocess.PIPE,
         text=True,
     ) as proc:
@@ -227,7 +228,7 @@ def test_execute_run(reusable_instance):
 def test_execute_run_cwd(reusable_instance):
     proc = reusable_instance.execute_run(
         command=["pwd"],
-        cwd=pathlib.Path("/"),
+        cwd=pathlib.PurePosixPath("/"),
         capture_output=True,
         text=True,
     )
@@ -262,7 +263,7 @@ def test_launch(instance_name):
 
 def test_mount_unmount(reusable_instance, home_tmp_path):
     host_source = home_tmp_path
-    target = pathlib.Path("/tmp/mnt")
+    target = pathlib.PurePosixPath("/tmp/mnt")
 
     test_file = host_source / "test.txt"
     test_file.write_text("this is a test")
@@ -288,11 +289,11 @@ def test_mount_unmount(reusable_instance, home_tmp_path):
 def test_mount_unmount_all(reusable_instance, home_tmp_path):
     host_source_1 = home_tmp_path / "1"
     host_source_1.mkdir()
-    target_1 = pathlib.Path("/tmp/mnt/1")
+    target_1 = pathlib.PurePosixPath("/tmp/mnt/1")
 
     host_source_2 = home_tmp_path / "2"
     host_source_2.mkdir()
-    target_2 = pathlib.Path("/tmp/mnt/2")
+    target_2 = pathlib.PurePosixPath("/tmp/mnt/2")
 
     reusable_instance.mount(host_source=host_source_1, target=target_1)
     reusable_instance.mount(host_source=host_source_2, target=target_2)

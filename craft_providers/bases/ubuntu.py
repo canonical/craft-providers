@@ -137,7 +137,7 @@ class BuilddBase(Base):
         """
         ).encode()
         executor.push_file_io(
-            destination=pathlib.Path("/etc/apt/apt.conf.d/20auto-upgrades"),
+            destination=pathlib.PurePosixPath("/etc/apt/apt.conf.d/20auto-upgrades"),
             content=io.BytesIO(content),
             file_mode="0644",
         )

@@ -75,7 +75,7 @@ def test_instance_config_defaults():
 
 def test_save(mock_executor):
     config = InstanceConfiguration(compatibility_tag="tag-foo-v1")
-    config_path = pathlib.Path("/etc/crafty-crafty.conf")
+    config_path = pathlib.PurePosixPath("/etc/crafty-crafty.conf")
 
     config.save(executor=mock_executor, config_path=config_path)
 
@@ -93,7 +93,7 @@ def test_save(mock_executor):
 
 def test_load_missing_config_returns_none(mock_executor):
     mock_executor.pull_file.side_effect = [FileNotFoundError]
-    config_path = pathlib.Path("/test/foo")
+    config_path = pathlib.PurePosixPath("/test/foo")
     config_instance = InstanceConfiguration.load(
         executor=mock_executor, config_path=config_path
     )
@@ -103,7 +103,7 @@ def test_load_missing_config_returns_none(mock_executor):
 
 def test_load_empty_config_returns_none(mock_executor, config_fixture):
     config_fixture(data="")
-    config_path = pathlib.Path("/etc/crafty-crafty.conf")
+    config_path = pathlib.PurePosixPath("/etc/crafty-crafty.conf")
     config_instance = InstanceConfiguration.load(
         executor=mock_executor, config_path=config_path
     )
@@ -113,7 +113,7 @@ def test_load_empty_config_returns_none(mock_executor, config_fixture):
 
 def test_load_with_valid_config(mock_executor, config_fixture, default_config_data):
     config_file = config_fixture(data=yaml.dump(default_config_data))
-    config_path = pathlib.Path("/etc/crafty-crafty.conf")
+    config_path = pathlib.PurePosixPath("/etc/crafty-crafty.conf")
     config_instance = InstanceConfiguration.load(
         executor=mock_executor, config_path=config_path
     )
@@ -136,7 +136,7 @@ def test_load_with_valid_config(mock_executor, config_fixture, default_config_da
 def test_load_with_invalid_config_raises_error(mock_executor, config_fixture):
     config_fixture(data="invalid: data")
 
-    config_path = pathlib.Path("/etc/crafty-crafty.conf")
+    config_path = pathlib.PurePosixPath("/etc/crafty-crafty.conf")
 
     with pytest.raises(ValidationError) as exc_info:
         InstanceConfiguration.load(executor=mock_executor, config_path=config_path)
@@ -150,7 +150,7 @@ def test_load_with_invalid_config_raises_error(mock_executor, config_fixture):
 def test_load_failure_to_pull_file_raises_error(mock_executor):
     mock_executor.pull_file.side_effect = [ProviderError(brief="foo")]
 
-    config_path = pathlib.Path("/test/foo")
+    config_path = pathlib.PurePosixPath("/test/foo")
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         InstanceConfiguration.load(executor=mock_executor, config_path=config_path)

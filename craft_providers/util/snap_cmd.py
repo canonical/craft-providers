@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -18,10 +18,10 @@
 """Helpers for snap command."""
 
 import pathlib
-from typing import List
+from typing import List, Union
 
 
-def formulate_ack_command(snap_assert_path: pathlib.Path) -> List[str]:
+def formulate_ack_command(snap_assert_path: pathlib.PurePosixPath) -> List[str]:
     """Formulate snap ack command to add assertions.
 
     :returns: List of ack command parts.
@@ -38,12 +38,13 @@ def formulate_known_command(query: List[str]) -> List[str]:
 
 
 def formulate_local_install_command(
-    classic: bool, dangerous: bool, snap_path: pathlib.Path
+    classic: bool, dangerous: bool, snap_path: pathlib.PurePosixPath
 ) -> List[str]:
     """Formulate snap install command.
 
     :param classic: Flag to enable installation of classic snap.
     :param dangerous: Flag to enable installation of snap without ack.
+    :param snap_path: Path to the snap file.
 
     :returns: List of command parts.
     """
@@ -58,7 +59,9 @@ def formulate_local_install_command(
     return install_cmd
 
 
-def formulate_pack_command(snap_name: str, output_file_path) -> List[str]:
+def formulate_pack_command(
+    snap_name: str, output_file_path: Union[str, pathlib.PurePath]
+) -> List[str]:
     """Formulate the command to pack a snap from a directory.
 
     :param snap_name: The name of the channel.

@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -23,7 +23,7 @@ from typing import Dict, List, Optional
 def formulate_command(
     env: Optional[Dict[str, Optional[str]]] = None,
     *,
-    chdir: Optional[pathlib.Path] = None,
+    chdir: Optional[pathlib.PurePath] = None,
     ignore_environment: bool = False,
 ) -> List[str]:
     """Create an env command with the specified environment.
