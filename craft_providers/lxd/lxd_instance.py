@@ -228,7 +228,7 @@ class LXDInstance(Executor):
         self,
         command: List[str],
         *,
-        cwd: Optional[pathlib.Path] = None,
+        cwd: Optional[pathlib.PurePath] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         timeout: Optional[float] = None,
         **kwargs,
@@ -240,7 +240,9 @@ class LXDInstance(Executor):
         env parameter.
 
         :param command: Command to execute.
+        :param cwd: Working directory for the process inside the instance.
         :param env: Additional environment to set for process.
+        :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Additional keyword arguments to pass.
 
         :returns: Popen instance.
@@ -262,7 +264,7 @@ class LXDInstance(Executor):
         self,
         command: List[str],
         *,
-        cwd: Optional[pathlib.Path] = None,
+        cwd: Optional[pathlib.PurePath] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         timeout: Optional[float] = None,
         **kwargs,
@@ -274,7 +276,9 @@ class LXDInstance(Executor):
         env parameter.
 
         :param command: Command to execute.
+        :param cwd: Working directory for the process inside the instance.
         :param env: Additional environment to set for process.
+        :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Keyword args to pass to subprocess.run().
 
         :returns: Completed process.
@@ -545,7 +549,7 @@ class LXDInstance(Executor):
         """
         return self.remote == "local"
 
-    def unmount(self, target: pathlib.Path) -> None:
+    def unmount(self, target: pathlib.PurePath) -> None:
         """Unmount mount target shared with host.
 
         :param target: Target shared with host to unmount.

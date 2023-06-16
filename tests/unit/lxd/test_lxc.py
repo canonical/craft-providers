@@ -136,7 +136,7 @@ def test_config_device_add_disk(fake_process, tmp_path):
         remote="test-remote",
         device="disk_foo",
         source=tmp_path,
-        path=pathlib.Path("/mnt"),
+        path=pathlib.PurePosixPath("/mnt"),
     )
 
     assert len(fake_process.calls) == 1
@@ -167,7 +167,7 @@ def test_config_device_add_disk_error(fake_process, tmp_path):
             remote="test-remote",
             device="disk_foo",
             source=tmp_path,
-            path=pathlib.Path("/mnt"),
+            path=pathlib.PurePosixPath("/mnt"),
         )
 
     assert exc_info.value == LXDError(
@@ -630,7 +630,7 @@ def test_exec_error(fake_process):
 
 
 def test_file_pull(fake_process, tmp_path):
-    source = pathlib.Path("/root/foo")
+    source = pathlib.PurePosixPath("/root/foo")
 
     fake_process.register_subprocess(
         [
@@ -656,7 +656,7 @@ def test_file_pull(fake_process, tmp_path):
 
 
 def test_file_pull_all_opts(fake_process, tmp_path):
-    source = pathlib.Path("/root/foo")
+    source = pathlib.PurePosixPath("/root/foo")
 
     fake_process.register_subprocess(
         [
@@ -686,7 +686,7 @@ def test_file_pull_all_opts(fake_process, tmp_path):
 
 
 def test_file_pull_error(fake_process, tmp_path):
-    source = pathlib.Path("/root/foo")
+    source = pathlib.PurePosixPath("/root/foo")
 
     fake_process.register_subprocess(
         [
@@ -719,7 +719,7 @@ def test_file_pull_error(fake_process, tmp_path):
 
 
 def test_file_push(fake_process, tmp_path):
-    destination = pathlib.Path("/root/foo")
+    destination = pathlib.PurePosixPath("/root/foo")
 
     fake_process.register_subprocess(
         [
@@ -745,7 +745,7 @@ def test_file_push(fake_process, tmp_path):
 
 
 def test_file_push_all_opts(fake_process, tmp_path):
-    destination = pathlib.Path("/root/foo")
+    destination = pathlib.PurePosixPath("/root/foo")
 
     fake_process.register_subprocess(
         [
@@ -800,7 +800,7 @@ def test_file_push_error(fake_process):
             project="test-project",
             remote="test-remote",
             source=pathlib.Path("/somefile"),
-            destination=pathlib.Path("/root/foo"),
+            destination=pathlib.PurePosixPath("/root/foo"),
         )
 
     assert exc_info.value == LXDError(

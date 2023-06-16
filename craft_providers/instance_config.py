@@ -92,7 +92,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra=pydantic.Extra.forbid):
     def load(
         cls,
         executor: Executor,
-        config_path: pathlib.Path = pathlib.Path("/etc/craft-instance.conf"),
+        config_path: pathlib.PurePath = pathlib.PurePath("/etc/craft-instance.conf"),
     ) -> Optional["InstanceConfiguration"]:
         """Load an instance config file from an environment.
 
@@ -128,7 +128,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra=pydantic.Extra.forbid):
     def save(
         self,
         executor: Executor,
-        config_path: pathlib.Path = pathlib.Path("/etc/craft-instance.conf"),
+        config_path: pathlib.PurePath = pathlib.PurePath("/etc/craft-instance.conf"),
     ) -> None:
         """Save an instance config file to an environment.
 
@@ -150,7 +150,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra=pydantic.Extra.forbid):
         cls,
         executor: Executor,
         data: Dict[str, Any],
-        config_path: pathlib.Path = pathlib.Path("/etc/craft-instance.conf"),
+        config_path: pathlib.PurePath = pathlib.PurePath("/etc/craft-instance.conf"),
     ) -> "InstanceConfiguration":
         """Update an instance config file in an environment.
 
@@ -159,6 +159,8 @@ class InstanceConfiguration(pydantic.BaseModel, extra=pydantic.Extra.forbid):
 
         :param executor: Executor for instance.
         :param data: The dictionary to update instance with.
+        :param config_path: Path to configuration file.
+                            Default is `/etc/craft-instance.conf`.
 
         :return: The updated `InstanceConfiguration` object.
         """
