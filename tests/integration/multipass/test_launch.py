@@ -102,7 +102,7 @@ def test_launch_os_incompatible_instance(core22_instance):
     base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     core22_instance.push_file_io(
-        destination=pathlib.Path("/etc/os-release"),
+        destination=pathlib.PurePosixPath("/etc/os-release"),
         content=io.BytesIO(b"NAME=Fedora\nVERSION_ID=32\n"),
         file_mode="0644",
     )

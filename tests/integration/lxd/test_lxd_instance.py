@@ -56,7 +56,7 @@ def reusable_instance(reusable_instance_name, request):
 def test_push_file_io(reusable_instance, content, mode, user, group):
     try:
         reusable_instance.push_file_io(
-            destination=pathlib.Path("/tmp/file-test.txt"),
+            destination=pathlib.PurePosixPath("/tmp/file-test.txt"),
             content=io.BytesIO(content),
             file_mode=mode,
             user=user,
@@ -106,7 +106,7 @@ def test_execute_popen(reusable_instance):
 def test_execute_popen_cwd(reusable_instance):
     with reusable_instance.execute_popen(
         command=["pwd"],
-        cwd=pathlib.Path("/tmp"),
+        cwd=pathlib.PurePosixPath("/tmp"),
         stdout=subprocess.PIPE,
         text=True,
     ) as proc:
@@ -128,7 +128,7 @@ def test_execute_run(reusable_instance):
 def test_execute_run_cwd(reusable_instance):
     proc = reusable_instance.execute_run(
         command=["pwd"],
-        cwd=pathlib.Path("/"),
+        cwd=pathlib.PurePosixPath("/"),
         capture_output=True,
         text=True,
     )
@@ -194,7 +194,7 @@ def test_mount_unmount(reusable_instance, tmp_path):
     tmp_path.chmod(0o755)
 
     host_source = tmp_path
-    target = pathlib.Path("/tmp/mnt")
+    target = pathlib.PurePosixPath("/tmp/mnt")
 
     test_file = host_source / "test.txt"
     test_file.write_text("this is a test")
@@ -222,11 +222,11 @@ def test_mount_unmount_all(reusable_instance, tmp_path):
 
     source1 = tmp_path / "1"
     source1.mkdir()
-    target_1 = pathlib.Path("/tmp/mnt/1")
+    target_1 = pathlib.PurePosixPath("/tmp/mnt/1")
 
     source2 = tmp_path / "2"
     source2.mkdir()
-    target_2 = pathlib.Path("/tmp/mnt/2")
+    target_2 = pathlib.PurePosixPath("/tmp/mnt/2")
 
     reusable_instance.mount(host_source=source1, target=target_1)
     reusable_instance.mount(host_source=source2, target=target_2)

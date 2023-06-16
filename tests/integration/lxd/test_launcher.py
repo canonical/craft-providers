@@ -466,7 +466,7 @@ def test_launch_map_user_uid_true(instance_name, tmp_path):
     )
 
     try:
-        instance.mount(host_source=tmp_path, target=pathlib.Path("/mnt"))
+        instance.mount(host_source=tmp_path, target=pathlib.PurePosixPath("/mnt"))
 
         # If user ID mappings are enabled, we will be able to write.
         instance.execute_run(["touch", "/mnt/foo"], capture_output=True, check=True)
@@ -490,7 +490,7 @@ def test_launch_map_user_uid_true_no_uid(instance_name, tmp_path):
     )
 
     try:
-        instance.mount(host_source=tmp_path, target=pathlib.Path("/mnt"))
+        instance.mount(host_source=tmp_path, target=pathlib.PurePosixPath("/mnt"))
 
         # If user ID mappings are enabled, we will be able to write.
         instance.execute_run(["touch", "/mnt/foo"], capture_output=True, check=True)
@@ -514,7 +514,7 @@ def test_launch_map_user_uid_false(instance_name, tmp_path):
     )
 
     try:
-        instance.mount(host_source=tmp_path, target=pathlib.Path("/mnt"))
+        instance.mount(host_source=tmp_path, target=pathlib.PurePosixPath("/mnt"))
 
         # If user ID mappings are not enabled, we won't be able to write.
         with pytest.raises(subprocess.CalledProcessError):
@@ -548,7 +548,7 @@ def test_launch_os_incompatible_without_auto_clean(core22_instance):
     base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     core22_instance.push_file_io(
-        destination=pathlib.Path("/etc/os-release"),
+        destination=pathlib.PurePosixPath("/etc/os-release"),
         content=io.BytesIO(b"NAME=Fedora\nVERSION_ID=32\n"),
         file_mode="0644",
     )
@@ -573,7 +573,7 @@ def test_launch_os_incompatible_with_auto_clean(core22_instance):
     base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     core22_instance.push_file_io(
-        destination=pathlib.Path("/etc/os-release"),
+        destination=pathlib.PurePosixPath("/etc/os-release"),
         content=io.BytesIO(b"NAME=Fedora\nVERSION_ID=32\n"),
         file_mode="0644",
     )

@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 def _rootify_multipass_command(
     command: List[str],
     *,
-    cwd: Optional[pathlib.Path] = None,
+    cwd: Optional[pathlib.PurePath] = None,
     env: Optional[Dict[str, Optional[str]]] = None,
 ) -> List[str]:
     """Wrap a command to run as root with specified environment.
@@ -190,7 +190,7 @@ class MultipassInstance(Executor):
         self,
         command: List[str],
         *,
-        cwd: Optional[pathlib.Path] = None,
+        cwd: Optional[pathlib.PurePath] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         timeout: Optional[float] = None,
         **kwargs,
@@ -226,7 +226,7 @@ class MultipassInstance(Executor):
         self,
         command: List[str],
         *,
-        cwd: Optional[pathlib.Path] = None,
+        cwd: Optional[pathlib.PurePath] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         timeout: Optional[float] = None,
         **kwargs,

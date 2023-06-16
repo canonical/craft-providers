@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -38,7 +38,7 @@ class Executor(ABC):
         self,
         command: List[str],
         *,
-        cwd: Optional[pathlib.Path] = None,
+        cwd: Optional[pathlib.PurePath] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         timeout: Optional[float] = None,
         **kwargs,
@@ -50,6 +50,7 @@ class Executor(ABC):
         env parameter.
 
         :param command: Command to execute.
+        :param cwd: Working directory for the process inside the instance.
         :param env: Additional environment to set for process.
         :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Additional keyword arguments to pass.
@@ -62,7 +63,7 @@ class Executor(ABC):
         self,
         command: List[str],
         *,
-        cwd: Optional[pathlib.Path] = None,
+        cwd: Optional[pathlib.PurePath] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         timeout: Optional[float] = None,
         **kwargs,
@@ -74,6 +75,7 @@ class Executor(ABC):
         env parameter.
 
         :param command: Command to execute.
+        :param cwd: Working directory for the process inside the instance.
         :param env: Additional environment to set for process.
         :param timeout: Timeout (in seconds) for the command.
         :param kwargs: Keyword args to pass to subprocess.run().
@@ -99,7 +101,7 @@ class Executor(ABC):
 
     @contextlib.contextmanager
     def temporarily_pull_file(
-        self, *, source: pathlib.Path, missing_ok: bool = False
+        self, *, source: pathlib.PurePath, missing_ok: bool = False
     ) -> Generator[Optional[pathlib.Path], None, None]:
         """Copy a file from the environment to a temporary file in the host.
 
@@ -175,7 +177,7 @@ class Executor(ABC):
         """
 
     @abstractmethod
-    def mount(self, *, host_source: pathlib.Path, target: pathlib.Path) -> None:
+    def mount(self, *, host_source: pathlib.Path, target: pathlib.PurePath) -> None:
         """Mount host source directory to target mount point."""
 
     @abstractmethod
