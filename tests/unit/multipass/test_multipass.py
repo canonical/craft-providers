@@ -25,6 +25,9 @@ from craft_providers.errors import details_from_command_error
 from craft_providers.multipass import Multipass
 from craft_providers.multipass.errors import MultipassError
 
+# Shortcut any calls to time.sleep with pytest-time's instant_sleep
+pytestmark = pytest.mark.usefixtures("instant_sleep")
+
 EXAMPLE_INFO = """\
 {
     "errors": [
