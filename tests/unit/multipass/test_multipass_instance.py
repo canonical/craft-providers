@@ -122,7 +122,7 @@ def test_push_file_io(mock_multipass, instance):
     ]
 
     instance.push_file_io(
-        destination=pathlib.Path("/etc/test.conf"),
+        destination=pathlib.PurePosixPath("/etc/test.conf"),
         content=io.BytesIO(b"foo"),
         file_mode="0644",
     )
@@ -203,7 +203,7 @@ def test_push_file_io_error(mock_multipass, instance):
 
     with pytest.raises(MultipassError) as exc_info:
         instance.push_file_io(
-            destination=pathlib.Path("/etc/test.conf"),
+            destination=pathlib.PurePosixPath("/etc/test.conf"),
             content=io.BytesIO(b"foo"),
             file_mode="0644",
         )
@@ -241,7 +241,9 @@ def test_execute_popen(mock_multipass, instance):
 
 def test_execute_popen_with_cwd(mock_multipass, instance):
     instance.execute_popen(
-        command=["test-command", "flags"], cwd=pathlib.Path("/tmp"), input="foo"
+        command=["test-command", "flags"],
+        cwd=pathlib.PurePosixPath("/tmp"),
+        input="foo",
     )
 
     assert mock_multipass.mock_calls == [
@@ -368,7 +370,7 @@ def test_is_mounted_false(mock_multipass, instance):
     assert (
         instance.is_mounted(
             host_source=pathlib.Path(project_path),
-            target=pathlib.Path("/root/project"),
+            target=pathlib.PurePosixPath("/root/project"),
         )
         is False
     )
@@ -380,7 +382,7 @@ def test_is_mounted_true(mock_multipass, instance, project_path):
     assert (
         instance.is_mounted(
             host_source=project_path,
-            target=pathlib.Path("/root/project"),
+            target=pathlib.PurePosixPath("/root/project"),
         )
         is True
     )
@@ -438,7 +440,7 @@ def test_launch_all_opts(mock_multipass, instance):
 def test_mount(mock_multipass, project_path):
     MultipassInstance(name="flowing-hawfinch", multipass=mock_multipass).mount(
         host_source=project_path,
-        target=pathlib.Path("/root/project"),
+        target=pathlib.PurePosixPath("/root/project"),
     )
 
     assert mock_multipass.mock_calls == [
@@ -453,7 +455,7 @@ def test_mount(mock_multipass, project_path):
 def test_mount_already_mounted(mock_multipass, instance, project_path):
     instance.mount(
         host_source=project_path,
-        target=pathlib.Path("/root/project"),
+        target=pathlib.PurePosixPath("/root/project"),
     )
 
     assert mock_multipass.mock_calls == [mock.call.info(instance_name="test-instance")]
@@ -462,7 +464,7 @@ def test_mount_already_mounted(mock_multipass, instance, project_path):
 def test_pull_file(mock_multipass, instance, tmp_path):
     mock_multipass.exec.return_value = mock.Mock(returncode=0)
 
-    source = pathlib.Path("/tmp/src.txt")
+    source = pathlib.PurePosixPath("/tmp/src.txt")
     destination = tmp_path / "dst.txt"
 
     instance.pull_file(
@@ -487,7 +489,7 @@ def test_pull_file(mock_multipass, instance, tmp_path):
 def test_pull_file_no_source(mock_multipass, instance, tmp_path):
     mock_multipass.exec.return_value = mock.Mock(returncode=1)
 
-    source = pathlib.Path("/tmp/src.txt")
+    source = pathlib.PurePosixPath("/tmp/src.txt")
     destination = tmp_path / "dst.txt"
 
     with pytest.raises(FileNotFoundError) as exc_info:
@@ -511,7 +513,7 @@ def test_pull_file_no_source(mock_multipass, instance, tmp_path):
 def test_pull_file_no_parent_directory(mock_multipass, instance, tmp_path):
     mock_multipass.exec.return_value = mock.Mock(returncode=0)
 
-    source = pathlib.Path("/tmp/src.txt")
+    source = pathlib.PurePosixPath("/tmp/src.txt")
     destination = tmp_path / "not-created" / "dst.txt"
 
     with pytest.raises(FileNotFoundError) as exc_info:
@@ -547,7 +549,7 @@ def test_push_file(mock_multipass, instance, simple_file):
         None,
     ]
 
-    destination = pathlib.Path("/tmp/dst.txt")
+    destination = pathlib.PurePosixPath("/tmp/dst.txt")
 
     instance.push_file(source=simple_file, destination=destination)
 
@@ -612,7 +614,7 @@ def test_push_file_to_directory(mock_multipass, instance, simple_file):
         None,
     ]
 
-    destination = pathlib.Path("/tmp")
+    destination = pathlib.PurePosixPath("/tmp")
 
     instance.push_file(source=simple_file, destination=destination)
 
@@ -665,7 +667,9 @@ def test_push_file_to_directory(mock_multipass, instance, simple_file):
 def test_push_file_source_directory_error(mock_multipass, instance, tmp_path):
     """Raise an error if the source is a directory."""
     with pytest.raises(IsADirectoryError) as exc_info:
-        instance.push_file(source=tmp_path, destination=pathlib.Path("/tmp/dst.txt"))
+        instance.push_file(
+            source=tmp_path, destination=pathlib.PurePosixPath("/tmp/dst.txt")
+        )
 
     assert mock_multipass.mock_calls == []
     assert str(exc_info.value) == f"Source cannot be a directory: {str(tmp_path)!r}"
@@ -676,7 +680,9 @@ def test_push_file_no_source_error(mock_multipass, instance, tmp_path):
     source = tmp_path / "does-not-exist.txt"
 
     with pytest.raises(FileNotFoundError) as exc_info:
-        instance.push_file(source=source, destination=pathlib.Path("/tmp/dst.txt"))
+        instance.push_file(
+            source=source, destination=pathlib.PurePosixPath("/tmp/dst.txt")
+        )
 
     assert mock_multipass.mock_calls == []
     assert str(exc_info.value) == f"File not found: {str(source)!r}"
@@ -689,7 +695,7 @@ def test_push_file_no_parent_directory_error(mock_multipass, instance, simple_fi
     with pytest.raises(FileNotFoundError) as exc_info:
         instance.push_file(
             source=simple_file,
-            destination=pathlib.Path("/tmp/dst.txt"),
+            destination=pathlib.PurePosixPath("/tmp/dst.txt"),
         )
 
     assert mock_multipass.mock_calls == [
@@ -717,7 +723,7 @@ def test_push_file_mktemp_error(mock_multipass, instance, simple_file):
 
     with pytest.raises(MultipassError) as exc_info:
         instance.push_file(
-            source=simple_file, destination=pathlib.Path("/etc/test.conf")
+            source=simple_file, destination=pathlib.PurePosixPath("/etc/test.conf")
         )
 
     assert exc_info.value == MultipassError(
@@ -744,7 +750,7 @@ def test_push_file_chmod_error(mock_multipass, instance, simple_file):
 
     with pytest.raises(MultipassError) as exc_info:
         instance.push_file(
-            source=simple_file, destination=pathlib.Path("/etc/test.conf")
+            source=simple_file, destination=pathlib.PurePosixPath("/etc/test.conf")
         )
 
     assert exc_info.value == MultipassError(
@@ -774,7 +780,7 @@ def test_push_file_mv_error(mock_multipass, instance, simple_file):
 
     with pytest.raises(MultipassError) as exc_info:
         instance.push_file(
-            source=simple_file, destination=pathlib.Path("/etc/test.conf")
+            source=simple_file, destination=pathlib.PurePosixPath("/etc/test.conf")
         )
 
     assert exc_info.value == MultipassError(
@@ -809,7 +815,7 @@ def test_stop_all_opts(mock_multipass, instance):
 
 
 def test_unmount(mock_multipass, instance):
-    instance.unmount(target=pathlib.Path("/mnt"))
+    instance.unmount(target=pathlib.PurePosixPath("/mnt"))
 
     assert mock_multipass.mock_calls == [mock.call.umount(mount="test-instance:/mnt")]
 

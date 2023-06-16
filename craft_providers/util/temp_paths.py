@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -34,7 +34,7 @@ def home_temporary_directory() -> Iterator[pathlib.Path]:
 
 @contextlib.contextmanager
 def home_temporary_file() -> Iterator[pathlib.Path]:
-    """Create a temporary directory in the home directory where Multipass has access."""
+    """Create a temporary file in the home directory where Multipass has access."""
     with home_temporary_directory() as tmp_dir:
         with tempfile.NamedTemporaryFile(dir=tmp_dir) as tmp_file:
             yield pathlib.Path(tmp_file.name)

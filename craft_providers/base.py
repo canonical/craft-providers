@@ -84,7 +84,7 @@ class Base(ABC):
 
     _environment: Dict[str, Optional[str]]
     _hostname: str
-    _instance_config_path: pathlib.Path = pathlib.Path("/etc/craft-instance.conf")
+    _instance_config_path = pathlib.PurePosixPath("/etc/craft-instance.conf")
     _instance_config_class: Type[InstanceConfiguration] = InstanceConfiguration
     _snaps: Optional[List[Snap]] = None
     _packages: Optional[List[str]] = None
@@ -299,7 +299,7 @@ class Base(ABC):
         ).encode()
 
         executor.push_file_io(
-            destination=pathlib.Path("/etc/environment"),
+            destination=pathlib.PurePosixPath("/etc/environment"),
             content=io.BytesIO(content),
             file_mode="0644",
         )
@@ -335,7 +335,7 @@ class Base(ABC):
     def _setup_hostname(self, executor: Executor) -> None:
         """Configure hostname, installing /etc/hostname."""
         executor.push_file_io(
-            destination=pathlib.Path("/etc/hostname"),
+            destination=pathlib.PurePosixPath("/etc/hostname"),
             content=io.BytesIO((self._hostname + "\n").encode()),
             file_mode="0644",
         )
@@ -358,7 +358,7 @@ class Base(ABC):
         Installs eth0 network configuration using ipv4.
         """
         executor.push_file_io(
-            destination=pathlib.Path("/etc/systemd/network/10-eth0.network"),
+            destination=pathlib.PurePosixPath("/etc/systemd/network/10-eth0.network"),
             content=io.BytesIO(
                 dedent(
                     """\

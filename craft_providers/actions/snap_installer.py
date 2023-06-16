@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2022 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -279,7 +279,7 @@ def _add_assertions_from_host(executor: Executor, snap_name: str) -> None:
     :param snap_name: Name of snap to inject
     """
     # trim the `_name` suffix, if present
-    target_assert_path = pathlib.Path(f"/tmp/{snap_name.split('_')[0]}.assert")
+    target_assert_path = pathlib.PurePosixPath(f"/tmp/{snap_name.split('_')[0]}.assert")
     snap_info = get_host_snap_info(snap_name)
 
     try:
@@ -354,7 +354,7 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
         )
         return
 
-    target_snap_path = pathlib.Path(f"/tmp/{snap_store_name}.snap")
+    target_snap_path = pathlib.PurePosixPath(f"/tmp/{snap_store_name}.snap")
     is_dangerous = host_revision.startswith("x")
 
     if not is_dangerous:

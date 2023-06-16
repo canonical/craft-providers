@@ -123,7 +123,7 @@ def test_push_file_io(
     ]
 
     instance.push_file_io(
-        destination=pathlib.Path("/etc/test.conf"),
+        destination=pathlib.PurePosixPath("/etc/test.conf"),
         content=io.BytesIO(b"foo"),
         file_mode="0644",
     )
@@ -132,7 +132,7 @@ def test_push_file_io(
         mock.call.file_push(
             instance_name=instance.instance_name,
             source=pathlib.Path("test-tmp-file"),
-            destination=pathlib.Path("/etc/test.conf"),
+            destination=pathlib.PurePosixPath("/etc/test.conf"),
             mode="0644",
             project=instance.project,
             remote=instance.remote,
@@ -173,7 +173,7 @@ def test_push_file_io_error(mock_lxc, instance):
 
     with pytest.raises(LXDError) as exc_info:
         instance.push_file_io(
-            destination=pathlib.Path("/etc/test.conf"),
+            destination=pathlib.PurePosixPath("/etc/test.conf"),
             content=io.BytesIO(b"foo"),
             file_mode="0644",
         )
@@ -219,7 +219,9 @@ def test_execute_popen(mock_lxc, instance):
 
 def test_execute_popen_with_cwd(mock_lxc, instance):
     instance.execute_popen(
-        command=["test-command", "flags"], cwd=pathlib.Path("/tmp"), input="foo"
+        command=["test-command", "flags"],
+        cwd=pathlib.PurePosixPath("/tmp"),
+        input="foo",
     )
 
     assert mock_lxc.mock_calls == [
@@ -271,7 +273,9 @@ def test_execute_run(mock_lxc, instance):
 
 def test_execute_run_with_cwd(mock_lxc, instance):
     instance.execute_run(
-        command=["test-command", "flags"], cwd=pathlib.Path("/tmp"), input="foo"
+        command=["test-command", "flags"],
+        cwd=pathlib.PurePosixPath("/tmp"),
+        input="foo",
     )
 
     assert mock_lxc.mock_calls == [
@@ -437,7 +441,7 @@ def test_is_mounted_false(mock_lxc, instance):
     assert (
         instance.is_mounted(
             host_source=pathlib.Path(project_path),
-            target=pathlib.Path("/root/project"),
+            target=pathlib.PurePosixPath("/root/project"),
         )
         is False
     )
@@ -455,7 +459,7 @@ def test_is_mounted_true(mock_lxc, instance, project_path):
     assert (
         instance.is_mounted(
             host_source=project_path,
-            target=pathlib.Path("/root/project"),
+            target=pathlib.PurePosixPath("/root/project"),
         )
         is True
     )
@@ -570,7 +574,7 @@ def test_launch_with_mknod(mock_lxc, instance):
 
 def test_mount(mock_lxc, tmp_path, instance):
     """Verify calls to mount a directory."""
-    instance.mount(host_source=tmp_path, target=pathlib.Path("/mnt/foo"))
+    instance.mount(host_source=tmp_path, target=pathlib.PurePosixPath("/mnt/foo"))
 
     assert mock_lxc.mock_calls == [
         mock.call.config_device_show(
@@ -581,7 +585,7 @@ def test_mount(mock_lxc, tmp_path, instance):
         mock.call.config_device_add_disk(
             instance_name=instance.instance_name,
             source=tmp_path,
-            path=pathlib.Path("/mnt/foo"),
+            path=pathlib.PurePosixPath("/mnt/foo"),
             device="disk-/mnt/foo",
             project=instance.project,
             remote=instance.remote,
@@ -591,7 +595,9 @@ def test_mount(mock_lxc, tmp_path, instance):
 
 def test_mount_already_mounted(mock_lxc, instance, project_path):
     """Do not mount if directory is already mounted."""
-    instance.mount(host_source=project_path, target=pathlib.Path("/root/project"))
+    instance.mount(
+        host_source=project_path, target=pathlib.PurePosixPath("/root/project")
+    )
 
     assert mock_lxc.mock_calls == [
         mock.call.config_device_show(
@@ -605,7 +611,7 @@ def test_mount_already_mounted(mock_lxc, instance, project_path):
 def test_pull_file(mock_lxc, instance, tmp_path):
     mock_lxc.exec.return_value = mock.Mock(returncode=0)
 
-    source = pathlib.Path("/tmp/src.txt")
+    source = pathlib.PurePosixPath("/tmp/src.txt")
     destination = tmp_path / "dst.txt"
 
     instance.pull_file(
@@ -637,7 +643,7 @@ def test_pull_file(mock_lxc, instance, tmp_path):
 def test_pull_file_no_source(mock_lxc, instance, tmp_path):
     mock_lxc.exec.return_value = mock.Mock(returncode=1)
 
-    source = pathlib.Path("/tmp/src.txt")
+    source = pathlib.PurePosixPath("/tmp/src.txt")
     destination = tmp_path / "dst.txt"
 
     with pytest.raises(FileNotFoundError) as exc_info:
@@ -664,7 +670,7 @@ def test_pull_file_no_source(mock_lxc, instance, tmp_path):
 def test_pull_file_no_parent_directory(mock_lxc, instance, tmp_path):
     mock_lxc.exec.return_value = mock.Mock(returncode=0)
 
-    source = pathlib.Path("/tmp/src.txt")
+    source = pathlib.PurePosixPath("/tmp/src.txt")
     destination = tmp_path / "not-created" / "dst.txt"
 
     with pytest.raises(FileNotFoundError) as exc_info:
@@ -693,7 +699,7 @@ def test_push_file(mock_lxc, instance, tmp_path):
 
     source = tmp_path / "src.txt"
     source.write_text("this is a test")
-    destination = pathlib.Path("/tmp/dst.txt")
+    destination = pathlib.PurePosixPath("/tmp/dst.txt")
 
     instance.push_file(
         source=source,
@@ -725,7 +731,7 @@ def test_push_file(mock_lxc, instance, tmp_path):
 
 def test_push_file_no_source(mock_lxc, instance, tmp_path):
     source = tmp_path / "src.txt"
-    destination = pathlib.Path("/tmp/dst.txt")
+    destination = pathlib.PurePosixPath("/tmp/dst.txt")
 
     with pytest.raises(FileNotFoundError) as exc_info:
         instance.push_file(
@@ -742,7 +748,7 @@ def test_push_file_no_parent_directory(mock_lxc, instance, tmp_path):
 
     source = tmp_path / "src.txt"
     source.write_text("this is a test")
-    destination = pathlib.Path("/tmp/dst.txt")
+    destination = pathlib.PurePosixPath("/tmp/dst.txt")
 
     with pytest.raises(FileNotFoundError) as exc_info:
         instance.push_file(
@@ -800,7 +806,7 @@ def test_supports_mount(instance):
 
 
 def test_unmount(mock_lxc, instance):
-    instance.unmount(target=pathlib.Path("/root/project"))
+    instance.unmount(target=pathlib.PurePosixPath("/root/project"))
 
     assert mock_lxc.mock_calls == [
         mock.call.config_device_show(
@@ -851,7 +857,7 @@ def test_unmount_error(mock_lxc, instance):
     }
 
     with pytest.raises(LXDError) as exc_info:
-        instance.unmount(target=pathlib.Path("not-mounted"))
+        instance.unmount(target=pathlib.PurePosixPath("not-mounted"))
 
     assert exc_info.value == LXDError(
         brief=(

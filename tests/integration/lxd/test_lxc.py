@@ -156,7 +156,7 @@ def test_file_push(instance, lxc, project, tmp_path):
         instance_name=instance,
         project=project,
         source=test_file,
-        destination=pathlib.Path("/tmp/foo"),
+        destination=pathlib.PurePosixPath("/tmp/foo"),
     )
 
     proc = lxc.exec(
@@ -180,13 +180,13 @@ def test_file_pull(instance, lxc, project, tmp_path):
         instance_name=instance,
         project=project,
         source=test_file,
-        destination=pathlib.Path("/tmp/foo"),
+        destination=pathlib.PurePosixPath("/tmp/foo"),
     )
 
     lxc.file_pull(
         instance_name=instance,
         project=project,
-        source=pathlib.Path("/tmp/foo"),
+        source=pathlib.PurePosixPath("/tmp/foo"),
         destination=out_path,
     )
 
@@ -194,7 +194,7 @@ def test_file_pull(instance, lxc, project, tmp_path):
 
 
 def test_disk_add_remove(instance, lxc, tmp_path, project):
-    mount_target = pathlib.Path("/mnt")
+    mount_target = pathlib.PurePosixPath("/mnt")
 
     # Make sure permissions allow read from inside guest without mappings.
     tmp_path.chmod(0o755)
