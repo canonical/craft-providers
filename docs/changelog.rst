@@ -16,17 +16,18 @@ Changelog
 - Add AlmaLinux 9 base
 - Add stricter typing for base names
 - Refactor CI workflow
-- Refactor Multipass `push_file_io`
+- Refactor Multipass ``push_file_io``
 - Pin dependency urllib3<2
 
 1.11.0 (2023-04-19)
 -------------------
-- Move Snap pydantic model from `bases.buildd` to `actions.snap_installer`
-- Rename `bases.buildd` module to `bases.ubuntu`
-- Determine base alias from base configuration in `provider.launched_environment()`
-- Add new functions `get_base_alias()` and `get_base_from_alias()`
+- Move Snap pydantic model from ``bases.buildd`` to ``actions.snap_installer``
+- Rename ``bases.buildd`` module to ``bases.ubuntu``
+- Determine base alias from base configuration in
+  ``provider.launched_environment()``
+- Add new functions ``get_base_alias()`` and ``get_base_from_alias()``
 - Add CentOS 7 base
-- Add default for `launched_environment()` parameter `allow_unstable=False`
+- Add default for ``launched_environment()`` parameter ``allow_unstable=False``
 - Trim suffixes from snap names when installing snaps.
 
 1.10.0 (2023-03-31)
@@ -39,41 +40,44 @@ Changelog
 ------------------
 - Set cloud.cfg to not reset apt's source list for buildd bases
 - Store LXD instance's full name in the config's description
-- Add `allow_unstable` parameter to `Provider.launched_environment()`
+- Add ``allow_unstable`` parameter to ``Provider.launched_environment()``
 
 1.8.1 (2023-03-10)
 ------------------
-- Add new base alias `BuilddBaseAlias.DEVEL`
+- Add new base alias ``BuilddBaseAlias.DEVEL``
 - Expire unstable base instances every 14 days
 - Refactor tests such that all base aliases are tested by default
 
 1.8.0 (2023-03-01)
 ------------------
-- Track if instances are properly setup when launching. If the instance did not fully
-  complete setup and auto-clean is enabled, the instance will be cleaned and recreated.
-- Add new field `setup` to instance configuration to track set up status
-- Update base compatibility tag from `base-v0` to `base-v1`
+- Track if instances are properly setup when launching. If the instance did not
+  fully complete setup and auto-clean is enabled, the instance will be cleaned
+  and recreated.
+- Add new field ``setup`` to instance configuration to track set up status
+- Update base compatibility tag from ``base-v0`` to ``base-v1``
 - Add new BuilddBaseAliases for Lunar and Kinetic
 - Add support for interim Ubuntu releases for LXD
 - Add support for custom LXD image remotes. LXD remotes can now add any
-  remote server to retrieve images from using the `RemoteImage` class.
-- Add deprecation warning for LXD function `configure_buildd_image_remote()`.
-  Usage of this function should be replaced with RemoteImage's `add_remote()`.
-- Rename BuilddBase function `setup_instance_config()` to `update_compatibility_tag()`
+  remote server to retrieve images from using the ``RemoteImage`` class.
+- Add deprecation warning for LXD function ``configure_buildd_image_remote()``.
+  Usage of this function should be replaced with RemoteImage's ``add_remote()``.
+- Rename BuilddBase function ``setup_instance_config()`` to
+  ``update_compatibility_tag()``
 - Update brew for macos CI tests
 - Update readthedocs link in readme
 - Capture subproccess error details when snap removal fails
-- Add default for `_run_lxc()` parameter `check=True`
+- Add default for ``_run_lxc()`` parameter ``check=True``
 - Refactor lxd unit and integration tests
 - Enable more pylint checks
-- Use new `use_base_instance` parameter when launching LXD instances from LXDProvider
+- Use new ``use_base_instance`` parameter when launching LXD instances from
+  LXDProvider
 
 1.7.2 (2023-02-06)
 ------------------
 - Check LXD id map before starting an existing instance.
   If the id map does not match, the instance will be auto cleaned
   or an error will be raised.
-- Add `lxc.config_get()` method to retrieve config values
+- Add ``lxc.config_get()`` method to retrieve config values
 
 1.7.1 (2023-01-23)
 ------------------
@@ -84,15 +88,15 @@ Changelog
 ------------------
 - LXD instances launch from a cached base instance rather than a base image.
   This reduces disk usage and launch time.
-- For the LXD launch function `launched_environment`, the parameter `use_snapshots`
-  has been replaced by `use_base_instance`. `use_snapshots` still works but logs
-  a deprecation notice.
+- For the LXD launch function ``launched_environment``, the parameter
+  ``use_snapshots`` has been replaced by ``use_base_instance``.
+  ``use_snapshots`` still works but logs a deprecation notice.
 - Expire and recreate base instances older than 3 months (90 days)
-- Add `lxc.copy()` method to copy instances
+- Add ``lxc.copy()`` method to copy instances
 - Check for network connectivity after network-related commands fail
 - Add documentation for network connectivity issues inside instances
 - Enable testing for Ubuntu 22.04 images
-- Update `MultipassInstance.push_file_io()` to work regardless of the
+- Update ``MultipassInstance.push_file_io()`` to work regardless of the
   host's working directory
 
 1.6.2 (2022-12-08)
@@ -111,10 +115,11 @@ Changelog
 
 Note: The new Provider classes are used to encapsulate LXD and Multipass,
       from installing the provider to creating and managing instances. The code
-      was leveraged from the craft applications (snapcraft, charmcraft, rockcraft,
-      lpcraft), which implemented similar variations of these Provider classes.
-      These classes are not stable and are likely to change. They will be stable and
-      recommended for use in the release of craft-providers 2.0.
+      was leveraged from the craft applications (snapcraft, charmcraft,
+      rockcraft, lpcraft), which implemented similar variations of these
+      Provider classes. These classes are not stable and are likely to change.
+      They will be stable and recommended for use in the release of
+      craft-providers 2.0.
 
 1.5.1 (2022-09-29)
 ------------------
@@ -124,7 +129,9 @@ Note: The new Provider classes are used to encapsulate LXD and Multipass,
 1.5.0 (2022-09-23)
 ------------------
 - Add mount method to Executor base class
-- LXDInstance's mount method signature has changed - The optional parameter `device_name` has been deprecated. It now matches MultipassInstance's signature of `mount(host_source, target)`
+- LXDInstance's mount method signature has changed - The optional parameter
+  ``device_name`` has been deprecated. It now matches MultipassInstance's
+  signature of ``mount(host_source, target)``
 - Signed snaps injected into a provider are asserted
 - Existing .snap files are not removed before overwriting with a new .snap file
 
