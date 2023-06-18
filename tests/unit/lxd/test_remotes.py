@@ -225,7 +225,7 @@ def test_configure_buildd_image_remote(
 
     assert str(warning[0].message) == (
         "configure_buildd_image_remote() is deprecated. "
-        "Use configure_image_remote()."
+        "Use get_remote_image() and RemoteImage.add_remote()."
     )
     mock_get_remote_image.assert_called_once()
     mock_remote_image.add_remote.assert_called_once_with(mock_lxc)
