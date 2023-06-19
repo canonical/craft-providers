@@ -43,8 +43,8 @@ jobs:
   unit-tests:
     strategy:
       matrix:
-        platform: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.platform }}
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -135,13 +135,14 @@ jobs:
     strategy:
       matrix:
         python: [
-          {system-version: "3.8", tox-version: "py38"},
-          {system-version: "3.10", tox-version: "py310"},
           {system-version: "3.11", tox-version: "py311"},
-          {system-version: "3.12-dev", tox-version: "py312"},
         ]
     runs-on: macos-latest
     steps:
+      - name: Install Multipass
+        run: |
+          brew update
+          brew install multipass
       - name: Checkout code
         uses: actions/checkout@v3
         with:
@@ -156,15 +157,11 @@ jobs:
           echo "::group::pip install"
           python -m pip install 'tox>=4.6'
           echo "::endgroup::"
-          echo "::group::Install Multipass"
-          brew update
-          brew install multipass
-          # wait 20 seconds for multipassd to start (see https://github.com/canonical/multipass/issues/1995)
-          sleep 20
-          # this can be removed when multipass 1.12 is available on brew, because qemu will be the new default
-          multipass set local.driver=qemu
-          sleep 20
-          multipass version
+          echo "::group::Configure Multipass"
+          while ! multipass version
+          do
+            sleep 1
+          done
           echo "::endgroup::"
       - name: Setup Tox environments
         run: tox run -e integration-${{ matrix.python.tox-version }} --notest
