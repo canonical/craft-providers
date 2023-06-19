@@ -60,7 +60,6 @@ def launch(
         instance.start()
         try:
             base_configuration.warmup(executor=instance)
-            return instance
         except bases.BaseCompatibilityError as error:
             if auto_clean:
                 logger.debug(
@@ -71,6 +70,8 @@ def launch(
                 instance.delete()
             else:
                 raise
+        else:
+            return instance
 
     instance.launch(
         cpus=cpus,

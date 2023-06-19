@@ -206,6 +206,7 @@ def configure_buildd_image_remote(lxc: LXC = LXC()) -> str:
 
     This is a deprecated function to maintain the existing API. It will be
     removed with the release of craft-providers 2.0.
+    Applications should call `get_remote_image()` and `RemoteImage.add_remote()`.
 
     :param lxc: LXC client.
 
@@ -214,7 +215,7 @@ def configure_buildd_image_remote(lxc: LXC = LXC()) -> str:
     warnings.warn(
         message=(
             "configure_buildd_image_remote() is deprecated. "
-            "Use configure_image_remote()."
+            "Use get_remote_image() and RemoteImage.add_remote()."
         ),
         category=DeprecationWarning,
     )
