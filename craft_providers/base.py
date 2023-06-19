@@ -1018,7 +1018,7 @@ class Base(ABC):
         # (because we're hitting port 443), as bash's TCP functionality will not
         # use it (supporting both lowercase and uppercase names, which is what
         # most applications do)
-        if os.getenv("HTTPS_PROXY") or os.getenv("https_proxy"):
+        if os.getenv("HTTPS_PROXY") or os.getenv("https_proxy"):  # noqa: SIM112
             return True
 
         # check if the port is open using bash's built-in tcp-client, communicating with
