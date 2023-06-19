@@ -228,6 +228,8 @@ ignore = [
     "D213",  # Multi-line docstring summary should start at the second line (reason: pep257 default)
     "D215",  # Section underline is over-indented (reason: pep257 default)
     "A003",  # Class attribute shadowing built-in (reason: Class attributes don't often get bare references)
+    "SIM117", # Use a single `with` statement with multiple contexts instead of nested `with` statements
+              # (reason: this creates long lines that get wrapped and reduces readability)
 
     # Ignored due to common usage in current code
     "TRY003",  # Avoid specifying long messages outside the exception class
@@ -263,11 +265,7 @@ ignore = [
     "S311", # Standard pseudo-random generators are not suitable for cryptographic purposes
     "S324", # Probable use of insecure hash functions in `hashlib`
     "S506", # Probable use of unsafe loader `BaseLoader` with `yaml.load`. Allows instantiation of arbitrary "object"s. Consider `yaml.safe_load`.
-    "SIM108", # Use ternary operator instead of `if`-`else`-block
-    "SIM112", # Use capitalized environment variable `HTTPS_PROXY` instead of `https_proxy`
-    "SIM117", # Use a single `with` statement with multiple contexts instead of nested `with` statements
     "TRY002", # Create your own exception
-    "TRY300", # Consider moving this statement to an `else` block
 ]
 
 [tool.ruff.per-file-ignores]
