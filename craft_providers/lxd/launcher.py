@@ -286,7 +286,6 @@ def _launch_existing_instance(
 
     try:
         base_configuration.warmup(executor=instance)
-        return True
     except bases.BaseCompatibilityError as error:
         # delete the instance so a new instance can be created
         if auto_clean:
@@ -298,6 +297,8 @@ def _launch_existing_instance(
             instance.delete()
             return False
         raise
+
+    return True
 
 
 def _check_id_map(
