@@ -23,14 +23,6 @@ import pytest
 from craft_providers import multipass
 
 
-@pytest.fixture(autouse=True)
-def mock_time_sleep():
-    with mock.patch(
-        "time.sleep",
-    ) as mock_sleep:
-        yield mock_sleep
-
-
 @pytest.fixture()
 def mock_details_from_process_error():
     details = "<details>"
