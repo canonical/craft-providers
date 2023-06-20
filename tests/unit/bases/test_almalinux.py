@@ -993,7 +993,6 @@ def test_wait_for_system_ready(
     ]
 
 
-@patch("time.time", side_effect=[0.0, 0.0, 1.0])
 @pytest.mark.parametrize("alias", list(almalinux.AlmaLinuxBaseAlias))
 def test_wait_for_system_ready_timeout(fake_executor, fake_process, alias):
     base_config = almalinux.AlmaLinuxBase(
@@ -1015,7 +1014,6 @@ def test_wait_for_system_ready_timeout(fake_executor, fake_process, alias):
     )
 
 
-@patch("time.time", side_effect=[0.0, 0.0, 1.0])
 @pytest.mark.parametrize("alias", list(almalinux.AlmaLinuxBaseAlias))
 def test_wait_for_system_ready_timeout_in_network(
     fake_executor, fake_process, alias, monkeypatch
