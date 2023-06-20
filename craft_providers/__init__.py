@@ -33,6 +33,7 @@ except ImportError:  # pragma: no cover
         __version__ = "dev"
 
 __all__ = [
+    "__version__",
     "Base",
     "Executor",
     "ProviderError",
