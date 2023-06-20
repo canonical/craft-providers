@@ -8,3 +8,9 @@ Reference
 
    bases
    executors
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
