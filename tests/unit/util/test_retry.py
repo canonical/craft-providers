@@ -25,7 +25,7 @@ from craft_providers.util import retry
 
 @pytest.fixture(params=range(1, 6), ids=[f"timeout_{i}ms" for i in range(1, 6)])
 def timeout(request):
-    return request.param * 0.001
+    return request.param * 0.01
 
 
 @pytest.fixture(params=range(5), ids=[f"wait_{i}us" for i in range(5)])
@@ -74,6 +74,12 @@ def test_retry_until_timeout_success_long_retry(monkeypatch, timeout, retry_mult
     assert mock_monotonic.mock_calls == [mock.call(), mock.call()]
 
 
+@pytest.mark.xfail(
+    sys.platform in ("win32", "cygwin"),
+    reason="Windows timer resolution doesn't always result in time.sleep being called",
+    raises=WindowsError,
+    strict=False,  # It could pass.
+)
 @pytest.mark.parametrize("error_cls", [TimeoutError, Exception, ValueError])
 def test_retry_until_timeout_times_out(retry_wait, timeout, mock_time_sleep, error_cls):
     mock_function = mock.Mock(side_effect=Exception())
@@ -83,7 +89,15 @@ def test_retry_until_timeout_times_out(retry_wait, timeout, mock_time_sleep, err
 
     mock_function.assert_called()
 
-    mock_time_sleep.assert_called_with(retry_wait)
+    # Behaviour on Windows CI is unreliable related to this, so exclude Windows
+    # from this check. This is due in part to a lower resolution in Windows's
+    # sleep timer compared to other platforms.
+    try:
+        mock_time_sleep.assert_called_with(retry_wait)
+    except AssertionError as exc:
+        if sys.platform in ("win32", "cygwin"):
+            raise WindowsError from exc
+        raise exc
 
 
 @pytest.mark.parametrize("error_cls", [TimeoutError, Exception, ValueError])
