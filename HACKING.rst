@@ -103,6 +103,9 @@ into a runner using action-tmate_. To get ssh access:
 #. Press ``Run workflow`` and select ``Enable ssh access`` in the dropdown
 #. Open the workflow's logs and use the ssh address provided by ``action-tmate``
 
+`SSH access is limited`_ to the GitHub user who started the test suite, so you
+need to add your public `SSH key on GitHub`_.
+
 Contributing code
 #################
 
@@ -129,4 +132,6 @@ Please follow these guidelines when committing code for this project:
 .. _pytest: https://pytest.org
 .. _ruff: https://github.com/charliermarsh/ruff
 .. _ShellCheck: https://www.shellcheck.net/
+.. _`SSH access is limited`: https://github.com/marketplace/actions/debugging-with-tmate#use-registered-public-ssh-keys
+.. _`SSH key on GitHub`: https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account
 .. _tox: https://tox.wiki

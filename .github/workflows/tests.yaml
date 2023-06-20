@@ -49,6 +49,8 @@ jobs:
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
+        with:
+          limit-access-to-actor: true
       - name: Run Linters
         run: tox run --skip-pkg-install --no-list-dependencies -m lint
   unit-tests:
@@ -81,6 +83,8 @@ jobs:
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
+        with:
+          limit-access-to-actor: true
       - name: Test with tox
         # use `tox` instead of `.tox/.tox/bin/tox` to support Windows
         run: tox run --skip-pkg-install --no-list-dependencies --result-json results/tox-${{ matrix.platform }}.json -m unit-tests
@@ -139,6 +143,8 @@ jobs:
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
+        with:
+          limit-access-to-actor: true
       - name: Run integration tests on Linux
         env:
           CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL: 1
@@ -185,6 +191,8 @@ jobs:
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
+        with:
+          limit-access-to-actor: true
       - name: Run integration tests on MacOS
         env:
           CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL: 1
