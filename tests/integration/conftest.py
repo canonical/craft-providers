@@ -35,6 +35,13 @@ from craft_providers.actions.snap_installer import get_host_snap_info
 from craft_providers.bases import ubuntu
 
 
+def pytest_runtest_setup(item: pytest.Item):
+    with_sudo = item.get_closest_marker("with_sudo")
+    if with_sudo:
+        if not os.getenv("CI") and not os.getenv("CRAFT_PROVIDERS_TESTS_ENABLE_SUDO"):
+            pytest.skip("Not running in CI and CRAFT_PROVIDERS_TESTS_ENABLE_SUDO not set.")
+
+
 def generate_instance_name():
     """Generate a random instance name."""
     return "itest-" + "".join(random.choices(string.ascii_uppercase, k=8))

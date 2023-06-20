@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Canonical Ltd.
+# Copyright 2021-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -25,9 +25,15 @@ def lxd():
     return LXD()
 
 
-def test_init(lxd):
-    lxd.init(auto=True)
-    lxd.init(sudo=True, auto=True)
+@pytest.mark.parametrize(
+    "sudo",
+    [
+        pytest.param(False, id="no-sudo"),
+        pytest.param(True, marks=pytest.mark.with_sudo, id="with-sudo"),
+    ]
+)
+def test_init(lxd, sudo):
+    lxd.init(auto=True, sudo=sudo)
 
 
 def test_version(lxd):
@@ -40,9 +46,15 @@ def test_version(lxd):
     assert len(components) in [2, 3]
 
 
-def test_wait_ready(lxd):
-    lxd.wait_ready()
-    lxd.wait_ready(sudo=True)
+@pytest.mark.parametrize(
+    "sudo",
+    [
+        pytest.param(False, id="no-sudo"),
+        pytest.param(True, marks=pytest.mark.with_sudo, id="with-sudo"),
+    ]
+)
+def test_wait_ready(lxd, sudo):
+    lxd.wait_ready(sudo=sudo)
 
 
 def test_is_supported_version(lxd):
