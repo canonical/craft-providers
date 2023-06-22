@@ -231,25 +231,39 @@ class Base(ABC):
 
         :returns: Dictionary of key-mappings found in os-release.
         """
-        try:
-            # Replace encoding errors if it somehow occurs with utf-8. This
-            # doesn't need to be perfect for checking compatibility.
-            proc = executor.execute_run(
-                command=["cat", "/etc/os-release"],
-                capture_output=True,
-                check=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=self._timeout_simple,
-            )
-        except subprocess.CalledProcessError as error:
-            raise BaseConfigurationError(
-                brief="Failed to read /etc/os-release.",
-                details=details_from_called_process_error(error),
-            ) from error
 
-        return parse_os_release(proc.stdout)
+        # `lxc exec` will occasionally print an empty string when the CPU is
+        # busy. The retry logic here decreases the chance of that.
+        def getter(timeout: float) -> str:
+            try:
+                # Replace encoding errors if it somehow occurs with utf-8. This
+                # doesn't need to be perfect for checking compatibility.
+                proc = executor.execute_run(
+                    command=["cat", "/etc/os-release"],
+                    capture_output=True,
+                    check=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=timeout,
+                )
+            except subprocess.CalledProcessError as error:
+                raise BaseConfigurationError(
+                    brief="Failed to read /etc/os-release.",
+                    details=details_from_called_process_error(error),
+                ) from error
+            if not proc.stdout:
+                raise BaseConfigurationError(
+                    brief="Failed to read /etc/os-release.",
+                    details="File appears to be empty.",
+                )
+            return proc.stdout
+
+        return parse_os_release(
+            retry.retry_until_timeout(
+                self._timeout_simple or TIMEOUT_SIMPLE, self._retry_wait, getter
+            )
+        )
 
     @abstractmethod
     def _ensure_os_compatible(self, executor: Executor) -> None:

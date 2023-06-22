@@ -29,6 +29,9 @@ WAIT_FOR_SYSTEM_READY_CMD = ["systemctl", "is-system-running"]
 WAIT_FOR_NETWORK_CMD = ["getent", "hosts", "snapcraft.io"]
 
 
+DEFAULT_FAKE_CMD = ["fake-executor"]
+
+
 class FakeBase(base.Base):
     FakeBaseAlias = enum.Enum("FakeBaseAlias", ["TREBLE"])
     _environment = {}
@@ -135,3 +138,78 @@ def test_wait_for_network_timeout(fake_base, fake_executor, fake_process, callba
 
     with pytest.raises(BaseConfigurationError):
         fake_base._setup_wait_for_system_ready(fake_executor)
+
+
+@pytest.mark.parametrize(
+    ("process_outputs", "expected"),
+    [
+        (
+            [
+                'NAME="AlmaLinux"\nVERSION="9.1 (Lime Lynx)"\nID="almalinux"\nID_LIKE="rhel centos fedora"\nVERSION_ID="9.1"\n'
+            ],
+            {
+                "NAME": "AlmaLinux",
+                "ID": "almalinux",
+                "VERSION": "9.1 (Lime Lynx)",
+                "VERSION_ID": "9.1",
+                "ID_LIKE": "rhel centos fedora",
+            },
+        ),
+        (
+            [
+                "",
+                'NAME="AlmaLinux"\nVERSION="9.1 (Lime Lynx)"\nID="almalinux"\nID_LIKE="rhel centos fedora"\nVERSION_ID="9.1"\n',
+            ],
+            {
+                "NAME": "AlmaLinux",
+                "ID": "almalinux",
+                "VERSION": "9.1 (Lime Lynx)",
+                "VERSION_ID": "9.1",
+                "ID_LIKE": "rhel centos fedora",
+            },
+        ),
+        (
+            [
+                'NAME="CentOS Linux"\nVERSION="7 (Core)"\nID="centos"\nID_LIKE="rhel fedora"\nVERSION_ID="7"\n'
+            ],
+            {
+                "NAME": "CentOS Linux",
+                "ID": "centos",
+                "VERSION": "7 (Core)",
+                "VERSION_ID": "7",
+                "ID_LIKE": "rhel fedora",
+            },
+        ),
+        (
+            [
+                "",
+                'NAME="CentOS Linux"\nVERSION="7 (Core)"\nID="centos"\nID_LIKE="rhel fedora"\nVERSION_ID="7"\n',
+            ],
+            {
+                "NAME": "CentOS Linux",
+                "ID": "centos",
+                "VERSION": "7 (Core)",
+                "VERSION_ID": "7",
+                "ID_LIKE": "rhel fedora",
+            },
+        ),
+        (
+            ["NAME=Ubuntu\nVERSION_ID=22.04\n"],
+            {"NAME": "Ubuntu", "VERSION_ID": "22.04"},
+        ),
+    ],
+)
+@pytest.mark.usefixtures("instant_sleep")
+def test_get_os_release(
+    fake_process, fake_executor, fake_base, process_outputs, expected
+):
+    """`_get_os_release` should parse data from `/etc/os-release` to a dict."""
+    for output in process_outputs:
+        fake_process.register_subprocess(
+            [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+            stdout=output,
+        )
+
+    result = fake_base._get_os_release(executor=fake_executor)
+
+    assert result == expected
