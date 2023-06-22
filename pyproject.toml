@@ -136,7 +136,7 @@ skip_empty = true
 fail_under = 95
 
 [tool.pyright]
-# strict type-checking with pyright is disabled (see #287)
+# typing in craft-providers is incomplete (see #326)
 # strict = ["craft_providers"]
 pythonVersion = "3.8"
 pythonPlatform = "Linux"
@@ -153,7 +153,7 @@ warn_redundant_casts = true
 strict_equality = true
 strict_concatenate = true
 disallow_subclassing_any = true
-# Ignored while syncing craft-providers with starbase (see https://github.com/canonical/craft-providers/issues/287)
+# typing in craft-providers is incomplete (see #326)
 #warn_return_any = true
 #disallow_untyped_decorators = true
 #disallow_any_generics = true
@@ -259,7 +259,7 @@ ignore = [
     # Ignored due to common usage in current code
     "TRY003",  # Avoid specifying long messages outside the exception class
 
-    # Ignored while syncing craft-providers with starbase (see https://github.com/canonical/craft-providers/issues/287)
+    # linting in craft-providers is incomplete (see #325)
     "ANN001", # Missing type annotation for function argument
     "ANN003", # Missing type annotation for `**kwargs`
     "ANN201", # Missing return type annotation for public function

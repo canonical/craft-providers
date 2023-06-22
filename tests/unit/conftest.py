@@ -19,6 +19,7 @@ import io
 import pathlib
 import subprocess
 from typing import Any, Dict, List, Optional
+from unittest import mock
 
 import pytest
 import responses as responses_module
@@ -136,3 +137,16 @@ def responses():
     """
     with responses_module.RequestsMock() as rsps:
         yield rsps
+
+
+@pytest.fixture(autouse=True)
+def mock_time_sleep():
+    with mock.patch("time.sleep", return_value=None) as mock_sleep:
+        yield mock_sleep
+
+
+@pytest.fixture(
+    params=range(4), ids=("succeed", "fail_once", "fail_twice", "fail_thrice")
+)
+def failure_count(request):
+    return request.param
