@@ -44,7 +44,6 @@ def retry_until_timeout(
     :raises: the passed error from the last exception
     """
     deadline = time.monotonic() + timeout
-    print(f"deadline {deadline=}")
     soft_deadline = deadline - retry_wait
 
     while (now := time.monotonic()) < soft_deadline:
@@ -52,7 +51,6 @@ def retry_until_timeout(
             return func(deadline - now)
         except Exception:
             if time.monotonic() < soft_deadline:
-                print(f"sleeping {time.monotonic()}")
                 time.sleep(retry_wait)
     try:
         return func(retry_wait)

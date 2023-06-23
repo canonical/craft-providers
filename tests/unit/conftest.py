@@ -139,10 +139,10 @@ def responses():
         yield rsps
 
 
-@pytest.fixture(autouse=True)
-def mock_time_sleep():
-    with mock.patch("time.sleep", return_value=None) as mock_sleep:
-        yield mock_sleep
+# @pytest.fixture(autouse=True)
+# def mock_time_sleep():
+#     with mock.patch("time.sleep", return_value=None) as mock_sleep:
+#         yield mock_sleep
 
 
 @pytest.fixture(
