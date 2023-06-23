@@ -261,7 +261,10 @@ class Base(ABC):
 
         return parse_os_release(
             retry.retry_until_timeout(
-                self._timeout_simple or TIMEOUT_SIMPLE, self._retry_wait, getter
+                self._timeout_simple or TIMEOUT_SIMPLE,
+                self._retry_wait,
+                getter,
+                error=None,
             )
         )
 
@@ -340,7 +343,7 @@ class Base(ABC):
             brief="Timed out waiting for environment to be ready."
         )
         retry.retry_until_timeout(
-            self._timeout_simple or math.inf,
+            self._timeout_simple or TIMEOUT_SIMPLE,
             self._retry_wait,
             assert_running,
             error=error,

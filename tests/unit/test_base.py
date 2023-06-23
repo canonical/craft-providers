@@ -24,6 +24,8 @@ import pytest_subprocess.fake_popen
 from craft_providers import Executor, base
 from craft_providers.errors import BaseConfigurationError
 
+pytestmark = [pytest.mark.usefixtures("instant_sleep")]
+
 FAKE_EXECUTOR_CMD = ["fake-executor"]
 WAIT_FOR_SYSTEM_READY_CMD = ["systemctl", "is-system-running"]
 WAIT_FOR_NETWORK_CMD = ["getent", "hosts", "snapcraft.io"]
@@ -37,7 +39,7 @@ class FakeBase(base.Base):
     _environment = {}
 
     _hostname = "my-hostname"
-    _retry_wait = 0.0  # Don't actually sleep before retrying
+    _retry_wait = 0.01
 
     # Very small retry and timeout values so tests don't take long.
     _timeout_simple = 1
@@ -199,8 +201,7 @@ def test_wait_for_network_timeout(fake_base, fake_executor, fake_process, callba
         ),
     ],
 )
-@pytest.mark.usefixtures("instant_sleep")
-def test_get_os_release(
+def test_get_os_release_success(
     fake_process, fake_executor, fake_base, process_outputs, expected
 ):
     """`_get_os_release` should parse data from `/etc/os-release` to a dict."""
@@ -213,3 +214,34 @@ def test_get_os_release(
     result = fake_base._get_os_release(executor=fake_executor)
 
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("stdout", "returncode"),
+    [
+        ("", 0),
+        ("NAME=Linux", 1),
+    ],
+)
+def test_get_os_release_error_output(
+    fake_process, fake_executor, fake_base, stdout, returncode
+):
+    """Test when output values /etc/os-release are invalid."""
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout=stdout,
+        returncode=returncode,
+    )
+    fake_process.keep_last_process(True)
+
+    with pytest.raises(BaseConfigurationError):
+        fake_base._get_os_release(executor=fake_executor)
+
+
+def test_get_os_release_exception(fake_base, mock_executor):
+    mock_executor.execute_run.side_effect = subprocess.CalledProcessError(
+        cmd=[], returncode=1
+    )
+
+    with pytest.raises(BaseConfigurationError):
+        fake_base._get_os_release(executor=mock_executor)
