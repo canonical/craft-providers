@@ -22,8 +22,6 @@ from unittest import mock
 import pytest
 from craft_providers.util import retry
 
-# pytestmark = [pytest.mark.usefixtures("instant_sleep")]
-
 
 @pytest.fixture(params=range(1, 6), ids=[f"timeout_{i}s" for i in range(1, 6)])
 def timeout(request):
@@ -95,7 +93,6 @@ def test_retry_until_timeout_times_out(retry_wait, timeout, instant_sleep, error
     # Behaviour on Windows CI is unreliable related to this, so exclude Windows
     # from this check. This is due in part to a lower resolution in Windows's
     # sleep timer compared to other platforms.
-    # mock_instant_sleep.sleep.assert_called_with(retry_wait)
 
 
 @pytest.mark.parametrize("error_cls", [TimeoutError, Exception, ValueError])

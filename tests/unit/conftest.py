@@ -19,7 +19,6 @@ import io
 import pathlib
 import subprocess
 from typing import Any, Dict, List, Optional
-from unittest import mock
 
 import pytest
 import responses as responses_module
