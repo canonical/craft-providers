@@ -20,7 +20,7 @@ License
 -------
 Free software: GNU Lesser General Public License v3
 
- Documentation
+Documentation
 --------------
 https://canonical-craft-providers.readthedocs-hosted.com/en/latest/
 
