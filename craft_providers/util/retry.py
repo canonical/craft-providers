@@ -20,7 +20,7 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, TypeVar
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from collections.abc import Callable
 
 T = TypeVar("T")
@@ -31,7 +31,7 @@ def retry_until_timeout(
     retry_wait: float,
     func: Callable[[float], T],
     *,
-    error: Exception = TimeoutError(),
+    error: Exception | None = TimeoutError(),
 ) -> T:
     """Re-run a function until it either succeeds or it times out.
 
@@ -39,11 +39,12 @@ def retry_until_timeout(
     :param retry_wait: The length of time (in seconds) before retrying.
     :param func: The callable. May only take a timeout parameter.
         Must raise an exception on failure, may return anything on success.
-    :param error: Exception to raise on timeout
+    :param error: Exception to raise on timeout or None to pass the error unchanged.
     :returns: The result of the function
     :raises: the passed error from the last exception
     """
     deadline = time.monotonic() + timeout
+    print(f"deadline {deadline=}")
     soft_deadline = deadline - retry_wait
 
     while (now := time.monotonic()) < soft_deadline:
@@ -51,8 +52,11 @@ def retry_until_timeout(
             return func(deadline - now)
         except Exception:
             if time.monotonic() < soft_deadline:
+                print(f"sleeping {time.monotonic()}")
                 time.sleep(retry_wait)
     try:
         return func(retry_wait)
     except Exception as exc:
+        if error is None:
+            raise
         raise error from exc
