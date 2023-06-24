@@ -32,7 +32,7 @@ from freezegun import freeze_time
 from . import conftest
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def get_base_instance():
     def _base_instance(
         image_name: str = "22.04",

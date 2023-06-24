@@ -36,6 +36,7 @@ def installed_lxd_required(installed_lxd):
 
 
 @pytest.fixture()
+@pytest.mark.with_sudo
 def installed_lxd_without_init(uninstalled_lxd):
     """Ensure lxd is installed, but not initialized.
 
@@ -43,13 +44,12 @@ def installed_lxd_without_init(uninstalled_lxd):
 
     Requires CRAFT_PROVIDERS_TESTS_ENABLE_LXD_INSTALL=1.
     """
-    if os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_LXD_INSTALL") == "1":
-        subprocess.run(["sudo", "snap", "install", "lxd"], check=True)
-        subprocess.run(["sudo", "lxd", "waitready"], check=True)
-        yield
-        subprocess.run(["sudo", "lxd", "init", "--auto"], check=True)
-    else:
+    if os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_LXD_INSTALL") != "1":
         pytest.skip("lxd not installed, skipped")
+    subprocess.run(["sudo", "snap", "install", "lxd"], check=True)
+    subprocess.run(["sudo", "lxd", "waitready"], check=True)
+    yield
+    subprocess.run(["sudo", "lxd", "init", "--auto"], check=True)
 
 
 @contextmanager
