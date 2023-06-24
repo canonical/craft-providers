@@ -86,7 +86,7 @@ def reusable_instance_name():
     return generate_instance_name()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def installed_lxd():
     """Ensure lxd is installed, or skip the test if we cannot.
 
@@ -134,7 +134,7 @@ def uninstalled_lxd():
         lxd.install()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def installed_multipass():
     """Ensure multipass is installed, or skip the test if we cannot.
 
@@ -199,7 +199,7 @@ def core22_lxd_instance(installed_lxd, instance_name):
         instance.delete()
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def installed_snap():
     """Fixture to provide contextmanager to install a specified snap.
 
@@ -207,12 +207,12 @@ def installed_snap():
     CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL=1
     """
 
+    if shutil.which("snap") is None or sys.platform != "linux":
+        pytest.skip("requires linux and snapd")
+
     @contextlib.contextmanager
     def _installed_snap(snap_name, *, try_path: Optional[pathlib.Path] = None):
         """Ensure snap is installed or skip test."""
-        if shutil.which("snap") is None or sys.platform != "linux":
-            pytest.skip("requires linux and snapd")
-
         # do nothing if already installed and not dangerous
         if snap_exists(snap_name) and not is_installed_dangerously(snap_name):
             yield
@@ -285,7 +285,7 @@ def dangerously_installed_snap(tmpdir):
     return _dangerously_installed_snap
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def empty_test_snap(installed_snap, tmp_path):
     """Fixture to provide an empty local-only snap for test purposes.
 
