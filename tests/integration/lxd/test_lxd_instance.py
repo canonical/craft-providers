@@ -24,6 +24,13 @@ from craft_providers.lxd import LXDInstance
 
 from . import conftest
 
+pytestmark = [
+    # These tests are flaky on very busy systems.
+    # https://github.com/lxc/lxd/issues/11422
+    # https://github.com/lxc/lxd/issues/11890
+    pytest.mark.flaky(reruns=2, reruns_delay=1),
+]
+
 
 @pytest.fixture()
 def instance(instance_name, project):
@@ -36,16 +43,23 @@ def instance(instance_name, project):
         yield instance
 
 
-@pytest.fixture(scope="module", params=["18.04", "20.04", "22.04", "23.04"])
+@pytest.fixture(
+    scope="module",
+    params=[
+        pytest.param(version, marks=pytest.mark.xdist_group(name=version))
+        for version in ["18.04", "20.04", "22.04", "23.04"]
+    ],
+)
 def reusable_instance(reusable_instance_name, request):
     """Reusable instance for tests that don't require a fresh instance."""
+    name = f"{reusable_instance_name}-reusable-{request.param}"
     with conftest.tmp_instance(
-        name=reusable_instance_name,
+        name=name,
         image=request.param,
         ephemeral=False,
         project="default",
     ):
-        instance = LXDInstance(name=reusable_instance_name, project="default")
+        instance = LXDInstance(name=name, project="default")
 
         yield instance
 
