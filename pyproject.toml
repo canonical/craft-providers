@@ -33,7 +33,7 @@ dev = [
     "freezegun==1.2.2",
     "logassert==7",
     "pyfakefs==5.2.2",
-    "pytest==7.3.1",
+    "pytest==7.3.2",
     "pytest-cov==4.1.0",
     "pytest-mock==3.10.0",
     "pytest-subprocess==1.5.0",
@@ -46,12 +46,12 @@ dev = [
 lint = [
     "black==23.3.0",
     "codespell[toml]==2.2.4",
-    "ruff==0.0.270",
+    "ruff==0.0.272",
     "yamllint==1.32.0",
 ]
 types = [
     "mypy[reports]==1.3.0",
-    "pyright==1.1.311",
+    "pyright==1.1.313",
 ]
 docs = [
     "furo==2023.5.20",
@@ -72,10 +72,24 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]
-readme = {file = "README.md"}
+readme = {file = "README.rst"}
 
 [tool.setuptools_scm]
 write_to = "craft_providers/_version.py"
+# the version comes from the latest annotated git tag formatted as 'X.Y.Z'
+# version scheme:
+#   - X.Y.Z.post<commits since tag>+g<hash>.d<%Y%m%d>
+# parts of scheme:
+#   - X.Y.Z - most recent git tag
+#   - post<commits since tag>+g<hash> - present when current commit is not tagged
+#   - .d<%Y%m%d> - present when working dir is dirty
+# version scheme when no tags exist:
+#   - 0.0.post<total commits>+g<hash>
+version_scheme = "post-release"
+# deviations from the default 'git describe' command:
+# - only match annotated tags
+# - only match tags formatted as 'X.Y.Z'
+git_describe_command = "git describe --dirty --long --match '[0-9]*.[0-9]*.[0-9]*' --exclude '*[^0-9.]*'"
 
 [tool.setuptools.packages.find]
 exclude = [
@@ -97,10 +111,21 @@ skip = ".tox,.git,build,.*_cache,__pycache__,*.tar,*.snap,*.png,./node_modules,.
 quiet-level = 3
 check-filenames = true
 
+[tool.isort]
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+line_length = 88
+
 [tool.pytest.ini_options]
 minversion = "7.0"
 testpaths = "tests"
 xfail_strict = true
+markers = [
+    "with_sudo: Test requires sudo",
+]
 
 [tool.coverage.run]
 branch = true
@@ -112,7 +137,7 @@ skip_empty = true
 fail_under = 95
 
 [tool.pyright]
-# strict type-checking with pyright is disabled (see #287)
+# typing in craft-providers is incomplete (see #326)
 # strict = ["craft_providers"]
 pythonVersion = "3.8"
 pythonPlatform = "Linux"
@@ -129,7 +154,7 @@ warn_redundant_casts = true
 strict_equality = true
 strict_concatenate = true
 disallow_subclassing_any = true
-# Ignored while syncing craft-providers with starbase (see https://github.com/canonical/craft-providers/issues/287)
+# typing in craft-providers is incomplete (see #326)
 #warn_return_any = true
 #disallow_untyped_decorators = true
 #disallow_any_generics = true
@@ -229,11 +254,13 @@ ignore = [
     "D213",  # Multi-line docstring summary should start at the second line (reason: pep257 default)
     "D215",  # Section underline is over-indented (reason: pep257 default)
     "A003",  # Class attribute shadowing built-in (reason: Class attributes don't often get bare references)
+    "SIM117", # Use a single `with` statement with multiple contexts instead of nested `with` statements
+              # (reason: this creates long lines that get wrapped and reduces readability)
 
     # Ignored due to common usage in current code
     "TRY003",  # Avoid specifying long messages outside the exception class
 
-    # Ignored while syncing craft-providers with starbase (see https://github.com/canonical/craft-providers/issues/287)
+    # linting in craft-providers is incomplete (see #325)
     "ANN001", # Missing type annotation for function argument
     "ANN003", # Missing type annotation for `**kwargs`
     "ANN201", # Missing return type annotation for public function
@@ -264,11 +291,7 @@ ignore = [
     "S311", # Standard pseudo-random generators are not suitable for cryptographic purposes
     "S324", # Probable use of insecure hash functions in `hashlib`
     "S506", # Probable use of unsafe loader `BaseLoader` with `yaml.load`. Allows instantiation of arbitrary "object"s. Consider `yaml.safe_load`.
-    "SIM108", # Use ternary operator instead of `if`-`else`-block
-    "SIM112", # Use capitalized environment variable `HTTPS_PROXY` instead of `https_proxy`
-    "SIM117", # Use a single `with` statement with multiple contexts instead of nested `with` statements
     "TRY002", # Create your own exception
-    "TRY300", # Consider moving this statement to an `else` block
 ]
 
 [tool.ruff.per-file-ignores]

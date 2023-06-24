@@ -1,5 +1,4 @@
 name: tests
-
 on:
   push:
     branches:
@@ -8,6 +7,15 @@ on:
       - "hotfix/*"
       - "release/*"
   pull_request:
+
+  # Allows triggering the workflow manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      enable_ssh_access:
+        type: boolean
+        description: 'Enable ssh access'
+        required: false
+        default: false
 
 jobs:
   linters:
@@ -30,7 +38,7 @@ jobs:
           sudo snap install --no-wait shellcheck
           echo "::endgroup::"
           echo "::group::pip install"
-          python -m pip install 'tox>=4' tox-gh
+          python -m pip install 'tox>=4'
           echo "::endgroup::"
           echo "::group::Create virtual environments for linting processes."
           tox run -m lint --notest
@@ -38,13 +46,18 @@ jobs:
           echo "::group::Wait for snap to complete"
           snap watch --last=install
           echo "::endgroup::"
+      - name: Enable ssh access
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ inputs.enable_ssh_access }}
+        with:
+          limit-access-to-actor: true
       - name: Run Linters
         run: tox run --skip-pkg-install --no-list-dependencies -m lint
   unit-tests:
     strategy:
       matrix:
-        platform: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.platform }}
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -62,11 +75,16 @@ jobs:
       - name: Configure environment
         run: |
           echo "::group::pip install"
-          python -m pip install 'tox>=4.6' tox-gh
+          python -m pip install 'tox>=4.6'
           echo "::endgroup::"
           mkdir -p results
       - name: Setup Tox environments
         run: tox run -m unit-tests --notest
+      - name: Enable ssh access
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ inputs.enable_ssh_access }}
+        with:
+          limit-access-to-actor: true
       - name: Test with tox
         # use `tox` instead of `.tox/.tox/bin/tox` to support Windows
         run: tox run --skip-pkg-install --no-list-dependencies --result-json results/tox-${{ matrix.platform }}.json -m unit-tests
@@ -122,6 +140,11 @@ jobs:
           echo "::endgroup::"
       - name: Setup Tox environments
         run: tox run -e integration-${{ matrix.python.tox-version }} --notest
+      - name: Enable ssh access
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ inputs.enable_ssh_access }}
+        with:
+          limit-access-to-actor: true
       - name: Run integration tests on Linux
         env:
           CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL: 1
@@ -135,13 +158,14 @@ jobs:
     strategy:
       matrix:
         python: [
-          {system-version: "3.8", tox-version: "py38"},
-          {system-version: "3.10", tox-version: "py310"},
           {system-version: "3.11", tox-version: "py311"},
-          {system-version: "3.12-dev", tox-version: "py312"},
         ]
     runs-on: macos-latest
     steps:
+      - name: Install Multipass
+        run: |
+          brew update
+          brew install multipass
       - name: Checkout code
         uses: actions/checkout@v3
         with:
@@ -156,18 +180,19 @@ jobs:
           echo "::group::pip install"
           python -m pip install 'tox>=4.6'
           echo "::endgroup::"
-          echo "::group::Install Multipass"
-          brew update
-          brew install multipass
-          # wait 20 seconds for multipassd to start (see https://github.com/canonical/multipass/issues/1995)
-          sleep 20
-          # this can be removed when multipass 1.12 is available on brew, because qemu will be the new default
-          multipass set local.driver=qemu
-          sleep 20
-          multipass version
+          echo "::group::Configure Multipass"
+          while ! multipass version
+          do
+            sleep 1
+          done
           echo "::endgroup::"
       - name: Setup Tox environments
         run: tox run -e integration-${{ matrix.python.tox-version }} --notest
+      - name: Enable ssh access
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ inputs.enable_ssh_access }}
+        with:
+          limit-access-to-actor: true
       - name: Run integration tests on MacOS
         env:
           CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL: 1

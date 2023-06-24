@@ -135,11 +135,8 @@ class LXDProvider(Provider):
                 ),
             )
 
-        if image.is_stable:
-            expiration = timedelta(days=90)
-        else:
-            # unstable images should be refreshed more often
-            expiration = timedelta(days=14)
+        # unstable images should be refreshed more often
+        expiration = timedelta(days=90) if image.is_stable else timedelta(days=14)
 
         try:
             instance = launch(

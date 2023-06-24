@@ -21,17 +21,16 @@
 import enum
 import io
 import logging
+import math
 import os
 import pathlib
 import re
 import subprocess
 import sys
-import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from enum import Enum
 from textwrap import dedent
-from time import sleep
 from typing import Dict, List, Optional, Type, final
 
 from pydantic import ValidationError
@@ -52,6 +51,7 @@ from craft_providers.errors import (
 )
 from craft_providers.executor import Executor
 from craft_providers.instance_config import InstanceConfiguration
+from craft_providers.util import retry
 from craft_providers.util.os_release import parse_os_release
 
 logger = logging.getLogger(__name__)
@@ -307,32 +307,29 @@ class Base(ABC):
     def _setup_wait_for_system_ready(self, executor: Executor) -> None:
         """Wait until system is ready."""
         logger.debug("Waiting for environment to be ready...")
-        start_time = time.time()
-        timeout = False
 
-        while not timeout:
+        def assert_running(timeout: float) -> None:
             proc = self._execute_run(
                 ["systemctl", "is-system-running"],
                 executor=executor,
                 capture_output=True,
                 check=False,
                 text=True,
-                timeout=self._timeout_simple,
+                timeout=timeout,
             )
+            system_state = proc.stdout.strip()
+            if system_state not in ("running", "degraded"):
+                logger.debug("systemctl is-system-running status: %s", system_state)
+                raise ValueError
 
-            running_state = proc.stdout.strip()
-            if running_state in ["running", "degraded"]:
-                return
-
-            logger.debug("systemctl is-system-running status: %s", running_state)
-
-            sleep(self._retry_wait)
-
-            if self._timeout_simple and self._timeout_simple > 0:
-                timeout = time.time() - start_time > self._timeout_simple
-
-        raise BaseConfigurationError(
-            brief="Timed out waiting for environment to be ready.",
+        error = BaseConfigurationError(
+            brief="Timed out waiting for environment to be ready."
+        )
+        retry.retry_until_timeout(
+            self._timeout_simple or math.inf,
+            self._retry_wait,
+            assert_running,
+            error=error,
         )
 
     def _setup_hostname(self, executor: Executor) -> None:
@@ -429,26 +426,22 @@ class Base(ABC):
     def _setup_wait_for_network(self, executor: Executor) -> None:
         """Wait until networking is ready."""
         logger.debug("Waiting for networking to be ready...")
-        start_time = time.time()
-
         command = ["getent", "hosts", "snapcraft.io"]
-        while True:
-            proc = self._execute_run(
-                command, executor=executor, check=False, timeout=10
+
+        def check_network(timeout: float) -> None:
+            self._execute_run(
+                command, executor=executor, check=True, timeout=0.1 * timeout
             )
-            if proc.returncode == 0:
-                return
 
-            if (
-                self._timeout_simple
-                and self._timeout_simple > 0
-                and time.time() - start_time > self._timeout_simple
-            ):
-                raise BaseConfigurationError(
-                    brief="Timed out waiting for networking to be ready.",
-                )
-
-            sleep(self._retry_wait)
+        error = BaseConfigurationError(
+            brief="Timed out waiting for networking to be ready."
+        )
+        retry.retry_until_timeout(
+            self._timeout_simple or math.inf,
+            self._retry_wait,
+            check_network,
+            error=error,
+        )
 
     def _enable_udevd_service(self, executor: Executor) -> None:
         """Enable and start udevd service."""
@@ -1025,7 +1018,7 @@ class Base(ABC):
         # (because we're hitting port 443), as bash's TCP functionality will not
         # use it (supporting both lowercase and uppercase names, which is what
         # most applications do)
-        if os.getenv("HTTPS_PROXY") or os.getenv("https_proxy"):
+        if os.getenv("HTTPS_PROXY") or os.getenv("https_proxy"):  # noqa: SIM112
             return True
 
         # check if the port is open using bash's built-in tcp-client, communicating with
