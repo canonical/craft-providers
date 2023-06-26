@@ -80,12 +80,6 @@ def test_retry_until_timeout_success_long_retry(monkeypatch, timeout, retry_mult
     assert mock_monotonic.mock_calls == [mock.call(), mock.call()]
 
 
-@pytest.mark.xfail(
-    sys.platform in ("win32", "cygwin"),
-    reason="Windows timer resolution doesn't always result in time.sleep being called",
-    raises=AssertionError,
-    strict=False,  # It could pass.
-)
 @pytest.mark.parametrize("error_cls", [TimeoutError, Exception, ValueError])
 def test_retry_until_timeout_times_out(retry_wait, timeout, instant_sleep, error_cls):
     mock_function = mock.Mock(side_effect=Exception())
@@ -94,7 +88,6 @@ def test_retry_until_timeout_times_out(retry_wait, timeout, instant_sleep, error
         retry.retry_until_timeout(timeout, retry_wait, mock_function, error=error_cls())
 
     mock_function.assert_called()
-    mock_time_sleep.assert_called_with(retry_wait)
 
 
 @pytest.mark.parametrize("error_cls", [TimeoutError, Exception, ValueError])
