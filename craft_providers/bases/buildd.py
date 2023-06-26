@@ -21,7 +21,6 @@ import io
 import logging
 import os
 import pathlib
-import re
 import subprocess
 import sys
 import time
@@ -202,7 +201,7 @@ class BuilddBase(Base):
 
     :param alias: Base alias / version.
     :param environment: Environment to set in /etc/environment.
-    :param hostname: Hostname to configure.
+    :param hostname: Deprecated parameter, not used.
     :param snaps: Optional list of snaps to install on the base image.
     :param packages: Optional list of system packages to install on the base image.
     """
@@ -217,7 +216,7 @@ class BuilddBase(Base):
         alias: BuilddBaseAlias,
         compatibility_tag: Optional[str] = None,
         environment: Optional[Dict[str, Optional[str]]] = None,
-        hostname: str = "craft-buildd-instance",
+        hostname: Optional[str] = None,
         snaps: Optional[List[Snap]] = None,
         packages: Optional[List[str]] = None,
     ):
@@ -231,40 +230,14 @@ class BuilddBase(Base):
         if compatibility_tag:
             self.compatibility_tag = compatibility_tag
 
-        self._set_hostname(hostname)
         self.snaps = snaps
         self.packages = packages
 
-    def _set_hostname(self, hostname: str) -> None:
-        """Set hostname.
-
-        hostname naming convention:
-        - between 1 and 63 characters long
-        - be made up exclusively of letters, numbers, and hyphens from the ASCII table
-        - not begin or end with a hyphen
-
-        If needed, the provided hostname will be trimmed to meet naming conventions.
-
-        :param hostname: hostname to set
-        :raises BaseConfigurationError: if the hostname contains no
-          alphanumeric characters
-        """
-        # truncate to 63 characters
-        truncated_name = hostname[:63]
-
-        # remove anything that is not an alphanumeric character or hyphen
-        name_with_valid_chars = re.sub(r"[^\w-]", "", truncated_name)
-
-        # trim hyphens from the beginning and end
-        valid_name = name_with_valid_chars.strip("-")
-        if not valid_name:
-            raise BaseConfigurationError(
-                brief=f"failed to create base with hostname {hostname!r}.",
-                details="hostname must contain at least one alphanumeric character",
+        if hostname:
+            logger.warning(
+                "Deprecated: Parameter 'hostname' is deprecated and should not be "
+                "used. The hostname is set by the provider from the instance name."
             )
-
-        logger.debug("Using hostname %r", valid_name)
-        self.hostname = valid_name
 
     def _ensure_instance_config_compatible(
         self, *, executor: Executor, deadline: Optional[float]
@@ -443,7 +416,6 @@ class BuilddBase(Base):
 
         Guarantees provided by this setup:
           - configured /etc/environment
-          - configured hostname
           - networking available (IP & DNS resolution)
           - apt cache up-to-date
           - snapd configured and ready
@@ -471,7 +443,6 @@ class BuilddBase(Base):
             executor=executor, deadline=deadline, retry_wait=retry_wait
         )
         self._update_compatibility_tag(executor=executor, deadline=deadline)
-        self._setup_hostname(executor=executor, deadline=deadline)
         self._setup_resolved(executor=executor, deadline=deadline)
         self._setup_networkd(executor=executor, deadline=deadline)
         self._setup_wait_for_network(
@@ -746,28 +717,6 @@ class BuilddBase(Base):
             content=io.BytesIO(content),
             file_mode="0644",
         )
-
-    def _setup_hostname(self, *, executor: Executor, deadline: Optional[float]) -> None:
-        """Configure hostname, installing /etc/hostname.
-
-        :param executor: Executor for target container.
-        :param deadline: Optional time.time() deadline.
-        """
-        _check_deadline(deadline)
-        executor.push_file_io(
-            destination=pathlib.Path("/etc/hostname"),
-            content=io.BytesIO((self.hostname + "\n").encode()),
-            file_mode="0644",
-        )
-
-        try:
-            _check_deadline(deadline)
-            _execute_run(executor, ["hostname", "-F", "/etc/hostname"])
-        except subprocess.CalledProcessError as error:
-            raise BaseConfigurationError(
-                brief="Failed to set hostname.",
-                details=errors.details_from_called_process_error(error),
-            ) from error
 
     def _setup_networkd(self, *, executor: Executor, deadline: Optional[float]) -> None:
         """Configure networkd and start it.

@@ -167,7 +167,6 @@ def test_setup(
         alias=alias,
         compatibility_tag=tag,
         environment=environment,
-        hostname="test-hostname",
         snaps=snaps,
         packages=packages,
     )
@@ -189,9 +188,6 @@ def test_setup(
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "is-system-running"], stdout="degraded"
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "hostname", "-F", "/etc/hostname"]
     )
     fake_process.register_subprocess(
         [
@@ -341,13 +337,6 @@ def test_setup(
         {
             "destination": "/etc/craft-instance.conf",
             "content": (f"compatibility_tag: {expected_tag}\n").encode(),
-            "file_mode": "0644",
-            "group": "root",
-            "user": "root",
-        },
-        {
-            "destination": "/etc/hostname",
-            "content": b"test-hostname\n",
             "file_mode": "0644",
             "group": "root",
             "user": "root",
@@ -700,24 +689,6 @@ def test_ensure_os_compatible_version_failure(
     )
 
     mock_get_os_release.assert_called_once()
-
-
-def test_setup_hostname_failure(fake_process, fake_executor):
-    base_config = buildd.BuilddBase(alias=buildd.BuilddBaseAlias.FOCAL)
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "hostname", "-F", "/etc/hostname"],
-        returncode=-1,
-    )
-
-    with pytest.raises(errors.BaseConfigurationError) as exc_info:
-        base_config._setup_hostname(executor=fake_executor, deadline=None)
-
-    assert exc_info.value == errors.BaseConfigurationError(
-        brief="Failed to set hostname.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
 
 
 def test_setup_networkd_enable_failure(fake_process, fake_executor):
@@ -1615,97 +1586,6 @@ def test_warmup_never_network(fake_process, fake_executor, mock_load):
         base_config.warmup(executor=fake_executor, timeout=0.01, retry_wait=0.1)
 
 
-@pytest.mark.parametrize(
-    "hostname",
-    [
-        "t",
-        "test",
-        "test1",
-        "test-1",
-        "1-test",
-        "this-is-40-characters-xxxxxxxxxxxxxxxxxx",
-        "this-is-63-characters-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    ],
-)
-def test_set_hostname_unchanged(hostname, logs):
-    """Verify hostnames that are already compliant are not changed."""
-    base_config = buildd.BuilddBase(
-        alias=buildd.BuilddBaseAlias.JAMMY,
-        hostname=hostname,
-    )
-
-    assert base_config.hostname == hostname
-    assert Exact(f"Using hostname '{hostname}'") in logs.debug
-
-
-@pytest.mark.parametrize(
-    "hostname, expected_hostname",
-    [
-        # trim away invalid beginning characters
-        ("-test", "test"),
-        # trim away invalid ending characters
-        ("test-", "test"),
-        ("test--", "test"),
-        ("test1-", "test1"),
-        # trim away invalid characters
-        ("test$", "test"),
-        ("test-!@#$%^&*()test", "test-test"),
-        ("$1test", "1test"),
-        ("test-$", "test"),
-        # this name contains invalid characters so it gets converted, even
-        # though it is 63 characters
-        (
-            "this-is-63-characters-with-invalid-characters-$$$xxxxxxxxxxxxxX",
-            "this-is-63-characters-with-invalid-characters-xxxxxxxxxxxxxX",
-        ),
-        # this name is longer than 63 characters, so it gets converted
-        (
-            "this-is-64-characters-with-valid-characters-xxxxxxxxxxxxxxxxxxXx",
-            "this-is-64-characters-with-valid-characters-xxxxxxxxxxxxxxxxxxX",
-        ),
-        # trim away away invalid characters and truncate to 63 characters
-        (
-            "-this-is-64-characters-and-has-invalid-characters-$$$xxxxxxxxxx-",
-            "this-is-64-characters-and-has-invalid-characters-xxxxxxxxxx",
-        ),
-        # ensure invalid ending characters are removed after truncating
-        (
-            "this-is-64-characters-and-has-a-hyphen-at-character-63-xxxxxxx-x",
-            "this-is-64-characters-and-has-a-hyphen-at-character-63-xxxxxxx",
-        ),
-    ],
-)
-def test_set_hostname(hostname, expected_hostname, logs):
-    """Verify hostname is compliant with hostname naming conventions."""
-    base_config = buildd.BuilddBase(
-        alias=buildd.BuilddBaseAlias.JAMMY,
-        hostname=hostname,
-    )
-
-    assert base_config.hostname == expected_hostname
-    assert Exact(f"Using hostname '{expected_hostname}'") in logs.debug
-
-
-@pytest.mark.parametrize(
-    "hostname",
-    [
-        "",
-        "-",
-        "$$$",
-        "-$-$-",
-    ],
-)
-def test_set_hostname_invalid(hostname):
-    """Verify invalid hostnames raise an error."""
-    with pytest.raises(BaseConfigurationError) as error:
-        buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY, hostname=hostname)
-
-    assert error.value == BaseConfigurationError(
-        brief=f"failed to create base with hostname {hostname!r}.",
-        details="hostname must contain at least one alphanumeric character",
-    )
-
-
 def test_execute_run_default(fake_executor):
     """Default _execute_run behaviour."""
     command = ["the", "command"]
@@ -1876,4 +1756,17 @@ def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executo
         details=details_from_called_process_error(
             exc_info.value.__cause__  # type: ignore
         ),
+    )
+
+
+def test_hostname_deprecated(logs):
+    """Log a warning if a hostname if provided."""
+    buildd.BuilddBase(alias=buildd.BuilddBaseAlias.JAMMY, hostname="test-hostname")
+
+    assert (
+        Exact(
+            "Deprecated: Parameter 'hostname' is deprecated and should not be used. "
+            "The hostname is set by the provider from the instance name."
+        )
+        in logs.warning
     )
