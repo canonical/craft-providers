@@ -19,7 +19,6 @@ import io
 import pathlib
 import subprocess
 from typing import Any, Dict, List, Optional
-from unittest import mock
 
 import pytest
 import responses as responses_module
@@ -139,10 +138,10 @@ def responses():
         yield rsps
 
 
-@pytest.fixture(autouse=True)
-def mock_time_sleep():
-    with mock.patch("time.sleep", return_value=None) as mock_sleep:
-        yield mock_sleep
+# @pytest.fixture(autouse=True)
+# def mock_time_sleep():
+#     with mock.patch("time.sleep", return_value=None) as mock_sleep:
+#         yield mock_sleep
 
 
 @pytest.fixture(
