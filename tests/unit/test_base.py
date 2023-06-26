@@ -24,9 +24,14 @@ import pytest_subprocess.fake_popen
 from craft_providers import Executor, base
 from craft_providers.errors import BaseConfigurationError
 
+pytestmark = [pytest.mark.usefixtures("instant_sleep")]
+
 FAKE_EXECUTOR_CMD = ["fake-executor"]
 WAIT_FOR_SYSTEM_READY_CMD = ["systemctl", "is-system-running"]
 WAIT_FOR_NETWORK_CMD = ["getent", "hosts", "snapcraft.io"]
+
+
+DEFAULT_FAKE_CMD = ["fake-executor"]
 
 
 class FakeBase(base.Base):
@@ -34,7 +39,7 @@ class FakeBase(base.Base):
     _environment = {}
 
     _hostname = "my-hostname"
-    _retry_wait = 0.0  # Don't actually sleep before retrying
+    _retry_wait = 0.01
 
     # Very small retry and timeout values so tests don't take long.
     _timeout_simple = 1
@@ -135,3 +140,108 @@ def test_wait_for_network_timeout(fake_base, fake_executor, fake_process, callba
 
     with pytest.raises(BaseConfigurationError):
         fake_base._setup_wait_for_system_ready(fake_executor)
+
+
+@pytest.mark.parametrize(
+    ("process_outputs", "expected"),
+    [
+        (
+            [
+                'NAME="AlmaLinux"\nVERSION="9.1 (Lime Lynx)"\nID="almalinux"\nID_LIKE="rhel centos fedora"\nVERSION_ID="9.1"\n'
+            ],
+            {
+                "NAME": "AlmaLinux",
+                "ID": "almalinux",
+                "VERSION": "9.1 (Lime Lynx)",
+                "VERSION_ID": "9.1",
+                "ID_LIKE": "rhel centos fedora",
+            },
+        ),
+        (
+            [
+                "",
+                'NAME="AlmaLinux"\nVERSION="9.1 (Lime Lynx)"\nID="almalinux"\nID_LIKE="rhel centos fedora"\nVERSION_ID="9.1"\n',
+            ],
+            {
+                "NAME": "AlmaLinux",
+                "ID": "almalinux",
+                "VERSION": "9.1 (Lime Lynx)",
+                "VERSION_ID": "9.1",
+                "ID_LIKE": "rhel centos fedora",
+            },
+        ),
+        (
+            [
+                'NAME="CentOS Linux"\nVERSION="7 (Core)"\nID="centos"\nID_LIKE="rhel fedora"\nVERSION_ID="7"\n'
+            ],
+            {
+                "NAME": "CentOS Linux",
+                "ID": "centos",
+                "VERSION": "7 (Core)",
+                "VERSION_ID": "7",
+                "ID_LIKE": "rhel fedora",
+            },
+        ),
+        (
+            [
+                "",
+                'NAME="CentOS Linux"\nVERSION="7 (Core)"\nID="centos"\nID_LIKE="rhel fedora"\nVERSION_ID="7"\n',
+            ],
+            {
+                "NAME": "CentOS Linux",
+                "ID": "centos",
+                "VERSION": "7 (Core)",
+                "VERSION_ID": "7",
+                "ID_LIKE": "rhel fedora",
+            },
+        ),
+        (
+            ["NAME=Ubuntu\nVERSION_ID=22.04\n"],
+            {"NAME": "Ubuntu", "VERSION_ID": "22.04"},
+        ),
+    ],
+)
+def test_get_os_release_success(
+    fake_process, fake_executor, fake_base, process_outputs, expected
+):
+    """`_get_os_release` should parse data from `/etc/os-release` to a dict."""
+    for output in process_outputs:
+        fake_process.register_subprocess(
+            [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+            stdout=output,
+        )
+
+    result = fake_base._get_os_release(executor=fake_executor)
+
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("stdout", "returncode"),
+    [
+        ("", 0),
+        ("NAME=Linux", 1),
+    ],
+)
+def test_get_os_release_error_output(
+    fake_process, fake_executor, fake_base, stdout, returncode
+):
+    """Test when output values /etc/os-release are invalid."""
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout=stdout,
+        returncode=returncode,
+    )
+    fake_process.keep_last_process(True)
+
+    with pytest.raises(BaseConfigurationError):
+        fake_base._get_os_release(executor=fake_executor)
+
+
+def test_get_os_release_exception(fake_base, mock_executor):
+    mock_executor.execute_run.side_effect = subprocess.CalledProcessError(
+        cmd=[], returncode=1
+    )
+
+    with pytest.raises(BaseConfigurationError):
+        fake_base._get_os_release(executor=mock_executor)
