@@ -23,19 +23,19 @@ import pytest
 from craft_providers.util import retry
 
 
-@pytest.fixture(params=range(1, 6), ids=[f"timeout_{i}ms" for i in range(1, 6)])
+@pytest.fixture(params=range(1, 6), ids=[f"timeout_{i}s" for i in range(1, 6)])
 def timeout(request):
+    return request.param
+
+
+@pytest.fixture(params=range(1, 6), ids=[f"wait_{i}0ms" for i in range(1, 6)])
+def retry_wait(request):
+    """A parametrized fixture of times to wait before retrying, in microseconds"""
     return request.param * 0.01
 
 
-@pytest.fixture(params=range(5), ids=[f"wait_{i}us" for i in range(5)])
-def retry_wait(request):
-    """A parametrized fixture of times to wait before retrying, in microseconds"""
-    return request.param * 0.000_001
-
-
 def test_retry_until_timeout_success(
-    failure_count, retry_wait, timeout, mock_time_sleep
+    failure_count, retry_wait, timeout, mock_instant_sleep
 ):
     failures = [Exception()] * failure_count
     mock_function = mock.Mock(side_effect=[*failures, None])
@@ -45,11 +45,12 @@ def test_retry_until_timeout_success(
     assert len(mock_function.mock_calls) == failure_count + 1
     # This is flaky on Windows, so exclude this assertion.
     if sys.platform not in ("win32", "cygwin"):
-        assert len(mock_time_sleep.mock_calls) >= failure_count
+        assert len(mock_instant_sleep.sleep.mock_calls) >= failure_count
 
 
 # @pytest.mark.no_mock_sleep
 @pytest.mark.parametrize("retry_multiplier", [0.5, 0.8])
+@pytest.mark.usefixtures("instant_sleep")
 def test_retry_until_timeout_success_longish_retry(timeout, retry_multiplier):
     """retry_wait is more than half the timeout we always run twice."""
     retry_wait = timeout * retry_multiplier
@@ -77,11 +78,11 @@ def test_retry_until_timeout_success_long_retry(monkeypatch, timeout, retry_mult
 @pytest.mark.xfail(
     sys.platform in ("win32", "cygwin"),
     reason="Windows timer resolution doesn't always result in time.sleep being called",
-    raises=OSError,
+    raises=AssertionError,
     strict=False,  # It could pass.
 )
 @pytest.mark.parametrize("error_cls", [TimeoutError, Exception, ValueError])
-def test_retry_until_timeout_times_out(retry_wait, timeout, mock_time_sleep, error_cls):
+def test_retry_until_timeout_times_out(retry_wait, timeout, instant_sleep, error_cls):
     mock_function = mock.Mock(side_effect=Exception())
 
     with pytest.raises(error_cls):
@@ -92,18 +93,12 @@ def test_retry_until_timeout_times_out(retry_wait, timeout, mock_time_sleep, err
     # Behaviour on Windows CI is unreliable related to this, so exclude Windows
     # from this check. This is due in part to a lower resolution in Windows's
     # sleep timer compared to other platforms.
-    try:
-        mock_time_sleep.assert_called_with(retry_wait)
-    except AssertionError as exc:
-        if sys.platform in ("win32", "cygwin"):
-            raise OSError from exc
-        raise
 
 
 @pytest.mark.parametrize("error_cls", [TimeoutError, Exception, ValueError])
 @pytest.mark.parametrize("retry_multiplier", [1.0, 1.1, 2.0])
 def test_retry_until_timeout_times_out_long_retry(
-    timeout, mock_time_sleep, error_cls, retry_multiplier
+    timeout, mock_instant_sleep, error_cls, retry_multiplier
 ):
     """Here the retry time is always at least as long as the timeout."""
     mock_function = mock.Mock(side_effect=Exception())
@@ -115,4 +110,4 @@ def test_retry_until_timeout_times_out_long_retry(
 
     mock_function.assert_called_once()
 
-    mock_time_sleep.assert_not_called()
+    mock_instant_sleep.sleep.assert_not_called()
