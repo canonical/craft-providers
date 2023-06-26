@@ -105,10 +105,10 @@ jobs:
     strategy:
       matrix:
         python: [
-          {system-version: "3.8", tox-version: "py38"},
-          {system-version: "3.10", tox-version: "py310"},
-          {system-version: "3.11", tox-version: "py311"},
-          {system-version: "3.12-dev", tox-version: "py312"},
+          {system-version: "3.8", tox-version: "py3.8"},
+          {system-version: "3.10", tox-version: "py3.10"},
+          {system-version: "3.11", tox-version: "py3.11"},
+          {system-version: "3.12-dev", tox-version: "py3.12"},
         ]
     # does not work with canonical/setup-lxd github action (see https://github.com/canonical/craft-providers/issues/271)
     runs-on: ubuntu-latest
@@ -157,9 +157,7 @@ jobs:
   integration-tests-macos:
     strategy:
       matrix:
-        python: [
-          {system-version: "3.11", tox-version: "py311"},
-        ]
+        python: ["3.11"]
     runs-on: macos-latest
     steps:
       - name: Install Multipass
@@ -173,7 +171,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python.system-version }}
+          python-version: ${{ matrix.python }}
           cache: 'pip'
       - name: Configure environment
         run: |
@@ -187,7 +185,7 @@ jobs:
           done
           echo "::endgroup::"
       - name: Setup Tox environments
-        run: tox run -e integration-${{ matrix.python.tox-version }} --notest
+        run: tox run -e integration-py${{ matrix.python }} --notest
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
@@ -199,4 +197,4 @@ jobs:
           CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL: 1
           PYTEST_ADDOPTS: "--no-header -vv -rN"
         run: |
-          .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies -e integration-${{ matrix.python.tox-version }}
+          .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies -e integration-py${{ matrix.python }}
