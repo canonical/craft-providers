@@ -46,8 +46,7 @@ jobs:
           make test-pylint
       - name: Run pyright
         run: |
-          sudo snap install --classic node
-          sudo snap install --classic pyright
+          pip install "pyright==1.1.301"
           make test-pyright
       - name: Install LXD
         run: |
