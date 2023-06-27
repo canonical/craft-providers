@@ -45,7 +45,7 @@ def mock_requests():
 
 
 @pytest.fixture(params=["1"])
-def config_fixture(request, tmp_path, mocker):
+def config_fixture(fake_home_temporary_file, request):
     """Creates an instance config file in the pytest temp directory.
 
     Patches the temp_paths functions to point to the
@@ -63,20 +63,7 @@ def config_fixture(request, tmp_path, mocker):
         """
     )
 
-    def config_generator():
-        """Generate a fresh config file so we do not __enter__ after __exit__."""
-        config_file = tmp_path / "craft-instance.conf"
-        config_file.write_text(config_content)
-        return config_file
-
-    mocker.patch(
-        "craft_providers.instance_config.temp_paths.home_temporary_file",
-        side_effect=config_generator,
-    )
-    mocker.patch(
-        "craft_providers.instance_config.temp_paths.home_temporary_directory",
-        return_value=tmp_path,
-    )
+    fake_home_temporary_file.write_text(config_content)
 
 
 @pytest.fixture(params=[{"revision": "2", "id": "3", "publisher": {"id": "4"}}])
@@ -418,6 +405,7 @@ def test_inject_from_host_matching_revision_no_op(
     fake_executor,
     fake_process,
     logs,
+    tmp_path,
 ):
     """Injection shouldn't occur if target revision equals the host revision"""
     snap_installer.inject_from_host(
@@ -445,9 +433,7 @@ def test_inject_from_host_no_snapd(mock_get_host_snap_info, fake_executor):
         )
 
 
-def test_inject_from_host_push_error(
-    config_fixture, mock_requests, fake_executor, fake_process
-):
+def test_inject_from_host_push_error(mock_requests, fake_executor):
     mock_executor = mock.Mock(spec=fake_executor, wraps=fake_executor)
     mock_executor.push_file.side_effect = ProviderError(brief="foo")
 
@@ -464,12 +450,11 @@ def test_inject_from_host_push_error(
 
 
 def test_inject_from_host_snapd_connection_error_using_pack_fallback(
-    config_fixture,
     mock_get_host_snap_info,
     mock_requests,
     fake_executor,
     fake_process,
-    tmpdir,
+    tmp_path,
 ):
     mock_requests.get.side_effect = requests.exceptions.ConnectionError()
 
@@ -478,7 +463,7 @@ def test_inject_from_host_snapd_connection_error_using_pack_fallback(
             "snap",
             "pack",
             "/snap/test-name/current/",
-            f'--filename={pathlib.PurePosixPath(tmpdir / "test-name.snap")}',
+            f'--filename={pathlib.PurePosixPath(tmp_path / "test-name.snap")}',
         ]
     )
     # register 'snap known' calls
@@ -512,7 +497,6 @@ def test_inject_from_host_snapd_connection_error_using_pack_fallback(
 
 
 def test_inject_from_host_snapd_http_error_using_pack_fallback(
-    config_fixture,
     mock_get_host_snap_info,
     mock_requests,
     fake_executor,
@@ -562,9 +546,7 @@ def test_inject_from_host_snapd_http_error_using_pack_fallback(
     assert len(fake_process.calls) == 7
 
 
-def test_inject_from_host_install_failure(
-    mock_requests, config_fixture, fake_executor, fake_process
-):
+def test_inject_from_host_install_failure(mock_requests, fake_executor, fake_process):
     fake_process.register_subprocess(
         [
             "fake-executor",
@@ -871,10 +853,6 @@ def test_add_assertions_from_host_error_on_push(
     """Raise SnapInstallationError when assert file cannot be pushed."""
     mock_executor = mock.Mock(spec=fake_executor, wraps=fake_executor)
     mock_executor.push_file.side_effect = ProviderError(brief="foo")
-    mocker.patch(
-        "craft_providers.instance_config.temp_paths.home_temporary_file",
-        return_value=pathlib.Path(tmpdir) / "temp-file",
-    )
 
     # register 'snap known' calls
     for _ in range(4):
@@ -895,16 +873,12 @@ def test_add_assertions_from_host_error_on_push(
 
 
 def test_add_assertions_from_host_error_on_ack(
-    fake_executor, fake_process, mock_requests, mocker, tmpdir
+    fake_executor, fake_process, mock_requests,
 ):
     """Raise SnapInstallationError when 'snap ack' fails."""
     fake_process.register_subprocess(
         ["fake-executor", "snap", "ack", "/tmp/test-name.assert"],
         returncode=1,
-    )
-    mocker.patch(
-        "craft_providers.instance_config.temp_paths.home_temporary_file",
-        return_value=pathlib.Path(tmpdir) / "temp-file",
     )
 
     # register 'snap known' calls

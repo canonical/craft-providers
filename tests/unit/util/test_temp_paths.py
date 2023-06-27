@@ -20,7 +20,10 @@ import pathlib
 from craft_providers.util import temp_paths
 
 
-def test_home_temporary_directory():
+def test_home_temporary_directory(monkeypatch):
+    # Remove the fake home temporary directory fixture set in conftest
+    monkeypatch.undo()
+
     with temp_paths.home_temporary_directory() as tmp_path:
         assert tmp_path.relative_to(pathlib.Path.home())
         assert tmp_path.is_dir() is True
@@ -28,7 +31,10 @@ def test_home_temporary_directory():
     assert tmp_path.exists() is False
 
 
-def test_home_temporary_file():
+def test_home_temporary_file(monkeypatch):
+    # Remove the fake home temporary file fixture set in conftest
+    monkeypatch.undo()
+
     with temp_paths.home_temporary_file() as tmp_file:
         assert tmp_file.relative_to(pathlib.Path.home())
         assert tmp_file.is_file() is True
