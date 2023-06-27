@@ -67,8 +67,8 @@ jobs:
         uses: codecov/codecov-action@v1
 
   macos-integration-tests:
-    name: MacOS 10.15 Integration Tests
-    runs-on: macos-10.15
+    name: MacOS Integration Tests
+    runs-on: macos-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -82,8 +82,10 @@ jobs:
         run: |
           brew update
           brew install multipass
-          multipass version
           sleep 20
+          multipass set local.driver=qemu
+          sleep 20
+          multipass version
       - name: Run integration tests on MacOS
         run: |
           export CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL=1
