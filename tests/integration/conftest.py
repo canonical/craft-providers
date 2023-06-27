@@ -286,7 +286,7 @@ def dangerously_installed_snap(tmpdir):
 
 
 @pytest.fixture(scope="session")
-def empty_test_snap(installed_snap, tmp_path):
+def empty_test_snap(installed_snap):
     """Fixture to provide an empty local-only snap for test purposes.
 
     Requires:
@@ -294,14 +294,16 @@ def empty_test_snap(installed_snap, tmp_path):
     """
     snap_name = "craft-integration-test-snap"
 
-    tmp_path.chmod(0o755)
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = pathlib.Path(tmp_dir)
+        tmp_path.chmod(0o755)
 
-    meta_dir = tmp_path / "meta"
-    meta_dir.mkdir()
-    snap_yaml = meta_dir / "snap.yaml"
-    snap_yaml.write_text(
-        f"name: {snap_name}\nversion: 1.0\ntype: base\nsummary: test snap\n"
-    )
+        meta_dir = tmp_path / "meta"
+        meta_dir.mkdir()
+        snap_yaml = meta_dir / "snap.yaml"
+        snap_yaml.write_text(
+            f"name: {snap_name}\nversion: 1.0\ntype: base\nsummary: test snap\n"
+        )
 
-    with installed_snap(snap_name, try_path=tmp_path):
-        yield snap_name
+        with installed_snap(snap_name, try_path=tmp_path):
+            yield snap_name
