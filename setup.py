@@ -52,7 +52,7 @@ test_requires = [
     "flake8",
     "freezegun",
     "isort",
-    "mypy",
+    "mypy==1.1.1",
     "logassert",
     "pydocstyle",
     "pyfakefs",
