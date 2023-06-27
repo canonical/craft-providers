@@ -22,6 +22,9 @@ from unittest import mock
 import pytest
 from craft_providers import multipass
 
+# Shortcut any calls to time.sleep with pytest-time's instant_sleep
+pytestmark = pytest.mark.usefixtures("instant_sleep")
+
 
 @pytest.fixture()
 def mock_details_from_process_error():
@@ -33,7 +36,7 @@ def mock_details_from_process_error():
         yield mock_details
 
 
-def test_install_darwin(fake_process, monkeypatch):
+def test_install_darwin(fake_process, monkeypatch, mock_instant_sleep):
     monkeypatch.setattr(sys, "platform", "darwin")
 
     fake_process.register_subprocess(["brew", "install", "multipass"])
@@ -49,6 +52,7 @@ def test_install_darwin(fake_process, monkeypatch):
         ["multipass", "set", "local.driver=qemu"],
         ["multipass", "version"],
     ]
+    mock_instant_sleep.sleep.assert_called_with(20)
 
 
 def test_install_darwin_error(
