@@ -405,7 +405,6 @@ def test_inject_from_host_matching_revision_no_op(
     fake_executor,
     fake_process,
     logs,
-    tmp_path,
 ):
     """Injection shouldn't occur if target revision equals the host revision"""
     snap_installer.inject_from_host(
@@ -454,7 +453,7 @@ def test_inject_from_host_snapd_connection_error_using_pack_fallback(
     mock_requests,
     fake_executor,
     fake_process,
-    tmp_path,
+    tmpdir,
 ):
     mock_requests.get.side_effect = requests.exceptions.ConnectionError()
 
@@ -463,7 +462,7 @@ def test_inject_from_host_snapd_connection_error_using_pack_fallback(
             "snap",
             "pack",
             "/snap/test-name/current/",
-            f'--filename={pathlib.PurePosixPath(tmp_path / "test-name.snap")}',
+            f'--filename={pathlib.PurePosixPath(tmpdir / "test-name.snap")}',
         ]
     )
     # register 'snap known' calls
@@ -873,7 +872,7 @@ def test_add_assertions_from_host_error_on_push(
 
 
 def test_add_assertions_from_host_error_on_ack(
-    fake_executor, fake_process, mock_requests,
+    fake_executor, fake_process, mock_requests
 ):
     """Raise SnapInstallationError when 'snap ack' fails."""
     fake_process.register_subprocess(
