@@ -22,6 +22,12 @@ from unittest import mock
 import pytest
 from craft_providers.util import retry
 
+pytestmark = [
+    # These tests can be flaky on Windows, at least in GitHub CI. The flakiness
+    # comes from timing issues on Windows.
+    pytest.mark.flaky(condition=sys.platform == "win32", reruns=3, reruns_delay=1),
+]
+
 
 @pytest.fixture(params=range(1, 6), ids=[f"timeout_{i}s" for i in range(1, 6)])
 def timeout(request):
@@ -48,7 +54,6 @@ def test_retry_until_timeout_success(
         assert len(mock_instant_sleep.sleep.mock_calls) >= failure_count
 
 
-# @pytest.mark.no_mock_sleep
 @pytest.mark.parametrize("retry_multiplier", [0.5, 0.8])
 @pytest.mark.usefixtures("instant_sleep")
 def test_retry_until_timeout_success_longish_retry(timeout, retry_multiplier):
@@ -75,12 +80,6 @@ def test_retry_until_timeout_success_long_retry(monkeypatch, timeout, retry_mult
     assert mock_monotonic.mock_calls == [mock.call(), mock.call()]
 
 
-@pytest.mark.xfail(
-    sys.platform in ("win32", "cygwin"),
-    reason="Windows timer resolution doesn't always result in time.sleep being called",
-    raises=AssertionError,
-    strict=False,  # It could pass.
-)
 @pytest.mark.parametrize("error_cls", [TimeoutError, Exception, ValueError])
 def test_retry_until_timeout_times_out(retry_wait, timeout, instant_sleep, error_cls):
     mock_function = mock.Mock(side_effect=Exception())
@@ -89,10 +88,6 @@ def test_retry_until_timeout_times_out(retry_wait, timeout, instant_sleep, error
         retry.retry_until_timeout(timeout, retry_wait, mock_function, error=error_cls())
 
     mock_function.assert_called()
-
-    # Behaviour on Windows CI is unreliable related to this, so exclude Windows
-    # from this check. This is due in part to a lower resolution in Windows's
-    # sleep timer compared to other platforms.
 
 
 @pytest.mark.parametrize("error_cls", [TimeoutError, Exception, ValueError])
@@ -109,5 +104,4 @@ def test_retry_until_timeout_times_out_long_retry(
         )
 
     mock_function.assert_called_once()
-
     mock_instant_sleep.sleep.assert_not_called()
