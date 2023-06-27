@@ -21,6 +21,12 @@ import pytest
 from craft_providers import lxd
 from craft_providers.bases import ubuntu
 
+# The LXD tests can be flaky, erroring out with a BaseCompatibilityError:
+# "Clean incompatible instance and retry the requested operation."
+# This is due to an upstream LXD bug that appears to still be present in LXD 5.14:
+# https://github.com/lxc/lxd/issues/11422
+pytestmark = pytest.mark.flaky(reruns=3, reruns_delay=2)
+
 
 # exclude XENIAL because it is not supported for LXD
 @pytest.mark.parametrize(
