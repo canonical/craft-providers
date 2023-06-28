@@ -94,13 +94,15 @@ _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE = {
     bases.BuilddBaseAlias.JAMMY.value: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="22.04"
     ),
+    # kinetic image is not available on macos
     bases.BuilddBaseAlias.KINETIC.value: RemoteImage(
         remote=Remote.RELEASE, image_name="kinetic"
     ),
     bases.BuilddBaseAlias.LUNAR.value: RemoteImage(
-        remote=Remote.DAILY, image_name="lunar"
+        remote=Remote.RELEASE, image_name="lunar"
     ),
-    # XXX: devel image from snapcraft remote is not working (LP #2007419)
+    # XXX: snapcraft:devel image is not working (LP #2007419)
+    # daily:devel image is not available on macos
     bases.BuilddBaseAlias.DEVEL.value: RemoteImage(
         remote=Remote.DAILY, image_name="devel"
     ),

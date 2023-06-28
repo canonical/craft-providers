@@ -28,6 +28,9 @@ install_requires = [
     "pydantic",
     "pyyaml",
     "requests_unixsocket",
+    # Needed until requests-unixsocket supports urllib3 v2
+    # https://github.com/msabramo/requests-unixsocket/pull/69
+    "urllib3<2",
 ]
 
 dev_requires = [
@@ -49,7 +52,7 @@ test_requires = [
     "flake8",
     "freezegun",
     "isort",
-    "mypy",
+    "mypy==1.1.1",
     "logassert",
     "pydocstyle",
     "pyfakefs",
