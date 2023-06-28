@@ -21,7 +21,7 @@ import pathlib
 import subprocess
 from typing import Optional
 
-import pkg_resources
+import packaging.version
 
 from craft_providers.errors import details_from_called_process_error
 
@@ -73,6 +73,7 @@ class LXD:
 
         :returns: True if installed version is supported.
         """
+        minimum_version = packaging.version.parse(self.minimum_required_version)
         version = self.version()
 
         if "." not in version:
@@ -81,9 +82,7 @@ class LXD:
                 details=f"Version data returned: {version!r}",
             )
 
-        return pkg_resources.parse_version(version) >= pkg_resources.parse_version(
-            self.minimum_required_version
-        )
+        return packaging.version.parse(version) >= minimum_version
 
     def version(self) -> str:
         """Query LXD version.

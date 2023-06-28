@@ -31,7 +31,7 @@ import subprocess
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-import pkg_resources
+import packaging.version
 
 from craft_providers import errors
 from craft_providers.const import RETRY_WAIT
@@ -153,11 +153,10 @@ class Multipass:
 
         :returns: True if installed version is supported.
         """
+        minimum_version = packaging.version.parse(self.minimum_required_version)
         version, _ = self.version()
 
-        return pkg_resources.parse_version(version) >= pkg_resources.parse_version(
-            self.minimum_required_version
-        )
+        return packaging.version.parse(version) >= minimum_version
 
     def launch(
         self,

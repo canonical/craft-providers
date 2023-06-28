@@ -2,6 +2,7 @@
 name = "craft-providers"
 dynamic = ["version", "readme"]
 dependencies = [
+    "packaging>=14.1",
     "pydantic",
     "pyyaml",
     "requests_unixsocket",
