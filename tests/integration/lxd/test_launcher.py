@@ -216,6 +216,15 @@ def test_launch_use_base_instance(get_instance_and_base_instance, instance_name)
     assert instance.exists()
     assert instance.is_running()
 
+    # collect the hostname of the instance
+    instance_hostname = (
+        instance.execute_run(["cat", "/etc/hostname"], check=True, capture_output=True)
+        .stdout.decode()
+        .rstrip("\n")
+    )
+
+    assert instance_hostname == base_configuration.hostname
+
 
 def test_launch_create_base_instance_with_correct_image_description(
     get_base_instance, instance_name
