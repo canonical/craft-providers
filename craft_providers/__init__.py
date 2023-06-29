@@ -17,7 +17,7 @@
 
 """Craft Providers base package."""
 
-__version__ = "1.10.0"
+__version__ = "1.10.1"
 
 from .base import Base
 from .errors import ProviderError
