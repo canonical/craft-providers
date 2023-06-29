@@ -2,6 +2,12 @@
 Changelog
 *********
 
+1.10.1 (2023-06-29)
+-------------------
+- Set hostname when launching LXD instances
+- Update Lunar image for Multipass to stable image
+- Pin dependency urllib3<2
+
 1.10.0 (2023-03-31)
 -------------------
 - Add support for kinetic, lunar, and devel images with Multipass
