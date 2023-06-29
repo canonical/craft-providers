@@ -615,5 +615,10 @@ def launch(
     # instance is now ready to be started and warmed up
     logger.warning("Starting instance.")
     instance.start()
+
+    # change the hostname from the base instance's hostname
+    # pylint: disable-next=protected-access
+    base_configuration._setup_hostname(executor=instance, deadline=None)  # type: ignore
+
     base_configuration.warmup(executor=instance)
     return instance
