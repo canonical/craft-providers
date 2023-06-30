@@ -14,7 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
-
+import contextlib
 import io
 import pathlib
 import subprocess
@@ -149,3 +149,33 @@ def responses():
 )
 def failure_count(request):
     return request.param
+
+
+@pytest.fixture(autouse=True)
+def fake_home_temporary_directory(monkeypatch, tmp_path):
+    @contextlib.contextmanager
+    def home_temporary_directory():
+        yield tmp_path
+
+    monkeypatch.setattr(
+        "craft_providers.instance_config.temp_paths.home_temporary_directory",
+        home_temporary_directory,
+    )
+    return tmp_path
+
+
+@pytest.fixture(autouse=True)
+def fake_home_temporary_file(monkeypatch, tmp_path):
+    temp_file = tmp_path / "temp-file"
+
+    @contextlib.contextmanager
+    def home_temporary_file():
+        temp_file.touch()
+        yield temp_file
+        temp_file.unlink(missing_ok=True)
+
+    monkeypatch.setattr(
+        "craft_providers.instance_config.temp_paths.home_temporary_file",
+        home_temporary_file,
+    )
+    return temp_file
