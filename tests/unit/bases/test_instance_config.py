@@ -45,21 +45,13 @@ def mock_executor():
 
 
 @pytest.fixture()
-def config_fixture(mocker, tmpdir):
+def config_fixture(fake_home_temporary_file):
     """Creates an instance config file containing data passed to the fixture."""
 
     def _config_fixture(**kwargs):
-        temp_path = pathlib.Path(tmpdir)
+        fake_home_temporary_file.write_text(**kwargs)
 
-        config_file = temp_path / "craft-instance.conf"
-        config_file.write_text(**kwargs)
-
-        mocker.patch(
-            "craft_providers.instance_config.temp_paths.home_temporary_file",
-            return_value=config_file,
-        )
-
-        return config_file
+        return fake_home_temporary_file
 
     return _config_fixture
 
