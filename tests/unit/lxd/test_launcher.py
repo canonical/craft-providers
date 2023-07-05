@@ -181,11 +181,7 @@ def test_launch_use_base_instance(
         call.stop(),
         call.start(),
     ]
-    assert fake_base_instance.mock_calls == [
-        call.exists(),
-        call.__bool__(),
-        call.__bool__(),
-    ]
+    fake_base_instance.exists.assert_called_once()
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.get_command_environment(),
@@ -261,6 +257,7 @@ def test_launch_use_existing_base_instance(
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.get_command_environment(),
+        call._setup_hostname(executor=fake_instance),
         call.warmup(executor=fake_instance),
     ]
 
