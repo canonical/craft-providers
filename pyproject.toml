@@ -2,7 +2,8 @@
 name = "craft-providers"
 dynamic = ["version", "readme"]
 dependencies = [
-    "pydantic",
+    "packaging>=14.1",
+    "pydantic<2.0",
     "pyyaml",
     "requests_unixsocket",
     # Needed until requests-unixsocket supports urllib3 v2
@@ -93,13 +94,17 @@ version_scheme = "post-release"
 # - only match tags formatted as 'X.Y.Z'
 git_describe_command = "git describe --dirty --long --match '[0-9]*.[0-9]*.[0-9]*' --exclude '*[^0-9.]*'"
 
-[tool.setuptools.packages.find]
-exclude = [
-    "dist*",
-    "docs*",
-    "results*",
-    "tests*",
+[tool.setuptools]
+packages = [
+    "craft_providers",
+    "craft_providers_docs"
 ]
+
+[tool.setuptools.package-dir]
+craft_providers_docs = "docs/base"
+
+[tool.setuptools.package-data]
+craft_providers_docs = ["**"]
 
 [tool.distutils.bdist_wheel]
 universal = true

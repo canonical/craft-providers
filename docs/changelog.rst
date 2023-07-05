@@ -2,6 +2,21 @@
 Changelog
 *********
 
+See the `Releases page`_ on Github for a complete list of commits that are
+included in each version.
+
+1.14.0 (2023-06-28)
+-------------------
+- Update Lunar image for Multipass to stable image
+- Install common packages and clean up package cache on bases
+- Push files to any location in Multipass instances
+- CI, linting, and testing overhaul
+- Add diataxis front page for documentation
+- Improve ``push_file_io`` for LXD instances
+- Improve ``retry-until-timeout`` logic
+- Refactor base classes
+- Improve operability with Python 3.12
+
 1.13.0 (2023-05-31)
 -------------------
 - Push files to any location in Multipass instances
@@ -209,3 +224,5 @@ Note: The provided name for a LXD executor object is converted to comply with
 - Declare instance paths as PurePath
 - Address linter issues
 - Update documentation
+
+.. _Releases page: https://github.com/canonical/craft-providers/releases
