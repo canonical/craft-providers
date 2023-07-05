@@ -49,9 +49,7 @@ def test_retry_until_timeout_success(
     retry.retry_until_timeout(timeout, retry_wait, mock_function)
 
     assert len(mock_function.mock_calls) == failure_count + 1
-    # This is flaky on Windows, so exclude this assertion.
-    if sys.platform not in ("win32", "cygwin"):
-        assert len(mock_instant_sleep.sleep.mock_calls) >= failure_count
+    assert len(mock_instant_sleep.sleep.mock_calls) >= failure_count
 
 
 @pytest.mark.parametrize("retry_multiplier", [0.5, 0.8])
