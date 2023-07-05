@@ -8,10 +8,12 @@ This project aims to provide Python interfaces for instantiating and executing
 builds for a variety of target environments.
 
 Initial providers include:
-- LXD containers
-- Multipass VMs
+
+- `LXD containers`_
+- `Multipass VMs`_
 
 Host support is targeted for:
+
 - Linux
 - Mac OS X
 - Windows
@@ -27,3 +29,6 @@ https://canonical-craft-providers.readthedocs-hosted.com/en/latest/
 Contributing
 ------------
 See the HACKING.rst document for details on how to contribute.
+
+.. _`LXD containers`: https://linuxcontainers.org/lxd/
+.. _`Multipass VMs`: https://multipass.run/
