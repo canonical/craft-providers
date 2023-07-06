@@ -43,7 +43,7 @@ dev = [
     "pytest-time==0.2.0",
     "responses==0.23.1",
     "types-requests==2.31.0.1",
-    "types-setuptools==67.8.0.0",
+    "types-setuptools==68.0.0.1",
     "types-pyyaml==6.0.12.10",
 ]
 lint = [
