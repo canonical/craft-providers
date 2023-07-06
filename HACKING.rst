@@ -20,11 +20,10 @@ you with tox, but you'll need to install:
 
 - Python 3.8 (default on Ubuntu 20.04, available on Ubuntu 22.04 through the
   deadsnakes_ PPA) with setuptools.
-- tox_ version 4 or later. (3.8+ will automatically provision a v4 virtualenv)
+- tox_ version 3.8 or later
 - Pyright_ (it's recommended you install with
   ``snap install --classic pyright``)
 - ShellCheck_  (also available via snap: ``snap install shellcheck``)
-- pre-commit_
 
 Once you have all of those installed, you can install the necessary virtual
 environments for this repository using tox.
@@ -57,15 +56,15 @@ If you'd like to run the tests with a newer version of Python, you can pass a
 specific environment. You must have an appropriately versioned Python
 interpreter installed. For example, to run with Python 3.10, run::
 
-    tox -e test-py310
+    tox -e test-py3.10
 
 While the use of pre-commit_ is optional, it is highly encouraged, as it runs
 automatic fixes for files when ``git commit`` is called, including code
-formatting with ``black`` and ``ruff``.  The versions available in ``apt``
-from Debian 11 (bullseye), Ubuntu 22.04 (jammy) and newer are sufficient, but
-you can also install the latest with ``pip install pre-commit``. Once you've
-installed it, run ``pre-commit install`` in this git repository to install the
-pre-commit hooks.
+formatting with ``black`` and ``ruff``.  The versions available in ``apt`` from
+Debian 11 (bullseye), Ubuntu 22.04 (jammy) and newer are sufficient, but you can
+also install the latest with ``pip install pre-commit``. Once you've installed
+it, run ``pre-commit install`` in this git repository to install the pre-commit
+hooks.
 
 Tox environments and labels
 ###########################
@@ -75,12 +74,12 @@ We group tox environments with the following labels:
 * ``format``: Runs all code formatters with auto-fixing
 * ``type``: Runs all type checkers
 * ``lint``: Runs all linters (including type checkers)
-* ``unit-tests``: Runs unit tests in Python versions on supported LTS's + latest
-* ``integration-tests``: Same as above but for integration tests
+* ``unit-tests``: Runs unit tests in several supported Python versions
+* ``integration-tests``: Run integration tests in several Python versions
 * ``tests``: The union of ``unit-tests`` and ``integration-tests``
 
-For each of these, you can see which environments will be run with
-``tox list``. For example:
+For each of these, you can see which environments will be run with ``tox list``.
+For example::
 
     tox list -m lint
 

@@ -30,6 +30,7 @@ craft-providers = "craft_providers.cli:main"
 
 [project.optional-dependencies]
 dev = [
+    "build",
     "coverage[toml]==7.2.7",
     "freezegun==1.2.2",
     "logassert==7",
@@ -141,7 +142,9 @@ omit = ["tests/**"]
 
 [tool.coverage.report]
 skip_empty = true
-fail_under = 95
+exclude_also = [
+    "if (typing\\.)?TYPE_CHECKING:",
+]
 
 [tool.pyright]
 # typing in craft-providers is incomplete (see #326)
@@ -218,7 +221,8 @@ select = [  # Base linting rule selections.
     "RSE",  # Errors on pytest raises.
     "RET",  # Simpler logic after return, raise, continue or break
     "SIM",  # Code simplification
-    "TCH",  # Guard imports only used for type checking behind a type-checkning block.
+    "TCH004",  # Remove imports from type-checking guard blocks if used at runtime
+    "TCH005",  # Delete empty type-checking blocks
     "ARG",  # Unused arguments
     "PTH",  # Migrate to pathlib
     "ERA",  # Don't check in commented out code

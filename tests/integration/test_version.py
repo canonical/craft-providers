@@ -11,11 +11,10 @@
 #
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Craft Providers versioning tests."""
+"""Versioning tests."""
 import re
 import subprocess
 
-import craft_providers
 import pytest
 
 
@@ -42,9 +41,9 @@ def _repo_has_version_tag() -> bool:
 @pytest.mark.skipif(
     _repo_has_version_tag(), reason="Skipping because project was versioned from a tag."
 )
-def test_version_without_tags():
+def test_version_without_tags(project_main_module):
     """Validate version format when no valid tag are present."""
-    version = craft_providers.__version__
+    version = project_main_module.__version__
 
     # match on '0.0.post<total commits>+g<hash>'
     #       or '0.0.post<total commits>+g<hash>.d<%Y%m%d>'
@@ -55,9 +54,9 @@ def test_version_without_tags():
     not _repo_has_version_tag(),
     reason="Skipping because project was not versioned from a tag.",
 )
-def test_version_with_tags():
+def test_version_with_tags(project_main_module):
     """Version should be properly formatted when a valid tag exists."""
-    version = craft_providers.__version__
+    version = project_main_module.__version__
 
     # match on 'X.Y.Z'
     #       or 'X.Y.Z.d<%Y%m%d>'
