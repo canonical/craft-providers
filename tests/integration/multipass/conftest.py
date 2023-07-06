@@ -23,7 +23,7 @@ from contextlib import contextmanager
 import pytest
 
 
-@pytest.fixture(autouse=True, scope="module")
+@pytest.fixture(autouse=True, scope="session")
 def installed_multipass_required(installed_multipass):
     """All Multipass integration tests required multipass to be installed."""
 

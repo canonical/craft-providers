@@ -86,7 +86,7 @@ def reusable_instance_name():
     return generate_instance_name()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def installed_lxd():
     """Ensure lxd is installed, or skip the test if we cannot.
 
@@ -134,7 +134,7 @@ def uninstalled_lxd():
         lxd.install()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def installed_multipass():
     """Ensure multipass is installed, or skip the test if we cannot.
 
@@ -199,7 +199,7 @@ def core22_lxd_instance(installed_lxd, instance_name):
         instance.delete()
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def installed_snap():
     """Fixture to provide contextmanager to install a specified snap.
 
@@ -207,12 +207,12 @@ def installed_snap():
     CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL=1
     """
 
+    if shutil.which("snap") is None or sys.platform != "linux":
+        pytest.skip("requires linux and snapd")
+
     @contextlib.contextmanager
     def _installed_snap(snap_name, *, try_path: Optional[pathlib.Path] = None):
         """Ensure snap is installed or skip test."""
-        if shutil.which("snap") is None or sys.platform != "linux":
-            pytest.skip("requires linux and snapd")
-
         # do nothing if already installed and not dangerous
         if snap_exists(snap_name) and not is_installed_dangerously(snap_name):
             yield
@@ -285,8 +285,8 @@ def dangerously_installed_snap(tmpdir):
     return _dangerously_installed_snap
 
 
-@pytest.fixture()
-def empty_test_snap(installed_snap, tmp_path):
+@pytest.fixture(scope="session")
+def empty_test_snap(installed_snap):
     """Fixture to provide an empty local-only snap for test purposes.
 
     Requires:
@@ -294,14 +294,16 @@ def empty_test_snap(installed_snap, tmp_path):
     """
     snap_name = "craft-integration-test-snap"
 
-    tmp_path.chmod(0o755)
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = pathlib.Path(tmp_dir)
+        tmp_path.chmod(0o755)
 
-    meta_dir = tmp_path / "meta"
-    meta_dir.mkdir()
-    snap_yaml = meta_dir / "snap.yaml"
-    snap_yaml.write_text(
-        f"name: {snap_name}\nversion: 1.0\ntype: base\nsummary: test snap\n"
-    )
+        meta_dir = tmp_path / "meta"
+        meta_dir.mkdir()
+        snap_yaml = meta_dir / "snap.yaml"
+        snap_yaml.write_text(
+            f"name: {snap_name}\nversion: 1.0\ntype: base\nsummary: test snap\n"
+        )
 
-    with installed_snap(snap_name, try_path=tmp_path):
-        yield snap_name
+        with installed_snap(snap_name, try_path=tmp_path):
+            yield snap_name
