@@ -1485,6 +1485,17 @@ def test_project_create_error(fake_process):
         ],
         returncode=1,
     )
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "project",
+            "list",
+            "test-remote:",
+            "--format=yaml",
+        ],
+        stdout="- config:\n  name: default\n",
+        returncode=0,
+    )
 
     with pytest.raises(LXDError) as exc_info:
         LXC().project_create(
@@ -1498,6 +1509,37 @@ def test_project_create_error(fake_process):
             exc_info.value.__cause__  # type: ignore
         ),
     )
+
+
+def test_project_create_error_race(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "project",
+            "create",
+            "test-remote:test-project",
+        ],
+        returncode=1,
+    )
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "project",
+            "list",
+            "test-remote:",
+            "--format=yaml",
+        ],
+        stdout="- config:\n  name: default\n- config:\n  name: test-project\n",
+        returncode=0,
+    )
+
+    LXC().project_create(
+        project="test-project",
+        remote="test-remote",
+    )
+    assert len(fake_process.calls) == 2
 
 
 def test_project_delete(fake_process):
