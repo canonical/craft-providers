@@ -793,10 +793,19 @@ class LXC:
         try:
             self._run_lxc(command, capture_output=True, project=project)
         except subprocess.CalledProcessError as error:
-            raise LXDError(
-                brief=f"Failed to create project {project!r}.",
-                details=errors.details_from_called_process_error(error),
-            ) from error
+            # handle the race condition where two processes check and
+            # create the same project at the same time
+            if project in self.project_list(remote=remote):
+                logger.debug(
+                    "Remote %s is present on second check, ignoring exception %s.",
+                    project,
+                    str(error),
+                )
+            else:
+                raise LXDError(
+                    brief=f"Failed to create project {project!r}.",
+                    details=errors.details_from_called_process_error(error),
+                ) from error
 
     def project_delete(self, *, project: str, remote: str = "local") -> None:
         """Delete project, if it exists.
