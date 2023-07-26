@@ -5,6 +5,11 @@ Changelog
 See the `Releases page`_ on Github for a complete list of commits that are
 included in each version.
 
+1.14.1 (2023-07-24)
+-------------------
+- Prevent race when two processes try to create the same project
+  at the same time
+
 1.14.0 (2023-06-28)
 -------------------
 - Update Lunar image for Multipass to stable image
