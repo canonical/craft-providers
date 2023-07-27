@@ -1,6 +1,6 @@
 # -*- Mode:Python; indent-tabs-mode:nil; tab-width:4 -*-
 #
-# Copyright 2022 Canonical Ltd.
+# Copyright 2022-2023 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -35,6 +35,16 @@ logger = logging.getLogger(__name__)
 
 class Provider(ABC):
     """Build environment provider."""
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Name of the provider."""
+
+    @property
+    @abstractmethod
+    def install_recommendation(self) -> str:
+        """Recommended way to install the provider."""
 
     def clean_project_environments(self, *, instance_name: str) -> None:
         """Clean the provider environment.

@@ -298,3 +298,20 @@ def test_remote_image_name(remote):
 def test_remote_is_stable(remote_image, is_stable):
     """RemoteImages should be properly marked as stable or unstable."""
     assert remote_image.is_stable == is_stable
+
+
+def test_multipass_name():
+    """Verify MultipassProvider's name."""
+    provider = MultipassProvider()
+
+    assert provider.name == "Multipass"
+
+
+def test_multipass_install_recommendation():
+    """Verify MultipassProvider's install recommendation."""
+    provider = MultipassProvider()
+
+    assert (
+        provider.install_recommendation
+        == "Visit https://multipass.run/install for instructions to install Multipass."
+    )

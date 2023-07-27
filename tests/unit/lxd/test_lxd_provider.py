@@ -230,3 +230,20 @@ def test_launched_environment_unstable_error(
         "Cannot launch an unstable image 'test-image-name' from remote "
         "'test-remote-name'"
     )
+
+
+def test_lxd_name():
+    """Verify LXDProvider's name."""
+    provider = LXDProvider()
+
+    assert provider.name == "LXD"
+
+
+def test_lxd_install_recommendation():
+    """Verify LXDProvider's install recommendation."""
+    provider = LXDProvider()
+
+    assert (
+        provider.install_recommendation
+        == "Visit https://ubuntu.com/lxd/install for instructions to install LXD."
+    )
