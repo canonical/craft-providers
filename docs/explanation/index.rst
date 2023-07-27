@@ -22,4 +22,4 @@ If you're getting network errors in an LXD instance and have Docker installed,
 please refer to `this section`_ in the Linux Containers documentation for more
 information and ways to solve the situation.
 
-.. _`this section`: https://linuxcontainers.org/lxd/docs/master/howto/network_bridge_firewalld/#prevent-connectivity-issues-with-lxd-and-docker
+.. _`this section`: https://documentation.ubuntu.com/lxd/en/latest/howto/network_bridge_firewalld/#prevent-connectivity-issues-with-lxd-and-docker

@@ -51,6 +51,6 @@ def test_ensure_lxd_is_ready(installed_lxd_without_init):
     assert exc_info.value == lxd.LXDError(
         brief="LXD has not been properly initialized.",
         resolution="Execute 'lxd init --auto' to initialize LXD.\n"
-        "Visit https://linuxcontainers.org/lxd/getting-started-cli/ for "
+        "Visit https://documentation.ubuntu.com/lxd/en/latest/getting_started/"
         "instructions on installing and configuring LXD for your operating system.",
     )
