@@ -20,10 +20,13 @@
 import logging
 import os
 import re
+import subprocess
+import sys
 from datetime import datetime, timedelta
 from typing import Optional
 
 from craft_providers import Base, ProviderError, bases
+from craft_providers.errors import details_from_called_process_error
 
 from .errors import LXDError
 from .lxc import LXC
@@ -72,6 +75,8 @@ def _create_instance(
     )
     instance.launch(image=image_name, image_remote=image_remote, ephemeral=ephemeral)
     base_configuration.setup(executor=instance)
+
+    _set_timezone(instance, project, remote, lxc)
 
     # return early if base instances and user id mapping are not specified
     if not base_instance and not map_user_uid:
@@ -390,6 +395,45 @@ def _set_id_map(
     )
 
 
+def _set_timezone(instance: LXDInstance, project: str, remote: str, lxc: LXC) -> None:
+    """Set the instance's timezone to match the host's timezone.
+
+    Sets the instance timezone only on Linux hosts due to usage of the
+    `timedatectl` utility.
+    """
+    # no-op on non-linux platforms because `timedatectl` won't exist
+    if sys.platform != "linux":
+        logger.debug("Not setting timezone because host is not Linux.")
+        return
+
+    try:
+        timezone = subprocess.run(
+            ["timedatectl", "show", "-p", "Timezone", "--value"],
+            capture_output=True,
+            check=True,
+            text=True,
+        ).stdout.strip()
+    except subprocess.CalledProcessError as error:
+        # `timedatectl` support on the host is not an explicit requirement, so just
+        # log the failure and no-op
+        logger.debug(
+            "Not setting instance's timezone because host timezone could not "
+            f"be determined: {details_from_called_process_error(error)}"
+        )
+        return
+
+    logger.debug(f"Setting instance timezone to match host timezone {timezone!r}.")
+
+    # set the timezone via the TZ environment variable
+    lxc.config_set(
+        instance_name=instance.instance_name,
+        key="environment.TZ",
+        value=timezone,
+        project=project,
+        remote=remote,
+    )
+
+
 def launch(
     name: str,
     *,
@@ -619,4 +663,9 @@ def launch(
     base_configuration._setup_hostname(executor=instance)
 
     base_configuration.warmup(executor=instance)
+
+    # set timezone on warmup because the host's timezone may have changed since the
+    # instance was setup
+    _set_timezone(instance, project, remote, lxc)
+
     return instance
