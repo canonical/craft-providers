@@ -57,7 +57,7 @@ types = [
     "pyright==1.1.318",
 ]
 docs = [
-    "furo==2023.5.20",
+    "furo==2023.7.26",
     "sphinx>=7.1,<7.2",
     "sphinx-autobuild==2021.3.14",
     "sphinx-copybutton==0.5.2",
