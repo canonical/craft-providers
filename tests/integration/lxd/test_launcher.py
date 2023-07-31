@@ -20,6 +20,7 @@ import json
 import os
 import pathlib
 import subprocess
+import sys
 from datetime import datetime, timedelta
 
 import pytest
@@ -147,6 +148,36 @@ def test_launch_and_run(instance_name):
         proc = instance.execute_run(["echo", "hi"], check=True, stdout=subprocess.PIPE)
 
         assert proc.stdout == b"hi\n"
+    finally:
+        instance.delete()
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason=f"unsupported on {sys.platform}")
+def test_timezone(instance_name):
+    """Verify instance timezone matches the host timezone."""
+    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+
+    instance = lxd.launch(
+        name=instance_name,
+        base_configuration=base_configuration,
+        image_name=ubuntu.BuilddBaseAlias.JAMMY.value,
+        image_remote="ubuntu",
+    )
+
+    try:
+        host_timezone = subprocess.run(
+            ["timedatectl", "show", "-p", "Timezone", "--value"],
+            capture_output=True,
+            check=True,
+            text=True,
+        ).stdout.strip()
+
+        instance_timezone = instance.execute_run(
+            ["printenv", "TZ"], capture_output=True, check=True, text=True
+        ).stdout.strip()
+
+        assert host_timezone == instance_timezone
+
     finally:
         instance.delete()
 
