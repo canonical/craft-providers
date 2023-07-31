@@ -58,6 +58,16 @@ class LXDProvider(Provider):
         self.lxd_project = lxd_project
         self.lxd_remote = lxd_remote
 
+    @property
+    def name(self) -> str:
+        """Name of the provider."""
+        return "LXD"
+
+    @property
+    def install_recommendation(self) -> str:
+        """Recommended way to install the provider."""
+        return "Visit https://ubuntu.com/lxd/install for instructions to install LXD."
+
     @classmethod
     def ensure_provider_is_available(cls) -> None:
         """Ensure provider is available and ready, installing if required.

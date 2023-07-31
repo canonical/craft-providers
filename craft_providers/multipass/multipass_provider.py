@@ -142,6 +142,18 @@ class MultipassProvider(Provider):
     def __init__(self, instance: Multipass = Multipass()) -> None:
         self.multipass = instance
 
+    @property
+    def name(self) -> str:
+        """Name of the provider."""
+        return "Multipass"
+
+    @property
+    def install_recommendation(self) -> str:
+        """Recommended way to install the provider."""
+        return (
+            "Visit https://multipass.run/install for instructions to install Multipass."
+        )
+
     @classmethod
     def ensure_provider_is_available(cls) -> None:
         """Ensure provider is available, prompting the user to install it if required.

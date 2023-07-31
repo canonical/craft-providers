@@ -43,6 +43,18 @@ def mock_lxc(mocker):
 
 
 @pytest.fixture()
+def mock_platform(mocker):
+    mocker.patch("sys.platform", "linux")
+
+
+@pytest.fixture()
+def mock_timezone(fake_process):
+    fake_process.register_subprocess(
+        ["timedatectl", "show", "-p", "Timezone", "--value"], stdout="fake/timezone"
+    )
+
+
+@pytest.fixture()
 def fake_instance():
     """Returns a fake LXD Instance"""
     instance = MagicMock()
@@ -93,7 +105,12 @@ def mock_check_id_map(mocker):
 
 
 def test_launch_no_base_instance(
-    fake_instance, mock_base_configuration, mock_lxc, mock_lxd_instance
+    fake_instance,
+    mock_base_configuration,
+    mock_lxc,
+    mock_lxd_instance,
+    mock_platform,
+    mock_timezone,
 ):
     """Create an instance from an image and do not save a copy as the base instance."""
     lxd.launch(
@@ -105,7 +122,16 @@ def test_launch_no_base_instance(
         lxc=mock_lxc,
     )
 
-    assert mock_lxc.mock_calls == [call.project_list("local")]
+    assert mock_lxc.mock_calls == [
+        call.project_list("local"),
+        call.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="environment.TZ",
+            value="fake/timezone",
+            project="default",
+            remote="local",
+        ),
+    ]
     assert mock_lxd_instance.mock_calls == [
         call(
             name=fake_instance.name,
@@ -131,6 +157,8 @@ def test_launch_use_base_instance(
     mock_is_valid,
     mock_lxc,
     mock_lxd_instance,
+    mock_platform,
+    mock_timezone,
 ):
     """Launch an instance from an image and save a copy as the base instance."""
     lxd.launch(
@@ -146,6 +174,13 @@ def test_launch_use_base_instance(
 
     assert mock_lxc.mock_calls == [
         call.project_list("test-remote"),
+        call.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="environment.TZ",
+            value="fake/timezone",
+            project="test-project",
+            remote="test-remote",
+        ),
         call.copy(
             source_remote="test-remote",
             source_instance_name=fake_instance.instance_name,
@@ -198,6 +233,8 @@ def test_launch_use_existing_base_instance(
     mock_is_valid,
     mock_lxc,
     mock_lxd_instance,
+    mock_platform,
+    mock_timezone,
     map_user_uid,
     uid,
 ):
@@ -237,6 +274,15 @@ def test_launch_use_existing_base_instance(
                 remote="test-remote",
             ),
         )
+    expected_mock_lxc_calls.append(
+        call.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="environment.TZ",
+            value="fake/timezone",
+            project="test-project",
+            remote="test-remote",
+        )
+    )
     assert mock_lxc.mock_calls == expected_mock_lxc_calls
     assert mock_lxd_instance.mock_calls == [
         call(
@@ -269,6 +315,8 @@ def test_launch_existing_base_instance_invalid(
     mock_is_valid,
     mock_lxc,
     mock_lxd_instance,
+    mock_platform,
+    mock_timezone,
 ):
     """If the existing base instance is invalid, delete it and create a new instance."""
     fake_base_instance.exists.return_value = True
@@ -287,6 +335,13 @@ def test_launch_existing_base_instance_invalid(
 
     assert mock_lxc.mock_calls == [
         call.project_list("test-remote"),
+        call.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="environment.TZ",
+            value="fake/timezone",
+            project="test-project",
+            remote="test-remote",
+        ),
         call.copy(
             source_remote="test-remote",
             source_instance_name=fake_instance.instance_name,
@@ -337,7 +392,12 @@ def test_launch_existing_base_instance_invalid(
 
 
 def test_launch_all_opts(
-    fake_instance, mock_base_configuration, mock_lxc, mock_lxd_instance
+    fake_instance,
+    mock_base_configuration,
+    mock_lxc,
+    mock_lxd_instance,
+    mock_timezone,
+    mock_platform,
 ):
     """Parse all parameters."""
     lxd.launch(
@@ -357,6 +417,13 @@ def test_launch_all_opts(
 
     assert mock_lxc.mock_calls == [
         call.project_list("test-remote"),
+        call.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="environment.TZ",
+            value="fake/timezone",
+            project="test-project",
+            remote="test-remote",
+        ),
         call.config_set(
             instance_name=fake_instance.instance_name,
             key="raw.idmap",
@@ -410,7 +477,12 @@ def test_launch_missing_project(
 
 
 def test_launch_create_project(
-    fake_instance, mock_base_configuration, mock_lxc, mock_lxd_instance
+    fake_instance,
+    mock_base_configuration,
+    mock_lxc,
+    mock_lxd_instance,
+    mock_platform,
+    mock_timezone,
 ):
     """Create a project if it does not exist and auto_create_project is true."""
     lxd.launch(
@@ -432,6 +504,13 @@ def test_launch_create_project(
             profile="default",
             project="project-to-create",
             config=mock_lxc.profile_show.return_value,
+            remote="test-remote",
+        ),
+        call.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="environment.TZ",
+            value="fake/timezone",
+            project="project-to-create",
             remote="test-remote",
         ),
     ]
@@ -528,6 +607,8 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
     mock_check_id_map,
     mock_lxc,
     mock_lxd_instance,
+    mock_platform,
+    mock_timezone,
 ):
     """If instance is incompatible and auto_clean is true, launch a new instance."""
     fake_instance.exists.return_value = True
@@ -547,7 +628,16 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
         lxc=mock_lxc,
     )
 
-    assert mock_lxc.mock_calls == [call.project_list("local")]
+    assert mock_lxc.mock_calls == [
+        call.project_list("local"),
+        call.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="environment.TZ",
+            value="fake/timezone",
+            project="default",
+            remote="local",
+        ),
+    ]
     assert mock_lxd_instance.mock_calls == [
         call(
             name=fake_instance.name,
@@ -605,6 +695,8 @@ def test_launch_with_existing_ephemeral_instance(
     mock_check_id_map,
     mock_lxc,
     mock_lxd_instance,
+    mock_platform,
+    mock_timezone,
 ):
     """Delete and recreate existing ephemeral instances."""
     fake_instance.exists.return_value = True
@@ -619,7 +711,16 @@ def test_launch_with_existing_ephemeral_instance(
         lxc=mock_lxc,
     )
 
-    assert mock_lxc.mock_calls == [call.project_list("local")]
+    assert mock_lxc.mock_calls == [
+        call.project_list("local"),
+        call.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="environment.TZ",
+            value="fake/timezone",
+            project="default",
+            remote="local",
+        ),
+    ]
     assert mock_lxd_instance.mock_calls == [
         call(
             name=fake_instance.name,
@@ -740,6 +841,8 @@ def test_use_snapshots_deprecated(
     mock_base_configuration,
     mock_lxc,
     mock_lxd_instance,
+    mock_platform,
+    mock_timezone,
 ):
     """Log deprecation warning for `use_snapshots` and continue to launch."""
     lxd.launch(
@@ -763,6 +866,13 @@ def test_use_snapshots_deprecated(
 
     assert mock_lxc.mock_calls == [
         call.project_list("test-remote"),
+        call.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="environment.TZ",
+            value="fake/timezone",
+            project="test-project",
+            remote="test-remote",
+        ),
         call.copy(
             source_remote="test-remote",
             source_instance_name=fake_instance.instance_name,
@@ -1016,3 +1126,40 @@ def test_check_id_map_wrong_format(fake_base_instance, logs, mock_lxc, mocker):
         )
         in logs.debug
     )
+
+
+@pytest.mark.parametrize("platform", ["darwin", "win32", "other"])
+def test_timezone_non_linux_host(fake_instance, mocker, mock_lxc, logs, platform):
+    """Log an error and no-op if host is not linux."""
+    mocker.patch.object(sys, "platform", platform)
+
+    lxd.launcher._set_timezone(
+        instance=fake_instance,
+        project="test-project",
+        remote="test-remote",
+        lxc=mock_lxc,
+    )
+
+    assert "Not setting timezone because host is not Linux." in logs.debug
+
+
+def test_timezone_host_error(
+    fake_instance, fake_process, mock_lxc, mock_platform, logs
+):
+    """Log an error and no-op if timezone cannot be collected from host."""
+    fake_process.register_subprocess(
+        ["timedatectl", "show", "-p", "Timezone", "--value"],
+        returncode=1,
+    )
+
+    lxd.launcher._set_timezone(
+        instance=fake_instance,
+        project="test-project",
+        remote="test-remote",
+        lxc=mock_lxc,
+    )
+
+    assert (
+        "Not setting instance's timezone because host timezone could not "
+        "be determined: \\* Command that failed: 'timedatectl show -p Timezone --value'"
+    ) in logs.debug
