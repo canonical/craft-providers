@@ -42,7 +42,7 @@ def test_lxd_installation_error():
 
     assert str(error) == (
         "Failed to install LXD: error during foo.\n"
-        "Visit https://linuxcontainers.org/lxd/getting-started-cli/"
+        "Visit https://documentation.ubuntu.com/lxd/en/latest/getting_started/"
         " for instructions on installing and configuring LXD for your operating system."
     )
 
@@ -55,7 +55,7 @@ def test_lxd_installation_error_with_details():
     assert str(error) == (
         "Failed to install LXD: error during foo.\n"
         "Some details...\n"
-        "Visit https://linuxcontainers.org/lxd/getting-started-cli/"
+        "Visit https://documentation.ubuntu.com/lxd/en/latest/getting_started/"
         " for instructions on installing and configuring LXD for your operating system."
     )
 

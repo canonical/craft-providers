@@ -30,5 +30,5 @@ Contributing
 ------------
 See the HACKING.rst document for details on how to contribute.
 
-.. _`LXD containers`: https://linuxcontainers.org/lxd/
+.. _`LXD containers`: https://ubuntu.com/lxd/
 .. _`Multipass VMs`: https://multipass.run/

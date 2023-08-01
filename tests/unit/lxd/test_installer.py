@@ -283,8 +283,10 @@ def test_ensure_lxd_is_ready_not_installed(
 
     assert exc_info.value == LXDError(
         brief="LXD is required, but not installed.",
-        resolution="Visit https://linuxcontainers.org/lxd/getting-started-cli/ for "
-        "instructions on installing and configuring LXD for your operating system.",
+        resolution=(
+            "Visit https://documentation.ubuntu.com/lxd/en/latest/getting_started/ for "
+            "instructions on installing and configuring LXD for your operating system."
+        ),
     )
 
 
@@ -299,8 +301,10 @@ def test_ensure_lxd_is_ready_not_minimum_version(
 
     assert exc_info.value == LXDError(
         brief="LXD '3.12' does not meet the minimum required version '4.0'.",
-        resolution="Visit https://linuxcontainers.org/lxd/getting-started-cli/ for "
-        "instructions on installing and configuring LXD for your operating system.",
+        resolution=(
+            "Visit https://documentation.ubuntu.com/lxd/en/latest/getting_started/ for "
+            "instructions on installing and configuring LXD for your operating system."
+        ),
     )
 
 
@@ -315,7 +319,7 @@ def test_ensure_lxd_is_ready_not_permitted(
     assert exc_info.value == LXDError(
         brief="LXD requires additional permissions.",
         resolution="Ensure that the user is in the 'lxd' group.\n"
-        "Visit https://linuxcontainers.org/lxd/getting-started-cli/ for "
+        "Visit https://documentation.ubuntu.com/lxd/en/latest/getting_started/ for "
         "instructions on installing and configuring LXD for your operating system.",
     )
 
@@ -331,7 +335,7 @@ def test_ensure_lxd_is_ready_not_initialized(
     assert exc_info.value == LXDError(
         brief="LXD has not been properly initialized.",
         resolution="Execute 'lxd init --auto' to initialize LXD.\n"
-        "Visit https://linuxcontainers.org/lxd/getting-started-cli/ for "
+        "Visit https://documentation.ubuntu.com/lxd/en/latest/getting_started/ for "
         "instructions on installing and configuring LXD for your operating system.",
     )
 

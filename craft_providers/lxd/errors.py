@@ -21,7 +21,7 @@ from typing import Optional
 from craft_providers.errors import ProviderError
 
 LXD_INSTALL_HELP = (
-    "Visit https://linuxcontainers.org/lxd/getting-started-cli/"
+    "Visit https://documentation.ubuntu.com/lxd/en/latest/getting_started/"
     " for instructions on installing and configuring LXD for your operating system."
 )
 

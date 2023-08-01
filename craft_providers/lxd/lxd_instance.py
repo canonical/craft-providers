@@ -443,7 +443,7 @@ class LXDInstance(Executor):
     def _host_supports_mknod(self) -> bool:
         """Check if host supports mknod in container.
 
-        See: https://linuxcontainers.org/lxd/docs/master/syscall-interception
+        See: https://documentation.ubuntu.com/lxd/en/latest/syscall-interception/
 
         :returns: True if mknod is supported.
 
