@@ -308,6 +308,47 @@ def test_launch_use_existing_base_instance(
     ]
 
 
+def test_launch_use_existing_base_instance_already_running(
+    fake_instance,
+    fake_base_instance,
+    mock_base_configuration,
+    mock_is_valid,
+    mock_lxc,
+    mock_lxd_instance,
+    mock_platform,
+    mock_timezone,
+):
+    """Launch an existing instance which is already running."""
+    fake_base_instance.exists.return_value = True
+    fake_base_instance.is_running.return_value = True
+
+    fake_instance.is_running.return_value = True
+
+    lxd.launch(
+        name=fake_instance.name,
+        base_configuration=mock_base_configuration,
+        image_name="image-name",
+        image_remote="image-remote",
+        map_user_uid=True,
+        uid=1234,
+        use_base_instance=True,
+        project="test-project",
+        remote="test-remote",
+        lxc=mock_lxc,
+    )
+
+    assert fake_instance.mock_calls == [
+        call.exists(),
+        call.is_running(),
+        call.stop(),
+        call.start(),
+    ]
+    assert fake_base_instance.mock_calls == [
+        call.exists(),
+        call.is_running(),
+    ]
+
+
 def test_launch_existing_base_instance_invalid(
     fake_instance,
     fake_base_instance,
