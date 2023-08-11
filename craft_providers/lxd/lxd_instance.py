@@ -529,6 +529,7 @@ class LXDInstance(Executor):
 
         :raises LXDError: on unexpected error.
         """
+        logger.info("Starting instance")
         self.lxc.start(
             instance_name=self.instance_name, project=self.project, remote=self.remote
         )

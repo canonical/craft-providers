@@ -70,7 +70,8 @@ def _create_instance(
     :param remote: LXD remote to create instance on.
     :param lxc: LXC client.
     """
-    logger.warning(
+    logger.info("Creating new instance from remote")
+    logger.debug(
         "Creating new instance from image %r from remote %r.", image_name, image_remote
     )
     instance.launch(image=image_name, image_remote=image_remote, ephemeral=ephemeral)
@@ -86,7 +87,8 @@ def _create_instance(
     instance.stop()
 
     if base_instance:
-        logger.warning(
+        logger.info("Creating new base instance from instance")
+        logger.debug(
             "Creating new base instance %r from instance.", base_instance.instance_name
         )
         lxc.copy(
@@ -188,14 +190,14 @@ def _is_valid(
         info = lxc.info(instance_name=instance_name, project=project, remote=remote)
     except LXDError as raised:
         # if the base instance info can't be retrieved, consider it invalid
-        logger.warning("Could not get instance info with error: %s", raised)
+        logger.debug("Could not get instance info with error: %s", raised)
         return False
 
     creation_date_raw = info.get("Created")
 
     # if the base instance does not have a creation date, consider it invalid
     if not creation_date_raw:
-        logger.warning("Instance does not have a 'Created' date.")
+        logger.debug("Instance does not have a 'Created' date.")
         return False
 
     # parse datetime
@@ -203,14 +205,12 @@ def _is_valid(
         creation_date = datetime.strptime(creation_date_raw, "%Y/%m/%d %H:%M %Z")
     except ValueError as raised:
         # if the date can't be parsed, consider it invalid
-        logger.warning(
-            "Could not parse instance's 'Created' date with error: %r", raised
-        )
+        logger.debug("Could not parse instance's 'Created' date with error: %r", raised)
         return False
 
     expiration_date = datetime.now() - expiration
     if creation_date < expiration_date:
-        logger.warning(
+        logger.debug(
             "Instance is expired (Instance creation date: %s, expiration date: %s).",
             creation_date,
             expiration_date,
@@ -266,7 +266,7 @@ def _launch_existing_instance(
         uid=uid,
     ):
         if auto_clean:
-            logger.warning(
+            logger.debug(
                 "Cleaning incompatible instance %r (reason: %s).",
                 instance.instance_name,
                 "the instance's id map ('raw.idmap') is not configured as expected",
@@ -279,14 +279,14 @@ def _launch_existing_instance(
         )
 
     if ephemeral:
-        logger.warning("Instance exists and is ephemeral. Cleaning instance.")
+        logger.debug("Instance exists and is ephemeral. Cleaning instance.")
         instance.delete()
         return False
 
     if instance.is_running():
-        logger.warning("Instance exists and is running.")
+        logger.debug("Instance exists and is running.")
     else:
-        logger.warning("Instance exists and is not running. Starting instance.")
+        logger.debug("Instance exists and is not running. Starting instance.")
         instance.start()
 
     try:
@@ -294,7 +294,7 @@ def _launch_existing_instance(
     except bases.BaseCompatibilityError as error:
         # delete the instance so a new instance can be created
         if auto_clean:
-            logger.warning(
+            logger.debug(
                 "Cleaning incompatible instance %r (reason: %s).",
                 instance.instance_name,
                 error.reason,
@@ -513,7 +513,7 @@ def launch(
         remote=remote,
         default_command_environment=base_configuration.get_command_environment(),
     )
-    logger.warning(
+    logger.debug(
         "Checking for instance %r in project %r in remote %r",
         instance.instance_name,
         project,
@@ -536,10 +536,10 @@ def launch(
     ):
         return instance
 
-    logger.warning("Instance %r does not exist.", instance.instance_name)
+    logger.debug("Instance %r does not exist.", instance.instance_name)
 
     if not use_base_instance:
-        logger.warning("Using base instances is disabled.")
+        logger.debug("Using base instances is disabled.")
         _create_instance(
             instance=instance,
             base_instance=None,
@@ -566,7 +566,7 @@ def launch(
         remote=remote,
         default_command_environment=base_configuration.get_command_environment(),
     )
-    logger.warning(
+    logger.debug(
         "Checking for base instance %r in project %r in remote %r",
         base_instance.instance_name,
         project,
@@ -584,7 +584,7 @@ def launch(
 
     # the base instance does not exist, so create a new instance and base instance
     if not base_instance.exists():
-        logger.warning("Base instance %r does not exist.", base_instance.instance_name)
+        logger.debug("Base instance %r does not exist.", base_instance.instance_name)
         _create_instance(
             instance=instance,
             base_instance=base_instance,
@@ -609,7 +609,7 @@ def launch(
         lxc=lxc,
         expiration=expiration,
     ):
-        logger.warning(
+        logger.debug(
             "Base instance %r is not valid. Deleting base instance.",
             base_instance.instance_name,
         )
@@ -630,13 +630,14 @@ def launch(
         return instance
 
     # at this point, there is a valid base instance to be copied to a new instance
-    logger.warning(
-        "Creating instance from base instance %r", base_instance.instance_name
+    logger.info("Creating instance from base instance")
+    logger.debug(
+        "Creating instance from base instance %r.", base_instance.instance_name
     )
 
     # the base instance is not expected to be running but check for safety
     if base_instance.is_running():
-        logger.warning("Stopping base instance.")
+        logger.debug("Stopping base instance.")
 
     lxc.copy(
         source_remote=remote,
@@ -648,7 +649,7 @@ def launch(
 
     # the newly copied instance should not be running, but check anyways
     if instance.is_running():
-        logger.warning("Instance is already running.")
+        logger.debug("Instance is already running.")
         instance.stop()
 
     # set the id map while the instance is not running
@@ -656,7 +657,6 @@ def launch(
         _set_id_map(instance=instance, lxc=lxc, project=project, remote=remote, uid=uid)
 
     # instance is now ready to be started and warmed up
-    logger.warning("Starting instance.")
     instance.start()
 
     # change the hostname from the base instance's hostname

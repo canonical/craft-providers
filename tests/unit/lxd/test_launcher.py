@@ -771,7 +771,7 @@ def test_launch_existing_instance_id_map_mismatch_with_auto_clean(
             f"Cleaning incompatible instance '{fake_instance.instance_name}' (reason: "
             "the instance's id map ('raw.idmap') is not configured as expected)."
         )
-        in logs.warning
+        in logs.debug
     )
 
 
@@ -975,7 +975,7 @@ def test_is_valid_lxd_error(logs, mocker, mock_lxc):
     )
 
     assert not is_valid
-    assert Exact("Could not get instance info with error: test error") in logs.warning
+    assert Exact("Could not get instance info with error: test error") in logs.debug
 
 
 def test_is_valid_key_error(logs, mocker, mock_lxc):
@@ -991,7 +991,7 @@ def test_is_valid_key_error(logs, mocker, mock_lxc):
     )
 
     assert not is_valid
-    assert Exact("Instance does not have a 'Created' date.") in logs.warning
+    assert Exact("Instance does not have a 'Created' date.") in logs.debug
 
 
 def test_is_valid_value_error(logs, mocker, mock_lxc):
@@ -1012,7 +1012,7 @@ def test_is_valid_value_error(logs, mocker, mock_lxc):
             "Could not parse instance's 'Created' date with error: ValueError(\"time "
             "data 'bad-datetime-value' does not match format '%Y/%m/%d %H:%M %Z'\")"
         )
-        in logs.warning
+        in logs.debug
     )
 
 
