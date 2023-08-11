@@ -210,7 +210,7 @@ def _get_host_snap(snap_name: str) -> Iterator[pathlib.Path]:
         try:
             _download_host_snap(snap_name=snap_name, output=snap_path)
         except SnapInstallationError:
-            logger.warning(
+            logger.debug(
                 "Failed to fetch snap from snapd,"
                 " falling back to `snap pack` to recreate"
             )

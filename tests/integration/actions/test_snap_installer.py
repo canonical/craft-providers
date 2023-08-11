@@ -17,6 +17,7 @@
 
 """Tests for snap installer."""
 
+import logging
 import re
 from textwrap import dedent
 
@@ -107,6 +108,8 @@ def test_inject_from_host_using_pack_fallback(
     core22_lxd_instance, empty_test_snap, caplog
 ):
     """Verify a snap is packed if the local download fails."""
+    caplog.set_level(logging.DEBUG)
+
     snap_installer.inject_from_host(
         executor=core22_lxd_instance,
         snap_name=empty_test_snap,
@@ -118,9 +121,10 @@ def test_inject_from_host_using_pack_fallback(
     )
 
     log_messages = [r.message for r in caplog.records]
-    assert log_messages == [
+    expected = (
         "Failed to fetch snap from snapd, falling back to `snap pack` to recreate"
-    ]
+    )
+    assert expected in log_messages
 
 
 def test_install_from_store_strict(core22_lxd_instance, installed_snap, caplog):

@@ -308,6 +308,47 @@ def test_launch_use_existing_base_instance(
     ]
 
 
+def test_launch_use_existing_base_instance_already_running(
+    fake_instance,
+    fake_base_instance,
+    mock_base_configuration,
+    mock_is_valid,
+    mock_lxc,
+    mock_lxd_instance,
+    mock_platform,
+    mock_timezone,
+):
+    """Launch an existing instance which is already running."""
+    fake_base_instance.exists.return_value = True
+    fake_base_instance.is_running.return_value = True
+
+    fake_instance.is_running.return_value = True
+
+    lxd.launch(
+        name=fake_instance.name,
+        base_configuration=mock_base_configuration,
+        image_name="image-name",
+        image_remote="image-remote",
+        map_user_uid=True,
+        uid=1234,
+        use_base_instance=True,
+        project="test-project",
+        remote="test-remote",
+        lxc=mock_lxc,
+    )
+
+    assert fake_instance.mock_calls == [
+        call.exists(),
+        call.is_running(),
+        call.stop(),
+        call.start(),
+    ]
+    assert fake_base_instance.mock_calls == [
+        call.exists(),
+        call.is_running(),
+    ]
+
+
 def test_launch_existing_base_instance_invalid(
     fake_instance,
     fake_base_instance,
@@ -771,7 +812,7 @@ def test_launch_existing_instance_id_map_mismatch_with_auto_clean(
             f"Cleaning incompatible instance '{fake_instance.instance_name}' (reason: "
             "the instance's id map ('raw.idmap') is not configured as expected)."
         )
-        in logs.warning
+        in logs.debug
     )
 
 
@@ -975,7 +1016,7 @@ def test_is_valid_lxd_error(logs, mocker, mock_lxc):
     )
 
     assert not is_valid
-    assert Exact("Could not get instance info with error: test error") in logs.warning
+    assert Exact("Could not get instance info with error: test error") in logs.debug
 
 
 def test_is_valid_key_error(logs, mocker, mock_lxc):
@@ -991,7 +1032,7 @@ def test_is_valid_key_error(logs, mocker, mock_lxc):
     )
 
     assert not is_valid
-    assert Exact("Instance does not have a 'Created' date.") in logs.warning
+    assert Exact("Instance does not have a 'Created' date.") in logs.debug
 
 
 def test_is_valid_value_error(logs, mocker, mock_lxc):
@@ -1012,7 +1053,7 @@ def test_is_valid_value_error(logs, mocker, mock_lxc):
             "Could not parse instance's 'Created' date with error: ValueError(\"time "
             "data 'bad-datetime-value' does not match format '%Y/%m/%d %H:%M %Z'\")"
         )
-        in logs.warning
+        in logs.debug
     )
 
 
