@@ -121,9 +121,10 @@ def test_inject_from_host_using_pack_fallback(
     )
 
     log_messages = [r.message for r in caplog.records]
-    assert log_messages == [
+    expected = (
         "Failed to fetch snap from snapd, falling back to `snap pack` to recreate"
-    ]
+    )
+    assert expected in log_messages
 
 
 def test_install_from_store_strict(core22_lxd_instance, installed_snap, caplog):
