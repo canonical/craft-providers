@@ -41,7 +41,7 @@ dev = [
     "pytest-subprocess==1.5.0",
     "pytest-xdist==3.3.1",
     "pytest-time==0.3.1",
-    "responses==0.23.1",
+    "responses==0.23.3",
     "types-requests==2.31.0.2",
     "types-setuptools==68.0.0.3",
     "types-pyyaml==6.0.12.11",
@@ -53,8 +53,8 @@ lint = [
     "yamllint==1.32.0",
 ]
 types = [
-    "mypy[reports]==1.4.1",
-    "pyright==1.1.318",
+    "mypy[reports]==1.5.0",
+    "pyright==1.1.322",
 ]
 docs = [
     "furo==2023.7.26",
