@@ -35,7 +35,7 @@ from craft_providers.instance_config import InstanceConfiguration
 from logassert import Exact  # type: ignore
 from pydantic import ValidationError
 
-DEFAULT_FAKE_CMD = ["fake-executor"]
+from tests.unit.conftest import DEFAULT_FAKE_CMD
 
 
 @pytest.fixture()
@@ -760,19 +760,13 @@ def test_setup_snapd_proxy_failures(fake_process, fake_executor, fail_index):
     )
 
 
+@pytest.mark.usefixtures("stub_verify_network")
 @pytest.mark.parametrize("fail_index", list(range(0, 2)))
 def test_pre_setup_snapd_failures(fake_process, fake_executor, fail_index):
     base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
 
     return_codes = [0, 0]
     return_codes[fail_index] = 1
-
-    # some of the commands below are network related and will verify if internet
-    # is fine after failing; let't not make this a factor in this test
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
-        returncode=0,
-    )
 
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "is-active", "systemd-udevd"],
@@ -798,13 +792,10 @@ def test_pre_setup_snapd_failures(fake_process, fake_executor, fail_index):
     )
 
 
+@pytest.mark.usefixtures("stub_verify_network")
 def test_setup_snapd_failures(fake_process, fake_executor):
     base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
 
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
-        returncode=0,
-    )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "yum", "install", "-y", "snapd"],
         returncode=1,
@@ -821,6 +812,7 @@ def test_setup_snapd_failures(fake_process, fake_executor):
     )
 
 
+@pytest.mark.usefixtures("stub_verify_network")
 @pytest.mark.parametrize("fail_index", list(range(0, 8)))
 def test_post_setup_snapd_failures(fake_process, fake_executor, fail_index, mocker):
     base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
@@ -830,12 +822,6 @@ def test_post_setup_snapd_failures(fake_process, fake_executor, fail_index, mock
     return_codes = [0, 0, 0, 0, 0, 0, 0, 0]
     return_codes[fail_index] = 1
 
-    # some of the commands below are network related and will verify if internet
-    # is fine after failing; let't not make this a factor in this test
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
-        returncode=0,
-    )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "ln", "-sf", "/var/lib/snapd/snap", "/snap"],
         returncode=return_codes[0],
@@ -1515,15 +1501,12 @@ def test_execute_run_verify_network_run_ok(fake_process, fake_executor):
     assert proc.returncode == 0
 
 
+@pytest.mark.usefixtures("stub_verify_network")
 def test_execute_run_verify_network_connectivity_ok(fake_process, fake_executor):
     """Network verified after process failure, connectivity ok."""
     base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
     command = ["the", "command"]
 
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
-        returncode=0,
-    )
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, *command], returncode=1)
 
     with pytest.raises(subprocess.CalledProcessError):
@@ -1555,13 +1538,11 @@ def test_execute_run_bad_check_verifynetwork_combination(fake_executor):
         )
 
 
+@pytest.mark.usefixtures("stub_verify_network")
 def test_network_connectivity_yes(fake_executor, fake_process):
     """Connectivity is ok."""
     base_config = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
-        returncode=0,
-    )
+
     assert base_config._network_connected(executor=fake_executor) is True
 
 

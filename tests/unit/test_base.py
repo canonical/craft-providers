@@ -24,14 +24,12 @@ import pytest_subprocess.fake_popen
 from craft_providers import Executor, base
 from craft_providers.errors import BaseConfigurationError
 
+from tests.unit.conftest import DEFAULT_FAKE_CMD
+
 pytestmark = [pytest.mark.usefixtures("instant_sleep")]
 
-FAKE_EXECUTOR_CMD = ["fake-executor"]
 WAIT_FOR_SYSTEM_READY_CMD = ["systemctl", "is-system-running"]
 WAIT_FOR_NETWORK_CMD = ["getent", "hosts", "snapcraft.io"]
-
-
-DEFAULT_FAKE_CMD = ["fake-executor"]
 
 
 class FakeBase(base.Base):
@@ -86,7 +84,7 @@ def test_wait_for_system_ready_success(
     fake_base, fake_executor, fake_process, running_state, failure_count, timeout_value
 ):
     fake_base._timeout_simple = timeout_value
-    cmd = [*FAKE_EXECUTOR_CMD, *WAIT_FOR_SYSTEM_READY_CMD]
+    cmd = [*DEFAULT_FAKE_CMD, *WAIT_FOR_SYSTEM_READY_CMD]
     for _ in range(failure_count):
         fake_process.register(cmd, stdout="no")
     fake_process.register(cmd, stdout=running_state)
@@ -105,7 +103,7 @@ def test_wait_for_system_ready_timeout(
     fake_base, fake_executor, fake_process, callback
 ):
     fake_process.register(
-        [*FAKE_EXECUTOR_CMD, *WAIT_FOR_SYSTEM_READY_CMD], callback=callback
+        [*DEFAULT_FAKE_CMD, *WAIT_FOR_SYSTEM_READY_CMD], callback=callback
     )
     fake_process.keep_last_process(True)
 
@@ -117,7 +115,7 @@ def test_wait_for_network_success(
     fake_base, fake_executor, fake_process, failure_count, timeout_value
 ):
     fake_base._timeout_simple = timeout_value
-    cmd = [*FAKE_EXECUTOR_CMD, *WAIT_FOR_NETWORK_CMD]
+    cmd = [*DEFAULT_FAKE_CMD, *WAIT_FOR_NETWORK_CMD]
     for _ in range(failure_count):
         fake_process.register(cmd, returncode=1)
     fake_process.register(cmd, returncode=0)
@@ -133,9 +131,7 @@ def test_wait_for_network_success(
     ],
 )
 def test_wait_for_network_timeout(fake_base, fake_executor, fake_process, callback):
-    fake_process.register(
-        [*FAKE_EXECUTOR_CMD, *WAIT_FOR_NETWORK_CMD], callback=callback
-    )
+    fake_process.register([*DEFAULT_FAKE_CMD, *WAIT_FOR_NETWORK_CMD], callback=callback)
     fake_process.keep_last_process(True)
 
     with pytest.raises(BaseConfigurationError):

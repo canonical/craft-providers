@@ -25,6 +25,9 @@ import responses as responses_module
 from craft_providers.executor import Executor
 from craft_providers.util import env_cmd
 
+# command used by the FakeExecutor
+DEFAULT_FAKE_CMD = ["fake-executor"]
+
 
 class FakeExecutor(Executor):
     """Fake Executor.
@@ -74,7 +77,7 @@ class FakeExecutor(Executor):
     ) -> subprocess.Popen:
         env_args = [] if env is None else env_cmd.formulate_command(env, chdir=cwd)
 
-        final_cmd = ["fake-executor", *env_args, *command]
+        final_cmd = [*DEFAULT_FAKE_CMD, *env_args, *command]
         return subprocess.Popen(final_cmd, **kwargs)
 
     def execute_run(
@@ -88,7 +91,7 @@ class FakeExecutor(Executor):
     ) -> subprocess.CompletedProcess:
         env_args = [] if env is None else env_cmd.formulate_command(env, chdir=cwd)
 
-        final_cmd = ["fake-executor", *env_args, *command]
+        final_cmd = [*DEFAULT_FAKE_CMD, *env_args, *command]
 
         return subprocess.run(final_cmd, timeout=timeout, **kwargs)
 
@@ -138,12 +141,6 @@ def responses():
         yield rsps
 
 
-# @pytest.fixture(autouse=True)
-# def mock_time_sleep():
-#     with mock.patch("time.sleep", return_value=None) as mock_sleep:
-#         yield mock_sleep
-
-
 @pytest.fixture(
     params=range(4), ids=("succeed", "fail_once", "fail_twice", "fail_thrice")
 )
@@ -179,3 +176,12 @@ def fake_home_temporary_file(monkeypatch, tmp_path):
         home_temporary_file,
     )
     return temp_file
+
+
+@pytest.fixture()
+def stub_verify_network(fake_process):
+    """Ensures network check for Executor.execute_run(verify_network=True) succeeds."""
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
+        returncode=0,
+    )
