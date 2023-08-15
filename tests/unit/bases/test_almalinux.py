@@ -810,10 +810,9 @@ def test_setup_snapd_proxy_failures(fake_process, fake_executor, fail_index):
     )
 
 
+@pytest.mark.usefixtures("stub_verify_network")
 @pytest.mark.parametrize("fail_index", list(range(0, 2)))
-def test_pre_setup_snapd_failures(
-    mock_verify_network, fake_process, fake_executor, fail_index
-):
+def test_pre_setup_snapd_failures(fake_process, fake_executor, fail_index):
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
 
     return_codes = [0, 0]
@@ -843,7 +842,8 @@ def test_pre_setup_snapd_failures(
     )
 
 
-def test_setup_snapd_failures(mock_verify_network, fake_process, fake_executor):
+@pytest.mark.usefixtures("stub_verify_network")
+def test_setup_snapd_failures(fake_process, fake_executor):
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
 
     fake_process.register_subprocess(
@@ -862,10 +862,9 @@ def test_setup_snapd_failures(mock_verify_network, fake_process, fake_executor):
     )
 
 
+@pytest.mark.usefixtures("stub_verify_network")
 @pytest.mark.parametrize("fail_index", list(range(0, 8)))
-def test_post_setup_snapd_failures(
-    mock_verify_network, fake_process, fake_executor, fail_index, mocker
-):
+def test_post_setup_snapd_failures(fake_process, fake_executor, fail_index, mocker):
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
     mock_datetime = mocker.patch("craft_providers.base.datetime")
     mock_datetime.now.return_value = datetime(2022, 1, 2, 3, 4, 5, 6)
@@ -1552,9 +1551,8 @@ def test_execute_run_verify_network_run_ok(fake_process, fake_executor):
     assert proc.returncode == 0
 
 
-def test_execute_run_verify_network_connectivity_ok(
-    mock_verify_network, fake_process, fake_executor
-):
+@pytest.mark.usefixtures("stub_verify_network")
+def test_execute_run_verify_network_connectivity_ok(fake_process, fake_executor):
     """Network verified after process failure, connectivity ok."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
     command = ["the", "command"]
@@ -1590,7 +1588,8 @@ def test_execute_run_bad_check_verifynetwork_combination(fake_executor):
         )
 
 
-def test_network_connectivity_yes(mock_verify_network, fake_executor, fake_process):
+@pytest.mark.usefixtures("stub_verify_network")
+def test_network_connectivity_yes(fake_executor, fake_process):
     """Connectivity is ok."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
 

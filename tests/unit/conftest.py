@@ -179,8 +179,8 @@ def fake_home_temporary_file(monkeypatch, tmp_path):
 
 
 @pytest.fixture()
-def mock_verify_network(fake_process):
-    """Mock network check for `Executor.execute_run(verify_network=True)`."""
+def stub_verify_network(fake_process):
+    """Ensures network check for Executor.execute_run(verify_network=True) succeeds."""
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
         returncode=0,
