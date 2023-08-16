@@ -38,7 +38,7 @@ def get_base_instance():
     def _base_instance(
         image_name: str = "22.04",
         image_remote: str = "ubuntu",
-        compatibility_tag: str = "buildd-base-v1",
+        compatibility_tag: str = "buildd-base-v2",
         project: str = "default",
     ):
         """Get the base instance."""
@@ -301,7 +301,7 @@ def test_launch_create_base_instance_with_correct_image_description(
 
     assert (
         lxc_result[0]["expanded_config"]["image.description"]
-        == "base-instance-buildd-base-v1-ubuntu-22.04"
+        == "base-instance-buildd-base-v2-ubuntu-22.04"
     )
 
 
@@ -646,7 +646,7 @@ def test_launch_instance_config_incompatible_without_auto_clean(
 
     assert exc_info.value.brief == (
         "Incompatible base detected:"
-        " Expected image compatibility tag 'buildd-base-v1', found 'invalid'."
+        " Expected image compatibility tag 'buildd-base-v2', found 'invalid'."
     )
 
 
@@ -679,7 +679,7 @@ def test_launch_instance_not_setup_without_auto_clean(
     """Raise an error if an existing instance is not setup and auto_clean is False."""
     core22_instance.push_file_io(
         destination=base_configuration._instance_config_path,
-        content=io.BytesIO(b"compatibility_tag: buildd-base-v1\nsetup: false\n"),
+        content=io.BytesIO(b"compatibility_tag: buildd-base-v2\nsetup: false\n"),
         file_mode="0644",
     )
 
@@ -700,7 +700,7 @@ def test_launch_instance_not_setup_with_auto_clean(base_configuration, core22_in
     """Clean the instance if it is not setup and auto_clean is True."""
     core22_instance.push_file_io(
         destination=base_configuration._instance_config_path,
-        content=io.BytesIO(b"compatibility_tag: buildd-base-v1\nsetup: false\n"),
+        content=io.BytesIO(b"compatibility_tag: buildd-base-v2\nsetup: false\n"),
         file_mode="0644",
     )
 

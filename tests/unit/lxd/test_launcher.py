@@ -30,7 +30,7 @@ from logassert import Exact  # type: ignore
 @pytest.fixture()
 def mock_base_configuration():
     mock_base = Mock(spec=Base)
-    mock_base.compatibility_tag = "mock-compat-tag-v100"
+    mock_base.compatibility_tag = "mock-compat-tag-v200"
     mock_base.get_command_environment.return_value = {"foo": "bar"}
     return mock_base
 
@@ -204,7 +204,7 @@ def test_launch_use_base_instance(
             default_command_environment={"foo": "bar"},
         ),
         call(
-            name="base-instance-mock-compat-tag-v100-image-remote-image-name",
+            name="base-instance-mock-compat-tag-v200-image-remote-image-name",
             project="test-project",
             remote="test-remote",
             default_command_environment={"foo": "bar"},
@@ -292,7 +292,7 @@ def test_launch_use_existing_base_instance(
             default_command_environment={"foo": "bar"},
         ),
         call(
-            name="base-instance-mock-compat-tag-v100-image-remote-image-name",
+            name="base-instance-mock-compat-tag-v200-image-remote-image-name",
             project="test-project",
             remote="test-remote",
             default_command_environment={"foo": "bar"},
@@ -406,7 +406,7 @@ def test_launch_existing_base_instance_invalid(
             default_command_environment={"foo": "bar"},
         ),
         call(
-            name="base-instance-mock-compat-tag-v100-image-remote-image-name",
+            name="base-instance-mock-compat-tag-v200-image-remote-image-name",
             project="test-project",
             remote="test-remote",
             default_command_environment={"foo": "bar"},
@@ -937,7 +937,7 @@ def test_use_snapshots_deprecated(
             default_command_environment={"foo": "bar"},
         ),
         call(
-            name="base-instance-mock-compat-tag-v100-image-remote-image-name",
+            name="base-instance-mock-compat-tag-v200-image-remote-image-name",
             project="test-project",
             remote="test-remote",
             default_command_environment={"foo": "bar"},

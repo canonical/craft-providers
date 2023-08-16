@@ -46,7 +46,7 @@ def mock_buildd_base_configuration(mocker):
         "craft_providers.bases.ubuntu.BuilddBase", autospec=True
     )
     mock_base_config.alias = ubuntu.BuilddBaseAlias.JAMMY
-    mock_base_config.compatibility_tag = "buildd-base-v1"
+    mock_base_config.compatibility_tag = "buildd-base-v2"
     return mock_base_config
 
 
