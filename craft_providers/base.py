@@ -92,7 +92,7 @@ class Base(ABC):
     _timeout_complex: Optional[float] = TIMEOUT_COMPLEX
     _timeout_unpredictable: Optional[float] = TIMEOUT_UNPREDICTABLE
     alias: Enum
-    compatibility_tag: str = "base-v1"
+    compatibility_tag: str = "base-v2"
 
     @abstractmethod
     def __init__(

@@ -153,7 +153,7 @@ def test_launch_instance_config_incompatible_instance(core22_instance):
 
     assert exc_info.value.brief == (
         "Incompatible base detected:"
-        " Expected image compatibility tag 'buildd-base-v1', found 'invalid'."
+        " Expected image compatibility tag 'buildd-base-v2', found 'invalid'."
     )
 
     # Retry with auto_clean=True.
@@ -174,7 +174,7 @@ def test_launch_instance_not_setup_without_auto_clean(core22_instance):
 
     core22_instance.push_file_io(
         destination=base_configuration._instance_config_path,
-        content=io.BytesIO(b"compatibility_tag: buildd-base-v1\nsetup: false\n"),
+        content=io.BytesIO(b"compatibility_tag: buildd-base-v2\nsetup: false\n"),
         file_mode="0644",
     )
 
@@ -196,7 +196,7 @@ def test_launch_instance_not_setup_with_auto_clean(core22_instance):
 
     core22_instance.push_file_io(
         destination=base_configuration._instance_config_path,
-        content=io.BytesIO(b"compatibility_tag: buildd-base-v1\nsetup: false\n"),
+        content=io.BytesIO(b"compatibility_tag: buildd-base-v2\nsetup: false\n"),
         file_mode="0644",
     )
 

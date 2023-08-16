@@ -29,7 +29,7 @@ from pydantic import ValidationError
 @pytest.fixture()
 def default_config_data():
     return {
-        "compatibility_tag": "tag-foo-v1",
+        "compatibility_tag": "tag-foo-v2",
         "setup": True,
         "snaps": {
             "charmcraft": {"revision": 834},
@@ -66,7 +66,7 @@ def test_instance_config_defaults():
 
 
 def test_save(mock_executor):
-    config = InstanceConfiguration(compatibility_tag="tag-foo-v1")
+    config = InstanceConfiguration(compatibility_tag="tag-foo-v2")
     config_path = pathlib.PurePosixPath("/etc/crafty-crafty.conf")
 
     config.save(executor=mock_executor, config_path=config_path)
@@ -79,7 +79,7 @@ def test_save(mock_executor):
 
     assert (
         mock_executor.mock_calls[0].kwargs["content"].read()
-        == b"compatibility_tag: tag-foo-v1\n"
+        == b"compatibility_tag: tag-foo-v2\n"
     )
 
 
@@ -119,7 +119,7 @@ def test_load_with_valid_config(mock_executor, config_fixture, default_config_da
 
     assert config_instance is not None
     assert dict(config_instance) == {
-        "compatibility_tag": "tag-foo-v1",
+        "compatibility_tag": "tag-foo-v2",
         "setup": True,
         "snaps": {"charmcraft": {"revision": 834}, "core22": {"revision": 147}},
     }

@@ -55,7 +55,7 @@ def config_fixture(fake_home_temporary_file, request):
     """
     config_content = textwrap.dedent(
         f"""\
-        compatibility_tag: tag-foo-v1
+        compatibility_tag: tag-foo-v2
         snaps:
           test-name:
             revision: '{request.param}'
