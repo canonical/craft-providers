@@ -5,6 +5,17 @@ Changelog
 See the `Releases page`_ on Github for a complete list of commits that are
 included in each version.
 
+
+1.15.0 (2023-08-21)
+-------------------
+- Update base compatibility tag from ``base-v1`` to ``base-v2``
+- Use ``snap refresh --hold`` inside instances
+- Re-level log messages
+- Add more info-level log messages
+- Update links from linuxcontainers.org to ubuntu.com
+- Set timezone of LXD instances to match host's timezone
+- Add name and install recommendations to Providers
+
 1.14.1 (2023-07-24)
 -------------------
 - Prevent race when two processes try to create the same project
