@@ -24,6 +24,7 @@ import subprocess
 import sys
 import tempfile
 from unittest import mock
+from unittest.mock import call
 
 import pytest
 from craft_providers import errors
@@ -106,6 +107,33 @@ def mock_os_unlink():
 @pytest.fixture()
 def instance(mock_lxc):
     return LXDInstance(name=_TEST_INSTANCE["name"], lxc=mock_lxc)
+
+
+def test_config_get(mock_lxc, instance):
+    instance.config_get(key="test-key")
+
+    assert mock_lxc.mock_calls == [
+        call.config_get(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="test-key",
+            project="default",
+            remote="local",
+        )
+    ]
+
+
+def test_config_set(mock_lxc, instance):
+    instance.config_set(key="test-key", value="test-value")
+
+    assert mock_lxc.mock_calls == [
+        call.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="test-key",
+            value="test-value",
+            project="default",
+            remote="local",
+        )
+    ]
 
 
 def test_push_file_io(
@@ -779,6 +807,18 @@ def test_start(mock_lxc, instance):
             instance_name=instance.instance_name,
             project=instance.project,
             remote=instance.remote,
+        )
+    ]
+
+
+def test_restart(mock_lxc, instance):
+    instance.restart()
+
+    assert mock_lxc.mock_calls == [
+        call.restart(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            project="default",
+            remote="local",
         )
     ]
 

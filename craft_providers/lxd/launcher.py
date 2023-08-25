@@ -22,7 +22,9 @@ import os
 import re
 import subprocess
 import sys
-from datetime import datetime, timedelta
+import threading
+import time
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from craft_providers import Base, ProviderError, bases
@@ -31,9 +33,52 @@ from craft_providers.errors import details_from_called_process_error
 from .errors import LXDError
 from .lxc import LXC
 from .lxd_instance import LXDInstance
+from .lxd_instance_status import ProviderInstanceStatus
 from .project import create_with_default_profile
 
 logger = logging.getLogger(__name__)
+
+
+class InstanceTimer(threading.Thread):
+    """Timer for update instance that still alive."""
+
+    __active: bool = True
+    __interval: float
+    __instance: LXDInstance
+
+    def __init__(self, instance: LXDInstance, interval: int = 3) -> None:
+        """Initialize the timer.
+
+        :param instance: LXD instance to update.
+        :param interval: Interval in seconds to update the instance timer.
+        """
+        self.__instance = instance
+        self.__interval = interval
+        super().__init__(daemon=True)
+
+    def run(self) -> None:
+        """Run the timer."""
+        while self.__active:
+            now = datetime.now(timezone.utc).isoformat()
+            try:
+                self.__instance.config_set("user.craft_providers.timer", now)
+                logger.debug("Set instance timer to %r", now)
+            except LXDError:
+                # Error in timer update is not critical
+                logging.exception("Error updating instance timer")
+            time.sleep(self.__interval)
+
+        try:
+            self.__instance.config_set("user.craft_providers.timer", "DONE")
+            logger.debug("Set instance timer to 'DONE'")
+        except LXDError:
+            # Error in timer update is not critical
+            logging.exception("Error updating instance timer")
+        logger.debug("Instance timer update stopped.")
+
+    def stop(self) -> None:
+        """Stop the timer."""
+        self.__active = False
 
 
 def _create_instance(
@@ -71,49 +116,107 @@ def _create_instance(
     :param lxc: LXC client.
     """
     logger.info("Creating new instance from remote")
-    logger.debug(
-        "Creating new instance from image %r from remote %r.", image_name, image_remote
-    )
-    instance.launch(image=image_name, image_remote=image_remote, ephemeral=ephemeral)
-    base_configuration.setup(executor=instance)
 
-    _set_timezone(instance, project, remote, lxc)
-
-    # return early if base instances and user id mapping are not specified
-    if not base_instance and not map_user_uid:
-        return
-
-    # the instance needs to be stopped before copying or updating the id map
-    instance.stop()
-
+    # Lockable base instance creation. Only one caller can create the base instance.
+    # Other callers will will get LXDError and wait until the base instance is created.
     if base_instance:
-        logger.info("Creating new base instance from instance")
+        logger.info("Creating new base instance from remote")
         logger.debug(
-            "Creating new base instance %r from instance.", base_instance.instance_name
+            "Creating new base instance from image %r from remote %r",
+            image_name,
+            image_remote,
+        )
+        base_instance.launch(
+            image=image_name,
+            image_remote=image_remote,
+            ephemeral=False,  # base instance should not ephemeral
+        )
+        base_instance_status = base_instance.config_get("user.craft_providers.status")
+
+        # Skip the base configuration if the instance is already configured.
+        if base_instance_status != ProviderInstanceStatus.FINISHED.value:
+            logger.debug("Setting up base instance %r", base_instance.instance_name)
+            base_instance.config_set(
+                "user.craft_providers.status", ProviderInstanceStatus.PREPARING.value
+            )
+            config_timer = InstanceTimer(base_instance)
+            config_timer.start()
+            base_configuration.setup(executor=base_instance)
+            _set_timezone(
+                base_instance,
+                base_instance.project,
+                base_instance.remote,
+                base_instance.lxc,
+            )
+            base_instance.config_set(
+                "user.craft_providers.status", ProviderInstanceStatus.FINISHED.value
+            )
+            # set the full instance name as image description
+            lxc.config_set(
+                instance_name=base_instance.instance_name,
+                key="image.description",
+                value=base_instance.name,
+                project=project,
+                remote=remote,
+            )
+            config_timer.stop()
+            base_instance.stop()
+
+        # Copy the base instance to the instance.
+        logger.info("Creating new instance from base instance")
+        logger.debug(
+            "Creating new instance %r from base instance %r",
+            instance.instance_name,
+            base_instance.instance_name,
         )
         lxc.copy(
-            source_remote=remote,
-            source_instance_name=instance.instance_name,
+            source_remote=base_instance.remote,
+            source_instance_name=base_instance.instance_name,
             destination_remote=remote,
-            destination_instance_name=base_instance.instance_name,
+            destination_instance_name=instance.instance_name,
             project=project,
         )
+        _set_timezone(instance, project, remote, lxc)
+    else:
+        logger.debug(
+            "Creating new instance from image %r from remote %r",
+            image_name,
+            image_remote,
+        )
+        instance.launch(
+            image=image_name, image_remote=image_remote, ephemeral=ephemeral
+        )
+        instance_status = instance.config_get("user.craft_providers.status")
 
-        # set the full instance name as image description
-        lxc.config_set(
-            instance_name=base_instance.instance_name,
-            key="image.description",
-            value=base_instance.name,
-            project=project,
-            remote=remote,
-        )
+        # Skip the base configuration if the instance is already configured.
+        if instance_status != ProviderInstanceStatus.FINISHED.value:
+            logger.info("Setting up instance")
+            logger.debug("Setting up instance %r", instance.instance_name)
+            instance.config_set(
+                "user.craft_providers.status", ProviderInstanceStatus.PREPARING.value
+            )
+            config_timer = InstanceTimer(instance)
+            config_timer.start()
+            base_configuration.setup(executor=instance)
+            _set_timezone(instance, project, remote, lxc)
+            instance.config_set(
+                "user.craft_providers.status", ProviderInstanceStatus.FINISHED.value
+            )
+            config_timer.stop()
+            if not ephemeral:
+                # stop ephemeral instances will delete them immediately
+                instance.stop()
 
     # after creating the base instance, the id map can be set
     if map_user_uid:
         _set_id_map(instance=instance, lxc=lxc, project=project, remote=remote, uid=uid)
 
     # now restart and wait for the instance to be ready
-    instance.start()
+    if ephemeral:
+        # ephemeral instances can only be restarted
+        instance.restart()
+    else:
+        instance.start()
     base_configuration.wait_until_ready(executor=instance)
 
 

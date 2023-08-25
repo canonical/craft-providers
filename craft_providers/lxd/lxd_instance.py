@@ -534,6 +534,15 @@ class LXDInstance(Executor):
             instance_name=self.instance_name, project=self.project, remote=self.remote
         )
 
+    def restart(self) -> None:
+        """Restart instance.
+
+        :raises LXDError: on unexpected error.
+        """
+        self.lxc.restart(
+            instance_name=self.instance_name, project=self.project, remote=self.remote
+        )
+
     def stop(self) -> None:
         """Stop instance.
 
@@ -593,3 +602,37 @@ class LXDInstance(Executor):
                 project=self.project,
                 remote=self.remote,
             )
+
+    def config_get(self, key: str) -> str:
+        """Get instance configuration value.
+
+        :param key: Configuration key to get.
+
+        :returns: Configuration value.
+
+        :raises LXDError: On unexpected error.
+        """
+        return self.lxc.config_get(
+            instance_name=self.instance_name,
+            key=key,
+            project=self.project,
+            remote=self.remote,
+        )
+
+    def config_set(self, key: str, value: str) -> None:
+        """Set instance configuration value.
+
+        :param key: Configuration key to set.
+        :param value: Configuration key to the value.
+
+        :returns: None.
+
+        :raises LXDError: On unexpected error.
+        """
+        self.lxc.config_set(
+            instance_name=self.instance_name,
+            key=key,
+            value=value,
+            project=self.project,
+            remote=self.remote,
+        )

@@ -22,6 +22,7 @@ import pathlib
 import subprocess
 import sys
 from datetime import datetime, timedelta
+from threading import Thread
 
 import pytest
 from craft_providers import lxd
@@ -267,7 +268,7 @@ def test_launch_use_base_instance(
         .rstrip("\n")
     )
 
-    assert instance_hostname == base_configuration._hostname
+    assert instance_hostname == instance.instance_name
 
 
 def test_launch_create_base_instance_with_correct_image_description(
@@ -435,6 +436,63 @@ def test_launch_with_project_and_use_base_instance(
     finally:
         if instance.exists():
             instance.delete()
+        if base_instance.exists():
+            base_instance.delete()
+
+
+def test_launch_with_project_and_use_base_instance_parallel(
+    base_configuration, get_base_instance, instance_name, project
+):
+    """Launch 5 instances at same time and use the same base instances."""
+    base_instance = get_base_instance(project=project)
+
+    instances = []
+
+    class InstanceThread(Thread):
+        def __init__(self, instance_name):
+            super().__init__()
+            self.instance_name = instance_name
+            self.instance = None
+
+        def run(self):
+            self.instance = lxd.launch(
+                name=self.instance_name,
+                base_configuration=base_configuration,
+                image_name="22.04",
+                image_remote="ubuntu",
+                use_base_instance=True,
+                project=project,
+                remote="local",
+            )
+
+    # launch 5 instances from an image and create a base instance
+    for i in range(0, 5):
+        instance_thread = InstanceThread(f"{instance_name}-{i}")
+        instances.append(instance_thread)
+
+    for instance_thread in instances:
+        instance_thread.start()
+
+    for instance_thread in instances:
+        instance_thread.join()
+
+    try:
+        assert base_instance.exists()
+        assert not base_instance.is_running()
+
+        for instance_thread in instances:
+            assert instance_thread.instance is not None
+            assert instance_thread.instance.exists()
+            assert instance_thread.instance.is_running()
+
+    finally:
+        for instance_thread in instances:
+            if (
+                instance_thread.instance is not None
+                and instance_thread.instance.exists()
+            ):
+                instance_thread.instance.delete()
+
         if base_instance.exists():
             base_instance.delete()
 
