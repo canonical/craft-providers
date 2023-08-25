@@ -16,16 +16,22 @@
 #
 
 """LXC wrapper."""
+import contextlib
 import enum
 import logging
 import pathlib
 import shlex
 import subprocess
+import threading
+import time
+from collections import deque
+from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 
 import yaml
 
 from craft_providers import errors
+from craft_providers.lxd.lxd_instance_status import ProviderInstanceStatus
 
 from .errors import LXDError
 
@@ -58,6 +64,7 @@ class LXC:
         lxc_path: pathlib.Path = pathlib.Path("lxc"),
     ) -> None:
         self.lxc_path = lxc_path
+        self.lxc_lock = threading.Lock()
 
     def _run_lxc(
         self,
@@ -88,11 +95,12 @@ class LXC:
 
         logger.debug("Executing on host: %s", shlex.join(lxc_cmd))
 
-        # for subprocess, input takes priority over stdin
-        if "input" in kwargs:
-            return subprocess.run(lxc_cmd, check=check, **kwargs)
+        with self.lxc_lock:
+            # for subprocess, input takes priority over stdin
+            if "input" in kwargs:
+                return subprocess.run(lxc_cmd, check=check, **kwargs)
 
-        return subprocess.run(lxc_cmd, check=check, stdin=stdin.value, **kwargs)
+            return subprocess.run(lxc_cmd, check=check, stdin=stdin.value, **kwargs)
 
     def config_device_add_disk(
         self,
@@ -541,7 +549,7 @@ class LXC:
                 ),
             ) from error
 
-    def launch(
+    def launch(  # noqa: PLR0912
         self,
         *,
         instance_name: str,
@@ -564,6 +572,17 @@ class LXC:
 
         :raises LXDError: on unexpected error.
         """
+        _default_instance_metadata: Dict[str, str] = {
+            "user.craft_providers.status": ProviderInstanceStatus.STARTING.value,
+            "user.craft_providers.timer": datetime.now(timezone.utc).isoformat(),
+        }
+        retry_count: int = 0
+        if config_keys:
+            config_keys = config_keys.copy()
+            config_keys.update(_default_instance_metadata)
+        else:
+            config_keys = _default_instance_metadata
+
         command = ["launch", f"{image_remote}:{image}", f"{remote}:{instance_name}"]
 
         if ephemeral:
@@ -573,18 +592,65 @@ class LXC:
             for config_key in [f"{k}={v}" for k, v in config_keys.items()]:
                 command.extend(["--config", config_key])
 
-        try:
-            self._run_lxc(
-                command,
-                capture_output=True,
-                stdin=StdinType.INTERACTIVE,
-                project=project,
+        # The total times of retrying to launch the same instance per craft-providers.
+        # If parallel lxc failed, the bad instance will be deleted by the lock holder
+        # or any other craft-providers, and the lock will be released.
+        # However, the new instance lock could be held by any craft-providers.
+        # This is used to avoid lock holder dead and all others are blocked.
+        while retry_count < 3:
+            try:
+                # Try to launch instance
+                self._run_lxc(
+                    command,
+                    capture_output=True,
+                    stdin=StdinType.INTERACTIVE,
+                    project=project,
+                )
+            except subprocess.CalledProcessError as error:
+                logger.debug(
+                    "Failed to launch instance %s, retrying %s.",
+                    instance_name,
+                    retry_count,
+                )
+                logger.debug(str(error))
+                # Ignore first 3 failed attempts
+                if retry_count >= 2:
+                    raise LXDError(
+                        brief=f"Failed to launch instance {instance_name!r}.",
+                        details=errors.details_from_called_process_error(error),
+                    ) from error
+            else:
+                # Success launching instance, we hold the instance lock
+                logger.debug("Successfully launched instance %s.", instance_name)
+                return
+
+            # Maybe race condition, check if the instance is preparing by others.
+            logger.debug(
+                "Failed to launch instance %s, checking status.", instance_name
             )
-        except subprocess.CalledProcessError as error:
-            raise LXDError(
-                brief=f"Failed to launch instance {instance_name!r}.",
-                details=errors.details_from_called_process_error(error),
-            ) from error
+            try:
+                self.check_instance_status(
+                    instance_name=instance_name, project=project, remote=remote
+                )
+            except LXDError:
+                # Something went wrong. Delete the instance.
+                with contextlib.suppress(LXDError):
+                    # Ignore errors that someone else already deleted the instance
+                    logger.debug("Deleting instance %s due to error.", instance_name)
+                    self.delete(
+                        instance_name=instance_name,
+                        project=project,
+                        remote=remote,
+                        force=True,
+                    )
+
+                # Sleep for 10 seconds to avoid other delete new instance
+                time.sleep(10)
+            else:
+                # Someone else succeeded creating the instance, just return
+                return
+
+            retry_count += 1
 
     def image_copy(
         self,
@@ -961,6 +1027,27 @@ class LXC:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
+    def restart(
+        self, *, instance_name: str, project: str = "default", remote: str = "local"
+    ) -> None:
+        """Restart container.
+
+        :param instance_name: Name of instance to restart.
+        :param project: Name of LXD project.
+        :param remote: Name of LXD remote.
+
+        :raises LXDError: on unexpected error.
+        """
+        command = ["restart", f"{remote}:{instance_name}"]
+
+        try:
+            self._run_lxc(command, capture_output=True, project=project)
+        except subprocess.CalledProcessError as error:
+            raise LXDError(
+                brief=f"Failed to restart {instance_name!r}.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
     def stop(
         self,
         *,
@@ -995,3 +1082,76 @@ class LXC:
                 brief=f"Failed to stop {instance_name!r}.",
                 details=errors.details_from_called_process_error(error),
             ) from error
+
+    def check_instance_status(
+        self,
+        *,
+        instance_name: str,
+        project: str = "default",
+        remote: str = "local",
+    ) -> None:
+        """Check build status of instance.
+
+        The possible status are:
+        - None: Either the instance is downloading or old that this is not set.
+        - STARTING: Instance is starting, the creation is successful. If it also STOPPED,
+            then there could be a boot issue.
+        - PREPARING: Instance is preparing, the boot is successful. If it also STOPPED,
+            then the craft-providers or craft-app configuration / installation
+            was interrupted or failed.
+        - FINISHED: Instance is ready, all configuration and installation is successful.
+            When it also STOPPED, then the instance is ready to be copied.
+        """
+        instance_status: Optional[str] = None
+        instance_info: Dict[str, Any] = {"Status": ""}
+        start_time = time.time()
+
+        # 20 * 3 seconds = 1 minute no change in timer
+        timer_queue: deque = deque([-2, -1], maxlen=20)
+
+        # Retry unless the timer queue is all the same
+        while len(set(timer_queue)) > 1:
+            try:
+                # Get instance info
+                instance_info = self.info(
+                    instance_name=instance_name, project=project, remote=remote
+                )
+                logger.debug("Instance info: %s", instance_info)
+
+                # Get build status
+                instance_status = self.config_get(
+                    instance_name=instance_name,
+                    key="user.craft_providers.status",
+                    project=project,
+                    remote=remote,
+                )
+                logger.debug("Instance status: %s", instance_status)
+
+                timer = self.config_get(
+                    instance_name=instance_name,
+                    key="user.craft_providers.timer",
+                    project=project,
+                    remote=remote,
+                )
+                timer_queue.append(timer)
+                logger.debug("Timer: %s", timer)
+            except LXDError:
+                # Keep retrying since the instance might not be ready yet
+                # Max retry time is 10 minutes
+                if time.time() - start_time > 600:
+                    logger.debug("Instance %s max waiting time reached.", instance_name)
+                    raise
+                time.sleep(3)
+                continue
+
+            if (
+                instance_status == ProviderInstanceStatus.FINISHED.value
+                and instance_info["Status"] == "STOPPED"
+            ):
+                logger.debug("Instance %s is ready.", instance_name)
+                return
+
+            time.sleep(3)
+
+        # No timer change for 1 minute and the instance is still not ready.
+        raise LXDError("Instance setup failed. Check LXD logs for more details.")

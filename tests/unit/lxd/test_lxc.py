@@ -16,10 +16,14 @@
 #
 import pathlib
 import subprocess
+from textwrap import dedent
+from unittest.mock import call
 
 import pytest
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, lxc
+from craft_providers.lxd.lxc import StdinType
+from freezegun import freeze_time
 
 
 def test_lxc_run_default(mocker, tmp_path):
@@ -916,18 +920,152 @@ def test_launch(fake_process):
             "launch",
             "test-image-remote:test-image",
             "test-remote:test-instance",
+            "--config",
+            "user.craft_providers.status=STARTING",
+            "--config",
+            "user.craft_providers.timer=2023-01-01T00:00:00+00:00",
         ]
     )
 
-    LXC().launch(
-        instance_name="test-instance",
-        image="test-image",
-        image_remote="test-image-remote",
-        project="test-project",
-        remote="test-remote",
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "config",
+            "set",
+            "test-remote:test-instance",
+            "user.craft_providers.status",
+            "PREPARING",
+        ]
     )
 
+    with freeze_time("2023-01-01"):
+        LXC().launch(
+            instance_name="test-instance",
+            image="test-image",
+            image_remote="test-image-remote",
+            project="test-project",
+            remote="test-remote",
+        )
+
     assert len(fake_process.calls) == 1
+
+
+def test_launch_failed_retry_check(fake_process, mocker):
+    """Test that we use check_instance_status if launch fails."""
+    mock_launch = mocker.patch("craft_providers.lxd.lxc.LXC._run_lxc")
+    mock_launch.side_effect = [
+        subprocess.CalledProcessError(1, ["lxc", "fail", " test"]),
+    ]
+    mock_check = mocker.patch("craft_providers.lxd.lxc.LXC.check_instance_status")
+    mocker.patch("time.sleep")
+
+    with freeze_time("2023-01-01"):
+        LXC().launch(
+            instance_name="test-instance",
+            image="test-image",
+            image_remote="test-image-remote",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert mock_launch.mock_calls == [
+        call(
+            [
+                "launch",
+                "test-image-remote:test-image",
+                "test-remote:test-instance",
+                "--config",
+                "user.craft_providers.status=STARTING",
+                "--config",
+                "user.craft_providers.timer=2023-01-01T00:00:00+00:00",
+            ],
+            capture_output=True,
+            stdin=StdinType.INTERACTIVE,
+            project="test-project",
+        ),
+    ]
+
+    assert mock_check.mock_calls == [
+        call(
+            instance_name="test-instance", project="test-project", remote="test-remote"
+        )
+    ]
+
+
+def test_launch_failed_retry_failed(fake_process, mocker):
+    """Test that we retry launching an instance if it fails, but failed more than 3 times."""
+    mock_launch = mocker.patch("craft_providers.lxd.lxc.LXC._run_lxc")
+    mock_launch.side_effect = subprocess.CalledProcessError(1, ["lxc", "fail", " test"])
+    mock_check = mocker.patch("craft_providers.lxd.lxc.LXC.check_instance_status")
+    mock_check.side_effect = LXDError("test")
+    mocker.patch("time.sleep")
+
+    with pytest.raises(LXDError):
+        with freeze_time("2023-01-01"):
+            LXC().launch(
+                instance_name="test-instance",
+                image="test-image",
+                image_remote="test-image-remote",
+                project="test-project",
+                remote="test-remote",
+            )
+
+    assert mock_launch.mock_calls == [
+        call(
+            [
+                "launch",
+                "test-image-remote:test-image",
+                "test-remote:test-instance",
+                "--config",
+                "user.craft_providers.status=STARTING",
+                "--config",
+                "user.craft_providers.timer=2023-01-01T00:00:00+00:00",
+            ],
+            capture_output=True,
+            stdin=StdinType.INTERACTIVE,
+            project="test-project",
+        ),
+        call(
+            ["delete", "test-remote:test-instance", "--force"],
+            capture_output=True,
+            project="test-project",
+        ),
+        call(
+            [
+                "launch",
+                "test-image-remote:test-image",
+                "test-remote:test-instance",
+                "--config",
+                "user.craft_providers.status=STARTING",
+                "--config",
+                "user.craft_providers.timer=2023-01-01T00:00:00+00:00",
+            ],
+            capture_output=True,
+            stdin=StdinType.INTERACTIVE,
+            project="test-project",
+        ),
+        call(
+            ["delete", "test-remote:test-instance", "--force"],
+            capture_output=True,
+            project="test-project",
+        ),
+        call(
+            [
+                "launch",
+                "test-image-remote:test-image",
+                "test-remote:test-instance",
+                "--config",
+                "user.craft_providers.status=STARTING",
+                "--config",
+                "user.craft_providers.timer=2023-01-01T00:00:00+00:00",
+            ],
+            capture_output=True,
+            stdin=StdinType.INTERACTIVE,
+            project="test-project",
+        ),
+    ]
 
 
 def test_launch_all_opts(fake_process):
@@ -944,23 +1082,41 @@ def test_launch_all_opts(fake_process):
             "test-key=test-value",
             "--config",
             "test-key2=test-value2",
+            "--config",
+            "user.craft_providers.status=STARTING",
+            "--config",
+            "user.craft_providers.timer=2023-01-01T00:00:00+00:00",
         ]
     )
 
-    LXC().launch(
-        instance_name="test-instance",
-        image="test-image",
-        image_remote="test-image-remote",
-        project="test-project",
-        remote="test-remote",
-        config_keys={"test-key": "test-value", "test-key2": "test-value2"},
-        ephemeral=True,
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "config",
+            "set",
+            "test-remote:test-instance",
+            "user.craft_providers.status",
+            "PREPARING",
+        ]
     )
+
+    with freeze_time("2023-01-01"):
+        LXC().launch(
+            instance_name="test-instance",
+            image="test-image",
+            image_remote="test-image-remote",
+            project="test-project",
+            remote="test-remote",
+            config_keys={"test-key": "test-value", "test-key2": "test-value2"},
+            ephemeral=True,
+        )
 
     assert len(fake_process.calls) == 1
 
 
-def test_launch_error(fake_process):
+def test_launch_error(fake_process, mocker):
     fake_process.register_subprocess(
         [
             "lxc",
@@ -969,24 +1125,375 @@ def test_launch_error(fake_process):
             "launch",
             "test-image-remote:test-image",
             "test-remote:test-instance",
+            "--config",
+            "user.craft_providers.status=STARTING",
+            "--config",
+            "user.craft_providers.timer=2023-01-01T00:00:00+00:00",
         ],
         returncode=1,
+        occurrences=4,
+    )
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "delete",
+            "test-remote:test-instance",
+            "--force",
+        ],
+        returncode=0,
+        occurrences=4,
+    )
+
+    mocker.patch(
+        "craft_providers.lxd.lxc.LXC.check_instance_status"
+    ).side_effect = LXDError("Failed to get instance status.")
+
+    mocker.patch("time.sleep")
+
+    with pytest.raises(LXDError) as exc_info:
+        with freeze_time("2023-01-01"):
+            LXC().launch(
+                instance_name="test-instance",
+                image="test-image",
+                image_remote="test-image-remote",
+                project="test-project",
+                remote="test-remote",
+            )
+
+    assert exc_info.value == LXDError(
+        brief="Failed to launch instance 'test-instance'.",
+        details="* Command that failed: 'lxc --project test-project launch test-image-remote:test-image test-remote:test-instance --config user.craft_providers.status=STARTING --config user.craft_providers.timer=2023-01-01T00:00:00+00:00'\n* Command exit code: 1",
+        resolution=None,
+    )
+
+
+def test_check_instance_status(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "info",
+            "test-remote:test-instance",
+        ],
+        returncode=0,
+        stdout=dedent(
+            """\
+            Name: test-instance
+            Status: STOPPED
+            Type: container
+            Architecture: x86_64
+            Created: 2023/08/02 14:04 EDT
+            Last Used: 2023/08/08 09:44 EDT
+            """
+        ),
+    )
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "config",
+            "get",
+            "test-remote:test-instance",
+            "user.craft_providers.status",
+        ],
+        returncode=0,
+        stdout="FINISHED",
+    )
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "config",
+            "get",
+            "test-remote:test-instance",
+            "user.craft_providers.timer",
+        ],
+        returncode=0,
+        stdout="2023-01-01T00:00:00+00:00",
+    )
+
+    LXC().check_instance_status(
+        instance_name="test-instance", project="test-project", remote="test-remote"
+    )
+
+
+def test_check_instance_status_retry(fake_process, mocker):
+    time_time = mocker.patch("time.time")
+    time_time.side_effect = [0, 10]
+    mocker.patch("time.sleep")
+    mock_instance = mocker.patch("craft_providers.lxd.lxc.LXC.info")
+    mock_instance.side_effect = [
+        {"Status": "STOPPED"},
+        {"Status": "STOPPED"},
+    ]
+    mock_instance_config = mocker.patch("craft_providers.lxd.lxc.LXC.config_get")
+    mock_instance_config.side_effect = [
+        "STARTING",
+        "10",
+        "FINISHED",
+        "20",
+    ]
+
+    LXC().check_instance_status(
+        instance_name="test-instance", project="test-project", remote="test-remote"
+    )
+
+
+def test_check_instance_status_boot_failed(fake_process, mocker):
+    time_time = mocker.patch("time.time")
+    time_time.return_value = 0
+    mocker.patch("time.sleep")
+    mock_instance = mocker.patch("craft_providers.lxd.lxc.LXC.info")
+    mock_instance.return_value = {"Status": "STOPPED"}
+    mock_instance_config = mocker.patch("craft_providers.lxd.lxc.LXC.config_get")
+    mock_instance_config.side_effect = [
+        "STARTING",
+        "2023-01-01T00:00:00+00:00",
+    ] * 20
+
+    with pytest.raises(LXDError):
+        LXC().check_instance_status(
+            instance_name="test-instance", project="test-project", remote="test-remote"
+        )
+
+
+def test_check_instance_status_wait(fake_process, mocker):
+    time_time = mocker.patch("time.time")
+    time_time.return_value = 0
+    mocker.patch("time.sleep")
+    mock_instance = mocker.patch("craft_providers.lxd.lxc.LXC.info")
+    mock_instance.side_effect = [
+        {"Status": "STOPPED"},  # STARTING
+        {"Status": "RUNNING"},  # STARTING
+        {"Status": "RUNNING"},  # PREPARING
+        {"Status": "RUNNING"},  # PREPARING
+        {"Status": "RUNNING"},  # FINISHED
+        {"Status": "STOPPED"},  # FINISHED
+    ]
+    mock_instance_config = mocker.patch("craft_providers.lxd.lxc.LXC.config_get")
+    mock_instance_config.side_effect = [
+        "STARTING",
+        "2023-01-01T00:00:00+00:00",
+        "STARTING",
+        "2023-01-01T00:00:05+00:00",
+        "PREPARING",
+        "2023-01-01T00:00:10+00:00",
+        "PREPARING",
+        "2023-01-01T00:00:15+00:00",
+        "FINISHED",
+        "2023-01-01T00:00:20+00:00",
+        "FINISHED",
+        "2023-01-01T00:00:30+00:00",
+    ]
+
+    LXC().check_instance_status(
+        instance_name="test-instance", project="test-project", remote="test-remote"
+    )
+    assert mock_instance.call_count == 6
+    assert mock_instance_config.call_count == 12
+
+
+def test_check_instance_status_lxd_error(fake_process, mocker):
+    time_time = mocker.patch("time.time")
+    time_time.side_effect = [0, 1000, 2000]
+    mocker.patch("time.sleep")
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "info",
+            "test-remote:test-instance",
+        ],
+        returncode=0,
+        stdout=dedent(
+            """\
+            Name: test-instance
+            Status: STOPPED
+            Type: container
+            Architecture: x86_64
+            Created: 2023/08/02 14:04 EDT
+            Last Used: 2023/08/08 09:44 EDT
+            """
+        ),
+        occurrences=1000,
+    )
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "config",
+            "get",
+            "test-remote:test-instance",
+            "user.craft_providers.status",
+        ],
+        returncode=1,
+        stdout="",
+        occurrences=1000,
+    )
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "config",
+            "get",
+            "test-remote:test-instance",
+            "user.craft_providers.timer",
+        ],
+        returncode=1,
+        stdout="",
+        occurrences=1000,
     )
 
     with pytest.raises(LXDError) as exc_info:
-        LXC().launch(
+        LXC().check_instance_status(
+            instance_name="test-instance", project="test-project", remote="test-remote"
+        )
+
+    assert exc_info.value == LXDError(
+        brief="Failed to get value for config key 'user.craft_providers.status' for instance 'test-instance'.",
+        details="* Command that failed: 'lxc --project test-project config get test-remote:test-instance user.craft_providers.status'\n* Command exit code: 1",
+        resolution=None,
+    )
+
+
+def test_check_instance_status_lxd_error_retry(fake_process, mocker):
+    time_time = mocker.patch("time.time")
+    time_time.side_effect = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900]
+    mocker.patch("time.sleep")
+    mock_instance = mocker.patch("craft_providers.lxd.lxc.LXC.info")
+    mock_instance.side_effect = [
+        LXDError(
+            brief="Failed to get instance info.",
+            details="* Command that failed: 'lxc --project test-project info test-remote:test-instance'\n* Command exit code: 1",
+            resolution=None,
+        ),
+        {"Status": "STOPPED"},
+        {"Status": "RUNNING"},
+        {"Status": "RUNNING"},
+        LXDError(
+            brief="Failed to get instance info.",
+            details="* Command that failed: 'lxc --project test-project info test-remote:test-instance'\n* Command exit code: 1",
+            resolution=None,
+        ),
+        {"Status": "RUNNING"},
+        {"Status": "RUNNING"},
+        {"Status": "RUNNING"},
+        {"Status": "STOPPED"},
+    ]
+    mock_instance_config = mocker.patch("craft_providers.lxd.lxc.LXC.config_get")
+    mock_instance_config.side_effect = [
+        LXDError(
+            brief="Failed to get instance info.",
+            details="* Command that failed: 'lxc --project test-project info test-remote:test-instance'\n* Command exit code: 1",
+            resolution=None,
+        ),
+        LXDError(
+            brief="Failed to get instance info.",
+            details="* Command that failed: 'lxc --project test-project info test-remote:test-instance'\n* Command exit code: 1",
+            resolution=None,
+        ),
+        "STARTING",
+        "2023-01-01T00:00:00+00:00",
+        "STARTING",
+        "2023-01-01T00:00:10+00:00",
+        "PREPARING",
+        "2023-01-01T00:00:20+00:00",
+        LXDError(
+            brief="Failed to get instance info.",
+            details="* Command that failed: 'lxc --project test-project info test-remote:test-instance'\n* Command exit code: 1",
+            resolution=None,
+        ),
+        "FINISHED",
+        "2023-01-01T00:00:40+00:00",
+        "FINISHED",
+        "2023-01-01T00:00:50+00:00",
+    ]
+
+    LXC().check_instance_status(
+        instance_name="test-instance", project="test-project", remote="test-remote"
+    )
+
+
+def test_check_instance_status_error_timeout(fake_process, mocker):
+    time_time = mocker.patch("time.time")
+    time_time.side_effect = [0, 1000, 2000]
+    mocker.patch("time.sleep")
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "info",
+            "test-remote:test-instance",
+        ],
+        returncode=0,
+        stdout=dedent(
+            """\
+            Name: test-instance
+            Status: STOPPED
+            Type: container
+            Architecture: x86_64
+            Created: 2023/08/02 14:04 EDT
+            Last Used: 2023/08/08 09:44 EDT
+            """
+        ),
+        occurrences=1000,
+    )
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "config",
+            "get",
+            "test-remote:test-instance",
+            "user.craft_providers.status",
+        ],
+        returncode=0,
+        stdout="STARTING",
+        occurrences=1000,
+    )
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "config",
+            "get",
+            "test-remote:test-instance",
+            "user.craft_providers.timer",
+        ],
+        returncode=0,
+        stdout="2023-01-01T00:00:00+00:00",
+        occurrences=1000,
+    )
+
+    with pytest.raises(LXDError) as exc_info:
+        LXC().check_instance_status(
             instance_name="test-instance",
-            image="test-image",
-            image_remote="test-image-remote",
             project="test-project",
             remote="test-remote",
         )
 
     assert exc_info.value == LXDError(
-        brief="Failed to launch instance 'test-instance'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
+        brief="Instance setup failed. Check LXD logs for more details.",
     )
 
 
@@ -1915,6 +2422,53 @@ def test_start_error(fake_process):
 
     assert exc_info.value == LXDError(
         brief="Failed to start 'test-instance'.",
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
+    )
+
+
+def test_restart(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "restart",
+            "test-remote:test-instance",
+        ],
+    )
+
+    LXC().restart(
+        instance_name="test-instance",
+        project="test-project",
+        remote="test-remote",
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_restart_error(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "restart",
+            "test-remote:test-instance",
+        ],
+        returncode=1,
+    )
+
+    with pytest.raises(LXDError) as exc_info:
+        LXC().restart(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert exc_info.value == LXDError(
+        brief="Failed to restart 'test-instance'.",
         details=errors.details_from_called_process_error(
             exc_info.value.__cause__  # type: ignore
         ),
