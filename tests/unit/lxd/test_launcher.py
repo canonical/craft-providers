@@ -142,13 +142,6 @@ def test_launch_no_base_instance(
 
     assert mock_lxc.mock_calls == [
         call.project_list("local"),
-        call.config_set(
-            instance_name="test-instance-fa2d407652a1c51f6019",
-            key="environment.TZ",
-            value="fake/timezone",
-            project="default",
-            remote="local",
-        ),
     ]
     assert mock_lxd_instance.mock_calls == [
         call(
@@ -164,6 +157,13 @@ def test_launch_no_base_instance(
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
         call.config_set("user.craft_providers.timer", "2023-01-01T00:00:00+00:00"),
+        call.lxc.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="environment.TZ",
+            value="fake/timezone",
+            project="default",
+            remote="local",
+        ),
         call.config_set("user.craft_providers.status", "FINISHED"),
         call.stop(),
         call.start(),
@@ -199,26 +199,12 @@ def test_launch_use_base_instance(
 
     assert mock_lxc.mock_calls == [
         call.project_list("test-remote"),
-        call.config_set(
-            instance_name="test-base-instance-e14661a426076717fa04",
-            key="image.description",
-            value="test-base-instance-$",
-            project="test-project",
-            remote="test-remote",
-        ),
         call.copy(
             source_remote="test-remote",
             source_instance_name=fake_base_instance.instance_name,
             destination_remote="test-remote",
             destination_instance_name=fake_instance.instance_name,
             project="test-project",
-        ),
-        call.config_set(
-            instance_name="test-instance-fa2d407652a1c51f6019",
-            key="environment.TZ",
-            value="fake/timezone",
-            project="test-project",
-            remote="test-remote",
         ),
     ]
     assert mock_lxd_instance.mock_calls == [
@@ -237,6 +223,13 @@ def test_launch_use_base_instance(
     ]
     assert fake_instance.mock_calls == [
         call.exists(),
+        call.lxc.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="environment.TZ",
+            value="fake/timezone",
+            project="test-project",
+            remote="test-remote",
+        ),
         call.start(),
     ]
     fake_base_instance.exists.assert_called_once()
@@ -259,7 +252,7 @@ def test_launch_use_base_instance_failed_lxc(
     mock_timezone,
 ):
     """Launch a base instance from an image, but lxc commands fail."""
-    mock_lxc.config_set.side_effect = [
+    fake_base_instance.lxc.config_set.side_effect = [
         LXDError("test1"),
     ]
     with pytest.raises(LXDError):
@@ -290,6 +283,7 @@ def test_launch_use_existing_base_instance(
 ):
     """Create instance from an existing base instance."""
     fake_base_instance.exists.return_value = True
+    mock_lxc.config_get.return_value = "both 1234 0"
 
     lxd.launch(
         name=fake_instance.name,
@@ -320,6 +314,14 @@ def test_launch_use_existing_base_instance(
                 instance_name=fake_instance.instance_name,
                 key="raw.idmap",
                 value="both 1234 0",
+                project="test-project",
+                remote="test-remote",
+            ),
+        )
+        expected_mock_lxc_calls.append(
+            call.config_get(
+                instance_name=fake_instance.instance_name,
+                key="raw.idmap",
                 project="test-project",
                 remote="test-remote",
             ),
@@ -373,6 +375,7 @@ def test_launch_use_existing_base_instance_already_running(
     fake_base_instance.is_running.return_value = True
 
     fake_instance.is_running.return_value = True
+    mock_lxc.config_get.return_value = "both 1234 0"
 
     lxd.launch(
         name=fake_instance.name,
@@ -428,13 +431,6 @@ def test_launch_existing_base_instance_invalid(
 
     assert mock_lxc.mock_calls == [
         call.project_list("test-remote"),
-        call.config_set(
-            instance_name="test-base-instance-e14661a426076717fa04",
-            key="image.description",
-            value="test-base-instance-$",
-            project="test-project",
-            remote="test-remote",
-        ),
         call.copy(
             source_remote="test-remote",
             source_instance_name=fake_base_instance.instance_name,
@@ -442,14 +438,18 @@ def test_launch_existing_base_instance_invalid(
             destination_instance_name=fake_instance.instance_name,
             project="test-project",
         ),
+    ]
+
+    assert fake_base_instance.lxc.mock_calls == [
         call.config_set(
-            instance_name="test-instance-fa2d407652a1c51f6019",
+            instance_name="test-base-instance-e14661a426076717fa04",
             key="environment.TZ",
             value="fake/timezone",
             project="test-project",
             remote="test-remote",
         ),
     ]
+
     assert mock_lxd_instance.mock_calls == [
         call(
             name=fake_instance.name,
@@ -464,7 +464,17 @@ def test_launch_existing_base_instance_invalid(
             default_command_environment={"foo": "bar"},
         ),
     ]
-    assert fake_instance.mock_calls == [call.exists(), call.start()]
+    assert fake_instance.mock_calls == [
+        call.exists(),
+        call.lxc.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="environment.TZ",
+            value="fake/timezone",
+            project="test-project",
+            remote="test-remote",
+        ),
+        call.start(),
+    ]
     assert fake_base_instance.mock_calls == [
         call.exists(),
         call.delete(),
@@ -480,6 +490,7 @@ def test_launch_existing_base_instance_invalid(
             project="test-project",
             remote="test-remote",
         ),
+        call.config_set("image.description", "test-base-instance-$"),
         call.config_set("user.craft_providers.status", "FINISHED"),
         call.stop(),
     ]
@@ -501,6 +512,8 @@ def test_launch_all_opts(
 ):
     """Parse all parameters."""
     fake_instance.config_get.return_value = "STARTING"
+    fake_instance.lxc.config_get.return_value = "both 1234 0"
+
     with freeze_time("2023-01-01"):
         lxd.launch(
             name=fake_instance.name,
@@ -519,20 +532,6 @@ def test_launch_all_opts(
 
     assert mock_lxc.mock_calls == [
         call.project_list("test-remote"),
-        call.config_set(
-            instance_name="test-instance-fa2d407652a1c51f6019",
-            key="environment.TZ",
-            value="fake/timezone",
-            project="test-project",
-            remote="test-remote",
-        ),
-        call.config_set(
-            instance_name=fake_instance.instance_name,
-            key="raw.idmap",
-            value="both 1234 0",
-            project="test-project",
-            remote="test-remote",
-        ),
     ]
     assert mock_lxd_instance.mock_calls == [
         call(
@@ -548,7 +547,27 @@ def test_launch_all_opts(
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
         call.config_set("user.craft_providers.timer", "2023-01-01T00:00:00+00:00"),
+        call.lxc.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="environment.TZ",
+            value="fake/timezone",
+            project="test-project",
+            remote="test-remote",
+        ),
         call.config_set("user.craft_providers.status", "FINISHED"),
+        call.lxc.config_set(
+            instance_name=fake_instance.instance_name,
+            key="raw.idmap",
+            value="both 1234 0",
+            project="test-project",
+            remote="test-remote",
+        ),
+        call.lxc.config_get(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="raw.idmap",
+            project="test-project",
+            remote="test-remote",
+        ),
         call.restart(),
     ]
     assert mock_base_configuration.mock_calls == [
@@ -613,13 +632,6 @@ def test_launch_create_project(
             config=mock_lxc.profile_show.return_value,
             remote="test-remote",
         ),
-        call.config_set(
-            instance_name="test-instance-fa2d407652a1c51f6019",
-            key="environment.TZ",
-            value="fake/timezone",
-            project="project-to-create",
-            remote="test-remote",
-        ),
     ]
     assert mock_lxd_instance.mock_calls == [
         call(
@@ -635,6 +647,13 @@ def test_launch_create_project(
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
         call.config_set("user.craft_providers.timer", "2023-01-01T00:00:00+00:00"),
+        call.lxc.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="environment.TZ",
+            value="fake/timezone",
+            project="project-to-create",
+            remote="test-remote",
+        ),
         call.config_set("user.craft_providers.status", "FINISHED"),
         call.stop(),
         call.start(),
@@ -746,13 +765,6 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
 
     assert mock_lxc.mock_calls == [
         call.project_list("local"),
-        call.config_set(
-            instance_name="test-instance-fa2d407652a1c51f6019",
-            key="environment.TZ",
-            value="fake/timezone",
-            project="default",
-            remote="local",
-        ),
     ]
     assert mock_lxd_instance.mock_calls == [
         call(
@@ -771,6 +783,13 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
         call.config_set("user.craft_providers.timer", "2023-01-01T00:00:00+00:00"),
+        call.lxc.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="environment.TZ",
+            value="fake/timezone",
+            project="default",
+            remote="local",
+        ),
         call.config_set("user.craft_providers.status", "FINISHED"),
         call.stop(),
         call.start(),
@@ -838,13 +857,6 @@ def test_launch_with_existing_ephemeral_instance(
 
     assert mock_lxc.mock_calls == [
         call.project_list("local"),
-        call.config_set(
-            instance_name="test-instance-fa2d407652a1c51f6019",
-            key="environment.TZ",
-            value="fake/timezone",
-            project="default",
-            remote="local",
-        ),
     ]
     assert mock_lxd_instance.mock_calls == [
         call(
@@ -861,6 +873,13 @@ def test_launch_with_existing_ephemeral_instance(
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
         call.config_set("user.craft_providers.timer", "2023-01-01T00:00:00+00:00"),
+        call.lxc.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="environment.TZ",
+            value="fake/timezone",
+            project="default",
+            remote="local",
+        ),
         call.config_set("user.craft_providers.status", "FINISHED"),
         call.restart(),
     ]
@@ -1000,26 +1019,12 @@ def test_use_snapshots_deprecated(
 
     assert mock_lxc.mock_calls == [
         call.project_list("test-remote"),
-        call.config_set(
-            instance_name="test-base-instance-e14661a426076717fa04",
-            key="image.description",
-            value="test-base-instance-$",
-            project="test-project",
-            remote="test-remote",
-        ),
         call.copy(
             source_remote="test-remote",
             source_instance_name=fake_base_instance.instance_name,
             destination_remote="test-remote",
             destination_instance_name=fake_instance.instance_name,
             project="test-project",
-        ),
-        call.config_set(
-            instance_name="test-instance-fa2d407652a1c51f6019",
-            key="environment.TZ",
-            value="fake/timezone",
-            project="test-project",
-            remote="test-remote",
         ),
     ]
     assert mock_lxd_instance.mock_calls == [
@@ -1038,6 +1043,13 @@ def test_use_snapshots_deprecated(
     ]
     assert fake_instance.mock_calls == [
         call.exists(),
+        call.lxc.config_set(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            key="environment.TZ",
+            value="fake/timezone",
+            project="test-project",
+            remote="test-remote",
+        ),
         call.start(),
     ]
     assert fake_base_instance.mock_calls == [
@@ -1054,6 +1066,7 @@ def test_use_snapshots_deprecated(
             project="test-project",
             remote="test-remote",
         ),
+        call.config_set("image.description", "test-base-instance-$"),
         call.config_set("user.craft_providers.status", "FINISHED"),
         call.stop(),
     ]
@@ -1164,6 +1177,7 @@ def test_is_valid_value_error(logs, mocker, mock_lxc):
 def test_set_id_map_default(fake_base_instance, mock_lxc, mocker):
     """Verify `_set_id_map()` sets the id map with default arguments."""
     mocker.patch("craft_providers.lxd.launcher.os.getuid", return_value=101)
+    mock_lxc.config_get.return_value = "both 101 0"
 
     lxd.launcher._set_id_map(instance=fake_base_instance, lxc=mock_lxc)
 
@@ -1179,9 +1193,21 @@ def test_set_id_map_default(fake_base_instance, mock_lxc, mocker):
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="unsupported on windows")
+def test_set_id_map_default_fail(fake_base_instance, mock_lxc, mocker):
+    """Verify `_set_id_map()` will fail if the id map is not usable."""
+    mocker.patch("craft_providers.lxd.launcher.os.getuid", return_value=101)
+    mocker.patch("time.sleep")
+    mock_lxc.config_get.return_value = ""
+
+    with pytest.raises(LXDError):
+        lxd.launcher._set_id_map(instance=fake_base_instance, lxc=mock_lxc)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="unsupported on windows")
 def test_set_id_map_all_options(fake_base_instance, mock_lxc, mocker):
     """Verify `_set_id_map()` sets the id map with all parameters specified."""
     mocker.patch("craft_providers.lxd.launcher.os.getuid", return_value=101)
+    mock_lxc.config_get.return_value = "both 202 0"
 
     lxd.launcher._set_id_map(
         instance=fake_base_instance,

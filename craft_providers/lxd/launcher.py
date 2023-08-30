@@ -148,16 +148,10 @@ def _create_instance(
                 base_instance.remote,
                 base_instance.lxc,
             )
+            # set the full instance name as image description
+            base_instance.config_set("image.description", base_instance.name)
             base_instance.config_set(
                 "user.craft_providers.status", ProviderInstanceStatus.FINISHED.value
-            )
-            # set the full instance name as image description
-            lxc.config_set(
-                instance_name=base_instance.instance_name,
-                key="image.description",
-                value=base_instance.name,
-                project=project,
-                remote=remote,
             )
             config_timer.stop()
             base_instance.stop()
@@ -176,7 +170,7 @@ def _create_instance(
             destination_instance_name=instance.instance_name,
             project=project,
         )
-        _set_timezone(instance, project, remote, lxc)
+        _set_timezone(instance, project, remote, instance.lxc)
     else:
         logger.debug(
             "Creating new instance from image %r from remote %r",
@@ -198,7 +192,7 @@ def _create_instance(
             config_timer = InstanceTimer(instance)
             config_timer.start()
             base_configuration.setup(executor=instance)
-            _set_timezone(instance, project, remote, lxc)
+            _set_timezone(instance, project, remote, instance.lxc)
             instance.config_set(
                 "user.craft_providers.status", ProviderInstanceStatus.FINISHED.value
             )
@@ -209,7 +203,9 @@ def _create_instance(
 
     # after creating the base instance, the id map can be set
     if map_user_uid:
-        _set_id_map(instance=instance, lxc=lxc, project=project, remote=remote, uid=uid)
+        _set_id_map(
+            instance=instance, lxc=instance.lxc, project=project, remote=remote, uid=uid
+        )
 
     # now restart and wait for the instance to be ready
     if ephemeral:
@@ -486,6 +482,7 @@ def _set_id_map(
     :param remote: LXD remote to create instance on.
     :param uid: The uid to be mapped. If not supplied, the current user's uid is used.
     """
+    configured_id_map = ""
     if uid is None:
         uid = os.getuid()
 
@@ -496,6 +493,26 @@ def _set_id_map(
         project=project,
         remote=remote,
     )
+
+    # There was a race in LXD that lxc config returns success,
+    # but the config was not applied. See https://github.com/canonical/lxd/issues/12189
+    configured_id_map = lxc.config_get(
+        instance_name=instance.instance_name,
+        key="raw.idmap",
+        project=project,
+        remote=remote,
+    )
+    configured_id_map_list = [line.split() for line in configured_id_map.splitlines()]
+
+    logger.debug(
+        "Got LXD idmap for instance %r: %r", instance.instance_name, configured_id_map
+    )
+
+    if ["both", str(uid), "0"] not in configured_id_map_list:
+        raise LXDError(
+            brief=f"Failed to set idmap for instance {instance.instance_name!r}",
+            details=f"Expected idmap: 'both {uid!s} 0', got {configured_id_map!r}",
+        )
 
 
 def _set_timezone(instance: LXDInstance, project: str, remote: str, lxc: LXC) -> None:
