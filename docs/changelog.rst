@@ -6,6 +6,16 @@ See the `Releases page`_ on Github for a complete list of commits that are
 included in each version.
 
 
+1.16.0 (2023-08-25)
+-------------------
+- Improve LXD instance creation process to avoid race conditions. The base
+  instance is now created first and copied to an instance. Retry, timeout,
+  and locking mechanisms prevent multiple processes from creating the
+  same base instance.
+- Add LXD functions ``check_instance_status()``, ``config_set()``,
+  ``config_get()``, and ``restart()``
+
+
 1.15.0 (2023-08-21)
 -------------------
 - Update base compatibility tag from ``base-v1`` to ``base-v2``
