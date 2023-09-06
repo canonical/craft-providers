@@ -2,6 +2,8 @@
 Craft providers
 ***************
 
+|doc-build-status-badge|_
+
 Description
 -----------
 This project aims to provide Python interfaces for instantiating and executing
@@ -32,3 +34,5 @@ See the HACKING.rst document for details on how to contribute.
 
 .. _`LXD containers`: https://ubuntu.com/lxd/
 .. _`Multipass VMs`: https://multipass.run/
+.. |doc-build-status-badge| image:: https://readthedocs.com/projects/canonical-craft-providers/badge/?version=latest
+.. _doc-build-status-badge: https://canonical-craft-providers.readthedocs-hosted.com/en/latest/?badge=latest
