@@ -79,6 +79,10 @@ class Base(ABC):
         extend this tag, not overwrite it, e.g.: compatibility_tag =
         f"{appname}-{Base.compatibility_tag}.{apprevision}" to ensure base
         compatibility levels are maintained.
+
+    :param cache_path: (Optional) Path to the shared cache directory. If this is
+        provided, shared cache directories will be mounted as appropriate. Some
+        directories depend on the base implementation.
     """
 
     _environment: Dict[str, Optional[str]]
@@ -91,6 +95,7 @@ class Base(ABC):
     _timeout_simple: Optional[float] = TIMEOUT_SIMPLE
     _timeout_complex: Optional[float] = TIMEOUT_COMPLEX
     _timeout_unpredictable: Optional[float] = TIMEOUT_UNPREDICTABLE
+    _cache_path: Optional[pathlib.Path] = None
     alias: Enum
     compatibility_tag: str = "base-v2"
 
@@ -105,6 +110,7 @@ class Base(ABC):
         snaps: Optional[List] = None,
         packages: Optional[List[str]] = None,
         use_default_packages: bool = True,
+        cache_path: Optional[pathlib.Path] = None,
     ) -> None:
         pass
 
@@ -786,6 +792,33 @@ class Base(ABC):
         """
         return
 
+    def _mount_cache_dirs(self, executor: Executor) -> None:
+        """Mount cache directories for this base.
+
+        e.g.
+            user cache (normally $HOME/.cache)
+            apt cache
+
+        This will only be run if caching is enabled for this instance.
+
+        This step should usually be extended, but may be overridden if common
+        cache directories are in unusual locations.
+        """
+        if self._cache_path is None:
+            logger.debug("No cache path set, not mounting cache directories.")
+            return
+        cache_home_proc = executor.execute_run(
+            ["bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
+            capture_output=True,
+            text=True
+        )
+        user_cache_path = self._cache_path / "user_cache"
+        user_cache_path.mkdir(parents=True, exist_ok=True)
+        executor.mount(
+            host_source=user_cache_path,
+            target=pathlib.PurePosixPath(cache_home_proc.stdout)
+        )
+
     def _pre_setup_packages(self, executor: Executor) -> None:
         """Do anything before setting up the packages.
 
@@ -974,6 +1007,9 @@ class Base(ABC):
         self._setup_network(executor=executor)
         self._post_setup_network(executor=executor)
 
+        if self._cache_path is not None:
+            self._mount_cache_dirs(executor=executor)
+
         self._setup_wait_for_network(executor=executor)
 
         self._pre_setup_packages(executor=executor)
@@ -1030,6 +1066,7 @@ class Base(ABC):
         self._post_image_check(executor=executor)
 
         self._setup_wait_for_system_ready(executor=executor)
+        self._mount_cache_dirs(executor=executor)
         self._setup_wait_for_network(executor=executor)
 
         self._warmup_snapd(executor=executor)

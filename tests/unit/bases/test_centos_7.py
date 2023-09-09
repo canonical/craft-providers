@@ -14,8 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
-
-
+import pathlib
 import subprocess
 from pathlib import Path
 from textwrap import dedent
@@ -1108,7 +1107,8 @@ def test_ensure_setup_completed_not_setup(status, fake_executor, mock_load):
         },
     ],
 )
-def test_warmup_overall(environment, fake_process, fake_executor, mock_load, mocker):
+@pytest.mark.parametrize("cache_path", [None, pathlib.Path("/tmp")])
+def test_warmup_overall(environment, fake_process, fake_executor, mock_load, mocker, cache_path):
     mock_load.return_value = InstanceConfiguration(
         compatibility_tag="centos-base-v2", setup=True
     )
@@ -1132,6 +1132,10 @@ def test_warmup_overall(environment, fake_process, fake_executor, mock_load, moc
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "is-system-running"], stdout="degraded"
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
+        stdout="/root/.cache",
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "getent", "hosts", "snapcraft.io"]
@@ -1283,6 +1287,10 @@ def test_warmup_never_network(fake_process, fake_executor, mock_load):
     base_config._timeout_simple = 0.01
     base_config._retry_wait = 0.02
 
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
+        stdout="/root/.cache",
+    )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
         stdout=dedent(

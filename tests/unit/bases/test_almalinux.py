@@ -14,8 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
-
-
+import pathlib
 import subprocess
 from pathlib import Path
 from textwrap import dedent
@@ -1161,7 +1160,8 @@ def test_ensuresetup_completed_not_setup(status, fake_executor, mock_load):
         },
     ],
 )
-def test_warmup_overall(environment, fake_process, fake_executor, mock_load, mocker):
+@pytest.mark.parametrize("cache_path", [None, pathlib.Path("/tmp")])
+def test_warmup_overall(environment, fake_process, fake_executor, mock_load, mocker, cache_path):
     mock_load.return_value = InstanceConfiguration(
         compatibility_tag="almalinux-base-v2", setup=True
     )
@@ -1170,7 +1170,7 @@ def test_warmup_overall(environment, fake_process, fake_executor, mock_load, moc
     if environment is None:
         environment = almalinux.AlmaLinuxBase.default_command_environment()
 
-    base_config = almalinux.AlmaLinuxBase(alias=alias, environment=environment)
+    base_config = almalinux.AlmaLinuxBase(alias=alias, environment=environment, )
 
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
@@ -1185,6 +1185,10 @@ def test_warmup_overall(environment, fake_process, fake_executor, mock_load, moc
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "is-system-running"], stdout="degraded"
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
+        stdout="/root/.cache",
     )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "getent", "hosts", "snapcraft.io"]

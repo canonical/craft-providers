@@ -20,7 +20,7 @@ import contextlib
 import logging
 import pathlib
 from datetime import timedelta
-from typing import Generator, Optional
+from typing import Optional, ContextManager
 
 from craft_providers import Executor, Provider
 from craft_providers.base import Base
@@ -110,7 +110,7 @@ class LXDProvider(Provider):
         build_base: Optional[str] = None,
         instance_name: str,
         allow_unstable: bool = False,
-    ) -> Generator[Executor, None, None]:
+    ) -> ContextManager[Executor]:
         """Configure and launch environment for specified base.
 
         When this method loses context, all directories are unmounted and the

@@ -14,8 +14,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
-
-
+import pathlib
 import subprocess
 from pathlib import Path
 from textwrap import dedent
@@ -684,6 +683,27 @@ def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
     assert exc_info.value == BaseCompatibilityError(
         "Expected image compatibility tag 'buildd-base-v2', found 'invalid-tag'"
     )
+
+
+@pytest.mark.parametrize("alias", list(ubuntu.BuilddBaseAlias))
+@pytest.mark.parametrize("cache_path", [pathlib.Path("/tmp/fake-cache-dir")])
+def test_mount_cache_dirs(fake_process, fake_executor, cache_path, alias):
+    """Test mounting of cache directories with a cache directory set."""
+    base = ubuntu.BuilddBase(alias=alias, cache_path=cache_path)
+    apt_cache_dir = pathlib.PurePosixPath("/var/cache/apt/archives")
+    user_cache_dir = pathlib.PurePosixPath("/root/.cache")
+    fake_process.register(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
+        stdout=str(user_cache_dir)
+    )
+
+    base._mount_cache_dirs(fake_executor)
+
+    expected_mounts = [
+        {"host_source": base._cache_path / "user_cache", "target": user_cache_dir},
+        {"host_source": base._cache_path / "apt_archives", "target": apt_cache_dir}
+    ]
+    assert fake_executor.records_of_mount == expected_mounts
 
 
 def test_get_os_release(fake_process, fake_executor):
@@ -1507,7 +1527,8 @@ def test_ensure_setup_completed_not_setup(status, fake_executor, mock_load):
         },
     ],
 )
-def test_warmup_overall(environment, fake_process, fake_executor, mock_load, mocker):
+@pytest.mark.parametrize("cache_path", [None, pathlib.Path("/tmp")])
+def test_warmup_overall(environment, fake_process, fake_executor, mock_load, mocker, cache_path):
     mock_load.return_value = InstanceConfiguration(
         compatibility_tag="buildd-base-v2", setup=True
     )

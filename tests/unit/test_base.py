@@ -16,6 +16,7 @@
 #
 """Tests for abstract Base's implementations."""
 import enum
+import pathlib
 import subprocess
 from unittest import mock
 
@@ -136,6 +137,22 @@ def test_wait_for_network_timeout(fake_base, fake_executor, fake_process, callba
 
     with pytest.raises(BaseConfigurationError):
         fake_base._setup_wait_for_system_ready(fake_executor)
+
+
+@pytest.mark.parametrize("cache_dir", [pathlib.Path("/tmp/fake-cache-dir")])
+def test_mount_cache_dirs(fake_process, fake_base, fake_executor, cache_dir):
+    """Test mounting of cache directories with a cache directory set."""
+    fake_base._cache_path = cache_dir
+    user_cache_dir = pathlib.PurePosixPath("/root/.cache")
+    fake_process.register(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
+        stdout=str(user_cache_dir)
+    )
+
+    fake_base._mount_cache_dirs(fake_executor)
+
+    expected = {"host_source": cache_dir / "user_cache", "target": user_cache_dir}
+    assert fake_executor.records_of_mount == [expected]
 
 
 @pytest.mark.parametrize(

@@ -71,6 +71,8 @@ class BuilddBase(Base):
     :param snaps: Optional list of snaps to install on the base image.
     :param packages: Optional list of system packages to install on the base image.
     :param use_default_packages: Optional bool to enable/disable default packages.
+    :param cache_path: Optional path to the shared cache directory. If this is
+        provided, shared cache directories will be mounted as appropriate.
     """
 
     compatibility_tag: str = f"buildd-{Base.compatibility_tag}"
@@ -85,6 +87,7 @@ class BuilddBase(Base):
         snaps: Optional[List[Snap]] = None,
         packages: Optional[List[str]] = None,
         use_default_packages: bool = True,
+        cache_path: Optional[pathlib.Path] = None,
     ) -> None:
         self.alias: BuilddBaseAlias = alias
 
@@ -119,6 +122,9 @@ class BuilddBase(Base):
             self._packages.extend(packages)
 
         self._snaps = snaps
+
+        if cache_path:
+            self._cache_path = cache_path / self.compatibility_tag / str(self.alias)
 
     def _disable_automatic_apt(self, executor: Executor) -> None:
         """Disable automatic apt actions.
@@ -351,6 +357,29 @@ class BuilddBase(Base):
             timeout=self._timeout_complex,
         )
 
+    def _mount_cache_dirs(self, executor: Executor) -> None:
+        """Mount cache directories for an Ubuntu base.
+
+        Mounts all the default cache directories and Ubuntu-specific directories
+        such as the apt cache.
+        """
+        if self._cache_path is None:
+            return
+        super()._mount_cache_dirs(executor)
+
+        apt_cache = self._cache_path / "apt_archives"
+        apt_cache.mkdir(parents=True, exist_ok=True)
+        partial = apt_cache / "partial"
+        partial.mkdir(exist_ok=True)
+        # chmod separately to prevent the process's umask from affecting permission
+        # We need to do this in order to allow the inner apt process to write to
+        # the directory.
+        apt_cache.chmod(mode=0o777)
+        partial.chmod(mode=0o777)
+        executor.mount(
+            host_source=apt_cache,
+            target=pathlib.PurePosixPath("/var/cache/apt/archives"),
+        )
 
 # Backward compatible, will be removed in 2.0
 default_command_environment = BuilddBase.default_command_environment

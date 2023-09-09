@@ -18,6 +18,7 @@
 """CentOS image(s)."""
 import enum
 import logging
+import pathlib
 import subprocess
 from typing import Dict, List, Optional
 
@@ -77,7 +78,9 @@ class CentOSBase(Base):
         snaps: Optional[List[Snap]] = None,
         packages: Optional[List[str]] = None,
         use_default_packages: bool = True,
+        cache_path: Optional[pathlib.Path] = None,
     ) -> None:
+        self._cache_dir = cache_path
         self.alias: CentOSBaseAlias = alias
 
         if environment is None:
