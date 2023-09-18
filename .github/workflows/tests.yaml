@@ -6,6 +6,7 @@ on:
       - "feature/*"
       - "hotfix/*"
       - "release/*"
+      - "renovate/*"
   pull_request:
 
   # Allows triggering the workflow manually from the Actions tab
