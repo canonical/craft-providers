@@ -554,6 +554,8 @@ def test_inject_from_host_install_failure(mock_requests, fake_executor, fake_pro
             "/tmp/test-name.snap",
             "--dangerous",
         ],
+        stdout="snap error",
+        stderr="snap error details",
         returncode=1,
     )
 
@@ -728,6 +730,8 @@ def test_install_from_store_failure(
             "--channel",
             "test-chan",
         ],
+        stdout="snap error",
+        stderr="snap error details",
         returncode=1,
     )
 
@@ -834,14 +838,17 @@ def test_get_host_snap_info_connection_error(responses):
 def test_get_assertion_connection_error(mocker):
     """Raise SnapInstallation when 'snap known' call fails."""
     mocker.patch(
-        "subprocess.run", side_effect=subprocess.CalledProcessError(100, ["error"])
+        "subprocess.run",
+        side_effect=subprocess.CalledProcessError(
+            100, ["error"], output="snap error", stderr="snap error details"
+        ),
     )
 
     with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
         snap_installer._get_assertion(["test1", "test2"])
     assert exc_info.value == snap_installer.SnapInstallationError(
         brief="failed to get assertions for snap",
-        details="* Command that failed: 'error'\n* Command exit code: 100",
+        details="* Command that failed: 'error'\n* Command exit code: 100\n* Command output: 'snap error'\n* Command standard error output: 'snap error details'",
     )
     assert exc_info.value.__cause__ is not None
 
@@ -877,6 +884,8 @@ def test_add_assertions_from_host_error_on_ack(
     """Raise SnapInstallationError when 'snap ack' fails."""
     fake_process.register_subprocess(
         ["fake-executor", "snap", "ack", "/tmp/test-name.assert"],
+        stdout="snap error",
+        stderr="snap error details",
         returncode=1,
     )
 
@@ -909,12 +918,15 @@ def test_get_target_snap_revision_from_snapd_process_error(fake_process, fake_ex
         "/run/snapd.socket",
         "http://localhost/v2/snaps/test-snap",
     ]
-    fake_process.register_subprocess(expected_cmd, returncode=1)
+    fake_process.register_subprocess(
+        expected_cmd, stdout="snap error", stderr="snap error details", returncode=1
+    )
 
     with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
         snap_installer._get_target_snap_revision_from_snapd("test-snap", fake_executor)
     assert exc_info.value == snap_installer.SnapInstallationError(
-        "Unable to get target snap revision."
+        "Unable to get target snap revision.",
+        details="* Command that failed: 'fake-executor curl --silent --unix-socket /run/snapd.socket http://localhost/v2/snaps/test-snap'\n* Command exit code: 1\n* Command output: b'snap error'\n* Command standard error output: b'snap error details'",
     )
     assert exc_info.value.__cause__ is not None
 
@@ -1037,7 +1049,10 @@ def test_get_snap_revision_ensuring_source_different_source_error(
 ):
     """Snap is available but from other source; snap removal failed."""
     fake_process.register_subprocess(
-        ["fake-executor", "snap", "remove", "test-name"], returncode=1
+        ["fake-executor", "snap", "remove", "test-name"],
+        stdout="snap error",
+        stderr="snap error details",
+        returncode=1,
     )
     with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
         snap_installer._get_snap_revision_ensuring_source(
