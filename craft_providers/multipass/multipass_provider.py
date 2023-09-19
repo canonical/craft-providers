@@ -96,10 +96,6 @@ _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
     ubuntu.BuilddBaseAlias.JAMMY: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="22.04"
     ),
-    # kinetic image is not available on macos
-    ubuntu.BuilddBaseAlias.KINETIC: RemoteImage(
-        remote=Remote.RELEASE, image_name="kinetic"
-    ),
     ubuntu.BuilddBaseAlias.LUNAR: RemoteImage(
         remote=Remote.RELEASE, image_name="lunar"
     ),

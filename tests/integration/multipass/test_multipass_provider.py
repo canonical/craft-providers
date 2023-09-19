@@ -48,9 +48,6 @@ def test_create_environment(installed_multipass, instance_name):
 def test_launched_environment(alias, installed_multipass, instance_name, tmp_path):
     """Verify `launched_environment()` creates and starts an instance then stops
     the instance when the method loses context."""
-    if sys.platform == "darwin" and alias == BuilddBaseAlias.KINETIC:
-        pytest.skip(reason="previous interim releases are not available on MacOS")
-
     if sys.platform == "darwin" and alias == BuilddBaseAlias.DEVEL:
         pytest.skip(reason="snapcraft:devel is not working on MacOS (LP #2007419)")
 

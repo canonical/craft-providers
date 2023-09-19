@@ -43,7 +43,6 @@ class BuilddBaseAlias(enum.Enum):
     BIONIC = "18.04"
     FOCAL = "20.04"
     JAMMY = "22.04"
-    KINETIC = "22.10"
     LUNAR = "23.04"
     DEVEL = "devel"
 
