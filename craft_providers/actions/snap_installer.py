@@ -146,7 +146,8 @@ def _get_target_snap_revision_from_snapd(
         )
     except subprocess.CalledProcessError as error:
         raise SnapInstallationError(
-            brief="Unable to get target snap revision."
+            brief="Unable to get target snap revision.",
+            details=details_from_called_process_error(error),
         ) from error
 
     result = json.loads(proc.stdout)

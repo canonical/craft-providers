@@ -662,7 +662,8 @@ class Base(ABC):
                         brief=(
                             f"failed to install snap {snap.name!r} from store"
                             f" channel {snap.channel!r} in target environment."
-                        )
+                        ),
+                        details=error.details,
                     ) from error
             else:
                 try:
@@ -676,7 +677,8 @@ class Base(ABC):
                         brief=(
                             f"failed to inject host's snap {snap.name!r} "
                             "into target environment."
-                        )
+                        ),
+                        details=error.details,
                     ) from error
 
     def wait_until_ready(self, executor: Executor) -> None:
