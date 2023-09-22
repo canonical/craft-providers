@@ -71,6 +71,8 @@ class BuilddBase(Base):
     :param snaps: Optional list of snaps to install on the base image.
     :param packages: Optional list of system packages to install on the base image.
     :param use_default_packages: Optional bool to enable/disable default packages.
+    :param cache_path: Optional path to the shared cache directory. If this is
+        provided, shared cache directories will be mounted as appropriate.
     """
 
     compatibility_tag: str = f"buildd-{Base.compatibility_tag}"
@@ -85,8 +87,10 @@ class BuilddBase(Base):
         snaps: Optional[List[Snap]] = None,
         packages: Optional[List[str]] = None,
         use_default_packages: bool = True,
+        cache_path: Optional[pathlib.Path] = None,
     ) -> None:
         self.alias: BuilddBaseAlias = alias
+        self._cache_path = cache_path
 
         if environment is None:
             self._environment = self.default_command_environment()

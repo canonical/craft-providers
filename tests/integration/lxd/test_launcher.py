@@ -380,10 +380,10 @@ def test_launch_create_project(base_configuration, instance_name, project_name):
 
 
 def test_launch_with_project_and_use_base_instance(
-    base_configuration, get_base_instance, instance_name, project
+    base_configuration, get_base_instance, instance_name, session_project
 ):
     """With a LXD project specified, launch an instance and use base instances."""
-    base_instance = get_base_instance(project=project)
+    base_instance = get_base_instance(project=session_project)
 
     # launch an instance from an image and create a base instance
     instance = lxd.launch(
@@ -392,7 +392,7 @@ def test_launch_with_project_and_use_base_instance(
         image_name="22.04",
         image_remote="ubuntu",
         use_base_instance=True,
-        project=project,
+        project=session_project,
         remote="local",
     )
 
@@ -413,7 +413,7 @@ def test_launch_with_project_and_use_base_instance(
             image_name="22.04",
             image_remote="ubuntu",
             use_base_instance=True,
-            project=project,
+            project=session_project,
             remote="local",
         )
 
@@ -427,7 +427,7 @@ def test_launch_with_project_and_use_base_instance(
             image_name="22.04",
             image_remote="ubuntu",
             use_base_instance=True,
-            project=project,
+            project=session_project,
             remote="local",
         )
 
@@ -441,10 +441,10 @@ def test_launch_with_project_and_use_base_instance(
 
 
 def test_launch_with_project_and_use_base_instance_parallel(
-    base_configuration, get_base_instance, instance_name, project
+    base_configuration, get_base_instance, instance_name, session_project
 ):
     """Launch 5 instances at same time and use the same base instances."""
-    base_instance = get_base_instance(project=project)
+    base_instance = get_base_instance(project=session_project)
 
     instances = []
 
@@ -461,7 +461,7 @@ def test_launch_with_project_and_use_base_instance_parallel(
                 image_name="22.04",
                 image_remote="ubuntu",
                 use_base_instance=True,
-                project=project,
+                project=session_project,
                 remote="local",
             )
 

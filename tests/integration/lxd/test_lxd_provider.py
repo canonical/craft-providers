@@ -17,7 +17,7 @@
 #
 
 import pytest
-from craft_providers.bases import get_base_from_alias, ubuntu
+from craft_providers.bases import almalinux, get_base_from_alias, ubuntu
 from craft_providers.lxd import LXDProvider, is_installed
 
 
@@ -43,21 +43,37 @@ def test_create_environment(installed_lxd, instance_name):
 
 @pytest.mark.parametrize(
     "alias",
-    set(ubuntu.BuilddBaseAlias) - {ubuntu.BuilddBaseAlias.XENIAL},
+    set(ubuntu.BuilddBaseAlias) - {ubuntu.BuilddBaseAlias.XENIAL}
+    | {almalinux.AlmaLinuxBaseAlias.NINE},
 )
-def test_launched_environment(alias, installed_lxd, instance_name, tmp_path):
-    provider = LXDProvider()
+def test_launched_environment(
+    alias, installed_lxd, instance_name, tmp_path, session_provider
+):
+    cache_path = tmp_path / "cache"
+    project_path = tmp_path / "project"
+    cache_path.mkdir()
+    project_path.mkdir()
 
-    base_configuration = get_base_from_alias(alias)(alias=alias)
-    with provider.launched_environment(
+    base_configuration = get_base_from_alias(alias)(alias=alias, cache_path=cache_path)
+
+    with session_provider.launched_environment(
         project_name="test-project",
-        project_path=tmp_path,
+        project_path=project_path,
         base_configuration=base_configuration,
         instance_name=instance_name,
         allow_unstable=True,
     ) as test_instance:
         assert test_instance.exists() is True
         assert test_instance.is_running() is True
+        test_instance.execute_run(["touch", "/root/.cache/pip/test-pip-cache"])
+
+        assert (
+            cache_path
+            / base_configuration.compatibility_tag
+            / str(base_configuration.alias)
+            / "pip"
+            / "test-pip-cache"
+        ).exists()
 
     assert test_instance.exists() is True
     assert test_instance.is_running() is False

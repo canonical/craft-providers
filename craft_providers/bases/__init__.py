@@ -22,8 +22,8 @@ import sys
 from typing import Dict, NamedTuple, Tuple, Type, Union
 
 from craft_providers.errors import BaseCompatibilityError, BaseConfigurationError
+from craft_providers.base import Base
 
-from ..base import Base
 from . import almalinux, centos
 from . import ubuntu
 from . import ubuntu as buildd

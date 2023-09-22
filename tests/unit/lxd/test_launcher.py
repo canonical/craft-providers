@@ -153,7 +153,13 @@ def test_launch_no_base_instance(
     ]
     assert fake_instance.mock_calls == [
         call.exists(),
-        call.launch(image="image-name", image_remote="image-remote", ephemeral=False),
+        call.launch(
+            image="image-name",
+            image_remote="image-remote",
+            ephemeral=False,
+            map_user_uid=False,
+            uid=None,
+        ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
         call.config_set("user.craft_providers.timer", "2023-01-01T00:00:00+00:00"),
@@ -479,7 +485,13 @@ def test_launch_existing_base_instance_invalid(
         call.exists(),
         call.delete(),
         call.__bool__(),
-        call.launch(image="image-name", image_remote="image-remote", ephemeral=False),
+        call.launch(
+            image="image-name",
+            image_remote="image-remote",
+            ephemeral=False,
+            map_user_uid=False,
+            uid=None,
+        ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
         call.config_set("user.craft_providers.timer", "2023-01-01T00:00:00+00:00"),
@@ -543,7 +555,13 @@ def test_launch_all_opts(
     ]
     assert fake_instance.mock_calls == [
         call.exists(),
-        call.launch(image="image-name", image_remote="image-remote", ephemeral=True),
+        call.launch(
+            image="image-name",
+            image_remote="image-remote",
+            ephemeral=True,
+            map_user_uid=True,
+            uid=1234,
+        ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
         call.config_set("user.craft_providers.timer", "2023-01-01T00:00:00+00:00"),
@@ -643,7 +661,13 @@ def test_launch_create_project(
     ]
     assert fake_instance.mock_calls == [
         call.exists(),
-        call.launch(image="image-name", image_remote="image-remote", ephemeral=False),
+        call.launch(
+            image="image-name",
+            image_remote="image-remote",
+            ephemeral=False,
+            map_user_uid=False,
+            uid=None,
+        ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
         call.config_set("user.craft_providers.timer", "2023-01-01T00:00:00+00:00"),
@@ -779,7 +803,13 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
         call.is_running(),
         call.start(),
         call.delete(),
-        call.launch(image="image-name", image_remote="image-remote", ephemeral=False),
+        call.launch(
+            image="image-name",
+            image_remote="image-remote",
+            ephemeral=False,
+            map_user_uid=False,
+            uid=None,
+        ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
         call.config_set("user.craft_providers.timer", "2023-01-01T00:00:00+00:00"),
@@ -869,7 +899,13 @@ def test_launch_with_existing_ephemeral_instance(
     assert fake_instance.mock_calls == [
         call.exists(),
         call.delete(),
-        call.launch(image="image-name", image_remote="image-remote", ephemeral=True),
+        call.launch(
+            image="image-name",
+            image_remote="image-remote",
+            ephemeral=True,
+            map_user_uid=False,
+            uid=None,
+        ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
         call.config_set("user.craft_providers.timer", "2023-01-01T00:00:00+00:00"),
@@ -1055,7 +1091,13 @@ def test_use_snapshots_deprecated(
     assert fake_base_instance.mock_calls == [
         call.exists(),
         call.__bool__(),
-        call.launch(image="image-name", image_remote="image-remote", ephemeral=False),
+        call.launch(
+            image="image-name",
+            image_remote="image-remote",
+            ephemeral=False,
+            map_user_uid=False,
+            uid=None,
+        ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
         call.config_set("user.craft_providers.timer", "2023-01-01T00:00:00+00:00"),

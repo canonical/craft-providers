@@ -130,6 +130,8 @@ def _create_instance(
             image=image_name,
             image_remote=image_remote,
             ephemeral=False,  # base instance should not ephemeral
+            map_user_uid=map_user_uid,
+            uid=uid,
         )
         base_instance_status = base_instance.config_get("user.craft_providers.status")
 
@@ -178,7 +180,11 @@ def _create_instance(
             image_remote,
         )
         instance.launch(
-            image=image_name, image_remote=image_remote, ephemeral=ephemeral
+            image=image_name,
+            image_remote=image_remote,
+            ephemeral=ephemeral,
+            map_user_uid=map_user_uid,
+            uid=uid,
         )
         instance_status = instance.config_get("user.craft_providers.status")
 
