@@ -6,7 +6,7 @@ Craft providers
 
 Description
 -----------
-This project aims to provide Python interfaces for instantiating and executing
+This project provides Python interfaces for instantiating and executing
 builds for a variety of target environments.
 
 Initial providers include:
