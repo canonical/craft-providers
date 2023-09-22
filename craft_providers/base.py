@@ -792,12 +792,11 @@ class Base(ABC):
         """
         return
 
-    def _mount_cache_dirs(self, executor: Executor) -> None:
-        """Mount cache directories for this base.
+    def _mount_shared_cache_dirs(self, executor: Executor) -> None:
+        """Mount shared cache directories for this base.
 
         e.g.
-            user cache (normally $HOME/.cache)
-            apt cache
+            pip cache (normally $HOME/.cache/pip)
 
         This will only be run if caching is enabled for this instance.
 
@@ -807,17 +806,36 @@ class Base(ABC):
         if self._cache_path is None:
             logger.debug("No cache path set, not mounting cache directories.")
             return
-        cache_home_proc = executor.execute_run(
+
+        # Get the real path with additional tags.
+        host_base_cache_path = self._cache_path.resolve().joinpath(
+            self.compatibility_tag, str(self.alias)
+        )
+
+        try:
+            host_base_cache_path.mkdir(parents=True, exist_ok=True)
+        except OSError as error:
+            raise BaseConfigurationError(
+                brief=f"Failed to create host cache directory: {host_base_cache_path}"
+            ) from error
+
+        guest_cache_proc = executor.execute_run(
             ["bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
             capture_output=True,
-            text=True
+            text=True,
         )
-        user_cache_path = self._cache_path / "user_cache"
-        user_cache_path.mkdir(parents=True, exist_ok=True)
-        executor.mount(
-            host_source=user_cache_path,
-            target=pathlib.PurePosixPath(cache_home_proc.stdout)
+        guest_base_cache_path = pathlib.Path(guest_cache_proc.stdout)
+
+        # PIP cache
+        host_pip_cache_path = host_base_cache_path / "pip"
+        host_pip_cache_path.mkdir(parents=True, exist_ok=True)
+
+        guest_pip_cache_path = guest_base_cache_path / "pip"
+        executor.execute_run(
+            ["mkdir", "-p", guest_pip_cache_path.as_posix()],
         )
+
+        executor.mount(host_source=host_pip_cache_path, target=guest_pip_cache_path)
 
     def _pre_setup_packages(self, executor: Executor) -> None:
         """Do anything before setting up the packages.
@@ -997,6 +1015,8 @@ class Base(ABC):
 
         self._update_compatibility_tag(executor=executor)
 
+        self._mount_shared_cache_dirs(executor=executor)
+
         self._pre_setup_os(executor=executor)
         self._setup_os(executor=executor)
         self._post_setup_os(executor=executor)
@@ -1006,9 +1026,6 @@ class Base(ABC):
         self._pre_setup_network(executor=executor)
         self._setup_network(executor=executor)
         self._post_setup_network(executor=executor)
-
-        if self._cache_path is not None:
-            self._mount_cache_dirs(executor=executor)
 
         self._setup_wait_for_network(executor=executor)
 
@@ -1065,8 +1082,9 @@ class Base(ABC):
         self._image_check(executor=executor)
         self._post_image_check(executor=executor)
 
+        self._mount_shared_cache_dirs(executor=executor)
+
         self._setup_wait_for_system_ready(executor=executor)
-        self._mount_cache_dirs(executor=executor)
         self._setup_wait_for_network(executor=executor)
 
         self._warmup_snapd(executor=executor)

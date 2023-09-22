@@ -147,7 +147,7 @@ def project(lxc, project_name):
 
 
 @pytest.fixture(scope="session")
-def session_project():
+def session_project(installed_lxd):
     lxc = LXC()
     project_name = "craft-providers-test-session"
     lxc_project.create_with_default_profile(lxc=lxc, project=project_name)

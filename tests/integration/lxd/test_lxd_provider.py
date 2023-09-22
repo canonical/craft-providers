@@ -17,7 +17,7 @@
 #
 
 import pytest
-from craft_providers.bases import get_base_from_alias, ubuntu, almalinux
+from craft_providers.bases import almalinux, get_base_from_alias, ubuntu
 from craft_providers.lxd import LXDProvider, is_installed
 
 
@@ -43,7 +43,8 @@ def test_create_environment(installed_lxd, instance_name):
 
 @pytest.mark.parametrize(
     "alias",
-    set(ubuntu.BuilddBaseAlias) - {ubuntu.BuilddBaseAlias.XENIAL} | {almalinux.AlmaLinuxBaseAlias.NINE},
+    set(ubuntu.BuilddBaseAlias) - {ubuntu.BuilddBaseAlias.XENIAL}
+    | {almalinux.AlmaLinuxBaseAlias.NINE},
 )
 def test_launched_environment(
     alias, installed_lxd, instance_name, tmp_path, session_provider
@@ -64,6 +65,15 @@ def test_launched_environment(
     ) as test_instance:
         assert test_instance.exists() is True
         assert test_instance.is_running() is True
+        test_instance.execute_run(["touch", "/root/.cache/pip/test-pip-cache"])
+
+        assert (
+            cache_path
+            / base_configuration.compatibility_tag
+            / str(base_configuration.alias)
+            / "pip"
+            / "test-pip-cache"
+        ).exists()
 
     assert test_instance.exists() is True
     assert test_instance.is_running() is False

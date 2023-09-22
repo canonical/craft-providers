@@ -64,6 +64,8 @@ class CentOSBase(Base):
     :param snaps: Optional list of snaps to install on the base image.
     :param packages: Optional list of system packages to install on the base image.
     :param use_default_packages: Optional bool to enable/disable default packages.
+    :param cache_path: Optional path to the shared cache directory. If this is
+        provided, shared cache directories will be mounted as appropriate.
     """
 
     compatibility_tag: str = f"centos-{Base.compatibility_tag}"

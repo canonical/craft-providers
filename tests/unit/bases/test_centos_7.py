@@ -1108,7 +1108,9 @@ def test_ensure_setup_completed_not_setup(status, fake_executor, mock_load):
     ],
 )
 @pytest.mark.parametrize("cache_path", [None, pathlib.Path("/tmp")])
-def test_warmup_overall(environment, fake_process, fake_executor, mock_load, mocker, cache_path):
+def test_warmup_overall(
+    environment, fake_process, fake_executor, mock_load, mocker, cache_path
+):
     mock_load.return_value = InstanceConfiguration(
         compatibility_tag="centos-base-v2", setup=True
     )

@@ -26,7 +26,9 @@ from . import conftest
 
 @pytest.fixture()
 def instance(instance_name, session_project):
-    with conftest.tmp_instance(name=instance_name, project=session_project) as tmp_instance:
+    with conftest.tmp_instance(
+        name=instance_name, project=session_project
+    ) as tmp_instance:
         yield tmp_instance
 
 
@@ -50,7 +52,9 @@ def test_config_get_and_set(instance, instance_name, lxc, session_project):
         project=session_project,
     )
 
-    value = lxc.config_get(instance_name=instance, key="user.test-key", project=session_project)
+    value = lxc.config_get(
+        instance_name=instance, key="user.test-key", project=session_project
+    )
 
     assert value == "test-value"
 
@@ -112,14 +116,14 @@ def test_delete(instance, lxc, session_project):
         lxc.delete(instance_name=instance, force=False, project=session_project)
 
     instances = lxc.list_names(project=session_project)
-    assert instances == [instance]
+    assert instance in instances
 
 
 def test_delete_force(instance, lxc, session_project):
     lxc.delete(instance_name=instance, force=True, project=session_project)
 
     instances = lxc.list_names(project=session_project)
-    assert instances == []
+    assert instance not in instances
 
 
 def test_image_copy(lxc, session_project):

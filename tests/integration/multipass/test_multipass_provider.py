@@ -46,6 +46,8 @@ def test_create_environment(installed_multipass, instance_name):
 
 ALIASES = list(BuilddBaseAlias)
 ALIASES.remove(BuilddBaseAlias.XENIAL)
+
+
 @pytest.mark.parametrize("alias", ALIASES)
 def test_launched_environment(alias, installed_multipass, instance_name, tmp_path):
     """Verify `launched_environment()` creates and starts an instance then stops
@@ -69,6 +71,16 @@ def test_launched_environment(alias, installed_multipass, instance_name, tmp_pat
     ) as test_instance:
         assert test_instance.exists() is True
         assert test_instance.is_running() is True
+
+        test_instance.execute_run(["touch", "/root/.cache/pip/test-pip-cache"])
+
+        assert (
+            cache_path
+            / base_configuration.compatibility_tag
+            / str(base_configuration.alias)
+            / "pip"
+            / "test-pip-cache"
+        ).exists()
 
     try:
         assert test_instance.exists() is True

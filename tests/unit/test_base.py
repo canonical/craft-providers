@@ -18,6 +18,7 @@
 import enum
 import pathlib
 import subprocess
+import sys
 from unittest import mock
 
 import pytest
@@ -140,19 +141,60 @@ def test_wait_for_network_timeout(fake_base, fake_executor, fake_process, callba
 
 
 @pytest.mark.parametrize("cache_dir", [pathlib.Path("/tmp/fake-cache-dir")])
-def test_mount_cache_dirs(fake_process, fake_base, fake_executor, cache_dir):
+def test_mount_shared_cache_dirs(fake_process, fake_base, fake_executor, cache_dir):
     """Test mounting of cache directories with a cache directory set."""
     fake_base._cache_path = cache_dir
-    user_cache_dir = pathlib.PurePosixPath("/root/.cache")
+    user_cache_dir = pathlib.Path("/root/.cache")
+
     fake_process.register(
         [*DEFAULT_FAKE_CMD, "bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
-        stdout=str(user_cache_dir)
+        stdout=str(user_cache_dir),
     )
 
-    fake_base._mount_cache_dirs(fake_executor)
+    fake_process.register(
+        [*DEFAULT_FAKE_CMD, "mkdir", "-p", "/root/.cache/pip"],
+    )
 
-    expected = {"host_source": cache_dir / "user_cache", "target": user_cache_dir}
+    fake_base._mount_shared_cache_dirs(fake_executor)
+
+    if sys.platform == "win32":
+        expected = {
+            "host_source": pathlib.WindowsPath("d:")
+            / cache_dir
+            / "base-v2"
+            / "FakeBaseAlias.TREBLE"
+            / "pip",
+            "target": user_cache_dir / "pip",
+        }
+    else:
+        expected = {
+            "host_source": cache_dir / "base-v2" / "FakeBaseAlias.TREBLE" / "pip",
+            "target": user_cache_dir / "pip",
+        }
     assert fake_executor.records_of_mount == [expected]
+
+
+@pytest.mark.parametrize("cache_dir", [pathlib.Path("/tmp/fake-cache-dir")])
+def test_mount_shared_cache_dirs_mkdir_failed(
+    fake_process, fake_base, fake_executor, cache_dir, mocker
+):
+    """Test mounting of cache directories with a cache directory set, but mkdir failed."""
+    fake_base._cache_path = cache_dir
+    user_cache_dir = pathlib.Path("/root/.cache")
+
+    fake_process.register(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
+        stdout=str(user_cache_dir),
+    )
+
+    fake_process.register(
+        [*DEFAULT_FAKE_CMD, "mkdir", "-p", "/root/.cache/pip"],
+    )
+
+    mocker.patch("pathlib.Path.mkdir", side_effect=OSError)
+
+    with pytest.raises(BaseConfigurationError):
+        fake_base._mount_shared_cache_dirs(fake_executor)
 
 
 @pytest.mark.parametrize(

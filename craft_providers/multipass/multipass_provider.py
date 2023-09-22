@@ -21,7 +21,7 @@ import logging
 import pathlib
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Optional, ContextManager
+from typing import Dict, Iterator, Optional
 
 from craft_providers import Base, Executor, Provider, base
 from craft_providers.bases import ubuntu
@@ -187,7 +187,7 @@ class MultipassProvider(Provider):
         build_base: Optional[str] = None,
         instance_name: str,
         allow_unstable: bool = False,
-    ) -> ContextManager[Executor]:
+    ) -> Iterator[Executor]:
         """Configure and launch environment for specified base.
 
         When this method loses context, all directories are unmounted and the

@@ -1161,7 +1161,9 @@ def test_ensuresetup_completed_not_setup(status, fake_executor, mock_load):
     ],
 )
 @pytest.mark.parametrize("cache_path", [None, pathlib.Path("/tmp")])
-def test_warmup_overall(environment, fake_process, fake_executor, mock_load, mocker, cache_path):
+def test_warmup_overall(
+    environment, fake_process, fake_executor, mock_load, mocker, cache_path
+):
     mock_load.return_value = InstanceConfiguration(
         compatibility_tag="almalinux-base-v2", setup=True
     )
@@ -1170,7 +1172,10 @@ def test_warmup_overall(environment, fake_process, fake_executor, mock_load, moc
     if environment is None:
         environment = almalinux.AlmaLinuxBase.default_command_environment()
 
-    base_config = almalinux.AlmaLinuxBase(alias=alias, environment=environment, )
+    base_config = almalinux.AlmaLinuxBase(
+        alias=alias,
+        environment=environment,
+    )
 
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],

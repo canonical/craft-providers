@@ -16,6 +16,7 @@
 #
 import pathlib
 import subprocess
+import sys
 from pathlib import Path
 from textwrap import dedent
 from unittest.mock import ANY, call, patch
@@ -690,19 +691,32 @@ def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
 def test_mount_cache_dirs(fake_process, fake_executor, cache_path, alias):
     """Test mounting of cache directories with a cache directory set."""
     base = ubuntu.BuilddBase(alias=alias, cache_path=cache_path)
-    apt_cache_dir = pathlib.PurePosixPath("/var/cache/apt/archives")
-    user_cache_dir = pathlib.PurePosixPath("/root/.cache")
+    host_cache_dir = cache_path / base.compatibility_tag / str(base.alias)
+    user_cache_dir = pathlib.Path("/root/.cache")
     fake_process.register(
         [*DEFAULT_FAKE_CMD, "bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
-        stdout=str(user_cache_dir)
+        stdout=str(user_cache_dir),
+    )
+    fake_process.register(
+        [*DEFAULT_FAKE_CMD, "mkdir", "-p", "/root/.cache/pip"],
     )
 
-    base._mount_cache_dirs(fake_executor)
+    base._mount_shared_cache_dirs(fake_executor)
 
-    expected_mounts = [
-        {"host_source": base._cache_path / "user_cache", "target": user_cache_dir},
-        {"host_source": base._cache_path / "apt_archives", "target": apt_cache_dir}
-    ]
+    if sys.platform == "win32":
+        expected_mounts = [
+            {
+                "host_source": pathlib.WindowsPath("D:") / host_cache_dir / "pip",
+                "target": user_cache_dir / "pip",
+            }
+        ]
+    else:
+        expected_mounts = [
+            {
+                "host_source": host_cache_dir / "pip",
+                "target": user_cache_dir / "pip",
+            },
+        ]
     assert fake_executor.records_of_mount == expected_mounts
 
 
@@ -1528,7 +1542,9 @@ def test_ensure_setup_completed_not_setup(status, fake_executor, mock_load):
     ],
 )
 @pytest.mark.parametrize("cache_path", [None, pathlib.Path("/tmp")])
-def test_warmup_overall(environment, fake_process, fake_executor, mock_load, mocker, cache_path):
+def test_warmup_overall(
+    environment, fake_process, fake_executor, mock_load, mocker, cache_path
+):
     mock_load.return_value = InstanceConfiguration(
         compatibility_tag="buildd-base-v2", setup=True
     )
