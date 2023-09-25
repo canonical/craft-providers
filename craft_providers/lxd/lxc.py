@@ -341,6 +341,7 @@ class LXC:
         remote: str = "local",
         runner: Callable = subprocess.run,
         timeout: Optional[float] = None,
+        check: bool = False,
         **kwargs,
     ):
         """Execute command in instance_name with specified runner.
@@ -356,9 +357,12 @@ class LXC:
             Popen.  First argument is finalized command with the attached
             kwargs.
         :param timeout: Timeout (in seconds) for the command.
+        :param check: Raise an exception if the command fails.
         :param kwargs: Additional kwargs for runner.
 
         :returns: Runner's instance.
+
+        :raises subprocess.CalledProcessError: if command fails and check is True.
         """
         final_cmd = [
             str(self.lxc_path),
@@ -379,7 +383,7 @@ class LXC:
         logger.debug("Executing in container: %s", shlex.join(final_cmd))
 
         if runner is subprocess.run:
-            return runner(final_cmd, timeout=timeout, **kwargs)
+            return runner(final_cmd, timeout=timeout, check=check, **kwargs)
 
         return runner(final_cmd, **kwargs)
 

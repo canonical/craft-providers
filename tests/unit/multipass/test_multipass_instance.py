@@ -288,6 +288,23 @@ def test_execute_run(mock_multipass, instance):
             runner=subprocess.run,
             input="foo",
             timeout=None,
+            check=False,
+        )
+    ]
+
+
+@pytest.mark.parametrize("check", [True, False])
+def test_execute_run_with_check(check, mock_multipass, instance):
+    instance.execute_run(command=["test-command", "flags"], input="foo", check=check)
+
+    assert mock_multipass.mock_calls == [
+        mock.call.exec(
+            instance_name="test-instance",
+            command=["sudo", "-H", "--", "test-command", "flags"],
+            runner=subprocess.run,
+            input="foo",
+            timeout=None,
+            check=check,
         )
     ]
 
@@ -309,6 +326,7 @@ def test_execute_run_with_cwd(mock_multipass, instance, tmp_path):
             ],
             runner=subprocess.run,
             timeout=None,
+            check=False,
         )
     ]
 
@@ -322,6 +340,7 @@ def test_execute_run_with_env(mock_multipass, instance):
             command=["sudo", "-H", "--", "env", "foo=bar", "test-command", "flags"],
             runner=subprocess.run,
             timeout=None,
+            check=False,
         )
     ]
 
@@ -347,6 +366,7 @@ def test_execute_run_with_env_unset(mock_multipass, instance):
             ],
             runner=subprocess.run,
             timeout=None,
+            check=False,
         )
     ]
 
