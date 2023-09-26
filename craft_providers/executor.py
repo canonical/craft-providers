@@ -66,6 +66,7 @@ class Executor(ABC):
         cwd: Optional[pathlib.PurePath] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         timeout: Optional[float] = None,
+        check: bool = False,
         **kwargs,
     ) -> subprocess.CompletedProcess:
         """Execute a command using subprocess.run().
@@ -78,12 +79,12 @@ class Executor(ABC):
         :param cwd: Working directory for the process inside the instance.
         :param env: Additional environment to set for process.
         :param timeout: Timeout (in seconds) for the command.
+        :param check: Raise an exception if the command fails.
         :param kwargs: Keyword args to pass to subprocess.run().
 
         :returns: Completed process.
 
-        :raises subprocess.CalledProcessError: if command fails and check is
-            True.
+        :raises subprocess.CalledProcessError: if command fails and check is True.
         """
 
     @abstractmethod

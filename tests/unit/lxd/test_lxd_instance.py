@@ -295,6 +295,7 @@ def test_execute_run(mock_lxc, instance):
             runner=subprocess.run,
             input="foo",
             timeout=None,
+            check=False,
         )
     ]
 
@@ -316,6 +317,26 @@ def test_execute_run_with_cwd(mock_lxc, instance):
             runner=subprocess.run,
             input="foo",
             timeout=None,
+            check=False,
+        )
+    ]
+
+
+@pytest.mark.parametrize("check", [True, False])
+def test_execute_run_with_check(check, mock_lxc, instance):
+    instance.execute_run(command=["test-command", "flags"], input="foo", check=check)
+
+    assert mock_lxc.mock_calls == [
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["test-command", "flags"],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            input="foo",
+            timeout=None,
+            check=check,
         )
     ]
 
@@ -338,6 +359,7 @@ def test_execute_run_with_default_command_env(mock_lxc):
             remote=instance.remote,
             runner=subprocess.run,
             timeout=None,
+            check=False,
         )
     ]
 
@@ -362,6 +384,7 @@ def test_execute_run_with_default_command_env_unset(mock_lxc):
             remote=instance.remote,
             runner=subprocess.run,
             timeout=None,
+            check=False,
         )
     ]
 
@@ -378,6 +401,7 @@ def test_execute_run_with_env(mock_lxc, instance):
             remote=instance.remote,
             runner=subprocess.run,
             timeout=None,
+            check=False,
         )
     ]
 
@@ -403,6 +427,7 @@ def test_execute_run_with_env_unset(mock_lxc, instance):
             remote=instance.remote,
             runner=subprocess.run,
             timeout=None,
+            check=False,
         )
     ]
 

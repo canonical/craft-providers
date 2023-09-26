@@ -87,13 +87,14 @@ class FakeExecutor(Executor):
         cwd: Optional[pathlib.Path] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         timeout: Optional[float] = None,
+        check: bool = False,
         **kwargs,
     ) -> subprocess.CompletedProcess:
         env_args = [] if env is None else env_cmd.formulate_command(env, chdir=cwd)
 
         final_cmd = [*DEFAULT_FAKE_CMD, *env_args, *command]
 
-        return subprocess.run(final_cmd, timeout=timeout, **kwargs)
+        return subprocess.run(final_cmd, timeout=timeout, check=check, **kwargs)
 
     def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:
         self.records_of_pull_file.append(

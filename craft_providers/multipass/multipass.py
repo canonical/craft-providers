@@ -94,6 +94,7 @@ class Multipass:
         instance_name: str,
         runner: Callable = subprocess.run,
         timeout: Optional[float] = None,
+        check: bool = False,
         **kwargs,
     ):
         """Execute command in instance_name with specified runner.
@@ -111,6 +112,7 @@ class Multipass:
             Popen.  First argument is finalized command with the attached
             kwargs.
         :param timeout: Timeout (in seconds) for the command.
+        :param check: Raise an exception if the command fails.
         :param kwargs: Additional kwargs for runner.
 
         :returns: Runner's instance.
@@ -122,7 +124,7 @@ class Multipass:
 
         # Only subprocess.run supports timeout
         if runner is subprocess.run:
-            return runner(final_cmd, timeout=timeout, **kwargs)
+            return runner(final_cmd, timeout=timeout, check=check, **kwargs)
 
         return runner(final_cmd, **kwargs)
 

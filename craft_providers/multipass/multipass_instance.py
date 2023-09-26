@@ -229,6 +229,7 @@ class MultipassInstance(Executor):
         cwd: Optional[pathlib.PurePath] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         timeout: Optional[float] = None,
+        check: bool = False,
         **kwargs,
     ) -> subprocess.CompletedProcess:
         """Execute a command in the instance using subprocess.run().
@@ -246,6 +247,7 @@ class MultipassInstance(Executor):
         :param cwd: working directory to execute the command
         :param env: Additional environment to set for process.
         :param timeout: Timeout (in seconds) for the command.
+        :param check: Raise an exception if the command fails.
         :param kwargs: Keyword args to pass to subprocess.run().
 
         :returns: Completed process.
@@ -257,6 +259,7 @@ class MultipassInstance(Executor):
             command=_rootify_multipass_command(command, cwd=cwd, env=env),
             runner=subprocess.run,
             timeout=timeout,
+            check=check,
             **kwargs,
         )
 
