@@ -5,6 +5,12 @@ Changelog
 See the `Releases page`_ on Github for a complete list of commits that are
 included in each version.
 
+1.18.0 (2023-09-28)
+-------------------
+- Check if base instance status before copying
+- Fail quickly when LXD errors do not involve instance creation
+- Add ``check`` parameter to ``execute_run``
+
 1.17.0 (2023-09-22)
 -------------------
 - Use a shared pip cache across instances
