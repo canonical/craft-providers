@@ -503,7 +503,7 @@ def test_inject_from_host_snapd_http_error_using_pack_fallback(
     tmpdir,
 ):
     mock_requests.get.return_value.raise_for_status.side_effect = (
-        requests.exceptions.HTTPError()
+        requests.exceptions.HTTPError()  # type: ignore [reportGeneralTypeIssues]
     )
     fake_process.register_subprocess(
         [
