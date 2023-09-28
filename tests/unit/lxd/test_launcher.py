@@ -120,6 +120,11 @@ def mock_check_id_map(mocker):
     return mocker.patch("craft_providers.lxd.launcher._check_id_map", return_value=True)
 
 
+@pytest.fixture()
+def mock_disable_timer_update_thread(mocker):
+    return mocker.patch("craft_providers.lxd.launcher.InstanceTimer.run")
+
+
 def test_launch_no_base_instance(
     fake_instance,
     mock_base_configuration,
@@ -357,7 +362,15 @@ def test_launch_use_existing_base_instance(
         ),
     ]
     assert fake_instance.mock_calls == [call.exists(), call.is_running(), call.start()]
-    assert fake_base_instance.mock_calls == [call.exists(), call.is_running()]
+    assert fake_base_instance.mock_calls == [
+        call.exists(),
+        call.lxc.check_instance_status(
+            instance_name=fake_base_instance.instance_name,
+            project=fake_base_instance.project,
+            remote=fake_base_instance.remote,
+        ),
+        call.is_running(),
+    ]
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.get_command_environment(),
@@ -404,6 +417,11 @@ def test_launch_use_existing_base_instance_already_running(
     ]
     assert fake_base_instance.mock_calls == [
         call.exists(),
+        call.lxc.check_instance_status(
+            instance_name=fake_base_instance.instance_name,
+            project=fake_base_instance.project,
+            remote=fake_base_instance.remote,
+        ),
         call.is_running(),
     ]
 
@@ -521,6 +539,7 @@ def test_launch_all_opts(
     mock_lxd_instance,
     mock_timezone,
     mock_platform,
+    mock_disable_timer_update_thread,
 ):
     """Parse all parameters."""
     fake_instance.config_get.return_value = "STARTING"
@@ -564,7 +583,6 @@ def test_launch_all_opts(
         ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
-        call.config_set("user.craft_providers.timer", "2023-01-01T00:00:00+00:00"),
         call.lxc.config_set(
             instance_name="test-instance-fa2d407652a1c51f6019",
             key="environment.TZ",
@@ -625,6 +643,7 @@ def test_launch_create_project(
     mock_lxd_instance,
     mock_platform,
     mock_timezone,
+    mock_disable_timer_update_thread,
 ):
     """Create a project if it does not exist and auto_create_project is true."""
     fake_instance.config_get.return_value = "STARTING"
@@ -670,7 +689,6 @@ def test_launch_create_project(
         ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
-        call.config_set("user.craft_providers.timer", "2023-01-01T00:00:00+00:00"),
         call.lxc.config_set(
             instance_name="test-instance-fa2d407652a1c51f6019",
             key="environment.TZ",
@@ -766,6 +784,7 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
     mock_lxd_instance,
     mock_platform,
     mock_timezone,
+    mock_disable_timer_update_thread,
 ):
     """If instance is incompatible and auto_clean is true, launch a new instance."""
     fake_instance.exists.return_value = True
@@ -812,7 +831,6 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
         ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
-        call.config_set("user.craft_providers.timer", "2023-01-01T00:00:00+00:00"),
         call.lxc.config_set(
             instance_name="test-instance-fa2d407652a1c51f6019",
             key="environment.TZ",
@@ -869,6 +887,7 @@ def test_launch_with_existing_ephemeral_instance(
     mock_lxd_instance,
     mock_platform,
     mock_timezone,
+    mock_disable_timer_update_thread,
 ):
     """Delete and recreate existing ephemeral instances."""
     fake_instance.exists.return_value = True
@@ -908,7 +927,6 @@ def test_launch_with_existing_ephemeral_instance(
         ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
-        call.config_set("user.craft_providers.timer", "2023-01-01T00:00:00+00:00"),
         call.lxc.config_set(
             instance_name="test-instance-fa2d407652a1c51f6019",
             key="environment.TZ",
@@ -1029,6 +1047,7 @@ def test_use_snapshots_deprecated(
     mock_lxd_instance,
     mock_platform,
     mock_timezone,
+    mock_disable_timer_update_thread,
 ):
     """Log deprecation warning for `use_snapshots` and continue to launch."""
     fake_base_instance.config_get.return_value = "STARTING"
@@ -1100,7 +1119,6 @@ def test_use_snapshots_deprecated(
         ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
-        call.config_set("user.craft_providers.timer", "2023-01-01T00:00:00+00:00"),
         call.lxc.config_set(
             instance_name="test-base-instance-e14661a426076717fa04",
             key="environment.TZ",

@@ -755,6 +755,13 @@ def launch(
         )
         return instance
 
+    # check if the base instance is still being created
+    base_instance.lxc.check_instance_status(
+        instance_name=base_instance.instance_name,
+        project=project,
+        remote=remote,
+    )
+
     # at this point, there is a valid base instance to be copied to a new instance
     logger.info("Creating instance from base instance")
     logger.debug(
