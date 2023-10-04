@@ -1,8 +1,8 @@
-*********
+***************
 Changelog
-*********
+***************
 
-See the `Releases page`_ on Github for a complete list of commits that are
+See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
 1.18.0 (2023-09-28)
@@ -47,7 +47,7 @@ included in each version.
 - Install common packages and clean up package cache on bases
 - Push files to any location in Multipass instances
 - CI, linting, and testing overhaul
-- Add diataxis front page for documentation
+- Add Diataxis front page for documentation
 - Improve ``push_file_io`` for LXD instances
 - Improve ``retry-until-timeout`` logic
 - Refactor base classes
@@ -120,7 +120,7 @@ included in each version.
   Usage of this function should be replaced with RemoteImage's ``add_remote()``.
 - Rename BuilddBase function ``setup_instance_config()`` to
   ``update_compatibility_tag()``
-- Update brew for macos CI tests
+- Update brew for macOS CI tests
 - Update readthedocs link in readme
 - Capture subproccess error details when snap removal fails
 - Add default for ``_run_lxc()`` parameter ``check=True``
