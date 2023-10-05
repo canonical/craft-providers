@@ -1,5 +1,3 @@
-.. craft providers documentation root file
-
 Craft Providers
 ===========================================
 

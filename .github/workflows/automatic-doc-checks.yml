@@ -1,0 +1,49 @@
+name: Main Documentation Checks
+
+on:
+  - push
+  - pull_request
+  - workflow_dispatch
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docchecks:
+    name: Run documentation checks
+    runs-on: ubuntu-latest
+    outputs:
+      result_spelling: ${{ steps.spellcheck-step.outcome }}
+      result_woke: ${{ steps.woke-step.outcome }}
+      result_links: ${{ steps.linkcheck-step.outcome }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Remove upstream unused files
+        run: |
+          rm -f docs/sphinx-docs-starter-pack/doc-cheat-sheet*
+
+      - name: Spell Check
+        id: spellcheck-step
+        if: success() || failure()
+        uses: canonical/documentation-workflows/spellcheck@main
+        with:
+          working-directory: "docs"
+
+      - name: Inclusive Language Check
+        id: woke-step
+        if: success() || failure()
+        uses: canonical/documentation-workflows/inclusive-language@main
+        with:
+          working-directory: "docs"
+
+      - name: Link Check
+        id: linkcheck-step
+        if: success() || failure()
+        uses: canonical/documentation-workflows/linkcheck@main
+        with:
+          working-directory: "docs"
