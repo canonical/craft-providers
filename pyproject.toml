@@ -42,7 +42,7 @@ dev = [
     "pytest-xdist==3.3.1",
     "pytest-time==0.3.1",
     "responses==0.23.3",
-    "types-requests==2.31.0.9",
+    "types-requests==2.31.0.6",
     "types-setuptools==68.2.0.0",
     "types-pyyaml==6.0.12.12",
 ]
