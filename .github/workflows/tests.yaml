@@ -34,7 +34,7 @@ jobs:
       - name: Configure environment
         run: |
           echo "::group::Begin snap install"
-          echo "Installing snaps in the background while running apt and pip..."
+          echo "Installing snaps in the background while running pip..."
           sudo snap install --no-wait --classic pyright
           sudo snap install --no-wait shellcheck
           echo "::endgroup::"
@@ -105,14 +105,8 @@ jobs:
   integration-tests-linux:
     strategy:
       matrix:
-        python: [
-          {system-version: "3.8", tox-version: "py3.8"},
-          {system-version: "3.10", tox-version: "py3.10"},
-          {system-version: "3.11", tox-version: "py3.11"},
-          {system-version: "3.12-dev", tox-version: "py3.12"},
-        ]
-    # does not work with canonical/setup-lxd github action (see https://github.com/canonical/craft-providers/issues/271)
-    runs-on: ubuntu-latest
+        python: ["3.8", "3.10", "3.12"]
+    runs-on: [self-hosted, linux, X64, jammy, large]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -121,7 +115,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python.system-version }}
+          python-version: ${{ matrix.python }}
           cache: 'pip'
       - name: Configure environment
         run: |
@@ -129,23 +123,13 @@ jobs:
           python -m pip install 'tox>=4.6'
           echo "::endgroup::"
           echo "::group::Configure LXD"
-          sudo groupadd --force --system lxd
-          sudo usermod --append --groups lxd $USER
           sudo snap refresh lxd --channel=latest/stable
           sudo snap start lxd
           sudo lxd waitready --timeout=30
           sudo lxd init --auto
-          # iptables calls from https://github.com/canonical/setup-lxd/blob/main/action.yml
-          sudo iptables -I DOCKER-USER -i lxdbr0 -j ACCEPT
-          sudo iptables -I DOCKER-USER -o lxdbr0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
           echo "::endgroup::"
       - name: Setup Tox environments
-        run: tox run -e integration-${{ matrix.python.tox-version }} --notest
-      - name: Enable ssh access
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ inputs.enable_ssh_access }}
-        with:
-          limit-access-to-actor: true
+        run: tox run -e integration-py${{ matrix.python }} --notest
       - name: Run integration tests on Linux
         env:
           CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL: 1
@@ -153,8 +137,7 @@ jobs:
           CRAFT_PROVIDERS_TESTS_ENABLE_LXD_UNINSTALL: 1
           PYTEST_ADDOPTS: "--no-header -vv -rN"
         run: |
-          sg lxd -c "lxc version"
-          sg lxd -c ".tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies -e integration-${{ matrix.python.tox-version }}"
+          .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies -e integration-py${{ matrix.python }}
   integration-tests-macos:
     strategy:
       matrix:
