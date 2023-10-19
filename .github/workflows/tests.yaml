@@ -112,7 +112,7 @@ jobs:
           {system-version: "3.12-dev", tox-version: "py3.12"},
         ]
     # does not work with canonical/setup-lxd github action (see https://github.com/canonical/craft-providers/issues/271)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, X64, jammy, large]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
