@@ -125,6 +125,10 @@ jobs:
           cache: 'pip'
       - name: Configure environment
         run: |
+          echo "::group::clean disk"
+          # removing the android sdk and libraries doubles available disk space from 14GB to 28GB
+          sudo rm -rf /usr/local/lib/android/
+          echo "::endgroup::"
           echo "::group::pip install"
           python -m pip install 'tox>=4.6'
           echo "::endgroup::"
