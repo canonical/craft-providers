@@ -5,6 +5,10 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+1.19.0 (2023-10-23)
+-------------------
+- Add Ubuntu 23.10 (Mantic) support
+
 1.18.0 (2023-09-28)
 -------------------
 - Check if base instance status before copying
