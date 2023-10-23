@@ -47,14 +47,14 @@ dev = [
     "types-pyyaml==6.0.12.12",
 ]
 lint = [
-    "black==23.9.1",
+    "black==23.10.0",
     "codespell[toml]==2.2.6",
     "ruff==0.1.1",
     "yamllint==1.32.0",
 ]
 types = [
-    "mypy[reports]==1.6.0",
-    "pyright==1.1.331",
+    "mypy[reports]==1.6.1",
+    "pyright==1.1.332",
 ]
 docs = [
     "furo==2023.9.10",
