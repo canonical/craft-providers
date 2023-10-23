@@ -44,6 +44,7 @@ class BuilddBaseAlias(enum.Enum):
     FOCAL = "20.04"
     JAMMY = "22.04"
     LUNAR = "23.04"
+    MANTIC = "23.10"
     DEVEL = "devel"
 
 
