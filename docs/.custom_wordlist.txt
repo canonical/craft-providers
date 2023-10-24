@@ -33,6 +33,7 @@ LXDInstance
 LXDInstance's
 LXDProvider
 macOS
+Mantic
 multipass
 Multipass
 MultipassInstance
