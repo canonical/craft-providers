@@ -848,7 +848,12 @@ def test_get_assertion_connection_error(mocker):
         snap_installer._get_assertion(["test1", "test2"])
     assert exc_info.value == snap_installer.SnapInstallationError(
         brief="failed to get assertions for snap",
-        details="* Command that failed: 'error'\n* Command exit code: 100\n* Command output: 'snap error'\n* Command standard error output: 'snap error details'",
+        details=(
+            "* Command that failed: 'error'\n"
+            "* Command exit code: 100\n"
+            "* Command output: 'snap error'\n"
+            "* Command standard error output: 'snap error details'"
+        ),
     )
     assert exc_info.value.__cause__ is not None
 
@@ -926,7 +931,13 @@ def test_get_target_snap_revision_from_snapd_process_error(fake_process, fake_ex
         snap_installer._get_target_snap_revision_from_snapd("test-snap", fake_executor)
     assert exc_info.value == snap_installer.SnapInstallationError(
         "Unable to get target snap revision.",
-        details="* Command that failed: 'fake-executor curl --silent --unix-socket /run/snapd.socket http://localhost/v2/snaps/test-snap'\n* Command exit code: 1\n* Command output: b'snap error'\n* Command standard error output: b'snap error details'",
+        details=(
+            "* Command that failed: 'fake-executor curl --silent --unix-socket "
+            "/run/snapd.socket http://localhost/v2/snaps/test-snap'\n"
+            "* Command exit code: 1\n"
+            "* Command output: b'snap error'\n"
+            "* Command standard error output: b'snap error details'"
+        ),
     )
     assert exc_info.value.__cause__ is not None
 

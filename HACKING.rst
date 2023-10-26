@@ -33,9 +33,8 @@ Other tools
 ###########
 Some other tools we use for code quality include:
 
-- Black_ for code formatting
 - pytest_ for testing
-- ruff_ for linting (and some additional formatting)
+- ruff_ for code formatting and linting
 
 A complete list is kept in our pyproject.toml_ file in dev dependencies.
 
@@ -61,11 +60,11 @@ interpreter installed. For example, to run with Python 3.10, run::
 
 While the use of pre-commit_ is optional, it is highly encouraged, as it runs
 automatic fixes for files when ``git commit`` is called, including code
-formatting with ``black`` and ``ruff``.  The versions available in ``apt``
-from Debian 11 (bullseye), Ubuntu 22.04 (jammy) and newer are sufficient, but
-you can also install the latest with ``pip install pre-commit``. Once you've
-installed it, run ``pre-commit install`` in this git repository to install the
-pre-commit hooks.
+formatting with ``ruff``.  The versions available in ``apt`` from Debian 11
+(bullseye), Ubuntu 22.04 (jammy) and newer are sufficient, but you can also
+install the latest with ``pip install pre-commit``. Once you've installed it,
+run ``pre-commit install`` in this git repository to install the pre-commit
+hooks.
 
 Tox environments and labels
 ###########################
@@ -122,7 +121,6 @@ Please follow these guidelines when committing code for this project:
 
 .. _Actions: https://github.com/canonical/craft-providers/actions
 .. _action-tmate: https://mxschmitt.github.io/action-tmate/
-.. _Black: https://black.readthedocs.io
 .. _`Canonical contributor licence agreement`: http://www.ubuntu.com/legal/contributors/
 .. _deadsnakes: https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa
 .. _`git submodules`: https://git-scm.com/book/en/v2/Git-Tools-Submodules#_cloning_submodules

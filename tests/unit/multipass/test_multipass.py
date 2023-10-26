@@ -40,7 +40,8 @@ EXAMPLE_INFO = """\
                     "used": "1339375616"
                 }
             },
-            "image_hash": "c5f2f08c6a1adee1f2f96d84856bf0162d33ea182dae0e8ed45768a86182d110",
+            "image_hash":
+            "c5f2f08c6a1adee1f2f96d84856bf0162d33ea182dae0e8ed45768a86182d110",
             "image_release": "22.04 LTS",
             "ipv4": [
                 "10.114.154.206"

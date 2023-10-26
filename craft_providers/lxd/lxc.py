@@ -1102,8 +1102,8 @@ class LXC:
 
         The possible status are:
         - None: Either the instance is downloading or old that this is not set.
-        - STARTING: Instance is starting, the creation is successful. If it also STOPPED,
-            then there could be a boot issue.
+        - STARTING: Instance is starting, the creation is successful. If it also
+            STOPPED, then there could be a boot issue.
         - PREPARING: Instance is preparing, the boot is successful. If it also STOPPED,
             then the craft-providers or craft-app configuration / installation
             was interrupted or failed.

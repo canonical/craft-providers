@@ -178,7 +178,7 @@ def test_mount_shared_cache_dirs(fake_process, fake_base, fake_executor, cache_d
 def test_mount_shared_cache_dirs_mkdir_failed(
     fake_process, fake_base, fake_executor, cache_dir, mocker
 ):
-    """Test mounting of cache directories with a cache directory set, but mkdir failed."""
+    """Test mounting of cache dirs with a cache dir set, but mkdir failed."""
     fake_base._cache_path = cache_dir
     user_cache_dir = pathlib.Path("/root/.cache")
 
@@ -202,7 +202,10 @@ def test_mount_shared_cache_dirs_mkdir_failed(
     [
         (
             [
-                'NAME="AlmaLinux"\nVERSION="9.1 (Lime Lynx)"\nID="almalinux"\nID_LIKE="rhel centos fedora"\nVERSION_ID="9.1"\n'
+                (
+                    'NAME="AlmaLinux"\nVERSION="9.1 (Lime Lynx)"\nID="almalinux"\n'
+                    'ID_LIKE="rhel centos fedora"\nVERSION_ID="9.1"\n'
+                ),
             ],
             {
                 "NAME": "AlmaLinux",
@@ -215,7 +218,10 @@ def test_mount_shared_cache_dirs_mkdir_failed(
         (
             [
                 "",
-                'NAME="AlmaLinux"\nVERSION="9.1 (Lime Lynx)"\nID="almalinux"\nID_LIKE="rhel centos fedora"\nVERSION_ID="9.1"\n',
+                (
+                    'NAME="AlmaLinux"\nVERSION="9.1 (Lime Lynx)"\nID="almalinux"\n'
+                    'ID_LIKE="rhel centos fedora"\nVERSION_ID="9.1"\n'
+                ),
             ],
             {
                 "NAME": "AlmaLinux",
@@ -227,7 +233,10 @@ def test_mount_shared_cache_dirs_mkdir_failed(
         ),
         (
             [
-                'NAME="CentOS Linux"\nVERSION="7 (Core)"\nID="centos"\nID_LIKE="rhel fedora"\nVERSION_ID="7"\n'
+                (
+                    'NAME="CentOS Linux"\nVERSION="7 (Core)"\nID="centos"\n'
+                    'ID_LIKE="rhel fedora"\nVERSION_ID="7"\n'
+                ),
             ],
             {
                 "NAME": "CentOS Linux",
@@ -240,7 +249,10 @@ def test_mount_shared_cache_dirs_mkdir_failed(
         (
             [
                 "",
-                'NAME="CentOS Linux"\nVERSION="7 (Core)"\nID="centos"\nID_LIKE="rhel fedora"\nVERSION_ID="7"\n',
+                (
+                    'NAME="CentOS Linux"\nVERSION="7 (Core)"\nID="centos"\n'
+                    'ID_LIKE="rhel fedora"\nVERSION_ID="7"\n'
+                ),
             ],
             {
                 "NAME": "CentOS Linux",

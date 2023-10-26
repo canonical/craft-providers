@@ -995,7 +995,7 @@ def test_launch_failed_retry_check(fake_process, mocker):
 
 
 def test_launch_failed_retry_failed(fake_process, mocker):
-    """Test that we retry launching an instance if it fails, but failed more than 3 times."""
+    """Test retry launching an instance if it fails and failed more than 3 times."""
     mock_launch = mocker.patch("craft_providers.lxd.lxc.LXC._run_lxc")
     mock_launch.side_effect = subprocess.CalledProcessError(1, ["lxc", "fail", " test"])
     mock_check = mocker.patch("craft_providers.lxd.lxc.LXC.check_instance_status")
@@ -1165,7 +1165,13 @@ def test_launch_error(fake_process, mocker):
 
     assert exc_info.value == LXDError(
         brief="Failed to launch instance 'test-instance'.",
-        details="* Command that failed: 'lxc --project test-project launch test-image-remote:test-image test-remote:test-instance --config user.craft_providers.status=STARTING --config user.craft_providers.timer=2023-01-01T00:00:00+00:00'\n* Command exit code: 1",
+        details=(
+            "* Command that failed: 'lxc --project test-project launch "
+            "test-image-remote:test-image test-remote:test-instance "
+            "--config user.craft_providers.status=STARTING --config "
+            "user.craft_providers.timer=2023-01-01T00:00:00+00:00'\n"
+            "* Command exit code: 1"
+        ),
         resolution=None,
     )
 
@@ -1364,8 +1370,15 @@ def test_check_instance_status_lxd_error(fake_process, mocker):
         )
 
     assert exc_info.value == LXDError(
-        brief="Failed to get value for config key 'user.craft_providers.status' for instance 'test-instance'.",
-        details="* Command that failed: 'lxc --project test-project config get test-remote:test-instance user.craft_providers.status'\n* Command exit code: 1",
+        brief=(
+            "Failed to get value for config key 'user.craft_providers.status' for "
+            "instance 'test-instance'."
+        ),
+        details=(
+            "* Command that failed: 'lxc --project test-project config get "
+            "test-remote:test-instance user.craft_providers.status'\n"
+            "* Command exit code: 1"
+        ),
         resolution=None,
     )
 
@@ -1378,7 +1391,10 @@ def test_check_instance_status_lxd_error_retry(fake_process, mocker):
     mock_instance.side_effect = [
         LXDError(
             brief="Failed to get instance info.",
-            details="* Command that failed: 'lxc --project test-project info test-remote:test-instance'\n* Command exit code: 1",
+            details=(
+                "* Command that failed: 'lxc --project test-project info "
+                "test-remote:test-instance'\n* Command exit code: 1"
+            ),
             resolution=None,
         ),
         {"Status": "STOPPED"},
@@ -1386,7 +1402,10 @@ def test_check_instance_status_lxd_error_retry(fake_process, mocker):
         {"Status": "RUNNING"},
         LXDError(
             brief="Failed to get instance info.",
-            details="* Command that failed: 'lxc --project test-project info test-remote:test-instance'\n* Command exit code: 1",
+            details=(
+                "* Command that failed: 'lxc --project test-project info "
+                "test-remote:test-instance'\n* Command exit code: 1"
+            ),
             resolution=None,
         ),
         {"Status": "RUNNING"},
@@ -1398,12 +1417,18 @@ def test_check_instance_status_lxd_error_retry(fake_process, mocker):
     mock_instance_config.side_effect = [
         LXDError(
             brief="Failed to get instance info.",
-            details="* Command that failed: 'lxc --project test-project info test-remote:test-instance'\n* Command exit code: 1",
+            details=(
+                "* Command that failed: 'lxc --project test-project info "
+                "test-remote:test-instance'\n* Command exit code: 1"
+            ),
             resolution=None,
         ),
         LXDError(
             brief="Failed to get instance info.",
-            details="* Command that failed: 'lxc --project test-project info test-remote:test-instance'\n* Command exit code: 1",
+            details=(
+                "* Command that failed: 'lxc --project test-project info "
+                "test-remote:test-instance'\n* Command exit code: 1"
+            ),
             resolution=None,
         ),
         "STARTING",
@@ -1414,7 +1439,10 @@ def test_check_instance_status_lxd_error_retry(fake_process, mocker):
         "2023-01-01T00:00:20+00:00",
         LXDError(
             brief="Failed to get instance info.",
-            details="* Command that failed: 'lxc --project test-project info test-remote:test-instance'\n* Command exit code: 1",
+            details=(
+                "* Command that failed: 'lxc --project test-project info "
+                "test-remote:test-instance'\n* Command exit code: 1"
+            ),
             resolution=None,
         ),
         "FINISHED",
