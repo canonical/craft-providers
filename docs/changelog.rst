@@ -5,6 +5,10 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+1.19.1 (2023-10-26)
+-------------------
+- Require a disk device in the default LXD profile
+
 1.19.0 (2023-10-23)
 -------------------
 - Add Ubuntu 23.10 (Mantic) support
