@@ -240,14 +240,65 @@ def test_install_requires_user_to_be_added_to_lxd_group(
 
 
 def test_is_initialized():
+    """Return true if there is a valid disk device in the default profile."""
     mock_lxc = mock.Mock(spec=LXC)
+    mock_lxc.profile_show.return_value = {
+        "config": {},
+        "description": "Default LXD profile",
+        "devices": {
+            "eth0": {
+                "name": "eth0",
+                "network": "lxdbr0",
+                "type": "nic",
+            },
+            "root": {
+                "path": "/",
+                "pool": "default",
+                "type": "disk",
+            },
+        },
+        "name": "default",
+    }
 
-    is_initialized(lxc=mock_lxc, remote="some-remote")
+    initialized = is_initialized(lxc=mock_lxc, remote="test")
 
-    assert mock_lxc.mock_calls == [
-        mock.call.profile_show(profile="default", remote="some-remote"),
-        mock.call.profile_show().get("devices"),
-    ]
+    assert initialized
+
+
+def test_is_initialized_empty_profile():
+    """Return false if the default profile is empty."""
+    mock_lxc = mock.Mock(spec=LXC)
+    mock_lxc.profile_show.return_value = {}
+
+    initialized = is_initialized(lxc=mock_lxc, remote="test")
+
+    assert not initialized
+
+
+@pytest.mark.parametrize(
+    "devices",
+    [
+        # no devices
+        {},
+        # path is not `/`
+        {"root": {"path": "/foo", "pool": "default", "type": "disk"}},
+        # type is not `disk`
+        {"root": {"path": "/", "pool": "default", "type": "other"}},
+    ],
+)
+def test_is_initialized_no_disk_device(devices):
+    """Return false is there is not a valid disk device."""
+    mock_lxc = mock.Mock(spec=LXC)
+    mock_lxc.profile_show.return_value = {
+        "config": {},
+        "description": "Default LXD profile",
+        "devices": devices,
+        "name": "default",
+    }
+
+    initialized = is_initialized(lxc=mock_lxc, remote="test")
+
+    assert not initialized
 
 
 @pytest.mark.parametrize(
@@ -334,6 +385,10 @@ def test_ensure_lxd_is_ready_not_initialized(
 
     assert exc_info.value == LXDError(
         brief="LXD has not been properly initialized.",
+        details=(
+            "The default LXD profile is empty or does not contain a disk device "
+            "with a path of '/'."
+        ),
         resolution="Execute 'lxd init --auto' to initialize LXD.\n"
         "Visit https://documentation.ubuntu.com/lxd/en/latest/getting_started/ for "
         "instructions on installing and configuring LXD for your operating system.",

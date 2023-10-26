@@ -76,13 +76,23 @@ def is_initialized(*, remote: str, lxc: LXC) -> bool:
     """Verify that LXD has been initialized and configuration looks valid.
 
     If LXD has been installed but the user has not initialized it (lxd init),
-    the default profile won't have devices configured.  Trying to launch an
-    instance or create a project using this profile will result in failures.
+    the default profile will be empty.  Trying to launch an instance or create
+    a project using this profile will result in failures.
+
+    LXD may be improperly initialized. To verify LXD was properly initialized, the
+    default profile must contain a disk device with the path `/`.
 
     :returns: True if initialized, else False.
     """
     devices = lxc.profile_show(profile="default", remote=remote).get("devices")
-    return bool(devices)
+
+    if not devices:
+        return False
+
+    return any(
+        device.get("type") == "disk" and device.get("path") == "/"
+        for device in devices.values()
+    )
 
 
 def is_installed() -> bool:
@@ -137,6 +147,10 @@ def ensure_lxd_is_ready(
     if not is_initialized(lxc=lxc, remote=remote):
         raise errors.LXDError(
             brief="LXD has not been properly initialized.",
+            details=(
+                "The default LXD profile is empty or does not contain a disk device "
+                "with a path of '/'."
+            ),
             resolution=(
                 "Execute 'lxd init --auto' to initialize LXD.\n"
                 + errors.LXD_INSTALL_HELP
