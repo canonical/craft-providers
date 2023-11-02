@@ -186,3 +186,10 @@ def stub_verify_network(fake_process):
         [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
         returncode=0,
     )
+
+
+@pytest.fixture(autouse=True, scope="function")
+def check_disk_usage():
+    print("\n\n\n=============================")
+    print(subprocess.run(['df', '-h']))
+    print("=============================")
