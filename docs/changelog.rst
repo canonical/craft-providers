@@ -5,6 +5,13 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+1.19.2 (2023-11-02)
+-------------------
+- Update base compatibility tag from ``base-v2`` to ``base-v3``
+  This fixes an issue where LXD instances created with
+  ``craft-providers==1.16.0`` may fail to start with
+  ``craft-providers>=1.17.0``.
+
 1.19.1 (2023-10-26)
 -------------------
 - Require a disk device in the default LXD profile
