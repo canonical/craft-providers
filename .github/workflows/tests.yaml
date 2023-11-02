@@ -42,7 +42,7 @@ jobs:
           python -m pip install 'tox>=4'
           echo "::endgroup::"
           echo "::group::Create virtual environments for linting processes."
-          tox run -m lint --notest
+          tox run --colored yes -m lint --notest
           echo "::endgroup::"
           echo "::group::Wait for snap to complete"
           snap watch --last=install
@@ -53,7 +53,7 @@ jobs:
         with:
           limit-access-to-actor: true
       - name: Run Linters
-        run: tox run --skip-pkg-install --no-list-dependencies -m lint
+        run: tox run --colored yes --skip-pkg-install --no-list-dependencies -m lint
   unit-tests:
     strategy:
       matrix:
@@ -80,15 +80,14 @@ jobs:
           echo "::endgroup::"
           mkdir -p results
       - name: Setup Tox environments
-        run: tox run -m unit-tests --notest
+        run: tox run --colored yes -m unit-tests --notest
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
         with:
           limit-access-to-actor: true
       - name: Test with tox
-        # use `tox` instead of `.tox/.tox/bin/tox` to support Windows
-        run: tox run --skip-pkg-install --no-list-dependencies --result-json results/tox-${{ matrix.platform }}.json -m unit-tests
+        run: tox run --skip-pkg-install --no-list-dependencies --result-json results/tox-${{ matrix.platform }}.json --colored yes -m unit-tests
         env:
           PYTEST_ADDOPTS: "--no-header -vv -rN"
       - name: Upload code coverage
@@ -144,7 +143,7 @@ jobs:
           sudo iptables -I DOCKER-USER -o lxdbr0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
           echo "::endgroup::"
       - name: Setup Tox environments
-        run: tox run -e integration-${{ matrix.python.tox-version }} --notest
+        run: tox run --colored yes -e integration-${{ matrix.python.tox-version }} --notest
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
@@ -158,7 +157,7 @@ jobs:
           PYTEST_ADDOPTS: "--no-header -vv -rN"
         run: |
           sg lxd -c "lxc version"
-          sg lxd -c ".tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies -e integration-${{ matrix.python.tox-version }}"
+          sg lxd -c ".tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies --colored yes -e integration-${{ matrix.python.tox-version }}"
   integration-tests-macos:
     strategy:
       matrix:
@@ -190,7 +189,7 @@ jobs:
           done
           echo "::endgroup::"
       - name: Setup Tox environments
-        run: tox run -e integration-py${{ matrix.python }} --notest
+        run: tox run --colored yes -e integration-py${{ matrix.python }} --notest
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
@@ -202,4 +201,4 @@ jobs:
           CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL: 1
           PYTEST_ADDOPTS: "--no-header -vv -rN"
         run: |
-          .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies -e integration-py${{ matrix.python }}
+          .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies --colored yes -e integration-py${{ matrix.python }}
