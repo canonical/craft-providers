@@ -3,7 +3,7 @@ name = "craft-providers"
 dynamic = ["version", "readme"]
 dependencies = [
     "packaging>=14.1",
-    "pydantic",
+    "pydantic>2",
     "pyyaml",
     "requests_unixsocket",
     # Needed until requests-unixsocket supports urllib3 v2
