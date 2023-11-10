@@ -264,6 +264,100 @@ def test_inject_from_host_snap_name(
     }
 
 
+def test_inject_from_host_snap_name_with_base(
+    config_fixture,
+    mock_requests,
+    fake_executor,
+    fake_process,
+    logs,
+    tmp_path,
+    mocker,
+):
+    """Inject a snap and its base installed locally with the `--name` parameter."""
+    # register 'snap known' calls
+    fake_process.register_subprocess(
+        ["snap", "known", fake_process.any()], occurrences=8
+    )
+    fake_process.register_subprocess(
+        ["fake-executor", "snap", "ack", "/tmp/coreXX.assert"]
+    )
+    fake_process.register_subprocess(
+        ["fake-executor", "snap", "ack", "/tmp/test-name.assert"]
+    )
+    fake_process.register_subprocess(
+        ["fake-executor", "snap", "install", "/tmp/coreXX.snap"]
+    )
+    fake_process.register_subprocess(
+        ["fake-executor", "snap", "install", "/tmp/test-name.snap"]
+    )
+
+    mocker.patch(
+        "craft_providers.actions.snap_installer.get_host_snap_info",
+        side_effect=[
+            {
+                "id": "",
+                "name": "test-name",
+                "type": "app",
+                "base": "coreXX",
+                "version": "0.1",
+                "channel": "",
+                "revision": "2",
+                "publisher": {"id": ""},
+                "confinement": "classic",
+            },
+            {
+                "id": "",
+                "name": "coreXX",
+                "type": "base",
+                "version": "0.1",
+                "channel": "latest/stable",
+                "revision": "1",
+                "publisher": {"id": ""},
+                "confinement": "strict",
+            },
+            {
+                "id": "",
+                "name": "coreXX",
+                "type": "base",
+                "version": "0.1",
+                "channel": "latest/stable",
+                "revision": "1",
+                "publisher": {"id": ""},
+                "confinement": "strict",
+            },
+            {
+                "id": "",
+                "name": "test-name",
+                "type": "app",
+                "base": "coreXX",
+                "version": "0.1",
+                "channel": "",
+                "revision": "2",
+                "publisher": {"id": ""},
+                "confinement": "classic",
+            },
+        ],
+    )
+
+    snap_installer.inject_from_host(
+        executor=fake_executor, snap_name="test-name_suffix", classic=False
+    )
+
+    mock_requests.get.assert_called_with(
+        "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name_suffix/file"
+    )
+    assert len(fake_process.calls) == 12
+    assert (
+        "Installing base snap 'coreXX' for 'test-name_suffix' from host" in logs.debug
+    )
+    assert (
+        Exact(
+            "Installing snap 'test-name_suffix' from host as 'test-name' in instance (classic=False)."
+        )
+        in logs.debug
+    )
+
+
 @pytest.mark.parametrize("mock_get_host_snap_info", [{"revision": "x3"}], indirect=True)
 def test_inject_from_host_dangerous(
     config_fixture,
@@ -432,9 +526,24 @@ def test_inject_from_host_no_snapd(mock_get_host_snap_info, fake_executor):
         )
 
 
-def test_inject_from_host_push_error(mock_requests, fake_executor):
+def test_inject_from_host_push_error(mock_requests, fake_executor, mocker):
     mock_executor = mock.Mock(spec=fake_executor, wraps=fake_executor)
     mock_executor.push_file.side_effect = ProviderError(brief="foo")
+
+    mocker.patch(
+        "craft_providers.actions.snap_installer.get_host_snap_info",
+        side_effect=[
+            {
+                "id": "",
+                "name": "test-name",
+                "type": "app",
+                "version": "0.1",
+                "channel": "",
+                "revision": "x1",
+                "confinement": "classic",
+            },
+        ],
+    )
 
     with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
         snap_installer.inject_from_host(
@@ -443,6 +552,47 @@ def test_inject_from_host_push_error(mock_requests, fake_executor):
 
     assert exc_info.value == snap_installer.SnapInstallationError(
         brief="failed to copy snap file for snap 'test-name'",
+        details="error copying snap file into target environment",
+    )
+    assert exc_info.value.__cause__ is not None
+
+
+def test_inject_from_host_with_base_push_error(mock_requests, fake_executor, mocker):
+    mock_executor = mock.Mock(spec=fake_executor, wraps=fake_executor)
+    mock_executor.push_file.side_effect = ProviderError(brief="foo")
+
+    mocker.patch(
+        "craft_providers.actions.snap_installer.get_host_snap_info",
+        side_effect=[
+            {
+                "id": "",
+                "name": "test-name",
+                "type": "app",
+                "base": "coreXX",
+                "version": "0.1",
+                "channel": "",
+                "revision": "x1",
+                "confinement": "classic",
+            },
+            {
+                "id": "",
+                "name": "coreXX",
+                "type": "base",
+                "version": "0.1",
+                "channel": "",
+                "revision": "x1",
+                "confinement": "strict",
+            },
+        ],
+    )
+
+    with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
+        snap_installer.inject_from_host(
+            executor=mock_executor, snap_name="test-name", classic=False
+        )
+
+    assert exc_info.value == snap_installer.SnapInstallationError(
+        brief="failed to copy snap file for snap 'coreXX'",
         details="error copying snap file into target environment",
     )
     assert exc_info.value.__cause__ is not None
@@ -545,7 +695,9 @@ def test_inject_from_host_snapd_http_error_using_pack_fallback(
     assert len(fake_process.calls) == 7
 
 
-def test_inject_from_host_install_failure(mock_requests, fake_executor, fake_process):
+def test_inject_from_host_install_failure(
+    mock_requests, fake_executor, fake_process, mocker
+):
     fake_process.register_subprocess(
         [
             "fake-executor",
@@ -557,6 +709,21 @@ def test_inject_from_host_install_failure(mock_requests, fake_executor, fake_pro
         stdout="snap error",
         stderr="snap error details",
         returncode=1,
+    )
+
+    mocker.patch(
+        "craft_providers.actions.snap_installer.get_host_snap_info",
+        side_effect=[
+            {
+                "id": "",
+                "name": "test-name",
+                "type": "app",
+                "version": "0.1",
+                "channel": "",
+                "revision": "x1",
+                "confinement": "classic",
+            },
+        ],
     )
 
     with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
