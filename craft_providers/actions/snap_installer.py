@@ -340,7 +340,15 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
             classic,
         )
 
-    host_revision = get_host_snap_info(snap_name)["revision"]
+    host_snap_info = get_host_snap_info(snap_name)
+    host_snap_base = host_snap_info.get("base", None)
+    if host_snap_base:
+        logger.debug(
+            "Installing base snap %r for %r from host", host_snap_base, snap_name
+        )
+        inject_from_host(executor=executor, snap_name=host_snap_base, classic=False)
+
+    host_revision = host_snap_info["revision"]
     target_revision = _get_snap_revision_ensuring_source(
         snap_name=snap_store_name,
         source=SNAP_SRC_HOST,
