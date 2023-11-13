@@ -5,6 +5,11 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+1.20.0 (2023-11-10)
+-------------------
+- Snaps injected from the host will have their base snap injected into
+  the instance.
+
 1.19.2 (2023-11-02)
 -------------------
 - Update base compatibility tag from ``base-v2`` to ``base-v3``
