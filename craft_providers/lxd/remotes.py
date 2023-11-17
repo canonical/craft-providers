@@ -144,6 +144,12 @@ _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
         remote_address=BUILDD_RELEASES_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
+    ubuntu.BuilddBaseAlias.NOBLE: RemoteImage(
+        image_name="core24",
+        remote_name=DAILY_REMOTE_NAME,
+        remote_address=DAILY_REMOTE_ADDRESS,
+        remote_protocol=ProtocolType.SIMPLESTREAMS,
+    ),
     ubuntu.BuilddBaseAlias.LUNAR: RemoteImage(
         image_name="lunar",
         remote_name=DAILY_REMOTE_NAME,
