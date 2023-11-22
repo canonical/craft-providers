@@ -1493,7 +1493,7 @@ def test_check_instance_status_error_timeout(fake_process, mocker):
         )
 
     assert exc_info.value == LXDError(
-        brief="Instance setup failed. Check LXD logs for more details.",
+        brief="Timed out waiting for instance to be ready."
     )
 
 
