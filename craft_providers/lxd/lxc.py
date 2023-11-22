@@ -19,6 +19,7 @@
 import contextlib
 import enum
 import logging
+import os
 import pathlib
 import shlex
 import subprocess
@@ -579,6 +580,7 @@ class LXC:
         _default_instance_metadata: Dict[str, str] = {
             "user.craft_providers.status": ProviderInstanceStatus.STARTING.value,
             "user.craft_providers.timer": datetime.now(timezone.utc).isoformat(),
+            "user.craft_providers.pid": str(os.getpid()),
         }
         retry_count: int = 0
         if config_keys:
