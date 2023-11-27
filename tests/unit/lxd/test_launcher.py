@@ -19,6 +19,7 @@
 
 import sys
 from datetime import timedelta
+from pathlib import Path
 from unittest.mock import MagicMock, Mock, call
 
 import pytest
@@ -1390,3 +1391,76 @@ def test_timer_error_ignore(fake_instance, fake_process, mock_lxc, mocker):
     timer.stop()
 
     assert fake_instance.config_set.call_count > 0
+
+
+def test_wait_for_instance_ready(fake_instance, logs):
+    """Return if the instance is ready."""
+    fake_instance.info.return_value = {"Status": "STOPPED"}
+    fake_instance.config_get.return_value = "FINISHED"
+
+    lxd.launcher._wait_for_instance_ready(fake_instance)
+
+    assert "Instance 'test-instance-fa2d407652a1c51f6019' is ready." in logs.debug
+
+
+def test_wait_for_instance_pid_active(fake_instance, mocker):
+    """If the instance is not ready and the pid is active, then check the status."""
+    fake_instance.info.return_value = {"Status": "STOPPED"}
+    # first call returns status, second returns the pid
+    fake_instance.config_get.side_effect = ["PREPARING", "123"]
+    # mock for the call `Path("/proc/123").exists()
+    mocker.patch.object(Path, "exists", return_value=True)
+
+    lxd.launcher._wait_for_instance_ready(fake_instance)
+
+    fake_instance.lxc.check_instance_status.assert_called_once()
+
+
+@pytest.mark.parametrize("platform", ["win32", "darwin", "other"])
+def test_wait_for_instance_skip_pid_check(platform, fake_instance, mocker, logs):
+    """Do not check for the pid if not on linux."""
+    mocker.patch("sys.platform", platform)
+    fake_instance.info.return_value = {"Status": "STOPPED"}
+    # first call returns status, second returns the pid
+    fake_instance.config_get.side_effect = ["PREPARING", "123"]
+
+    lxd.launcher._wait_for_instance_ready(fake_instance)
+
+    assert "Skipping PID check because system is not linux" in logs.debug
+    fake_instance.lxc.check_instance_status.assert_called_once()
+
+
+@pytest.mark.usefixtures("mock_platform")
+def test_wait_for_instance_no_pid(fake_instance):
+    """Raise an error if there is no pid in the config."""
+    fake_instance.info.return_value = {"Status": "STOPPED"}
+    # first call returns status, second returns an empty string for the pid
+    fake_instance.config_get.side_effect = ["PREPARING", ""]
+
+    with pytest.raises(LXDError) as raised:
+        lxd.launcher._wait_for_instance_ready(fake_instance)
+
+    assert raised.value.brief == "Instance is not ready."
+    assert raised.value.details == (
+        "Instance 'test-instance-fa2d407652a1c51f6019' is not ready and does not "
+        "have the pid of the process that created the instance."
+    )
+
+
+@pytest.mark.usefixtures("mock_platform")
+def test_wait_for_instance_pid_inactive(fake_instance, mocker):
+    """Raise an error if the instance is not ready and the pid is inactive."""
+    fake_instance.info.return_value = {"Status": "STOPPED"}
+    # first call returns status, second returns the pid
+    fake_instance.config_get.side_effect = ["PREPARING", "123"]
+    # mock for the call `Path("/proc/123").exists()
+    mocker.patch.object(Path, "exists", return_value=False)
+
+    with pytest.raises(LXDError) as raised:
+        lxd.launcher._wait_for_instance_ready(fake_instance)
+
+    assert raised.value.brief == "Instance is not ready."
+    assert raised.value.details == (
+        "Instance 'test-instance-fa2d407652a1c51f6019' is not ready and "
+        "the process (pid 123) that created the instance is inactive."
+    )

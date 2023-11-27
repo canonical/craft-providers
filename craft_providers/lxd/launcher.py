@@ -25,6 +25,7 @@ import sys
 import threading
 import time
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Optional
 
 from craft_providers import Base, ProviderError, bases
@@ -548,6 +549,80 @@ def _set_timezone(instance: LXDInstance, project: str, remote: str, lxc: LXC) ->
         value=timezone,
         project=project,
         remote=remote,
+    )
+
+
+def _wait_for_instance_ready(instance: LXDInstance) -> None:
+    """Wait for an instance to be ready.
+
+    If another process created an instance and is still running, then wait for
+    the other process to finish setting up the instance.
+
+    :param instance: LXD instance to wait for.
+
+    :raises LXDError:
+    - If the instance is not ready and the process that created the
+    instance is no longer running.
+    - If the function times out while waiting for another process
+    to set up the instance.
+    - On any failure to get config data or info from the instance.
+    """
+    instance_state = instance.info().get("Status")
+    instance_status = instance.config_get("user.craft_providers.status")
+
+    # check if the instance is ready
+    if (
+        instance_status == ProviderInstanceStatus.FINISHED.value
+        and instance_state == "STOPPED"
+    ):
+        logger.debug("Instance %r is ready.", instance.instance_name)
+        return
+
+    logger.debug(
+        "Instance %r is not ready (State: %s, Status: %s)",
+        instance.instance_name,
+        instance_state,
+        instance_status,
+    )
+
+    # LXD is linux-only, but verify the platform anyways
+    if sys.platform == "linux":
+        # get the PID of the process that created the instance
+        pid = instance.config_get("user.craft_providers.pid")
+
+        # an empty string means there was no value set
+        if pid == "":
+            raise LXDError(
+                brief="Instance is not ready.",
+                details=(
+                    f"Instance {instance.instance_name!r} is not ready and does not "
+                    "have the pid of the process that created the instance."
+                ),
+            )
+
+        # check if the PID is active
+        if Path(f"/proc/{pid}").exists():
+            logger.debug(
+                "Process that created the instance %r is still running (pid %s).",
+                instance.instance_name,
+                pid,
+            )
+        else:
+            raise LXDError(
+                brief="Instance is not ready.",
+                details=(
+                    f"Instance {instance.instance_name!r} is not ready and the process "
+                    f"(pid {pid}) that created the instance is inactive."
+                ),
+            )
+    else:
+        logger.debug("Skipping PID check because system is not linux")
+
+    # if the PID is active, wait for the instance to be ready
+    instance.lxc.check_instance_status(
+        instance_name=instance.instance_name,
+        project=instance.project,
+        remote=instance.remote,
     )
 
 
