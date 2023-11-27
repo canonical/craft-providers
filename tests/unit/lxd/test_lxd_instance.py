@@ -136,6 +136,18 @@ def test_config_set(mock_lxc, instance):
     ]
 
 
+def test_info(mock_lxc, instance):
+    instance.info()
+
+    assert mock_lxc.mock_calls == [
+        call.info(
+            instance_name="test-instance-fa2d407652a1c51f6019",
+            project="default",
+            remote="local",
+        )
+    ]
+
+
 def test_push_file_io(
     mock_lxc,
     mock_named_temporary_file,
