@@ -24,7 +24,7 @@ from unittest.mock import MagicMock, Mock, call
 
 import pytest
 from craft_providers import Base, ProviderError, bases, lxd
-from craft_providers.lxd import LXDError
+from craft_providers.lxd import LXDError, lxd_instance_status
 from freezegun import freeze_time
 from logassert import Exact  # type: ignore
 
@@ -363,15 +363,7 @@ def test_launch_use_existing_base_instance(
         ),
     ]
     assert fake_instance.mock_calls == [call.exists(), call.is_running(), call.start()]
-    assert fake_base_instance.mock_calls == [
-        call.exists(),
-        call.lxc.check_instance_status(
-            instance_name=fake_base_instance.instance_name,
-            project=fake_base_instance.project,
-            remote=fake_base_instance.remote,
-        ),
-        call.is_running(),
-    ]
+    assert fake_base_instance.mock_calls == [call.exists(), call.is_running()]
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.get_command_environment(),
@@ -416,15 +408,7 @@ def test_launch_use_existing_base_instance_already_running(
         call.stop(),
         call.start(),
     ]
-    assert fake_base_instance.mock_calls == [
-        call.exists(),
-        call.lxc.check_instance_status(
-            instance_name=fake_base_instance.instance_name,
-            project=fake_base_instance.project,
-            remote=fake_base_instance.remote,
-        ),
-        call.is_running(),
-    ]
+    assert fake_base_instance.mock_calls == [call.exists(), call.is_running()]
 
 
 def test_launch_existing_base_instance_invalid(
@@ -1150,7 +1134,10 @@ def test_use_snapshots_deprecated(
 )
 def test_is_valid(creation_date, fake_instance):
     """Instances younger than the expiration date (inclusive) are valid."""
-    fake_instance.info.return_value = {"Created": creation_date}
+    fake_instance.info.return_value = {"Created": creation_date, "Status": "STOPPED"}
+    fake_instance.config_get.return_value = (
+        lxd_instance_status.ProviderInstanceStatus.FINISHED.value
+    )
 
     is_valid = lxd.launcher._is_valid(
         instance=fake_instance,
@@ -1164,7 +1151,13 @@ def test_is_valid(creation_date, fake_instance):
 def test_is_valid_expired(fake_instance, mock_lxc):
     """Instances older than the expiration date are not valid."""
     # 91 days old
-    fake_instance.info.return_value = {"Created": "2022/09/07 11:05 UTC"}
+    fake_instance.info.return_value = {
+        "Created": "2022/09/07 11:05 UTC",
+        "Status": "STOPPED",
+    }
+    fake_instance.config_get.return_value = (
+        lxd_instance_status.ProviderInstanceStatus.FINISHED.value
+    )
 
     is_valid = lxd.launcher._is_valid(
         instance=fake_instance,
@@ -1217,6 +1210,31 @@ def test_is_valid_value_error(logs, fake_instance):
         )
         in logs.debug
     )
+
+
+@freeze_time("2022/12/07 11:05:00 UTC")
+def test_is_valid_wait_for_ready_error(logs, fake_instance, mocker):
+    """Warn if the instance's creation date cannot be parsed."""
+    mocker.patch(
+        "craft_providers.lxd.launcher._wait_for_instance_ready",
+        side_effect=LXDError("test error"),
+    )
+    fake_instance.info.return_value = {
+        "Created": "2022/12/08 11:05 UTC",
+        "Status": "STOPPED",
+    }
+
+    fake_instance.config_get.return_value = (
+        lxd_instance_status.ProviderInstanceStatus.FINISHED.value
+    )
+
+    is_valid = lxd.launcher._is_valid(
+        instance=fake_instance,
+        expiration=timedelta(days=1),
+    )
+
+    assert not is_valid
+    assert "Instance is not valid: test error" in logs.debug
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="unsupported on windows")

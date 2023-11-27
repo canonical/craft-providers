@@ -314,6 +314,12 @@ def _is_valid(*, instance: LXDInstance, expiration: timedelta) -> bool:
         )
         return False
 
+    try:
+        _wait_for_instance_ready(instance)
+    except LXDError as err:
+        logger.debug("Instance is not valid: %s", err)
+        return False
+
     logger.debug("Instance is valid.")
     return True
 
@@ -814,13 +820,6 @@ def launch(
             lxc=lxc,
         )
         return instance
-
-    # check if the base instance is still being created
-    base_instance.lxc.check_instance_status(
-        instance_name=base_instance.instance_name,
-        project=project,
-        remote=remote,
-    )
 
     # at this point, there is a valid base instance to be copied to a new instance
     logger.info("Creating instance from base instance")
