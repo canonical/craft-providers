@@ -138,6 +138,8 @@ testpaths = "tests"
 xfail_strict = true
 markers = [
     "with_sudo: Test requires sudo",
+    "slow: slow tests",
+    "smoketest: basic tests",
 ]
 
 [tool.coverage.run]
