@@ -270,7 +270,7 @@ def _is_valid(*, instance: LXDInstance, expiration: timedelta) -> bool:
 
     Instances are valid if they are ready and not expired (too old).
     An instance is ready if it is set up and stopped.
-    An instance's age is measured by it's creation date. For example, if the expiration
+    An instance's age is measured by its creation date. For example, if the expiration
     is 90 days, then the instance will expire 91 days after it was created.
 
     If errors occur during the validity check, the instance is assumed to be invalid.
