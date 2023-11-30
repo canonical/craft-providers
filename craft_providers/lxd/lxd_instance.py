@@ -639,3 +639,11 @@ class LXDInstance(Executor):
             project=self.project,
             remote=self.remote,
         )
+
+    def info(self) -> Dict[str, Any]:
+        """Get info for an instance."""
+        return self.lxc.info(
+            instance_name=self.instance_name,
+            project=self.project,
+            remote=self.remote,
+        )

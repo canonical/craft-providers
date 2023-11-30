@@ -25,6 +25,7 @@ import sys
 import threading
 import time
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Optional
 
 from craft_providers import Base, ProviderError, bases
@@ -264,35 +265,26 @@ def _formulate_base_instance_name(
     return "-".join(["base-instance", compatibility_tag, image_remote, image_name])
 
 
-def _is_valid(
-    *,
-    instance_name: str,
-    project: str,
-    remote: str,
-    lxc: LXC,
-    expiration: timedelta,
-) -> bool:
+def _is_valid(*, instance: LXDInstance, expiration: timedelta) -> bool:
     """Check if an instance is valid.
 
-    Instances are valid if they are not expired (too old). An instance's age is measured
-    by it's creation date. For example, if the expiration is 90 days, then the instance
-    will expire 91 days after it was created.
+    Instances are valid if they are ready and not expired (too old).
+    An instance is ready if it is set up and stopped.
+    An instance's age is measured by its creation date. For example, if the expiration
+    is 90 days, then the instance will expire 91 days after it was created.
 
     If errors occur during the validity check, the instance is assumed to be invalid.
 
-    :param instance_name: Name of instance to check the validity of.
-    :param project: LXD project name to create.
-    :param remote: LXD remote to create project on.
-    :param lxc: LXC client.
+    :param instance: LXD instance to check the validity of.
     :param expiration: How long an instance will be valid from its creation date.
 
     :returns: True if the instance is valid. False otherwise.
     """
-    logger.debug("Checking validity of instance %r.", instance_name)
+    logger.debug("Checking validity of instance %r.", instance.instance_name)
 
     # capture instance info
     try:
-        info = lxc.info(instance_name=instance_name, project=project, remote=remote)
+        info = instance.info()
     except LXDError as raised:
         # if the base instance info can't be retrieved, consider it invalid
         logger.debug("Could not get instance info with error: %s", raised)
@@ -320,6 +312,12 @@ def _is_valid(
             creation_date,
             expiration_date,
         )
+        return False
+
+    try:
+        _wait_for_instance_ready(instance)
+    except LXDError as err:
+        logger.debug("Instance is not valid: %s", err)
         return False
 
     logger.debug("Instance is valid.")
@@ -560,6 +558,80 @@ def _set_timezone(instance: LXDInstance, project: str, remote: str, lxc: LXC) ->
     )
 
 
+def _wait_for_instance_ready(instance: LXDInstance) -> None:
+    """Wait for an instance to be ready.
+
+    If another process created an instance and is still running, then wait for
+    the other process to finish setting up the instance.
+
+    :param instance: LXD instance to wait for.
+
+    :raises LXDError:
+    - If the instance is not ready and the process that created the
+    instance is no longer running.
+    - If the function times out while waiting for another process
+    to set up the instance.
+    - On any failure to get config data or info from the instance.
+    """
+    instance_state = instance.info().get("Status")
+    instance_status = instance.config_get("user.craft_providers.status")
+
+    # check if the instance is ready
+    if (
+        instance_status == ProviderInstanceStatus.FINISHED.value
+        and instance_state == "STOPPED"
+    ):
+        logger.debug("Instance %r is ready.", instance.instance_name)
+        return
+
+    logger.debug(
+        "Instance %r is not ready (State: %s, Status: %s)",
+        instance.instance_name,
+        instance_state,
+        instance_status,
+    )
+
+    # LXD is linux-only, but verify the platform anyways
+    if sys.platform == "linux":
+        # get the PID of the process that created the instance
+        pid = instance.config_get("user.craft_providers.pid")
+
+        # an empty string means there was no value set
+        if pid == "":
+            raise LXDError(
+                brief="Instance is not ready.",
+                details=(
+                    f"Instance {instance.instance_name!r} is not ready and does not "
+                    "have the pid of the process that created the instance."
+                ),
+            )
+
+        # check if the PID is active
+        if Path(f"/proc/{pid}").exists():
+            logger.debug(
+                "Process that created the instance %r is still running (pid %s).",
+                instance.instance_name,
+                pid,
+            )
+        else:
+            raise LXDError(
+                brief="Instance is not ready.",
+                details=(
+                    f"Instance {instance.instance_name!r} is not ready and the process "
+                    f"(pid {pid}) that created the instance is inactive."
+                ),
+            )
+    else:
+        logger.debug("Skipping PID check because system is not linux")
+
+    # if the PID is active, wait for the instance to be ready
+    instance.lxc.check_instance_status(
+        instance_name=instance.instance_name,
+        project=instance.project,
+        remote=instance.remote,
+    )
+
+
 def launch(
     name: str,
     *,
@@ -728,13 +800,7 @@ def launch(
 
     # the base instance exists but is not valid, so delete it then create a new
     # instance and base instance
-    if not _is_valid(
-        instance_name=base_instance.instance_name,
-        project=project,
-        remote=remote,
-        lxc=lxc,
-        expiration=expiration,
-    ):
+    if not _is_valid(instance=base_instance, expiration=expiration):
         logger.debug(
             "Base instance %r is not valid. Deleting base instance.",
             base_instance.instance_name,
@@ -754,13 +820,6 @@ def launch(
             lxc=lxc,
         )
         return instance
-
-    # check if the base instance is still being created
-    base_instance.lxc.check_instance_status(
-        instance_name=base_instance.instance_name,
-        project=project,
-        remote=remote,
-    )
 
     # at this point, there is a valid base instance to be copied to a new instance
     logger.info("Creating instance from base instance")
