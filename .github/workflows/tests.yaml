@@ -103,6 +103,7 @@ jobs:
           path: results/
   integration-tests-linux:
     strategy:
+      fail-fast: false
       matrix:
         python: [
           {system-version: "3.8", tox-version: "py3.8"},
