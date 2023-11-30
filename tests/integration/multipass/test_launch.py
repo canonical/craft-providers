@@ -68,6 +68,7 @@ def test_launch(instance_name):
         name=instance_name,
         base_configuration=base_configuration,
         image_name="snapcraft:core22",
+        disk_gb=16,
     )
 
     try:
@@ -89,6 +90,7 @@ def test_launch_existing_instance(core22_instance):
         name=core22_instance.name,
         base_configuration=base_configuration,
         image_name="snapcraft:core22",
+        disk_gb=16,
     )
 
     assert isinstance(instance, multipass.MultipassInstance)
@@ -127,6 +129,7 @@ def test_launch_os_incompatible_instance(core22_instance):
         name=core22_instance.name,
         base_configuration=base_configuration,
         image_name="snapcraft:core22",
+        disk_gb=16,
         auto_clean=True,
     )
 
@@ -161,6 +164,7 @@ def test_launch_instance_config_incompatible_instance(core22_instance):
         name=core22_instance.name,
         base_configuration=base_configuration,
         image_name="snapcraft:core22",
+        disk_gb=16,
         auto_clean=True,
     )
 
@@ -205,6 +209,7 @@ def test_launch_instance_not_setup_with_auto_clean(core22_instance):
         name=core22_instance.name,
         base_configuration=base_configuration,
         image_name="snapcraft:core22",
+        disk_gb=16,
         auto_clean=True,
     )
 
