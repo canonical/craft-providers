@@ -5,6 +5,13 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+1.20.1 (2023-11-30)
+-------------------
+- Update base compatibility tag from ``base-v3`` to ``base-v4``
+- If an existing base instance is not setup, then it is auto-cleaned.
+  If the process that created the not setup base instance is inactive, then
+  ``craft-providers`` will immediately auto-clean the instance.
+
 1.20.0 (2023-11-10)
 -------------------
 - Snaps injected from the host will have their base snap injected into
