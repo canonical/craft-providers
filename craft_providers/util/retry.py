@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import time
+import logging
 from typing import TYPE_CHECKING, TypeVar
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -25,6 +26,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 T = TypeVar("T")
 
+logger = logging.getLogger(__name__)
 
 def retry_until_timeout(
     timeout: float,
@@ -47,6 +49,7 @@ def retry_until_timeout(
     soft_deadline = deadline - retry_wait
 
     while (now := time.monotonic()) < soft_deadline:
+        logger.debug("now=%s, deadline=%s, soft_deadline=%s", now, deadline, soft_deadline)
         try:
             return func(deadline - now)
         except Exception:
