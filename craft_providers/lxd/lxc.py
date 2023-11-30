@@ -19,6 +19,7 @@
 import contextlib
 import enum
 import logging
+import os
 import pathlib
 import shlex
 import subprocess
@@ -579,6 +580,7 @@ class LXC:
         _default_instance_metadata: Dict[str, str] = {
             "user.craft_providers.status": ProviderInstanceStatus.STARTING.value,
             "user.craft_providers.timer": datetime.now(timezone.utc).isoformat(),
+            "user.craft_providers.pid": str(os.getpid()),
         }
         retry_count: int = 0
         if config_keys:
@@ -1098,7 +1100,12 @@ class LXC:
         project: str = "default",
         remote: str = "local",
     ) -> None:
-        """Check build status of instance.
+        """Repeatedly check if an instance is ready until the function times out.
+
+        If another process is setting up an instance, the instance's timer will keep
+        incrementing. This function will wait until the other process finishes setting
+        up the instance or times out and stops incrementing the timer. In the latter
+        case, a timeout will occur after 60 seconds of the timer not being incremented.
 
         The possible status are:
         - None: Either the instance is downloading or old that this is not set.
@@ -1109,6 +1116,8 @@ class LXC:
             was interrupted or failed.
         - FINISHED: Instance is ready, all configuration and installation is successful.
             When it also STOPPED, then the instance is ready to be copied.
+
+        :raises LXDError: If the instance is not ready.
         """
         instance_status: Optional[str] = None
         instance_info: Dict[str, Any] = {"Status": ""}
@@ -1117,8 +1126,9 @@ class LXC:
         # 20 * 3 seconds = 1 minute no change in timer
         timer_queue: deque = deque([-2, -1], maxlen=20)
 
-        # Retry unless the timer queue is all the same
+        # retry until the instance's timer hasn't changed for the last 20 iterations
         while len(set(timer_queue)) > 1:
+            logger.debug("Checking if instance is ready.")
             try:
                 # Get instance info
                 instance_info = self.info(
@@ -1159,7 +1169,7 @@ class LXC:
                 logger.debug("Instance %s is ready.", instance_name)
                 return
 
+            logger.debug("Instance is not ready.")
             time.sleep(3)
 
-        # No timer change for 1 minute and the instance is still not ready.
-        raise LXDError("Instance setup failed. Check LXD logs for more details.")
+        raise LXDError(brief="Timed out waiting for instance to be ready.")
