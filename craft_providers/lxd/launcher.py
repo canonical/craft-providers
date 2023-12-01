@@ -143,7 +143,10 @@ def _create_instance(
             )
             config_timer = InstanceTimer(base_instance)
             config_timer.start()
-            base_configuration.setup(executor=base_instance)
+
+            # The base configuration shouldn't mount cache directories because if
+            # they get deleted, copying the base instance will fail.
+            base_configuration.setup(executor=base_instance, mount_cache=False)
             _set_timezone(
                 base_instance,
                 base_instance.project,

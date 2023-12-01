@@ -979,6 +979,7 @@ class Base(ABC):
         *,
         executor: Executor,
         timeout: Optional[float] = TIMEOUT_UNPREDICTABLE,
+        mount_cache: bool = True,
     ) -> None:
         """Prepare base instance for use by the application.
 
@@ -1015,7 +1016,8 @@ class Base(ABC):
 
         self._update_compatibility_tag(executor=executor)
 
-        self._mount_shared_cache_dirs(executor=executor)
+        if mount_cache:
+            self._mount_shared_cache_dirs(executor=executor)
 
         self._pre_setup_os(executor=executor)
         self._setup_os(executor=executor)
