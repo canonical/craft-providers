@@ -995,6 +995,7 @@ class Base(ABC):
 
         :param executor: Executor for target container.
         :param timeout: Timeout in seconds.
+        :param mount_cache: If true, mount the cache directories.
 
         :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.

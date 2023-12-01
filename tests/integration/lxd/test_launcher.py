@@ -60,7 +60,7 @@ def base_configuration(tmp_path):
     return ubuntu.BuilddBase(
         alias=ubuntu.BuilddBaseAlias.JAMMY,
         hostname="test-hostname",
-        cache_path=tmp_path / "cache"
+        cache_path=tmp_path / "cache",
     )
 
 
@@ -225,7 +225,10 @@ def test_launch_use_base_instance(
     # fingerprint the base instance
     base_instance.start()
     base_instance.execute_run(["touch", "/base-instance"])
-    assert base_instance.execute_run(["ls", "/root/.cache/pip/"], check=False).returncode == 2
+    assert (
+        base_instance.execute_run(["ls", "/root/.cache/pip/"], check=False).returncode
+        == 2
+    )
     base_instance.stop()
 
     # delete the instance so a new instance is created from the base instance
