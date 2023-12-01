@@ -182,7 +182,7 @@ def test_launch_no_base_instance(
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.setup(executor=fake_instance),
-        call.wait_until_ready(executor=fake_instance),
+        call.warmup(executor=fake_instance),
     ]
 
 
@@ -248,7 +248,7 @@ def test_launch_use_base_instance(
         call.get_command_environment(),
         call.get_command_environment(),
         call.setup(executor=fake_base_instance, mount_cache=False),
-        call.wait_until_ready(executor=fake_instance),
+        call.warmup(executor=fake_instance),
     ]
 
 
@@ -528,7 +528,7 @@ def test_launch_existing_base_instance_invalid(
         call.get_command_environment(),
         call.get_command_environment(),
         call.setup(executor=fake_base_instance, mount_cache=False),
-        call.wait_until_ready(executor=fake_instance),
+        call.warmup(executor=fake_instance),
     ]
 
 
@@ -609,7 +609,7 @@ def test_launch_all_opts(
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.setup(executor=fake_instance),
-        call.wait_until_ready(executor=fake_instance),
+        call.warmup(executor=fake_instance),
     ]
 
 
@@ -703,7 +703,7 @@ def test_launch_create_project(
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.setup(executor=fake_instance),
-        call.wait_until_ready(executor=fake_instance),
+        call.warmup(executor=fake_instance),
     ]
 
 
@@ -846,7 +846,7 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
         call.get_command_environment(),
         call.warmup(executor=fake_instance),
         call.setup(executor=fake_instance),
-        call.wait_until_ready(executor=fake_instance),
+        call.warmup(executor=fake_instance),
     ]
 
 
@@ -940,7 +940,7 @@ def test_launch_with_existing_ephemeral_instance(
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.setup(executor=fake_instance),
-        call.wait_until_ready(executor=fake_instance),
+        call.warmup(executor=fake_instance),
     ]
 
 
@@ -1134,7 +1134,7 @@ def test_use_snapshots_deprecated(
         call.get_command_environment(),
         call.get_command_environment(),
         call.setup(executor=fake_base_instance, mount_cache=False),
-        call.wait_until_ready(executor=fake_instance),
+        call.warmup(executor=fake_instance),
     ]
 
 

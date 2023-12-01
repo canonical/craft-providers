@@ -222,7 +222,10 @@ def _create_instance(
         instance.restart()
     else:
         instance.start()
-    base_configuration.wait_until_ready(executor=instance)
+    # Warmup the instance to ensure we have everything set up.
+    # There are cases where setup won't do everything to the base instance that
+    # warmup does to the final instance (such as mounting cache directories).
+    base_configuration.warmup(executor=instance)
 
 
 def _ensure_project_exists(
