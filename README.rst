@@ -2,7 +2,7 @@
 Craft providers
 ***************
 
-|doc-build-status-badge|_
+|doc-build-status-badge|_ |weekly-test-status-badge|_ |code-coverage-badge|_
 
 Description
 -----------
@@ -36,3 +36,7 @@ See the HACKING.rst document for details on how to contribute.
 .. _`Multipass VMs`: https://multipass.run/
 .. |doc-build-status-badge| image:: https://readthedocs.com/projects/canonical-craft-providers/badge/?version=latest
 .. _doc-build-status-badge: https://canonical-craft-providers.readthedocs-hosted.com/en/latest/?badge=latest
+.. |weekly-test-status-badge| image:: https://github.com/canonical/craft-providers/actions/workflows/tests-weekly.yaml/badge.svg?branch=main
+.. _weekly-test-status-badge: https://github.com/canonical/craft-providers/actions/workflows/tests-weekly.yaml
+.. |code-coverage-badge| image:: https://codecov.io/gh/canonical/craft-providers/graph/badge.svg?token=CTEPNPXrn5
+.. _code-coverage-badge: https://codecov.io/gh/canonical/craft-providers
