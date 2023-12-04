@@ -55,11 +55,12 @@ def get_base_instance():
 
 
 @pytest.fixture()
-def base_configuration():
+def base_configuration(tmp_path):
     """Returns a simple base configuration."""
     return ubuntu.BuilddBase(
         alias=ubuntu.BuilddBaseAlias.JAMMY,
         hostname="test-hostname",
+        cache_path=tmp_path / "cache",
     )
 
 
@@ -224,6 +225,10 @@ def test_launch_use_base_instance(
     # fingerprint the base instance
     base_instance.start()
     base_instance.execute_run(["touch", "/base-instance"])
+    assert (
+        base_instance.execute_run(["ls", "/root/.cache/pip/"], check=False).returncode
+        == 2
+    )
     base_instance.stop()
 
     # delete the instance so a new instance is created from the base instance
@@ -269,6 +274,8 @@ def test_launch_use_base_instance(
     )
 
     assert instance_hostname == instance.instance_name
+
+    instance.execute_run(["ls", "/root/.cache/pip/"], check=True)
 
 
 def test_launch_create_base_instance_with_correct_image_description(
