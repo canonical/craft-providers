@@ -5,6 +5,11 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+1.19.3 (2023-12-01)
+-------------------
+- Update base compatibility tag to ``base-v5``.
+- Do not mount cache directories in LXD base instances.
+
 1.19.2 (2023-11-02)
 -------------------
 - Update base compatibility tag from ``base-v2`` to ``base-v3``
