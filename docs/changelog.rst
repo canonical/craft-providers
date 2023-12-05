@@ -7,7 +7,7 @@ included in each version.
 
 1.20.1 (2023-11-30)
 -------------------
-- Update base compatibility tag from ``base-v3`` to ``base-v4``
+- Update base compatibility tag to ``base-v4``
 - If an existing base instance is not setup, then it is auto-cleaned.
   If the process that created the not setup base instance is inactive, then
   ``craft-providers`` will immediately auto-clean the instance.
@@ -16,6 +16,11 @@ included in each version.
 -------------------
 - Snaps injected from the host will have their base snap injected into
   the instance.
+
+1.19.3 (2023-12-01)
+-------------------
+- Update base compatibility tag to ``base-v5``.
+- Do not mount cache directories in LXD base instances.
 
 1.19.2 (2023-11-02)
 -------------------
