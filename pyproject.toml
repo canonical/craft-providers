@@ -8,6 +8,7 @@ dependencies = [
     "requests_unixsocket",
     # Needed until requests-unixsocket supports urllib3 v2
     # https://github.com/msabramo/requests-unixsocket/pull/69
+    # When updating this, remove the constraints from renovate.json.
     "urllib3<2",
 ]
 classifiers = [
