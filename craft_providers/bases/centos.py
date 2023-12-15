@@ -83,7 +83,7 @@ class CentOSBase(Base):
         cache_path: Optional[pathlib.Path] = None,
     ) -> None:
         self._cache_dir = cache_path
-        self.alias: CentOSBaseAlias = alias
+        self.alias: enum.Enum = alias
 
         if environment is None:
             self._environment = self.default_command_environment()
@@ -95,7 +95,7 @@ class CentOSBase(Base):
 
         self._set_hostname(hostname)
 
-        self._packages: List[str] = []
+        self._packages: Optional[List[str]] = []
         if use_default_packages:
             self._packages.extend(
                 [
