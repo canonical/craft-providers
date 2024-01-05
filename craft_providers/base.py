@@ -97,7 +97,7 @@ class Base(ABC):
     _timeout_unpredictable: Optional[float] = TIMEOUT_UNPREDICTABLE
     _cache_path: Optional[pathlib.Path] = None
     alias: Enum
-    compatibility_tag: str = "base-v3"
+    compatibility_tag: str = "base-v5"
 
     @abstractmethod
     def __init__(
@@ -979,6 +979,7 @@ class Base(ABC):
         *,
         executor: Executor,
         timeout: Optional[float] = TIMEOUT_UNPREDICTABLE,
+        mount_cache: bool = True,
     ) -> None:
         """Prepare base instance for use by the application.
 
@@ -994,6 +995,7 @@ class Base(ABC):
 
         :param executor: Executor for target container.
         :param timeout: Timeout in seconds.
+        :param mount_cache: If true, mount the cache directories.
 
         :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.
@@ -1015,7 +1017,8 @@ class Base(ABC):
 
         self._update_compatibility_tag(executor=executor)
 
-        self._mount_shared_cache_dirs(executor=executor)
+        if mount_cache:
+            self._mount_shared_cache_dirs(executor=executor)
 
         self._pre_setup_os(executor=executor)
         self._setup_os(executor=executor)
@@ -1100,7 +1103,7 @@ class Base(ABC):
         # (because we're hitting port 443), as bash's TCP functionality will not
         # use it (supporting both lowercase and uppercase names, which is what
         # most applications do)
-        if os.getenv("HTTPS_PROXY") or os.getenv("https_proxy"):  # noqa: SIM112
+        if os.getenv("HTTPS_PROXY") or os.getenv("https_proxy"):
             return True
 
         # check if the port is open using bash's built-in tcp-client, communicating with

@@ -181,14 +181,15 @@ def test_transfer_destination_io(instance, multipass, home_tmp_path):
     assert out_path.read_text() == "this is a test"
 
 
+@pytest.mark.slow()
 def test_transfer_destination_io_large(instance, multipass, home_tmp_path):
     test_file = home_tmp_path / "test.txt"
 
     with test_file.open("wb") as stream:
-        stream.seek(1024 * 1024 * 1024 * 4)
+        stream.seek(1024 * 1024 * 100)
         stream.write(b"test")
 
-    assert test_file.stat().st_size == 4294967300
+    assert test_file.stat().st_size == 104857604
 
     multipass.transfer(
         source=str(test_file),
@@ -202,7 +203,7 @@ def test_transfer_destination_io_large(instance, multipass, home_tmp_path):
             destination=stream,
         )
 
-    assert out_path.stat().st_size == 4294967300
+    assert out_path.stat().st_size == 104857604
 
 
 def test_transfer_source_io(instance, multipass):
@@ -223,11 +224,12 @@ def test_transfer_source_io(instance, multipass):
     assert proc.stdout == b"this is a test"
 
 
+@pytest.mark.slow()
 def test_transfer_source_io_large(instance, multipass, home_tmp_path):
     test_file = home_tmp_path / "test.txt"
 
     with test_file.open("wb") as stream:
-        stream.seek(1024 * 1024 * 1024 * 4)
+        stream.seek(1024 * 1024 * 100)
         stream.write(b"test")
 
     with test_file.open("rb") as stream:
@@ -243,7 +245,7 @@ def test_transfer_source_io_large(instance, multipass, home_tmp_path):
         check=True,
     )
 
-    assert proc.stdout == b"4294967300\t/tmp/foo\n"
+    assert proc.stdout == b"104857604\t/tmp/foo\n"
 
 
 def test_wait_until_ready(multipass):

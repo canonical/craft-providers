@@ -17,9 +17,10 @@
 
 import pathlib
 import subprocess
+from datetime import datetime
 
 import pytest
-from craft_providers.lxd import LXDError
+from craft_providers.lxd import LXDError, lxd_instance_status
 
 from . import conftest
 
@@ -30,6 +31,33 @@ def instance(instance_name, session_project):
         name=instance_name, project=session_project
     ) as tmp_instance:
         yield tmp_instance
+
+
+def test_launch_default_config(instance, lxc, session_project):
+    """Verify default config values when launching."""
+    status = lxc.config_get(
+        instance_name=instance,
+        key="user.craft_providers.status",
+        project=session_project,
+    )
+    timer = lxc.config_get(
+        instance_name=instance,
+        key="user.craft_providers.timer",
+        project=session_project,
+    )
+    pid = lxc.config_get(
+        instance_name=instance,
+        key="user.craft_providers.pid",
+        project=session_project,
+    )
+
+    assert status in [
+        status.value for status in lxd_instance_status.ProviderInstanceStatus
+    ]
+    # assert timer is a valid ISO datetime
+    datetime.fromisoformat(timer)
+    # assert PID is an integer
+    int(pid)
 
 
 def test_exec(instance, lxc, session_project):

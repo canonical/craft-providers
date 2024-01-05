@@ -91,7 +91,9 @@ class BuilddBase(Base):
         use_default_packages: bool = True,
         cache_path: Optional[pathlib.Path] = None,
     ) -> None:
-        self.alias: BuilddBaseAlias = alias
+        # ignore enum subclass (see https://github.com/microsoft/pyright/issues/6750)
+        self.alias: BuilddBaseAlias = alias  # pyright: ignore
+
         self._cache_path = cache_path
 
         if environment is None:
@@ -104,7 +106,7 @@ class BuilddBase(Base):
 
         self._set_hostname(hostname)
 
-        self._packages: List[str] = []
+        self._packages: Optional[List[str]] = []
         if use_default_packages:
             self._packages.extend(
                 [

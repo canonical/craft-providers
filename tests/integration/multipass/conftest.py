@@ -34,8 +34,8 @@ def tmp_instance(
     instance_name: str,
     image_name: str = "22.04",
     cpus: str = "2",
-    disk: str = "64G",
-    mem: str = "1G",
+    disk: str = "16G",
+    mem: str = "4G",
 ):
     subprocess.run(
         [

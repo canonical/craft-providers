@@ -19,11 +19,12 @@
 
 import sys
 from datetime import timedelta
+from pathlib import Path
 from unittest.mock import MagicMock, Mock, call
 
 import pytest
 from craft_providers import Base, ProviderError, bases, lxd
-from craft_providers.lxd import LXDError
+from craft_providers.lxd import LXDError, lxd_instance_status
 from freezegun import freeze_time
 from logassert import Exact  # type: ignore
 
@@ -182,7 +183,7 @@ def test_launch_no_base_instance(
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.setup(executor=fake_instance),
-        call.wait_until_ready(executor=fake_instance),
+        call.warmup(executor=fake_instance),
     ]
 
 
@@ -247,8 +248,8 @@ def test_launch_use_base_instance(
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.get_command_environment(),
-        call.setup(executor=fake_base_instance),
-        call.wait_until_ready(executor=fake_instance),
+        call.setup(executor=fake_base_instance, mount_cache=False),
+        call.warmup(executor=fake_instance),
     ]
 
 
@@ -362,15 +363,7 @@ def test_launch_use_existing_base_instance(
         ),
     ]
     assert fake_instance.mock_calls == [call.exists(), call.is_running(), call.start()]
-    assert fake_base_instance.mock_calls == [
-        call.exists(),
-        call.lxc.check_instance_status(
-            instance_name=fake_base_instance.instance_name,
-            project=fake_base_instance.project,
-            remote=fake_base_instance.remote,
-        ),
-        call.is_running(),
-    ]
+    assert fake_base_instance.mock_calls == [call.exists(), call.is_running()]
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.get_command_environment(),
@@ -415,15 +408,7 @@ def test_launch_use_existing_base_instance_already_running(
         call.stop(),
         call.start(),
     ]
-    assert fake_base_instance.mock_calls == [
-        call.exists(),
-        call.lxc.check_instance_status(
-            instance_name=fake_base_instance.instance_name,
-            project=fake_base_instance.project,
-            remote=fake_base_instance.remote,
-        ),
-        call.is_running(),
-    ]
+    assert fake_base_instance.mock_calls == [call.exists(), call.is_running()]
 
 
 def test_launch_existing_base_instance_invalid(
@@ -527,8 +512,8 @@ def test_launch_existing_base_instance_invalid(
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.get_command_environment(),
-        call.setup(executor=fake_base_instance),
-        call.wait_until_ready(executor=fake_instance),
+        call.setup(executor=fake_base_instance, mount_cache=False),
+        call.warmup(executor=fake_instance),
     ]
 
 
@@ -609,7 +594,7 @@ def test_launch_all_opts(
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.setup(executor=fake_instance),
-        call.wait_until_ready(executor=fake_instance),
+        call.warmup(executor=fake_instance),
     ]
 
 
@@ -703,7 +688,7 @@ def test_launch_create_project(
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.setup(executor=fake_instance),
-        call.wait_until_ready(executor=fake_instance),
+        call.warmup(executor=fake_instance),
     ]
 
 
@@ -846,7 +831,7 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
         call.get_command_environment(),
         call.warmup(executor=fake_instance),
         call.setup(executor=fake_instance),
-        call.wait_until_ready(executor=fake_instance),
+        call.warmup(executor=fake_instance),
     ]
 
 
@@ -940,7 +925,7 @@ def test_launch_with_existing_ephemeral_instance(
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.setup(executor=fake_instance),
-        call.wait_until_ready(executor=fake_instance),
+        call.warmup(executor=fake_instance),
     ]
 
 
@@ -1133,8 +1118,8 @@ def test_use_snapshots_deprecated(
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.get_command_environment(),
-        call.setup(executor=fake_base_instance),
-        call.wait_until_ready(executor=fake_instance),
+        call.setup(executor=fake_base_instance, mount_cache=False),
+        call.warmup(executor=fake_instance),
     ]
 
 
@@ -1147,15 +1132,15 @@ def test_use_snapshots_deprecated(
         "2022/12/08 11:05 UTC",  # 1 day in the future (improbable but valid)
     ],
 )
-def test_is_valid(creation_date, mocker, mock_lxc):
+def test_is_valid(creation_date, fake_instance):
     """Instances younger than the expiration date (inclusive) are valid."""
-    mock_lxc.info.return_value = {"Created": creation_date}
+    fake_instance.info.return_value = {"Created": creation_date, "Status": "STOPPED"}
+    fake_instance.config_get.return_value = (
+        lxd_instance_status.ProviderInstanceStatus.FINISHED.value
+    )
 
     is_valid = lxd.launcher._is_valid(
-        instance_name="test-name",
-        project="test-project",
-        remote="test-remote",
-        lxc=mock_lxc,
+        instance=fake_instance,
         expiration=timedelta(days=90),
     )
 
@@ -1163,31 +1148,31 @@ def test_is_valid(creation_date, mocker, mock_lxc):
 
 
 @freeze_time("2022/12/07 11:05:00 UTC")
-def test_is_valid_expired(mocker, mock_lxc):
+def test_is_valid_expired(fake_instance, mock_lxc):
     """Instances older than the expiration date are not valid."""
     # 91 days old
-    mock_lxc.info.return_value = {"Created": "2022/09/07 11:05 UTC"}
+    fake_instance.info.return_value = {
+        "Created": "2022/09/07 11:05 UTC",
+        "Status": "STOPPED",
+    }
+    fake_instance.config_get.return_value = (
+        lxd_instance_status.ProviderInstanceStatus.FINISHED.value
+    )
 
     is_valid = lxd.launcher._is_valid(
-        instance_name="test-name",
-        project="test-project",
-        remote="test-remote",
-        lxc=mock_lxc,
+        instance=fake_instance,
         expiration=timedelta(days=90),
     )
 
     assert not is_valid
 
 
-def test_is_valid_lxd_error(logs, mocker, mock_lxc):
+def test_is_valid_lxd_error(logs, fake_instance):
     """Warn if the instance's info cannot be retrieved."""
-    mock_lxc.info.side_effect = lxd.LXDError("test error")
+    fake_instance.info.side_effect = lxd.LXDError("test error")
 
     is_valid = lxd.launcher._is_valid(
-        instance_name="test-name",
-        project="test-project",
-        remote="test-remote",
-        lxc=mock_lxc,
+        instance=fake_instance,
         expiration=timedelta(days=1),
     )
 
@@ -1195,15 +1180,12 @@ def test_is_valid_lxd_error(logs, mocker, mock_lxc):
     assert Exact("Could not get instance info with error: test error") in logs.debug
 
 
-def test_is_valid_key_error(logs, mocker, mock_lxc):
+def test_is_valid_key_error(logs, fake_instance):
     """Warn if the instance does not have a creation date."""
-    mock_lxc.info.return_value = {}
+    fake_instance.info.return_value = {}
 
     is_valid = lxd.launcher._is_valid(
-        instance_name="test-name",
-        project="test-project",
-        remote="test-remote",
-        lxc=mock_lxc,
+        instance=fake_instance,
         expiration=timedelta(days=1),
     )
 
@@ -1211,15 +1193,12 @@ def test_is_valid_key_error(logs, mocker, mock_lxc):
     assert Exact("Instance does not have a 'Created' date.") in logs.debug
 
 
-def test_is_valid_value_error(logs, mocker, mock_lxc):
+def test_is_valid_value_error(logs, fake_instance):
     """Warn if the instance's creation date cannot be parsed."""
-    mock_lxc.info.return_value = {"Created": "bad-datetime-value"}
+    fake_instance.info.return_value = {"Created": "bad-datetime-value"}
 
     is_valid = lxd.launcher._is_valid(
-        instance_name="test-name",
-        project="test-project",
-        remote="test-remote",
-        lxc=mock_lxc,
+        instance=fake_instance,
         expiration=timedelta(days=1),
     )
 
@@ -1231,6 +1210,31 @@ def test_is_valid_value_error(logs, mocker, mock_lxc):
         )
         in logs.debug
     )
+
+
+@freeze_time("2022/12/07 11:05:00 UTC")
+def test_is_valid_wait_for_ready_error(logs, fake_instance, mocker):
+    """Warn if the instance's creation date cannot be parsed."""
+    mocker.patch(
+        "craft_providers.lxd.launcher._wait_for_instance_ready",
+        side_effect=LXDError("test error"),
+    )
+    fake_instance.info.return_value = {
+        "Created": "2022/12/08 11:05 UTC",
+        "Status": "STOPPED",
+    }
+
+    fake_instance.config_get.return_value = (
+        lxd_instance_status.ProviderInstanceStatus.FINISHED.value
+    )
+
+    is_valid = lxd.launcher._is_valid(
+        instance=fake_instance,
+        expiration=timedelta(days=1),
+    )
+
+    assert not is_valid
+    assert "Instance is not valid: test error" in logs.debug
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="unsupported on windows")
@@ -1405,3 +1409,76 @@ def test_timer_error_ignore(fake_instance, fake_process, mock_lxc, mocker):
     timer.stop()
 
     assert fake_instance.config_set.call_count > 0
+
+
+def test_wait_for_instance_ready(fake_instance, logs):
+    """Return if the instance is ready."""
+    fake_instance.info.return_value = {"Status": "STOPPED"}
+    fake_instance.config_get.return_value = "FINISHED"
+
+    lxd.launcher._wait_for_instance_ready(fake_instance)
+
+    assert "Instance 'test-instance-fa2d407652a1c51f6019' is ready." in logs.debug
+
+
+def test_wait_for_instance_pid_active(fake_instance, mocker):
+    """If the instance is not ready and the pid is active, then check the status."""
+    fake_instance.info.return_value = {"Status": "STOPPED"}
+    # first call returns status, second returns the pid
+    fake_instance.config_get.side_effect = ["PREPARING", "123"]
+    # mock for the call `Path("/proc/123").exists()
+    mocker.patch.object(Path, "exists", return_value=True)
+
+    lxd.launcher._wait_for_instance_ready(fake_instance)
+
+    fake_instance.lxc.check_instance_status.assert_called_once()
+
+
+@pytest.mark.parametrize("platform", ["win32", "darwin", "other"])
+def test_wait_for_instance_skip_pid_check(platform, fake_instance, mocker, logs):
+    """Do not check for the pid if not on linux."""
+    mocker.patch("sys.platform", platform)
+    fake_instance.info.return_value = {"Status": "STOPPED"}
+    # first call returns status, second returns the pid
+    fake_instance.config_get.side_effect = ["PREPARING", "123"]
+
+    lxd.launcher._wait_for_instance_ready(fake_instance)
+
+    assert "Skipping PID check because system is not linux" in logs.debug
+    fake_instance.lxc.check_instance_status.assert_called_once()
+
+
+@pytest.mark.usefixtures("mock_platform")
+def test_wait_for_instance_no_pid(fake_instance):
+    """Raise an error if there is no pid in the config."""
+    fake_instance.info.return_value = {"Status": "STOPPED"}
+    # first call returns status, second returns an empty string for the pid
+    fake_instance.config_get.side_effect = ["PREPARING", ""]
+
+    with pytest.raises(LXDError) as raised:
+        lxd.launcher._wait_for_instance_ready(fake_instance)
+
+    assert raised.value.brief == "Instance is not ready."
+    assert raised.value.details == (
+        "Instance 'test-instance-fa2d407652a1c51f6019' is not ready and does not "
+        "have the pid of the process that created the instance."
+    )
+
+
+@pytest.mark.usefixtures("mock_platform")
+def test_wait_for_instance_pid_inactive(fake_instance, mocker):
+    """Raise an error if the instance is not ready and the pid is inactive."""
+    fake_instance.info.return_value = {"Status": "STOPPED"}
+    # first call returns status, second returns the pid
+    fake_instance.config_get.side_effect = ["PREPARING", "123"]
+    # mock for the call `Path("/proc/123").exists()
+    mocker.patch.object(Path, "exists", return_value=False)
+
+    with pytest.raises(LXDError) as raised:
+        lxd.launcher._wait_for_instance_ready(fake_instance)
+
+    assert raised.value.brief == "Instance is not ready."
+    assert raised.value.details == (
+        "Instance 'test-instance-fa2d407652a1c51f6019' is not ready and "
+        "the process (pid 123) that created the instance is inactive."
+    )

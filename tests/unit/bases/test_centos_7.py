@@ -40,7 +40,7 @@ from tests.unit.conftest import DEFAULT_FAKE_CMD
 def mock_load(mocker):
     return mocker.patch(
         "craft_providers.instance_config.InstanceConfiguration.load",
-        return_value=InstanceConfiguration(compatibility_tag="centos-base-v3"),
+        return_value=InstanceConfiguration(compatibility_tag="centos-base-v5"),
     )
 
 
@@ -150,7 +150,7 @@ def mock_get_os_release(mocker):
     ],
 )
 @pytest.mark.parametrize(
-    ("tag", "expected_tag"), [(None, "centos-base-v3"), ("test-tag", "test-tag")]
+    ("tag", "expected_tag"), [(None, "centos-base-v5"), ("test-tag", "test-tag")]
 )
 def test_setup(
     fake_process,
@@ -603,7 +603,7 @@ def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
         base_config._ensure_instance_config_compatible(executor=fake_executor)
 
     assert exc_info.value == BaseCompatibilityError(
-        "Expected image compatibility tag 'centos-base-v3', found 'invalid-tag'"
+        "Expected image compatibility tag 'centos-base-v5', found 'invalid-tag'"
     )
 
 
@@ -1003,7 +1003,7 @@ def test_update_setup_status(fake_executor, mock_load, status):
     assert fake_executor.records_of_push_file_io == [
         {
             "content": (
-                "compatibility_tag: centos-base-v3\n"
+                "compatibility_tag: centos-base-v5\n"
                 f"setup: {str(status).lower()}\n".encode()
             ),
             "destination": "/etc/craft-instance.conf",
@@ -1112,7 +1112,7 @@ def test_warmup_overall(
     environment, fake_process, fake_executor, mock_load, mocker, cache_path
 ):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="centos-base-v3", setup=True
+        compatibility_tag="centos-base-v5", setup=True
     )
     alias = centos.CentOSBaseAlias.SEVEN
 
@@ -1164,7 +1164,7 @@ def test_warmup_overall(
 
 def test_warmup_bad_os(fake_process, fake_executor, mock_load):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="centos-base-v3", setup=True
+        compatibility_tag="centos-base-v5", setup=True
     )
     base_config = centos.CentOSBase(
         alias=centos.CentOSBaseAlias.SEVEN,
@@ -1189,7 +1189,7 @@ def test_warmup_bad_os(fake_process, fake_executor, mock_load):
 
 def test_warmup_bad_instance_config(fake_process, fake_executor, mock_load):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="centos-base-v3", setup=True
+        compatibility_tag="centos-base-v5", setup=True
     )
     alias = centos.CentOSBaseAlias.SEVEN
     base_config = centos.CentOSBase(
@@ -1218,7 +1218,7 @@ def test_warmup_bad_instance_config(fake_process, fake_executor, mock_load):
 def test_warmup_not_setup(setup, fake_process, fake_executor, mock_load):
     """Raise a BaseConfigurationError if the instance is not setup."""
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="centos-base-v3", setup=setup
+        compatibility_tag="centos-base-v5", setup=setup
     )
     alias = centos.CentOSBaseAlias.SEVEN
     base_config = centos.CentOSBase(
@@ -1246,7 +1246,7 @@ def test_warmup_not_setup(setup, fake_process, fake_executor, mock_load):
 
 def test_warmup_never_ready(fake_process, fake_executor, mock_load):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="centos-base-v3", setup=True
+        compatibility_tag="centos-base-v5", setup=True
     )
     alias = centos.CentOSBaseAlias.SEVEN
     base_config = centos.CentOSBase(
@@ -1279,7 +1279,7 @@ def test_warmup_never_ready(fake_process, fake_executor, mock_load):
 
 def test_warmup_never_network(fake_process, fake_executor, mock_load):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="centos-base-v3", setup=True
+        compatibility_tag="centos-base-v5", setup=True
     )
     alias = centos.CentOSBaseAlias.SEVEN
     base_config = centos.CentOSBase(
