@@ -96,9 +96,6 @@ _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
     ubuntu.BuilddBaseAlias.JAMMY: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="22.04"
     ),
-    ubuntu.BuilddBaseAlias.LUNAR: RemoteImage(
-        remote=Remote.RELEASE, image_name="lunar"
-    ),
     ubuntu.BuilddBaseAlias.MANTIC: RemoteImage(
         remote=Remote.RELEASE, image_name="mantic"
     ),
