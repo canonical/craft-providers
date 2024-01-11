@@ -1,10 +1,6 @@
 {
   // Configuration file for RenovateBot: https://docs.renovatebot.com/configuration-options
   extends: ["config:base"],
-  ignoreDeps: [
-    "types-requests",  // Don't update until we can support urllib3 >= 2.0
-    "urllib3",  // Can't update until requests-unixsocket supports urllib3 v2
-  ],
   labels: ["dependencies"],  // For convenient searching in GitHub
   pip_requirements: {
     fileMatch: ["^tox.ini$", "(^|/)requirements([\\w-]*)\\.txt$"]
@@ -92,6 +88,14 @@
       matchStrings: [
         "# renovate: datasource=(?<datasource>\\S+);\\s*depName=(?<depName>.*?)\n\s+rev: \"v?(?<currentValue>.*?)\""
       ]
+    },
+    {
+      // Ignored packages
+      matchPackagePatterns: [
+        "types-requests",  // Don't update until we can support urllib3 >= 2.0
+        "urllib3",  // Can't update until requests-unixsocket supports urllib3 v2
+      ],
+      enabled: false
     }
   ],
   timezone: "Etc/UTC",
