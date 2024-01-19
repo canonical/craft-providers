@@ -5,6 +5,12 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+1.21.0 (2024-01-17)
+-------------------
+- Update base compatibility tag to ``base-v6``
+- Add Ubuntu 24.04 (Noble) support
+- Remove Ubuntu 23.04 (Lunar) support
+
 1.20.1 (2023-11-30)
 -------------------
 - Update base compatibility tag to ``base-v4``
