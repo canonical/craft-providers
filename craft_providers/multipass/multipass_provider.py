@@ -102,9 +102,10 @@ _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
     ubuntu.BuilddBaseAlias.NOBLE: RemoteImage(
         remote=Remote.RELEASE, image_name="noble"
     ),
-    # XXX: snapcraft:devel image is not working (LP #2007419)
-    # daily:devel image is not available on macos
-    ubuntu.BuilddBaseAlias.DEVEL: RemoteImage(remote=Remote.DAILY, image_name="devel"),
+    # devel images are not available on macos
+    ubuntu.BuilddBaseAlias.DEVEL: RemoteImage(
+        remote=Remote.SNAPCRAFT, image_name="devel"
+    ),
 }
 
 
