@@ -5,6 +5,10 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+1.22.0 (2024-01-30)
+-------------------
+- Do not update apt sources for Ubuntu devel images
+
 1.21.0 (2024-01-17)
 -------------------
 - Update base compatibility tag to ``base-v6``
