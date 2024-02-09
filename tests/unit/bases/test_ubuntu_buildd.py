@@ -41,7 +41,7 @@ from tests.unit.conftest import DEFAULT_FAKE_CMD
 def mock_load(mocker):
     return mocker.patch(
         "craft_providers.instance_config.InstanceConfiguration.load",
-        return_value=InstanceConfiguration(compatibility_tag="buildd-base-v5"),
+        return_value=InstanceConfiguration(compatibility_tag="buildd-base-v6"),
     )
 
 
@@ -146,7 +146,7 @@ def mock_get_os_release(mocker):
     ],
 )
 @pytest.mark.parametrize(
-    ("tag", "expected_tag"), [(None, "buildd-base-v5"), ("test-tag", "test-tag")]
+    ("tag", "expected_tag"), [(None, "buildd-base-v6"), ("test-tag", "test-tag")]
 )
 def test_setup(
     fake_process,
@@ -248,32 +248,6 @@ def test_setup(
             VERSION_CODENAME="test-name"
             """
         ),
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "sed", "-i", "s/test-name/devel/g", "/etc/apt/sources.list"]
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "test", "-s", "/etc/cloud/cloud.cfg"]
-    )
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "sed",
-            "-i",
-            "$ aapt_preserve_sources_list: true",
-            "/etc/cloud/cloud.cfg",
-        ]
-    )
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "find",
-            "/etc/apt/sources.list.d/",
-            "-type",
-            "f",
-            "-name",
-            "*.list",
-        ]
     )
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
     fake_process.register_subprocess(
@@ -638,38 +612,6 @@ def test_setup_apt_install_packages_install_error(mocker, fake_executor):
     )
 
 
-def test_pre_setup_packages_devel(fake_executor, fake_process, mocker):
-    """Verify `update_apt_sources()` is called for devel bases."""
-    mock_update_apt_sources = mocker.patch.object(
-        ubuntu.BuilddBase, "_update_apt_sources"
-    )
-
-    base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.DEVEL)
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "apt-get",
-            "install",
-            "-y",
-            "apt-utils",
-            "build-essential",
-            "python3",
-            "python3-dev",
-            "python3-pip",
-            "python3-wheel",
-            "python3-setuptools",
-            "curl",
-            "fuse",
-            "udev",
-        ]
-    )
-
-    base._pre_setup_packages(executor=fake_executor)
-
-    mock_update_apt_sources.assert_called_once()
-
-
 def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
     monkeypatch.setattr(
@@ -682,7 +624,7 @@ def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
         base_config._ensure_instance_config_compatible(executor=fake_executor)
 
     assert exc_info.value == BaseCompatibilityError(
-        "Expected image compatibility tag 'buildd-base-v5', found 'invalid-tag'"
+        "Expected image compatibility tag 'buildd-base-v6', found 'invalid-tag'"
     )
 
 
@@ -1192,220 +1134,6 @@ def test_wait_for_system_ready_timeout_in_network(
     )
 
 
-def test_update_apt_sources(fake_executor, fake_process, mock_get_os_release, logs):
-    """`update_apt_sources()` should update the apt source config files."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "sed",
-            "-i",
-            "s/jammy/test-codename/g",
-            "/etc/apt/sources.list",
-        ]
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "test", "-s", "/etc/cloud/cloud.cfg"]
-    )
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "sed",
-            "-i",
-            "$ aapt_preserve_sources_list: true",
-            "/etc/cloud/cloud.cfg",
-        ]
-    )
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "find",
-            "/etc/apt/sources.list.d/",
-            "-type",
-            "f",
-            "-name",
-            "*.list",
-        ],
-    )
-
-    base_config._update_apt_sources(executor=fake_executor, codename="test-codename")
-
-    mock_get_os_release.assert_called_once()
-    assert Exact("Updating apt sources from 'jammy' to 'test-codename'.") in logs.debug
-    assert (
-        Exact("Updating '/etc/cloud/cloud.cfg' to preserve apt sources.") in logs.debug
-    )
-
-
-def test_update_apt_sources_dir(fake_executor, fake_process, mock_get_os_release):
-    """Verify source files in `/etc/apt/sources.list.d/` are updated."""
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "sed",
-            "-i",
-            "s/jammy/test-codename/g",
-            "/etc/apt/sources.list",
-        ]
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "test", "-s", "/etc/cloud/cloud.cfg"]
-    )
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "sed",
-            "-i",
-            "$ aapt_preserve_sources_list: true",
-            "/etc/cloud/cloud.cfg",
-        ]
-    )
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "find",
-            "/etc/apt/sources.list.d/",
-            "-type",
-            "f",
-            "-name",
-            "*.list",
-        ],
-        stdout="/etc/apt/sources.list.d/file1.list\n/etc/apt/sources.list.d/file2.list",
-    )
-    fake_process.register_subprocess(
-        [
-            *DEFAULT_FAKE_CMD,
-            "sed",
-            "-i",
-            "s/jammy/test-codename/g",
-            "/etc/apt/sources.list.d/*.list",
-        ]
-    )
-
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
-    base_config._update_apt_sources(executor=fake_executor, codename="test-codename")
-
-    mock_get_os_release.assert_called_once()
-
-
-def test_update_apt_sources_source_list_sed_error(
-    fake_executor, fake_process, mock_get_os_release
-):
-    """Raise an error when the sed command fails to update apt sources."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
-    # fail on the first `sed` call
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "sed", fake_process.any()], returncode=1
-    )
-
-    with pytest.raises(BaseConfigurationError) as raised:
-        base_config._update_apt_sources(
-            executor=fake_executor, codename="test-codename"
-        )
-
-    assert raised.value.brief == "Failed to update '/etc/apt/sources.list'."
-
-
-def test_update_apt_sources_cloud_cfg_does_not_exist_error(
-    fake_executor, fake_process, mock_get_os_release
-):
-    """Raise an error when cloud.cfg is empty or does not exist."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
-    # fail on the `test` call
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "test", fake_process.any()], returncode=1
-    )
-
-    with pytest.raises(BaseConfigurationError) as raised:
-        base_config._update_apt_sources(
-            executor=fake_executor, codename="test-codename"
-        )
-
-    assert raised.value.brief == (
-        "Could not update '/etc/cloud/cloud.cfg' because it is empty or does not exist."
-    )
-
-
-def test_update_apt_sources_cloud_cfg_sed_error(
-    fake_executor, fake_process, mock_get_os_release
-):
-    """Raise an error when the sed command fails to update cloud.cfg."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
-    # fail on the second `sed` call
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "test", fake_process.any()])
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "sed", fake_process.any()], returncode=1
-    )
-
-    with pytest.raises(BaseConfigurationError) as raised:
-        base_config._update_apt_sources(
-            executor=fake_executor, codename="test-codename"
-        )
-
-    assert raised.value.brief == "Failed to update '/etc/cloud/cloud.cfg'."
-
-
-def test_update_apt_sources_find_error(
-    fake_executor, fake_process, mock_get_os_release
-):
-    """Raise an error when the find command fails to find apt source files."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "test", fake_process.any()])
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
-    # fail on the `find` call
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "find", fake_process.any()], returncode=1
-    )
-
-    with pytest.raises(BaseConfigurationError) as raised:
-        base_config._update_apt_sources(
-            executor=fake_executor, codename="test-codename"
-        )
-
-    assert (
-        raised.value.brief
-        == "Failed to find apt source files in '/etc/apt/sources.list.d/'."
-    )
-
-
-def test_update_apt_sources_dir_sed_error(
-    fake_executor, fake_process, mock_get_os_release
-):
-    """Raise an error when the sed command fails in the `sources.list.d` directory."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "test", fake_process.any()])
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "sed", fake_process.any()])
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "find", fake_process.any()],
-        stdout="test-output",
-    )
-    # fail on the third `sed` call
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "sed", fake_process.any()],
-        returncode=1,
-    )
-
-    with pytest.raises(BaseConfigurationError) as raised:
-        base_config._update_apt_sources(
-            executor=fake_executor, codename="test-codename"
-        )
-
-    assert (
-        raised.value.brief
-        == "Failed to update apt source files in '/etc/apt/sources.list.d/'."
-    )
-
-
 def test_update_compatibility_tag(fake_executor, mock_load):
     """`update_compatibility_tag()` should update the instance config."""
     base_config = ubuntu.BuilddBase(
@@ -1437,7 +1165,7 @@ def test_update_setup_status(fake_executor, mock_load, status):
     assert fake_executor.records_of_push_file_io == [
         {
             "content": (
-                "compatibility_tag: buildd-base-v5\n"
+                "compatibility_tag: buildd-base-v6\n"
                 f"setup: {str(status).lower()}\n".encode()
             ),
             "destination": "/etc/craft-instance.conf",
@@ -1546,7 +1274,7 @@ def test_warmup_overall(
     environment, fake_process, fake_executor, mock_load, mocker, cache_path
 ):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v5", setup=True
+        compatibility_tag="buildd-base-v6", setup=True
     )
 
     alias = ubuntu.BuilddBaseAlias.JAMMY
@@ -1595,7 +1323,7 @@ def test_warmup_overall(
 
 def test_warmup_bad_os(fake_process, fake_executor, mock_load):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v5", setup=True
+        compatibility_tag="buildd-base-v6", setup=True
     )
     base_config = ubuntu.BuilddBase(
         alias=ubuntu.BuilddBaseAlias.JAMMY,
@@ -1620,7 +1348,7 @@ def test_warmup_bad_os(fake_process, fake_executor, mock_load):
 
 def test_warmup_bad_instance_config(fake_process, fake_executor, mock_load):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v5", setup=True
+        compatibility_tag="buildd-base-v6", setup=True
     )
     alias = ubuntu.BuilddBaseAlias.JAMMY
     base_config = ubuntu.BuilddBase(
@@ -1649,7 +1377,7 @@ def test_warmup_bad_instance_config(fake_process, fake_executor, mock_load):
 def test_warmup_not_setup(setup, fake_process, fake_executor, mock_load):
     """Raise a BaseConfigurationError if the instance is not setup."""
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v5", setup=setup
+        compatibility_tag="buildd-base-v6", setup=setup
     )
     alias = ubuntu.BuilddBaseAlias.JAMMY
     base_config = ubuntu.BuilddBase(
@@ -1677,7 +1405,7 @@ def test_warmup_not_setup(setup, fake_process, fake_executor, mock_load):
 
 def test_warmup_never_ready(fake_process, fake_executor, mock_load):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v5", setup=True
+        compatibility_tag="buildd-base-v6", setup=True
     )
     alias = ubuntu.BuilddBaseAlias.JAMMY
     base_config = ubuntu.BuilddBase(
@@ -1709,7 +1437,7 @@ def test_warmup_never_ready(fake_process, fake_executor, mock_load):
 
 def test_warmup_never_network(fake_process, fake_executor, mock_load):
     mock_load.return_value = InstanceConfiguration(
-        compatibility_tag="buildd-base-v5", setup=True
+        compatibility_tag="buildd-base-v6", setup=True
     )
     alias = ubuntu.BuilddBaseAlias.JAMMY
     base_config = ubuntu.BuilddBase(
