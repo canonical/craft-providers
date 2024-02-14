@@ -44,7 +44,7 @@ def test_create_environment(installed_lxd, instance_name):
 @pytest.mark.parametrize(
     "alias",
     [
-        set(ubuntu.BuilddBaseAlias) - {ubuntu.BuilddBaseAlias.XENIAL},
+        *set(ubuntu.BuilddBaseAlias) - {ubuntu.BuilddBaseAlias.XENIAL},
         pytest.param(
             almalinux.AlmaLinuxBaseAlias.NINE,
             marks=pytest.mark.xfail(
