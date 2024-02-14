@@ -43,8 +43,15 @@ def test_create_environment(installed_lxd, instance_name):
 
 @pytest.mark.parametrize(
     "alias",
-    set(ubuntu.BuilddBaseAlias) - {ubuntu.BuilddBaseAlias.XENIAL}
-    | {almalinux.AlmaLinuxBaseAlias.NINE},
+    [
+        *set(ubuntu.BuilddBaseAlias) - {ubuntu.BuilddBaseAlias.XENIAL},
+        pytest.param(
+            almalinux.AlmaLinuxBaseAlias.NINE,
+            marks=pytest.mark.xfail(
+                strict=True, reason="alma images are not available (#502)"
+            ),
+        ),
+    ],
 )
 def test_launched_environment(
     alias, installed_lxd, instance_name, tmp_path, session_provider
