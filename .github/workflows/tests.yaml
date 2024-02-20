@@ -161,9 +161,11 @@ jobs:
           sg lxd -c ".tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies --colored yes -e integration-${{ matrix.python.tox-version }}"
   integration-smoketests-macos:
     strategy:
+      fail-fast: false
       matrix:
         python: ["3.11"]
-    runs-on: macos-latest
+        os: [macos-13]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Install Multipass
         run: |

@@ -19,7 +19,8 @@ jobs:
       fail-fast: false
       matrix:
         python: ["3.11"]
-    runs-on: macos-latest
+        os: [macos-13]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
       - name: Install Multipass
@@ -65,7 +66,8 @@ jobs:
       fail-fast: false
       matrix:
         python: ["3.11"]
-    runs-on: macos-latest
+        os: [macos-13]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Install Multipass
         run: |
