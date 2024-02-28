@@ -5,6 +5,12 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+1.23.0 (2024-02-28)
+-------------------
+- Update base compatibility tag to ``base-v7``
+- Use ``buildd`` daily for Ubuntu 24.04 (Noble) and Ubuntu devel images
+- Ensure apt installs non-interactively
+
 1.22.0 (2024-01-30)
 -------------------
 - Do not update apt sources for Ubuntu devel images
