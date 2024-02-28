@@ -100,6 +100,15 @@ class BuilddBase(Base):
         else:
             self._environment = environment
 
+        # ensure apt installs are always non-interactive
+        self._environment.update(
+            {
+                "DEBIAN_FRONTEND": "noninteractive",
+                "DEBCONF_NONINTERACTIVE_SEEN": "true",
+                "DEBIAN_PRIORITY": "critical",
+            }
+        )
+
         if compatibility_tag:
             self.compatibility_tag = compatibility_tag
 

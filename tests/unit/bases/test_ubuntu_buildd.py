@@ -82,6 +82,9 @@ def mock_get_os_release(mocker):
             (
                 b"PATH=/usr/local/sbin:/usr/local/bin:"
                 b"/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin\n"
+                b"DEBIAN_FRONTEND=noninteractive\n"
+                b"DEBCONF_NONINTERACTIVE_SEEN=true\n"
+                b"DEBIAN_PRIORITY=critical\n"
             ),
         ),
         (
@@ -93,6 +96,9 @@ def mock_get_os_release(mocker):
             (
                 b"https_proxy=http://foo.bar:8081\n"
                 b"PATH=/snap\nhttp_proxy=http://foo.bar:8080\n"
+                b"DEBIAN_FRONTEND=noninteractive\n"
+                b"DEBCONF_NONINTERACTIVE_SEEN=true\n"
+                b"DEBIAN_PRIORITY=critical\n"
             ),
         ),
     ],
