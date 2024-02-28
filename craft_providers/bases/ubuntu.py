@@ -100,6 +100,8 @@ class BuilddBase(Base):
         else:
             self._environment = environment
 
+        self._environment["DEBIAN_FRONTEND"] = "noninteractive"
+
         if compatibility_tag:
             self.compatibility_tag = compatibility_tag
 
