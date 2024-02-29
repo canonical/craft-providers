@@ -70,6 +70,14 @@
       groupName: "ruff",
       matchPackagePatterns: ["^(lint/)?ruff$"],
       prPriority: -3
+    },
+    {
+      // Ignored packages
+      matchPackagePatterns: [
+        "types-requests",  // Don't update until we can support urllib3 >= 2.0
+        "urllib3",  // Can't update until requests-unixsocket supports urllib3 v2
+      ],
+      enabled: false
     }
   ],
   regexManagers: [
@@ -88,14 +96,6 @@
       matchStrings: [
         "# renovate: datasource=(?<datasource>\\S+);\\s*depName=(?<depName>.*?)\n\s+rev: \"v?(?<currentValue>.*?)\""
       ]
-    },
-    {
-      // Ignored packages
-      matchPackagePatterns: [
-        "types-requests",  // Don't update until we can support urllib3 >= 2.0
-        "urllib3",  // Can't update until requests-unixsocket supports urllib3 v2
-      ],
-      enabled: false
     }
   ],
   timezone: "Etc/UTC",
