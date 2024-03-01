@@ -63,7 +63,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Set up Python versions on ${{ matrix.platform }}
+      - name: Set up Python versions on ${{ matrix.os }}
         uses: actions/setup-python@v5
         with:
           python-version: |
@@ -87,7 +87,7 @@ jobs:
         with:
           limit-access-to-actor: true
       - name: Test with tox
-        run: tox run --skip-pkg-install --no-list-dependencies --result-json results/tox-${{ matrix.platform }}.json --colored yes -m unit-tests
+        run: tox run --skip-pkg-install --no-list-dependencies --result-json results/tox-${{ matrix.os }}.json --colored yes -m unit-tests
         env:
           PYTEST_ADDOPTS: "--no-header -vv -rN"
       - name: Upload code coverage
@@ -99,7 +99,7 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
-          name: test-results-${{ matrix.platform }}
+          name: test-results-${{ matrix.os }}
           path: results/
   integration-tests-linux:
     strategy:
