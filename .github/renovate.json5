@@ -70,6 +70,14 @@
       groupName: "ruff",
       matchPackagePatterns: ["^(lint/)?ruff$"],
       prPriority: -3
+    },
+    {
+      // Ignored packages
+      matchPackagePatterns: [
+        "types-requests",  // Don't update until we can support urllib3 >= 2.0
+        "urllib3",  // Can't update until requests-unixsocket supports urllib3 v2
+      ],
+      enabled: false
     }
   ],
   regexManagers: [
@@ -98,5 +106,6 @@
   prCreation: "not-pending", // Wait until status checks have completed before raising the PR
   prNotPendingHours: 4, // ...unless the status checks have been running for 4+ hours.
   prHourlyLimit: 1, // No more than 1 PR per hour.
-  stabilityDays: 2 // Wait 2 days from release before updating.
+  stabilityDays: 2, // Wait 2 days from release before updating.
+  semanticCommitType: "build"  // use `build` as commit header type (i.e. `build(deps): <description>`)
 }

@@ -73,7 +73,7 @@ class FakeExecutor(Executor):
         self,
         command: List[str],
         *,
-        cwd: Optional[pathlib.Path] = None,
+        cwd: Optional[pathlib.PurePath] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         **kwargs,
     ) -> subprocess.Popen:
@@ -86,7 +86,7 @@ class FakeExecutor(Executor):
         self,
         command: List[str],
         *,
-        cwd: Optional[pathlib.Path] = None,
+        cwd: Optional[pathlib.PurePath] = None,
         env: Optional[Dict[str, Optional[str]]] = None,
         timeout: Optional[float] = None,
         check: bool = False,
@@ -121,7 +121,7 @@ class FakeExecutor(Executor):
         self.records_of_exists.append({})
         return True
 
-    def mount(self, *, host_source: pathlib.Path, target: pathlib.Path) -> None:
+    def mount(self, *, host_source: pathlib.Path, target: pathlib.PurePath) -> None:
         self.records_of_mount.append({"host_source": host_source, "target": target})
 
     def is_running(self) -> bool:

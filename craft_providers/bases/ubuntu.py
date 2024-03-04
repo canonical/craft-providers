@@ -43,8 +43,8 @@ class BuilddBaseAlias(enum.Enum):
     BIONIC = "18.04"
     FOCAL = "20.04"
     JAMMY = "22.04"
-    LUNAR = "23.04"
     MANTIC = "23.10"
+    NOBLE = "24.04"
     DEVEL = "devel"
 
 
@@ -90,7 +90,9 @@ class BuilddBase(Base):
         use_default_packages: bool = True,
         cache_path: Optional[pathlib.Path] = None,
     ) -> None:
-        self.alias: BuilddBaseAlias = alias
+        # ignore enum subclass (see https://github.com/microsoft/pyright/issues/6750)
+        self.alias: BuilddBaseAlias = alias  # pyright: ignore
+
         self._cache_path = cache_path
 
         if environment is None:
@@ -98,12 +100,21 @@ class BuilddBase(Base):
         else:
             self._environment = environment
 
+        # ensure apt installs are always non-interactive
+        self._environment.update(
+            {
+                "DEBIAN_FRONTEND": "noninteractive",
+                "DEBCONF_NONINTERACTIVE_SEEN": "true",
+                "DEBIAN_PRIORITY": "critical",
+            }
+        )
+
         if compatibility_tag:
             self.compatibility_tag = compatibility_tag
 
         self._set_hostname(hostname)
 
-        self._packages: List[str] = []
+        self._packages: Optional[List[str]] = []
         if use_default_packages:
             self._packages.extend(
                 [
@@ -175,98 +186,6 @@ class BuilddBase(Base):
                 )
             )
 
-    def _update_apt_sources(self, executor: Executor, codename: str) -> None:
-        """Update the codename in the apt source config files.
-
-        :param codename: New codename to use in apt source config files (i.e. 'lunar')
-        """
-        apt_source = "/etc/apt/sources.list"
-        apt_source_dir = "/etc/apt/sources.list.d/"
-        cloud_config = "/etc/cloud/cloud.cfg"
-
-        # get the current ubuntu codename
-        os_release = self._get_os_release(executor=executor)
-        version_codename = os_release.get("VERSION_CODENAME")
-        logger.debug("Updating apt sources from %r to %r.", version_codename, codename)
-
-        # replace all occurrences of the codename in the `sources.list` file
-        sed_command = ["sed", "-i", f"s/{version_codename}/{codename}/g"]
-        try:
-            self._execute_run(
-                [*sed_command, apt_source],
-                executor=executor,
-                timeout=self._timeout_simple,
-            )
-        except subprocess.CalledProcessError as error:
-            raise BaseConfigurationError(
-                brief=f"Failed to update {apt_source!r}.",
-                details=details_from_called_process_error(error),
-            ) from error
-
-        # if cloud-init and cloud.cfg isn't present, then raise an error
-        try:
-            self._execute_run(
-                ["test", "-s", cloud_config],
-                executor=executor,
-                timeout=self._timeout_simple,
-            )
-        except subprocess.CalledProcessError as error:
-            raise BaseConfigurationError(
-                brief=(
-                    f"Could not update {cloud_config!r} because it is empty or "
-                    "does not exist."
-                ),
-                details=details_from_called_process_error(error),
-            ) from error
-
-        # update cloud.cfg to prevent the sources.list file from being reset
-        logger.debug("Updating %r to preserve apt sources.", cloud_config)
-        try:
-            self._execute_run(
-                # 'aapt' is not a typo, the first 'a' is the sed command to append
-                # this is a shlex-compatible way to append to a file
-                ["sed", "-i", "$ aapt_preserve_sources_list: true", cloud_config],
-                executor=executor,
-                timeout=self._timeout_simple,
-            )
-        except subprocess.CalledProcessError as error:
-            raise BaseConfigurationError(
-                brief=f"Failed to update {cloud_config!r}.",
-                details=details_from_called_process_error(error),
-            ) from error
-
-        # running `find` and `sed` as two separate calls may appear unoptimized,
-        # but these shell commands will pass through `shlex.join()` before being
-        # executed, which means one-liners like `find -exec sed` or
-        # `find | xargs sed` cannot be used
-
-        try:
-            additional_source_files = self._execute_run(
-                ["find", apt_source_dir, "-type", "f", "-name", "*.list"],
-                executor=executor,
-                text=True,
-                timeout=self._timeout_simple,
-            ).stdout.strip()
-        except subprocess.CalledProcessError as error:
-            raise BaseConfigurationError(
-                brief=f"Failed to find apt source files in {apt_source_dir!r}.",
-                details=details_from_called_process_error(error),
-            ) from error
-
-        # if there are config files in `sources.list.d/`, then update them
-        if additional_source_files:
-            try:
-                self._execute_run(
-                    [*sed_command, apt_source_dir + "*.list"],
-                    executor=executor,
-                    timeout=self._timeout_simple,
-                )
-            except subprocess.CalledProcessError as error:
-                raise BaseConfigurationError(
-                    brief=f"Failed to update apt source files in {apt_source_dir!r}.",
-                    details=details_from_called_process_error(error),
-                ) from error
-
     def _post_setup_os(self, executor: Executor) -> None:
         """Ubuntu specific post-setup OS tasks."""
         self._disable_automatic_apt(executor=executor)
@@ -290,13 +209,6 @@ class BuilddBase(Base):
             content=io.BytesIO(b'APT::Update::Error-Mode "any";\n'),
             file_mode="0644",
         )
-
-        # devel images should use the devel repository
-        if self.alias == BuilddBaseAlias.DEVEL:
-            self._update_apt_sources(
-                executor=executor,
-                codename=BuilddBaseAlias.DEVEL.value,
-            )
 
         try:
             self._execute_run(

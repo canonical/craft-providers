@@ -258,7 +258,7 @@ def test_launch(instance_name):
     instance.launch(
         image="snapcraft:core22",
         cpus=4,
-        disk_gb=128,
+        disk_gb=16,
         mem_gb=1,
     )
 

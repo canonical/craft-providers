@@ -48,10 +48,14 @@ ALIASES = list(BuilddBaseAlias)
 ALIASES.remove(BuilddBaseAlias.XENIAL)
 
 
+@pytest.mark.slow()
 @pytest.mark.parametrize("alias", ALIASES)
 def test_launched_environment(alias, installed_multipass, instance_name, tmp_path):
     """Verify `launched_environment()` creates and starts an instance then stops
     the instance when the method loses context."""
+    if sys.platform == "darwin" and alias == BuilddBaseAlias.NOBLE:
+        pytest.skip(reason="Noble on MacOS are not available")
+
     if sys.platform == "darwin" and alias == BuilddBaseAlias.MANTIC:
         pytest.skip(reason="Mantic on MacOS are not available")
 

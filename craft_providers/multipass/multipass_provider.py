@@ -96,15 +96,17 @@ _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
     ubuntu.BuilddBaseAlias.JAMMY: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="22.04"
     ),
-    ubuntu.BuilddBaseAlias.LUNAR: RemoteImage(
-        remote=Remote.RELEASE, image_name="lunar"
-    ),
     ubuntu.BuilddBaseAlias.MANTIC: RemoteImage(
         remote=Remote.RELEASE, image_name="mantic"
     ),
-    # XXX: snapcraft:devel image is not working (LP #2007419)
-    # daily:devel image is not available on macos
-    ubuntu.BuilddBaseAlias.DEVEL: RemoteImage(remote=Remote.DAILY, image_name="devel"),
+    # this should use `image_name="24.04"` once noble is released (#511)
+    ubuntu.BuilddBaseAlias.NOBLE: RemoteImage(
+        remote=Remote.SNAPCRAFT, image_name="devel"
+    ),
+    # devel images are not available on macos
+    ubuntu.BuilddBaseAlias.DEVEL: RemoteImage(
+        remote=Remote.SNAPCRAFT, image_name="devel"
+    ),
 }
 
 

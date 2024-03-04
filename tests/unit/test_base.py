@@ -161,14 +161,14 @@ def test_mount_shared_cache_dirs(fake_process, fake_base, fake_executor, cache_d
         expected = {
             "host_source": pathlib.WindowsPath("d:")
             / cache_dir
-            / "base-v3"
+            / "base-v7"
             / "FakeBaseAlias.TREBLE"
             / "pip",
             "target": user_cache_dir / "pip",
         }
     else:
         expected = {
-            "host_source": cache_dir / "base-v3" / "FakeBaseAlias.TREBLE" / "pip",
+            "host_source": cache_dir / "base-v7" / "FakeBaseAlias.TREBLE" / "pip",
             "target": user_cache_dir / "pip",
         }
     assert fake_executor.records_of_mount == [expected]

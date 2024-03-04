@@ -8,6 +8,7 @@ dependencies = [
     "requests_unixsocket",
     # Needed until requests-unixsocket supports urllib3 v2
     # https://github.com/msabramo/requests-unixsocket/pull/69
+    # When updating this, remove the constraints from renovate.json.
     "urllib3<2",
 ]
 classifiers = [
@@ -30,52 +31,53 @@ craft-providers = "craft_providers.cli:main"
 
 [project.optional-dependencies]
 dev = [
-    "coverage[toml]==7.3.2",
-    "freezegun==1.2.2",
+    "coverage[toml]==7.4.3",
+    "freezegun==1.4.0",
     "logassert==7",
-    "pyfakefs==5.3.0",
-    "pytest==7.4.2",
+    "pyfakefs==5.3.5",
+    "pytest==8.0.2",
     "pytest-cov==4.1.0",
-    "pytest-mock==3.11.1",
-    "pytest-rerunfailures==12.0",
+    "pytest-mock==3.12.0",
+    "pytest-rerunfailures==13.0",
     "pytest-subprocess==1.5.0",
-    "pytest-xdist==3.3.1",
+    "pytest-xdist==3.5.0",
     "pytest-time==0.3.1",
-    "responses==0.23.3",
+    "responses==0.25.0",
+    # types-requests>=2.31.0.7 requires urllib3>=2
     "types-requests==2.31.0.6",
-    "types-setuptools==68.2.0.0",
+    "types-setuptools==69.1.0.20240223",
     "types-pyyaml==6.0.12.12",
 ]
 lint = [
-    "black==23.10.0",
+    "black==24.2.0",
     "codespell[toml]==2.2.6",
-    "ruff==0.1.1",
-    "yamllint==1.32.0",
+    "ruff==0.1.7",
+    "yamllint==1.35.1",
 ]
 types = [
-    "mypy[reports]==1.6.1",
-    "pyright==1.1.332",
+    "mypy[reports]==1.8.0",
+    "pyright==1.1.351",
 ]
 docs = [
     "furo==2023.9.10",
-    "lxd-sphinx-extensions==0.0.14",
+    "lxd-sphinx-extensions==0.0.16",
     "myst-parser==2.0.0",
-    "pyspelling==2.9",
+    "pyspelling==2.10",
     "sphinx==7.2.6",
     "sphinx-autobuild==2021.3.14",
     "sphinxcontrib-jquery==4.1",
     "sphinx-copybutton==0.5.2",
     "sphinx-design==0.5.0",
-    "sphinxext-opengraph==0.8.2",
-    "sphinx-lint==0.8.1",
+    "sphinxext-opengraph==0.9.1",
+    "sphinx-lint==0.9.1",
     "sphinx-notfound-page==1.0.0",
-    "sphinx-reredirects==0.1.2",
-    "sphinx-tabs==3.4.1",
+    "sphinx-reredirects==0.1.3",
+    "sphinx-tabs==3.4.5",
 ]
 
 [build-system]
 requires = [
-    "setuptools==67.7.2",
+    "setuptools==69.1.1",
     "setuptools_scm[toml]>=7.1"
 ]
 build-backend = "setuptools.build_meta"
@@ -138,6 +140,8 @@ testpaths = "tests"
 xfail_strict = true
 markers = [
     "with_sudo: Test requires sudo",
+    "slow: slow tests",
+    "smoketest: basic tests",
 ]
 
 [tool.coverage.run]
@@ -173,7 +177,7 @@ exclude = [
 warn_unused_configs = true
 warn_redundant_casts = true
 strict_equality = true
-strict_concatenate = true
+extra_checks = true
 disallow_subclassing_any = true
 # typing in craft-providers is incomplete (see #326)
 #warn_return_any = true
@@ -204,7 +208,7 @@ extend-exclude = [
     "__pycache__",
 ]
 # Follow ST063 - Maintaining and updating linting specifications for updating these.
-select = [  # Base linting rule selections.
+lint.select = [  # Base linting rule selections.
     # See the internal document for discussion:
     # https://docs.google.com/document/d/1i1n8pDmFmWi4wTDpk-JfnWCVUThPJiggyPi2DYwBBu4/edit
     # All sections here are stable in ruff and shouldn't randomly introduce
@@ -240,11 +244,11 @@ select = [  # Base linting rule selections.
     "PL",  # Pylint
     "TRY",  # Cleaner try/except,
 ]
-extend-select = [
+lint.extend-select = [
     # Pyupgrade: https://github.com/charliermarsh/ruff#pyupgrade-up
     "UP00", "UP01", "UP02", "UP030", "UP032", "UP033",
     # "UP034",  # Very new, not yet enabled in ruff 0.0.227
-    # Annotations: https://github.com/charliermarsh/ruff#flake8-annotations-ann
+    # Annotations: https://github.com/charliermarsh/ruff#lint.flake8-annotations-ann
     "ANN0",  # Type annotations for arguments other than `self` and `cls`
     "ANN2",  # Return type annotations
     "B026",  # Keyword arguments must come after starred arguments
@@ -265,7 +269,7 @@ extend-select = [
     "RUF008",  # Do not use mutable default values for dataclass attributes
     "RUF100",  # #noqa directive that doesn't flag anything
 ]
-ignore = [
+lint.ignore = [
     "ANN10",  # Type annotations for `self` and `cls`
     #"E203",  # Whitespace before ":"  -- Commented because ruff doesn't currently check E203
     "E501",  # Line too long (reason: black will automatically fix this for us)
@@ -315,7 +319,7 @@ ignore = [
     "TRY002", # Create your own exception
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/**.py" = [  # Some things we want for the moin project are unnecessary in tests.
     "D",  # Ignore docstring rules in tests
     "ANN", # Ignore type annotations in tests

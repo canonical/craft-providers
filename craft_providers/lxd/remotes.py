@@ -35,11 +35,9 @@ logger = logging.getLogger(__name__)
 BUILDD_RELEASES_REMOTE_NAME = "craft-com.ubuntu.cloud-buildd"
 BUILDD_RELEASES_REMOTE_ADDRESS = "https://cloud-images.ubuntu.com/buildd/releases"
 
-# XXX: lunar buildd daily images are not working (LP #2007419)
 BUILDD_DAILY_REMOTE_NAME = "craft-com.ubuntu.cloud-buildd-daily"
 BUILDD_DAILY_REMOTE_ADDRESS = "https://cloud-images.ubuntu.com/buildd/daily"
 
-# temporarily use the cloud release images until daily buildd images are fixed
 DAILY_REMOTE_NAME = "ubuntu-daily"
 DAILY_REMOTE_ADDRESS = "https://cloud-images.ubuntu.com/daily"
 
@@ -123,7 +121,6 @@ class RemoteImage:
                 logger.debug("Remote %r was successfully added.", self.remote_name)
 
 
-# XXX: support xenial?
 # mapping from supported bases to actual lxd remote images
 _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
     ubuntu.BuilddBaseAlias.BIONIC: RemoteImage(
@@ -144,12 +141,14 @@ _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
         remote_address=BUILDD_RELEASES_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
-    ubuntu.BuilddBaseAlias.LUNAR: RemoteImage(
-        image_name="lunar",
-        remote_name=DAILY_REMOTE_NAME,
-        remote_address=DAILY_REMOTE_ADDRESS,
+    ubuntu.BuilddBaseAlias.NOBLE: RemoteImage(
+        image_name="core24",
+        remote_name=BUILDD_DAILY_REMOTE_NAME,
+        remote_address=BUILDD_DAILY_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
+    # mantic buildd daily blocked by
+    # https://bugs.launchpad.net/cloud-images/+bug/2007419
     ubuntu.BuilddBaseAlias.MANTIC: RemoteImage(
         image_name="mantic",
         remote_name=DAILY_REMOTE_NAME,
@@ -158,8 +157,8 @@ _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
     ),
     ubuntu.BuilddBaseAlias.DEVEL: RemoteImage(
         image_name="devel",
-        remote_name=DAILY_REMOTE_NAME,
-        remote_address=DAILY_REMOTE_ADDRESS,
+        remote_name=BUILDD_DAILY_REMOTE_NAME,
+        remote_address=BUILDD_DAILY_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
     centos.CentOSBaseAlias.SEVEN: RemoteImage(

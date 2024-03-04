@@ -26,6 +26,11 @@ from craft_providers.lxd.lxc import StdinType
 from freezegun import freeze_time
 
 
+@pytest.fixture()
+def mock_getpid(mocker):
+    return mocker.patch("os.getpid", return_value=123)
+
+
 def test_lxc_run_default(mocker, tmp_path):
     """Test _lxc_run with default arguments."""
     mock_run = mocker.patch("subprocess.run")
@@ -911,6 +916,7 @@ def test_info_parse_error(fake_process):
     )
 
 
+@pytest.mark.usefixtures("mock_getpid")
 def test_launch(fake_process):
     fake_process.register_subprocess(
         [
@@ -924,6 +930,8 @@ def test_launch(fake_process):
             "user.craft_providers.status=STARTING",
             "--config",
             "user.craft_providers.timer=2023-01-01T00:00:00+00:00",
+            "--config",
+            "user.craft_providers.pid=123",
         ]
     )
 
@@ -952,6 +960,7 @@ def test_launch(fake_process):
     assert len(fake_process.calls) == 1
 
 
+@pytest.mark.usefixtures("mock_getpid")
 def test_launch_failed_retry_check(fake_process, mocker):
     """Test that we use check_instance_status if launch fails."""
     mock_launch = mocker.patch("craft_providers.lxd.lxc.LXC._run_lxc")
@@ -980,6 +989,8 @@ def test_launch_failed_retry_check(fake_process, mocker):
                 "user.craft_providers.status=STARTING",
                 "--config",
                 "user.craft_providers.timer=2023-01-01T00:00:00+00:00",
+                "--config",
+                "user.craft_providers.pid=123",
             ],
             capture_output=True,
             stdin=StdinType.INTERACTIVE,
@@ -994,6 +1005,7 @@ def test_launch_failed_retry_check(fake_process, mocker):
     ]
 
 
+@pytest.mark.usefixtures("mock_getpid")
 def test_launch_failed_retry_failed(fake_process, mocker):
     """Test that we retry launching an instance if it fails, but failed more than 3 times."""
     mock_launch = mocker.patch("craft_providers.lxd.lxc.LXC._run_lxc")
@@ -1022,6 +1034,8 @@ def test_launch_failed_retry_failed(fake_process, mocker):
                 "user.craft_providers.status=STARTING",
                 "--config",
                 "user.craft_providers.timer=2023-01-01T00:00:00+00:00",
+                "--config",
+                "user.craft_providers.pid=123",
             ],
             capture_output=True,
             stdin=StdinType.INTERACTIVE,
@@ -1041,6 +1055,8 @@ def test_launch_failed_retry_failed(fake_process, mocker):
                 "user.craft_providers.status=STARTING",
                 "--config",
                 "user.craft_providers.timer=2023-01-01T00:00:00+00:00",
+                "--config",
+                "user.craft_providers.pid=123",
             ],
             capture_output=True,
             stdin=StdinType.INTERACTIVE,
@@ -1060,6 +1076,8 @@ def test_launch_failed_retry_failed(fake_process, mocker):
                 "user.craft_providers.status=STARTING",
                 "--config",
                 "user.craft_providers.timer=2023-01-01T00:00:00+00:00",
+                "--config",
+                "user.craft_providers.pid=123",
             ],
             capture_output=True,
             stdin=StdinType.INTERACTIVE,
@@ -1068,6 +1086,7 @@ def test_launch_failed_retry_failed(fake_process, mocker):
     ]
 
 
+@pytest.mark.usefixtures("mock_getpid")
 def test_launch_all_opts(fake_process):
     fake_process.register_subprocess(
         [
@@ -1086,6 +1105,8 @@ def test_launch_all_opts(fake_process):
             "user.craft_providers.status=STARTING",
             "--config",
             "user.craft_providers.timer=2023-01-01T00:00:00+00:00",
+            "--config",
+            "user.craft_providers.pid=123",
         ]
     )
 
@@ -1116,6 +1137,7 @@ def test_launch_all_opts(fake_process):
     assert len(fake_process.calls) == 1
 
 
+@pytest.mark.usefixtures("mock_getpid")
 def test_launch_error(fake_process, mocker):
     fake_process.register_subprocess(
         [
@@ -1129,6 +1151,8 @@ def test_launch_error(fake_process, mocker):
             "user.craft_providers.status=STARTING",
             "--config",
             "user.craft_providers.timer=2023-01-01T00:00:00+00:00",
+            "--config",
+            "user.craft_providers.pid=123",
         ],
         returncode=1,
         occurrences=4,
@@ -1147,9 +1171,9 @@ def test_launch_error(fake_process, mocker):
         occurrences=4,
     )
 
-    mocker.patch(
-        "craft_providers.lxd.lxc.LXC.check_instance_status"
-    ).side_effect = LXDError("Failed to get instance status.")
+    mocker.patch("craft_providers.lxd.lxc.LXC.check_instance_status").side_effect = (
+        LXDError("Failed to get instance status.")
+    )
 
     mocker.patch("time.sleep")
 
@@ -1165,7 +1189,7 @@ def test_launch_error(fake_process, mocker):
 
     assert exc_info.value == LXDError(
         brief="Failed to launch instance 'test-instance'.",
-        details="* Command that failed: 'lxc --project test-project launch test-image-remote:test-image test-remote:test-instance --config user.craft_providers.status=STARTING --config user.craft_providers.timer=2023-01-01T00:00:00+00:00'\n* Command exit code: 1",
+        details="* Command that failed: 'lxc --project test-project launch test-image-remote:test-image test-remote:test-instance --config user.craft_providers.status=STARTING --config user.craft_providers.timer=2023-01-01T00:00:00+00:00 --config user.craft_providers.pid=123'\n* Command exit code: 1",
         resolution=None,
     )
 
@@ -1493,7 +1517,7 @@ def test_check_instance_status_error_timeout(fake_process, mocker):
         )
 
     assert exc_info.value == LXDError(
-        brief="Instance setup failed. Check LXD logs for more details.",
+        brief="Timed out waiting for instance to be ready."
     )
 
 

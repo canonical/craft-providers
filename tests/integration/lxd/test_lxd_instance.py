@@ -264,3 +264,9 @@ def test_start_stop(reusable_instance):
     reusable_instance.start()
 
     assert reusable_instance.is_running() is True
+
+
+def test_info(reusable_instance):
+    info = reusable_instance.info()
+
+    assert info.get("Name") == reusable_instance.instance_name
