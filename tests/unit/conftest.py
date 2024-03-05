@@ -24,6 +24,8 @@ import pytest
 import responses as responses_module
 from craft_providers.executor import Executor
 from craft_providers.util import env_cmd
+from pydantic import ValidationError
+from pydantic_core import InitErrorDetails
 
 # command used by the FakeExecutor
 DEFAULT_FAKE_CMD = ["fake-executor"]
@@ -185,4 +187,12 @@ def stub_verify_network(fake_process):
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
         returncode=0,
+    )
+
+
+@pytest.fixture()
+def fake_validation_error():
+    """Returns a stubbed ValidationError for pydantic."""
+    return ValidationError.from_exception_data(
+        "Field required", [InitErrorDetails(type="missing", loc=(10,), input={})]
     )
