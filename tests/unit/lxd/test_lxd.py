@@ -80,6 +80,7 @@ def test_init_error(fake_process):
         ("4.0", True),
         ("4.1.4", True),
         ("4.10", True),
+        ("5.21.0 LTS", True),
     ],
 )
 def test_is_supported_version(fake_process, version, compatible):
