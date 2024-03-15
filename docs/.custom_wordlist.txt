@@ -32,6 +32,7 @@ LXD
 LXDInstance
 LXDInstance's
 LXDProvider
+LTS
 macOS
 Mantic
 multipass
