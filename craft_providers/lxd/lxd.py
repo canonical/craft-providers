@@ -92,9 +92,10 @@ class LXD:
         """Query LXD version.
 
         The version is of the format:
-        <major>.<minor>[.<micro>]
+        <major>.<minor>[.<micro>] [LTS]
 
         Version examples:
+        - 5.21.0 LTS
         - 4.13
         - 4.0.5
         - 2.0.12
@@ -111,7 +112,14 @@ class LXD:
                 details=details_from_called_process_error(error),
             ) from error
 
-        return proc.stdout.strip()
+        version_string = proc.stdout.strip()
+        if version_string:
+            return version_string.split()[0]
+
+        raise LXDError(
+            "Failed to parse LXD version.",
+            details=f"Version data returned: {version_string!r}",
+        )
 
     def wait_ready(
         self,
