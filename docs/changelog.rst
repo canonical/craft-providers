@@ -5,6 +5,10 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+1.23.1 (2024-03-15)
+-------------------
+- Parse LXD versions with "LTS" suffix
+
 1.23.0 (2024-02-28)
 -------------------
 - Update base compatibility tag to ``base-v7``
