@@ -25,6 +25,10 @@ included in each version.
 - Add Ubuntu 24.04 (Noble) support
 - Remove Ubuntu 23.04 (Lunar) support
 
+1.20.2 (2024-03-15)
+-------------------
+- Parse LXD versions with "LTS" suffix
+
 1.20.1 (2023-11-30)
 -------------------
 - Update base compatibility tag to ``base-v4``
