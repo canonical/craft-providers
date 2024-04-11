@@ -5,6 +5,11 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+1.20.3 (2024-04-11)
+
+- Do not mount cache directories in LXD base instances.
+- Update base compatibility tag from ``base-v4`` to ``base-v8``
+
 1.20.2 (2024-03-15)
 -------------------
 - Parse LXD versions with "LTS" suffix
