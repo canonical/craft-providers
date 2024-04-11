@@ -2,6 +2,10 @@
 Changelog
 *********
 
+1.12.1 (2024-04-11)
+-------------------
+- Parse LXD versions with "LTS" suffix
+
 1.12.0 (2023-05-18)
 -------------------
 - Add AlmaLinux 9 base
