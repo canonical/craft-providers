@@ -97,7 +97,7 @@ class Base(ABC):
     _timeout_unpredictable: Optional[float] = TIMEOUT_UNPREDICTABLE
     _cache_path: Optional[pathlib.Path] = None
     alias: Enum
-    compatibility_tag: str = "base-v4"
+    compatibility_tag: str = "base-v8"
 
     @abstractmethod
     def __init__(
