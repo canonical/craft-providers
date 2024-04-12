@@ -25,11 +25,6 @@ included in each version.
 - Add Ubuntu 24.04 (Noble) support
 - Remove Ubuntu 23.04 (Lunar) support
 
-1.20.3 (2024-04-11)
--------------------
-- Do not mount cache directories in LXD base instances.
-- Update base compatibility tag from ``base-v4`` to ``base-v8``
-
 1.20.2 (2024-03-15)
 -------------------
 - Parse LXD versions with "LTS" suffix
