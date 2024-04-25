@@ -37,6 +37,9 @@ extensions = [
 ]
 # end-region
 
+# Ignore the venv created by the linting Makefile
+exclude_patterns = ["venv"]
+
 extensions.extend(
     [
         "sphinx.ext.autodoc",
