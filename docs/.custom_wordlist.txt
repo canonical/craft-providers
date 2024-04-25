@@ -22,6 +22,7 @@ http
 https
 implementers
 init
+io
 linter
 linux
 linuxcontainers
@@ -42,6 +43,7 @@ MultipassInstance's
 MultipassProvider
 operability
 PurePath
+popen
 pydantic
 pylint
 pylintrc
@@ -62,6 +64,7 @@ subtree
 suppressions
 toml
 ubuntu
+unmount
 UI
 uid
 urllib

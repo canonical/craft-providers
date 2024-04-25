@@ -70,11 +70,10 @@ instance/
 
 # Sphinx documentation
 docs/_build/
-docs/.sphinx/venv/
-docs/.sphinx/warnings.txt
-docs/.sphinx/.wordlist.dic
-docs/.sphinx/.doctrees/
-docs/sphinx-docs-starter-pack/*
+docs/venv/
+docs/warnings.txt
+docs/.wordlist.dic
+docs/.doctrees/
 
 # PyBuilder
 target/
