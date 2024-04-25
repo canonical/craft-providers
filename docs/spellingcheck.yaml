@@ -9,7 +9,8 @@ matrix:
     - .custom_wordlist.txt
     output: .wordlist.dic
   sources:
-  - _build/**/*.html
+  # Ignore spelling in docs generated from code (too noisy)
+  - _build/**/*.html|!_build/reference/executors/index.html|!_build/reference/bases/index.html
   pipeline:
   - pyspelling.filters.html:
       comments: false
