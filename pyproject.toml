@@ -31,11 +31,11 @@ craft-providers = "craft_providers.cli:main"
 
 [project.optional-dependencies]
 dev = [
-    "coverage[toml]==7.4.4",
-    "freezegun==1.4.0",
+    "coverage[toml]==7.5.0",
+    "freezegun==1.5.0",
     "logassert==7",
     "pyfakefs==5.4.1",
-    "pytest==8.1.1",
+    "pytest==8.1.2",
     "pytest-cov==5.0.0",
     "pytest-mock==3.14.0",
     "pytest-rerunfailures==14.0",
@@ -45,18 +45,18 @@ dev = [
     "responses==0.25.0",
     # types-requests>=2.31.0.7 requires urllib3>=2
     "types-requests==2.31.0.6",
-    "types-setuptools==69.5.0.20240415",
+    "types-setuptools==69.5.0.20240423",
     "types-pyyaml==6.0.12.20240311",
 ]
 lint = [
-    "black==24.4.0",
+    "black==24.4.2",
     "codespell[toml]==2.2.6",
     "ruff==0.4.2",
     "yamllint==1.35.1",
 ]
 types = [
-    "mypy[reports]==1.9.0",
-    "pyright==1.1.359",
+    "mypy[reports]==1.10.0",
+    "pyright==1.1.360",
 ]
 docs = [
     "pyspelling==2.10",
