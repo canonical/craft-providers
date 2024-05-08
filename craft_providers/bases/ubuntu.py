@@ -45,6 +45,7 @@ class BuilddBaseAlias(enum.Enum):
     JAMMY = "22.04"
     MANTIC = "23.10"
     NOBLE = "24.04"
+    ORACULAR = "24.10"
     DEVEL = "devel"
 
 
