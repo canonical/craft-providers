@@ -61,6 +61,7 @@ BASE_NAME_TO_BASE_ALIAS: Dict[BaseName, BaseAlias] = {
     BaseName("ubuntu", "22.04"): ubuntu.BuilddBaseAlias.JAMMY,
     BaseName("ubuntu", "23.10"): ubuntu.BuilddBaseAlias.MANTIC,
     BaseName("ubuntu", "24.04"): ubuntu.BuilddBaseAlias.NOBLE,
+    BaseName("ubuntu", "24.10"): ubuntu.BuilddBaseAlias.ORACULAR,
     BaseName("ubuntu", "devel"): ubuntu.BuilddBaseAlias.DEVEL,
     BaseName("centos", "7"): centos.CentOSBaseAlias.SEVEN,
     BaseName("almalinux", "9"): almalinux.AlmaLinuxBaseAlias.NINE,

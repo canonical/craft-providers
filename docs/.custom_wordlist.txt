@@ -22,6 +22,7 @@ http
 https
 implementers
 init
+io
 linter
 linux
 linuxcontainers
@@ -32,6 +33,7 @@ LXD
 LXDInstance
 LXDInstance's
 LXDProvider
+LTS
 macOS
 Mantic
 multipass
@@ -41,6 +43,7 @@ MultipassInstance's
 MultipassProvider
 operability
 PurePath
+popen
 pydantic
 pylint
 pylintrc
@@ -61,6 +64,7 @@ subtree
 suppressions
 toml
 ubuntu
+unmount
 UI
 uid
 urllib

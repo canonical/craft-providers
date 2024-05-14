@@ -3,9 +3,9 @@
 
 # You can set these variables from the command line, and also
 # from the environment for the first two.
-SPHINXOPTS    ?= -c . -d .sphinx/.doctrees
+SPHINXOPTS    ?= -c . -d .doctrees
 SPHINXBUILD   ?= sphinx-build
-SPHINXDIR     = .sphinx
+SPHINXDIR     = .
 SOURCEDIR     = .
 BUILDDIR      = _build
 VENVDIR       = $(SPHINXDIR)/venv
@@ -67,14 +67,14 @@ run: install
 # Doesn't depend on $(BUILDDIR) to rebuild properly at every run.
 html: install
 	. $(VENV); $(SPHINXBUILD) -b dirhtml "$(SOURCEDIR)" "$(BUILDDIR)" \
-        -w .sphinx/warnings.txt $(SPHINXOPTS)
+        -w warnings.txt $(SPHINXOPTS)
 
 .PHONY: html
 
 
 epub: install
 	. $(VENV); $(SPHINXBUILD) -b epub "$(SOURCEDIR)" "$(BUILDDIR)" \
-        -w .sphinx/warnings.txt $(SPHINXOPTS)
+        -w warnings.txt $(SPHINXOPTS)
 
 .PHONY: epub
 
@@ -89,7 +89,7 @@ clean: clean-doc
 	@test ! -e "$(VENVDIR)" -o \
         -d "$(VENVDIR)" -a "$(abspath $(VENVDIR))" != "$(VENVDIR)"
 	rm -rf $(VENVDIR)
-	rm -rf .sphinx/.doctrees
+	rm -rf .doctrees
 
 .PHONY: clean
 
@@ -101,7 +101,7 @@ clean-doc:
 
 
 spelling: html
-	. $(VENV) ; python3 -m pyspelling -c sphinx-docs-starter-pack/.sphinx/spellingcheck.yaml
+	. $(VENV) ; python3 -m pyspelling -c spellingcheck.yaml
 
 .PHONY: spelling
 
