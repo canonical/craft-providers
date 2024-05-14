@@ -67,7 +67,7 @@ class Snap(pydantic.BaseModel, extra=pydantic.Extra.forbid):
     channel: Optional[str] = "stable"
     classic: bool = False
 
-    @pydantic.validator("channel")
+    @pydantic.field_validator("channel")
     def validate_channel(cls, channel):
         """Validate that channel is not an empty string.
 
