@@ -394,23 +394,25 @@ def _launch_existing_instance(
 
     if instance.is_running():
         logger.debug("Instance exists and is running.")
+        logger.debug("Cancelling any pending shutdown.")
+        instance.execute_run(["shutdown", "-c"], capture_output=True)
     else:
         logger.debug("Instance exists and is not running. Starting instance.")
         instance.start()
 
-    try:
-        base_configuration.warmup(executor=instance)
-    except bases.BaseCompatibilityError as error:
-        # delete the instance so a new instance can be created
-        if auto_clean:
-            logger.debug(
-                "Cleaning incompatible instance %r (reason: %s).",
-                instance.instance_name,
-                error.reason,
-            )
-            instance.delete()
-            return False
-        raise
+        try:
+            base_configuration.warmup(executor=instance)
+        except bases.BaseCompatibilityError as error:
+            # delete the instance so a new instance can be created
+            if auto_clean:
+                logger.debug(
+                    "Cleaning incompatible instance %r (reason: %s).",
+                    instance.instance_name,
+                    error.reason,
+                )
+                instance.delete()
+                return False
+            raise
 
     return True
 
