@@ -5,6 +5,8 @@ dependencies = [
     "packaging>=14.1",
     "pydantic<2.0",
     "pyyaml",
+    # see https://github.com/psf/requests/issues/6707
+    "requests<2.32",
     "requests_unixsocket",
     # Needed until requests-unixsocket supports urllib3 v2
     # https://github.com/msabramo/requests-unixsocket/pull/69
