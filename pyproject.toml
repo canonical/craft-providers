@@ -47,7 +47,7 @@ dev = [
     "responses==0.25.0",
     # types-requests>=2.31.0.7 requires urllib3>=2
     "types-requests==2.31.0.6",
-    "types-setuptools==69.5.0.20240423",
+    "types-setuptools==70.0.0.20240524",
     "types-pyyaml==6.0.12.20240311",
 ]
 lint = [
