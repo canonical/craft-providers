@@ -23,7 +23,7 @@ import subprocess
 import sys
 
 import requests
-import requests_unixsocket
+import requests_unixsocket  # type: ignore
 
 from craft_providers.errors import details_from_called_process_error
 
