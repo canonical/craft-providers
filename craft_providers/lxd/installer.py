@@ -110,9 +110,7 @@ def is_installed() -> bool:
     # query snapd API
     url = "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/lxd"
     try:
-        snap_info = requests_unixsocket.get(
-            url=url, params={"select": "enabled"}
-        )
+        snap_info = requests_unixsocket.get(url=url, params={"select": "enabled"})
     except requests.exceptions.ConnectionError as error:
         raise errors.ProviderError(
             brief="Unable to connect to snapd service."
@@ -129,9 +127,7 @@ def is_installed() -> bool:
     try:
         status = snap_info.json()["result"]["status"]
     except KeyError:
-        raise errors.ProviderError(
-            brief="Unexpected response from snapd service."
-        )
+        raise errors.ProviderError(brief="Unexpected response from snapd service.")
 
     logger.debug(f"LXD snap status: {status}")
     # snap status can be "installed" or "active" - "installed" revisions
