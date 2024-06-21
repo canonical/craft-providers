@@ -333,7 +333,6 @@ def test_is_installed(mocker, status, exception, installed):
     )
 
 
-
 @pytest.mark.skipif(sys.platform != "linux", reason=f"unsupported on {sys.platform}")
 def test_is_user_permitted(mock_os_access):
     mock_os_access.return_value = True
