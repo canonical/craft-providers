@@ -56,7 +56,7 @@ def install(sudo: bool = True) -> str:
 
     cmd += ["snap", "install", "lxd"]
 
-    logger.debug("installing lxd")
+    logger.debug("installing LXD")
     try:
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as error:
@@ -68,7 +68,7 @@ def install(sudo: bool = True) -> str:
     lxd = LXD()
     lxd.wait_ready(sudo=sudo)
 
-    logger.debug("initializing lxd")
+    logger.debug("initializing LXD")
     lxd.init(auto=True, sudo=sudo)
 
     if not is_user_permitted():
