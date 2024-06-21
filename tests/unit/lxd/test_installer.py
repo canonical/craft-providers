@@ -303,6 +303,8 @@ def test_is_initialized_no_disk_device(devices):
     assert not initialized
 
 
+@pytest.mark.parametrize(("has_lxd_executable"), [(True), (False)])
+@pytest.mark.parametrize(("has_nonsnap_socket"), [(True), (False)])
 @pytest.mark.parametrize(
     ("status", "exception", "installed"),
     [
@@ -312,7 +314,9 @@ def test_is_initialized_no_disk_device(devices):
         (None, ProviderError, False),
     ],
 )
-def test_is_installed(mocker, status, exception, installed):
+def test_is_installed(
+    mocker, has_nonsnap_socket, has_lxd_executable, status, exception, installed
+):
     class FakeSnapInfo:
         def raise_for_status(self) -> None:
             pass
@@ -321,12 +325,18 @@ def test_is_installed(mocker, status, exception, installed):
             return status
 
     mock_get = mocker.patch("requests_unixsocket.get", return_value=FakeSnapInfo())
+    mocker.patch("pathlib.Path.is_socket", return_value=has_nonsnap_socket)
+    mocker.patch("shutil.which", new=lambda x: "lxd" if has_lxd_executable else None)
+
+    if has_nonsnap_socket and has_lxd_executable:
+        assert is_installed()
+        return
 
     if exception:
         with pytest.raises(exception):
             is_installed()
     else:
-        assert is_installed() == installed
+        assert is_installed() == (installed and has_lxd_executable)
 
     assert mock_get.mock_calls[0] == call(
         url="http+unix://%2Frun%2Fsnapd.socket/v2/snaps/lxd",

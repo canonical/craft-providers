@@ -19,6 +19,8 @@
 
 import logging
 import os
+import pathlib
+import shutil
 import subprocess
 import sys
 
@@ -107,6 +109,13 @@ def is_installed() -> bool:
     """
     logger.debug("Checking if LXD is installed.")
 
+    # check if non-snap lxd socket exists (for Arch or NixOS)
+    if (
+        pathlib.Path("/var/lib/lxd/unix.socket").is_socket()
+        and shutil.which("lxd") is not None
+    ):
+        return True
+
     # query snapd API
     url = "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/lxd"
     try:
@@ -132,7 +141,7 @@ def is_installed() -> bool:
     logger.debug(f"LXD snap status: {status}")
     # snap status can be "installed" or "active" - "installed" revisions
     # are filtered from this API call with `select: enabled`
-    return bool(status == "active")
+    return bool(status == "active") and shutil.which("lxd") is not None
 
 
 def is_user_permitted() -> bool:
