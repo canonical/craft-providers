@@ -16,11 +16,12 @@
 #
 
 import os
-import shutil
 import sys
 from unittest import mock
+from unittest.mock import call
 
 import pytest
+from craft_providers.errors import ProviderError
 from craft_providers.lxd import (
     LXC,
     LXD,
@@ -302,12 +303,35 @@ def test_is_initialized_no_disk_device(devices):
 
 
 @pytest.mark.parametrize(
-    ("which", "installed"), [("/path/to/lxd", True), (None, False)]
+    ("status", "exception", "installed"),
+    [
+        ({"result": {"status": "active"}}, None, True),
+        ({"result": {"status": "foo"}}, None, False),
+        ({}, ProviderError, False),
+        (None, ProviderError, False),
+    ],
 )
-def test_is_installed(which, installed, monkeypatch):
-    monkeypatch.setattr(shutil, "which", lambda x: which)
+def test_is_installed(mocker, status, exception, installed):
+    class FakeSnapInfo:
+        def raise_for_status(self) -> None:
+            pass
 
-    assert is_installed() == installed
+        def json(self) -> dict[str, any]:
+            return status
+
+    mock_get = mocker.patch("requests_unixsocket.get", return_value=FakeSnapInfo())
+
+    if exception:
+        with pytest.raises(exception):
+            is_installed()
+    else:
+        assert is_installed() == installed
+
+    assert mock_get.mock_calls[0] == call(
+        url="http+unix://%2Frun%2Fsnapd.socket/v2/snaps/lxd",
+        params={"select": "enabled"},
+    )
+
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason=f"unsupported on {sys.platform}")

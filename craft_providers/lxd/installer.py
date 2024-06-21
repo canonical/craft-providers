@@ -126,7 +126,7 @@ def is_installed() -> bool:
     # for completeness
     try:
         status = snap_info.json()["result"]["status"]
-    except KeyError:
+    except (TypeError, KeyError):
         raise errors.ProviderError(brief="Unexpected response from snapd service.")
 
     logger.debug(f"LXD snap status: {status}")
