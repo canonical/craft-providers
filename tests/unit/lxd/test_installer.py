@@ -326,7 +326,7 @@ def test_is_installed(
 
     mock_get = mocker.patch("requests_unixsocket.get", return_value=FakeSnapInfo())
     mocker.patch("pathlib.Path.is_socket", return_value=has_nonsnap_socket)
-    mocker.patch("shutil.which", new=lambda x: "lxd" if has_lxd_executable else None)
+    mocker.patch("shutil.which", return_value="lxd" if has_lxd_executable else None)
 
     if has_nonsnap_socket and has_lxd_executable:
         assert is_installed()
