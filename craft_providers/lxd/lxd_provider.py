@@ -132,7 +132,7 @@ class LXDProvider(Provider):
                 project=self.lxd_project, profile="default", remote=self.lxd_remote
             ).get("devices")
             if not devices:
-                # Project "rockcraft" exists but the default profile is ill-formed,
+                # Project exists but the default profile is ill-formed, tell the user to
                 # delete the project and start over.
                 raise LXDError(
                     brief="LXD project has an ill-formed default profile.",
@@ -141,8 +141,8 @@ class LXDProvider(Provider):
                         "has an empty devices section."
                     ),
                     resolution=(
-                        "Delete the 'rockcraft' LXD project, it will be recreated in the "
-                        "next execution.\n" + LXD_INSTALL_HELP
+                        f"Delete the '{self.lxd_project}' LXD project, it will be "
+                        "recreated in the next execution.\n" + LXD_INSTALL_HELP
                     ),
                 )
 
