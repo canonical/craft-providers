@@ -79,7 +79,7 @@ def install(sudo: bool = True) -> str:
     return lxd.version()
 
 
-def is_initialized(*, remote: str, project: str, lxc: LXC) -> bool:
+def is_initialized(*, remote: str, lxc: LXC) -> bool:
     """Verify that LXD has been initialized and configuration looks valid.
 
     If LXD has been installed but the user has not initialized it (lxd init),
@@ -153,11 +153,7 @@ def is_user_permitted() -> bool:
 
 
 def ensure_lxd_is_ready(
-    *,
-    remote: str = "local",
-    project: str = "default",
-    lxc: LXC = LXC(),
-    lxd: LXD = LXD(),
+    *, remote: str = "local", lxc: LXC = LXC(), lxd: LXD = LXD()
 ) -> None:
     """Ensure LXD is ready for use.
 
@@ -189,7 +185,7 @@ def ensure_lxd_is_ready(
             ),
         )
 
-    if not is_initialized(lxc=lxc, project=project, remote=remote):
+    if not is_initialized(lxc=lxc, remote=remote):
         raise errors.LXDError(
             brief="LXD has not been properly initialized.",
             details=(
