@@ -26,7 +26,7 @@ from craft_providers import Executor, Provider
 from craft_providers.base import Base
 from craft_providers.errors import BaseConfigurationError
 
-from .errors import LXDError, LXDUnstableImageError
+from .errors import LXD_INSTALL_HELP, LXDError, LXDUnstableImageError
 from .installer import ensure_lxd_is_ready, install, is_installed
 from .launcher import launch
 from .lxc import LXC
@@ -126,6 +126,26 @@ class LXDProvider(Provider):
 
         :raises LXDError: if instance cannot be configured and launched.
         """
+        projects = self.lxc.project_list(remote=self.lxd_remote)
+        if self.lxd_project in projects:
+            devices = self.lxc.profile_show(
+                project=self.lxd_project, profile="default", remote=self.lxd_remote
+            ).get("devices")
+            if not devices:
+                # Project exists but the default profile is ill-formed, tell the user to
+                # delete the project and start over.
+                raise LXDError(
+                    brief="LXD project has an ill-formed default profile.",
+                    details=(
+                        f"The default profile in the LXD project '{self.lxd_project}' "
+                        "has an empty devices section."
+                    ),
+                    resolution=(
+                        f"Delete the '{self.lxd_project}' LXD project, it will be "
+                        "recreated in the next execution.\n" + LXD_INSTALL_HELP
+                    ),
+                )
+
         if build_base:
             logger.warning(
                 "Deprecated: Parameter 'build_base' is deprecated and should "
