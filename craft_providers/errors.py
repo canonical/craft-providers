@@ -125,8 +125,9 @@ class NetworkError(ProviderError):
         brief = "A network related operation failed in a context of no network access."
         # XXX Facundo 2022-12-13: need to improve the URL here once
         # we have the online docs updated
+        url = "https://canonical-craft-providers.readthedocs-hosted.com/en/latest/explanation/"
         resolution = (
             "Verify that the environment has internet connectivity; "
-            "see https://craft-providers.readthedocs.io/ for further reference."
+            f"see {url} for further reference."
         )
         super().__init__(brief=brief, resolution=resolution)

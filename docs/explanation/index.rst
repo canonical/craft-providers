@@ -6,6 +6,8 @@ Explanation
 .. toctree::
    :maxdepth: 1
 
+.. _network-error:
+
 Failure to properly execute commands that depend on network access
 ==================================================================
 
