@@ -19,9 +19,13 @@
 
 import logging
 import os
+import pathlib
 import shutil
 import subprocess
 import sys
+
+import requests
+import requests_unixsocket  # type: ignore
 
 from craft_providers.errors import details_from_called_process_error
 
@@ -52,6 +56,7 @@ def install(sudo: bool = True) -> str:
 
     cmd += ["snap", "install", "lxd"]
 
+    logger.debug("installing LXD")
     try:
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as error:
@@ -62,6 +67,8 @@ def install(sudo: bool = True) -> str:
 
     lxd = LXD()
     lxd.wait_ready(sudo=sudo)
+
+    logger.debug("initialising LXD")
     lxd.init(auto=True, sudo=sudo)
 
     if not is_user_permitted():
@@ -96,11 +103,45 @@ def is_initialized(*, remote: str, lxc: LXC) -> bool:
 
 
 def is_installed() -> bool:
-    """Check if LXD is installed (and found on PATH).
+    """Check if LXD is installed.
 
     :returns: True if lxd is installed.
     """
-    return shutil.which("lxd") is not None
+    logger.debug("Checking if LXD is installed.")
+
+    # check if non-snap lxd socket exists (for Arch or NixOS)
+    if (
+        pathlib.Path("/var/lib/lxd/unix.socket").is_socket()
+        and shutil.which("lxd") is not None
+    ):
+        return True
+
+    # query snapd API
+    url = "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/lxd"
+    try:
+        snap_info = requests_unixsocket.get(url=url, params={"select": "enabled"})
+    except requests.exceptions.ConnectionError as error:
+        raise errors.ProviderError(
+            brief="Unable to connect to snapd service."
+        ) from error
+
+    try:
+        snap_info.raise_for_status()
+    except requests.exceptions.HTTPError as error:
+        logger.debug(f"Could not get snap info for LXD: {error}")
+        return False
+
+    # the LXD snap should be installed and active but check the status
+    # for completeness
+    try:
+        status = snap_info.json()["result"]["status"]
+    except (TypeError, KeyError):
+        raise errors.ProviderError(brief="Unexpected response from snapd service.")
+
+    logger.debug(f"LXD snap status: {status}")
+    # snap status can be "installed" or "active" - "installed" revisions
+    # are filtered from this API call with `select: enabled`
+    return bool(status == "active") and shutil.which("lxd") is not None
 
 
 def is_user_permitted() -> bool:

@@ -16,11 +16,13 @@
 #
 
 import os
-import shutil
 import sys
+from typing import Any, Dict
 from unittest import mock
+from unittest.mock import call
 
 import pytest
+from craft_providers.errors import ProviderError
 from craft_providers.lxd import (
     LXC,
     LXD,
@@ -301,13 +303,45 @@ def test_is_initialized_no_disk_device(devices):
     assert not initialized
 
 
+@pytest.mark.parametrize(("has_lxd_executable"), [(True), (False)])
+@pytest.mark.parametrize(("has_nonsnap_socket"), [(True), (False)])
 @pytest.mark.parametrize(
-    ("which", "installed"), [("/path/to/lxd", True), (None, False)]
+    ("status", "exception", "installed"),
+    [
+        ({"result": {"status": "active"}}, None, True),
+        ({"result": {"status": "foo"}}, None, False),
+        ({}, ProviderError, False),
+        (None, ProviderError, False),
+    ],
 )
-def test_is_installed(which, installed, monkeypatch):
-    monkeypatch.setattr(shutil, "which", lambda x: which)
+def test_is_installed(
+    mocker, has_nonsnap_socket, has_lxd_executable, status, exception, installed
+):
+    class FakeSnapInfo:
+        def raise_for_status(self) -> None:
+            pass
 
-    assert is_installed() == installed
+        def json(self) -> Dict[str, Any]:
+            return status
+
+    mock_get = mocker.patch("requests_unixsocket.get", return_value=FakeSnapInfo())
+    mocker.patch("pathlib.Path.is_socket", return_value=has_nonsnap_socket)
+    mocker.patch("shutil.which", return_value="lxd" if has_lxd_executable else None)
+
+    if has_nonsnap_socket and has_lxd_executable:
+        assert is_installed()
+        return
+
+    if exception:
+        with pytest.raises(exception):
+            is_installed()
+    else:
+        assert is_installed() == (installed and has_lxd_executable)
+
+    assert mock_get.mock_calls[0] == call(
+        url="http+unix://%2Frun%2Fsnapd.socket/v2/snaps/lxd",
+        params={"select": "enabled"},
+    )
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason=f"unsupported on {sys.platform}")

@@ -5,6 +5,11 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+1.24.1 (2024-02-07)
+-------------------
+- Improve detection of installed LXD
+- Update the link to the network troubleshooting docs
+
 1.24.0 (2024-06-18)
 -------------------
 - Add support for Ubuntu 24.10 (Oracular)
