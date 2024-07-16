@@ -164,7 +164,9 @@ jobs:
       fail-fast: false
       matrix:
         python: ["3.11"]
-        os: [macos-13]
+        os:
+          - macos-13  # x86
+          - macos-14  # arm
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install Multipass
