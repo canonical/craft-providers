@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2023 Canonical Ltd.
+# Copyright 2021-2024 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -25,10 +25,30 @@ from contextlib import contextmanager
 from typing import Any, Dict, Optional
 
 import pytest
+from craft_providers.bases import ubuntu
 from craft_providers.lxd import LXC
 from craft_providers.lxd import project as lxc_project
 from craft_providers.lxd.lxd_instance import LXDInstance
 from craft_providers.lxd.lxd_provider import LXDProvider
+
+_xfail_bases = {
+    ubuntu.BuilddBaseAlias.XENIAL: "Fails to setup snapd (#582)",
+    ubuntu.BuilddBaseAlias.ORACULAR: "24.10 fails setup (#598)",
+    ubuntu.BuilddBaseAlias.DEVEL: "24.10 fails setup (#598)",
+}
+"""List of bases that are expected to fail and a reason why."""
+
+UBUNTU_BASES_PARAM = [
+    (
+        pytest.param(
+            base, marks=pytest.mark.xfail(reason=_xfail_bases[base], strict=True)
+        )
+        if base in _xfail_bases
+        else base
+    )
+    for base in ubuntu.BuilddBaseAlias
+]
+"""List of testable Ubuntu bases."""
 
 
 @pytest.fixture(autouse=True, scope="module")
