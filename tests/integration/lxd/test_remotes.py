@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2023 Canonical Ltd.
+# Copyright 2021-2024 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -21,6 +21,8 @@ import pytest
 from craft_providers import lxd
 from craft_providers.bases import ubuntu
 
+from .conftest import UBUNTU_BASES_PARAM
+
 # The LXD tests can be flaky, erroring out with a BaseCompatibilityError:
 # "Clean incompatible instance and retry the requested operation."
 # This is due to an upstream LXD bug that appears to still be present in LXD 5.14:
@@ -28,10 +30,7 @@ from craft_providers.bases import ubuntu
 pytestmark = pytest.mark.flaky(reruns=3, reruns_delay=2)
 
 
-# exclude XENIAL because it is not supported for LXD
-@pytest.mark.parametrize(
-    "alias", set(ubuntu.BuilddBaseAlias) - {ubuntu.BuilddBaseAlias.XENIAL}
-)
+@pytest.mark.parametrize("alias", UBUNTU_BASES_PARAM)
 def test_configure_and_launch_remote(instance_name, alias):
     """Verify remotes are configured and images can be launched."""
     base_configuration = ubuntu.BuilddBase(alias=alias)
