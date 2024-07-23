@@ -551,8 +551,13 @@ class LXDInstance(Executor):
 
         :raises LXDError: on unexpected error.
         """
-        self.lxc.stop(
-            instance_name=self.instance_name, project=self.project, remote=self.remote
+        # self.lxc.stop(
+        #     instance_name=self.instance_name, project=self.project, remote=self.remote
+        # )
+        logger.debug("Leaving instance running for 15 minutes in case it's needed again.")
+        self.execute_run(
+            ["shutdown", "+15"],  # TODO: make the time configurable.
+            capture_output=True,
         )
 
     def supports_mount(self) -> bool:
