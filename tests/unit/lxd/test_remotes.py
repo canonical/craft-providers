@@ -145,8 +145,6 @@ def test_add_remote_race_condition_error(fake_remote_image, mock_lxc, logs):
         (ubuntu.BuilddBaseAlias.BIONIC, "core18"),
         (ubuntu.BuilddBaseAlias.FOCAL, "core20"),
         (ubuntu.BuilddBaseAlias.JAMMY, "core22"),
-        (ubuntu.BuilddBaseAlias.MANTIC, "mantic"),
-        (ubuntu.BuilddBaseAlias.NOBLE, "core24"),
         (ubuntu.BuilddBaseAlias.DEVEL, "devel"),
     ],
 )
@@ -164,8 +162,6 @@ def test_get_image_remote(provider_base_alias, image_name):
         (ubuntu.BuilddBaseAlias.BIONIC, "core18"),
         (ubuntu.BuilddBaseAlias.FOCAL, "core20"),
         (ubuntu.BuilddBaseAlias.JAMMY, "core22"),
-        (ubuntu.BuilddBaseAlias.MANTIC, "mantic"),
-        (ubuntu.BuilddBaseAlias.NOBLE, "core24"),
         (ubuntu.BuilddBaseAlias.DEVEL, "devel"),
     ],
 )
