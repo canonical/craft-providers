@@ -25,6 +25,7 @@ you with tox, but you'll need to install:
   ``snap install --classic pyright``)
 - ShellCheck_  (also available via snap: ``snap install shellcheck``)
 - pre-commit_
+- ruff_ (also available via snap: ``snap install ruff``)
 
 Once you have all of those installed, you can install the necessary virtual
 environments for this repository using tox.
@@ -35,7 +36,6 @@ Some other tools we use for code quality include:
 
 - Black_ for code formatting
 - pytest_ for testing
-- ruff_ for linting (and some additional formatting)
 
 A complete list is kept in our pyproject.toml_ file in dev dependencies.
 
@@ -130,7 +130,7 @@ Please follow these guidelines when committing code for this project:
 .. _pyproject.toml: ./pyproject.toml
 .. _Pyright: https://github.com/microsoft/pyright
 .. _pytest: https://pytest.org
-.. _ruff: https://github.com/charliermarsh/ruff
+.. _ruff: https://github.com/astral-sh/ruff
 .. _ShellCheck: https://www.shellcheck.net/
 .. _`SSH access is limited`: https://github.com/marketplace/actions/debugging-with-tmate#use-registered-public-ssh-keys
 .. _`SSH key on GitHub`: https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account
