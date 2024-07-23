@@ -1,6 +1,6 @@
 # -*- Mode:Python; indent-tabs-mode:nil; tab-width:4 -*-
 #
-# Copyright 2022-2023 Canonical Ltd.
+# Copyright 2022-2024 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -17,8 +17,10 @@
 #
 
 import pytest
-from craft_providers.bases import almalinux, get_base_from_alias, ubuntu
+from craft_providers.bases import almalinux, get_base_from_alias
 from craft_providers.lxd import LXDProvider, is_installed
+
+from .conftest import UBUNTU_BASES_PARAM
 
 
 def test_ensure_provider_is_available_not_installed(uninstalled_lxd):
@@ -42,11 +44,7 @@ def test_create_environment(installed_lxd, instance_name):
 
 
 @pytest.mark.parametrize(
-    "alias",
-    [
-        *set(ubuntu.BuilddBaseAlias) - {ubuntu.BuilddBaseAlias.XENIAL},
-        almalinux.AlmaLinuxBaseAlias.NINE,
-    ],
+    "alias", [*UBUNTU_BASES_PARAM, almalinux.AlmaLinuxBaseAlias.NINE]
 )
 def test_launched_environment(
     alias, installed_lxd, instance_name, tmp_path, session_provider

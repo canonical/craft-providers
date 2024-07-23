@@ -554,7 +554,7 @@ class LXC:
                 ),
             ) from error
 
-    def launch(  # noqa: PLR0912
+    def launch(
         self,
         *,
         instance_name: str,
