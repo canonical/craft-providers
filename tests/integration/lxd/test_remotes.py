@@ -52,36 +52,3 @@ def test_configure_and_launch_remote(instance_name, alias):
         assert proc.stdout == b"hi\n"
     finally:
         instance.delete()
-
-
-@pytest.mark.parametrize(
-    "alias",
-    [
-        ubuntu.BuilddBaseAlias.BIONIC,
-        ubuntu.BuilddBaseAlias.FOCAL,
-        ubuntu.BuilddBaseAlias.JAMMY,
-    ],
-)
-def test_configure_and_launch_buildd_remotes(instance_name, alias):
-    """Verify function `configure_buildd_image_remote()` can launch core 18|20|22."""
-    image_remote = lxd.configure_buildd_image_remote()
-    assert image_remote == "craft-com.ubuntu.cloud-buildd"
-
-    base_configuration = ubuntu.BuilddBase(alias=alias)
-    instance = lxd.launch(
-        name=instance_name,
-        base_configuration=base_configuration,
-        image_name=alias.value,
-        image_remote=image_remote,
-    )
-
-    try:
-        assert isinstance(instance, lxd.LXDInstance)
-        assert instance.exists() is True
-        assert instance.is_running() is True
-
-        proc = instance.execute_run(["echo", "hi"], check=True, stdout=subprocess.PIPE)
-
-        assert proc.stdout == b"hi\n"
-    finally:
-        instance.delete()

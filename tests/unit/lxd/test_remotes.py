@@ -213,20 +213,3 @@ def test_get_image_remote_deprecated_error():
         str(raised.value)
         == "Base alias not found for BaseName(name='ubuntu', version='8.04')"
     )
-
-
-def test_configure_buildd_image_remote(
-    mock_lxc, logs, mock_get_remote_image, mock_remote_image
-):
-    """Verify deprecated `configure_buildd_image_remote()` call."""
-
-    with pytest.warns(DeprecationWarning) as warning:
-        name = lxd.remotes.configure_buildd_image_remote(lxc=mock_lxc)
-
-    assert str(warning[0].message) == (
-        "configure_buildd_image_remote() is deprecated. "
-        "Use get_remote_image() and RemoteImage.add_remote()."
-    )
-    mock_get_remote_image.assert_called_once()
-    mock_remote_image.add_remote.assert_called_once_with(mock_lxc)
-    assert name == remotes.BUILDD_RELEASES_REMOTE_NAME
