@@ -184,30 +184,6 @@ def test_timezone(instance_name):
         instance.delete()
 
 
-def test_launch_use_snapshots_deprecated(
-    base_configuration, get_base_instance, instance_name
-):
-    """Launch an instance with the deprecated parameter `use_snapshots`."""
-    base_instance = get_base_instance()
-
-    instance = lxd.launch(
-        name=instance_name,
-        base_configuration=base_configuration,
-        image_name="22.04",
-        image_remote="ubuntu",
-        use_snapshots=True,
-    )
-    try:
-        # verify the instance and base instance exist
-        assert instance.exists()
-        assert base_instance.exists()
-    finally:
-        if instance.exists():
-            instance.delete()
-        if base_instance.exists():
-            base_instance.delete()
-
-
 def test_launch_use_base_instance(
     base_configuration, get_instance_and_base_instance, instance_name
 ):
@@ -216,9 +192,6 @@ def test_launch_use_base_instance(
     First, launch an instance from an image and create a base instance.
     Then launch an instance from the base instance.
     Then launch an instance when the instance exists.
-
-    The parameter `use_base_instance` and the deprecated parameter `use_snapshots`
-    should both result in the same behavior.
     """
     instance, base_instance = get_instance_and_base_instance
 

@@ -649,7 +649,6 @@ def launch(
     ephemeral: bool = False,
     map_user_uid: bool = False,
     uid: Optional[int] = None,
-    use_snapshots: Optional[bool] = None,
     use_base_instance: bool = False,
     project: str = "default",
     remote: str = "local",
@@ -686,7 +685,6 @@ def launch(
     :param map_user_uid: Map host uid/gid to instance's root uid/gid.
     :param uid: The uid to be mapped, if ``map_user_uid`` is enabled.
     :param use_base_instance: Use the base instance mechanisms to reduce setup time.
-    :param use_snapshots: Deprecated parameter replaced by `use_base_instance`.
     :param project: LXD project to create instance in.
     :param remote: LXD remote to create instance on.
     :param lxc: LXC client.
@@ -700,13 +698,6 @@ def launch(
     :raises ProviderError: if name of instance collides with base instance name.
     """
     # TODO: create a private class to reduce the parameters passed between methods
-
-    if use_snapshots:
-        logger.warning(
-            "Deprecated: Parameter 'use_snapshots' is deprecated. "
-            "Use parameter 'use_base_instance' instead."
-        )
-        use_base_instance = use_snapshots
 
     _ensure_project_exists(
         create=auto_create_project, project=project, remote=remote, lxc=lxc
