@@ -96,9 +96,6 @@ _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
     ubuntu.BuilddBaseAlias.JAMMY: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="22.04"
     ),
-    ubuntu.BuilddBaseAlias.MANTIC: RemoteImage(
-        remote=Remote.RELEASE, image_name="mantic"
-    ),
     # this should use `image_name="24.04"` once noble is released (#511)
     ubuntu.BuilddBaseAlias.NOBLE: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="devel"
