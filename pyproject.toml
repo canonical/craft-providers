@@ -4,7 +4,6 @@ dynamic = ["version", "readme"]
 dependencies = [
     "packaging>=14.1",
     "pydantic~=2.4",
-    # see https://github.com/psf/requests/issues/6707
     "pyyaml",
     # see https://github.com/psf/requests/issues/6707
     "requests<2.32",
