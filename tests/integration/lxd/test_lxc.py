@@ -133,8 +133,7 @@ def test_copy_error(instance, instance_name, lxc, session_project):
             f"{instance_name} local:{instance_name}'\n"
             "* Command exit code: 1\n"
             "* Command standard error output: b'Error: Failed creating instance "
-            'record: Add instance info to the database: This "instances" entry '
-            "already exists\\n'"
+            f'record: Instance "{instance_name}" already exists\\n\''
         ),
     )
 
