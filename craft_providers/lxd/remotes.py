@@ -147,14 +147,6 @@ _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
         remote_address=BUILDD_DAILY_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
-    # mantic buildd daily blocked by
-    # https://bugs.launchpad.net/cloud-images/+bug/2007419
-    ubuntu.BuilddBaseAlias.MANTIC: RemoteImage(
-        image_name="mantic",
-        remote_name=DAILY_REMOTE_NAME,
-        remote_address=DAILY_REMOTE_ADDRESS,
-        remote_protocol=ProtocolType.SIMPLESTREAMS,
-    ),
     ubuntu.BuilddBaseAlias.ORACULAR: RemoteImage(
         image_name="oracular",
         remote_name=BUILDD_DAILY_REMOTE_NAME,

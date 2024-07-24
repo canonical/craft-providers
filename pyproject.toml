@@ -55,7 +55,6 @@ dev = [
 lint = [
     "black==24.4.2",
     "codespell[toml]==2.2.6",
-    "ruff==0.4.8",
     "yamllint==1.35.1",
 ]
 types = [
@@ -72,7 +71,7 @@ docs = [
 
 [build-system]
 requires = [
-    "setuptools==70.0.0",
+    "setuptools==71.1.0",
     "setuptools_scm[toml]>=7.1"
 ]
 build-backend = "setuptools.build_meta"
