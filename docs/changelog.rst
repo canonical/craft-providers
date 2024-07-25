@@ -1,6 +1,5 @@
-***************
 Changelog
-***************
+*********
 
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
@@ -10,16 +9,20 @@ included in each version.
 - Use Ubuntu 24.04 buildd image for Multipass
 - Remove Ubuntu 23.10 (Mantic) support
 
-1.24.1 (2024-02-07)
--------------------
-- Improve detection of installed LXD
-- Update the link to the network troubleshooting docs
-
 1.24.0 (2024-06-18)
 -------------------
 - Add support for Ubuntu 24.10 (Oracular)
 
+1.20.3 (2024-04-11)
+-------------------
+- Do not mount cache directories in LXD base instances.
+- Update base compatibility tag from ``base-v4`` to ``base-v8``
+
 1.23.1 (2024-03-15)
+-------------------
+- Parse LXD versions with "LTS" suffix
+
+1.20.2 (2024-03-15)
 -------------------
 - Parse LXD versions with "LTS" suffix
 
@@ -28,6 +31,11 @@ included in each version.
 - Update base compatibility tag to ``base-v7``
 - Use ``buildd`` daily for Ubuntu 24.04 (Noble) and Ubuntu devel images
 - Ensure apt installs non-interactively
+
+1.24.1 (2024-02-07)
+-------------------
+- Improve detection of installed LXD
+- Update the link to the network troubleshooting docs
 
 1.22.0 (2024-01-30)
 -------------------
@@ -39,14 +47,10 @@ included in each version.
 - Add Ubuntu 24.04 (Noble) support
 - Remove Ubuntu 23.04 (Lunar) support
 
-1.20.3 (2024-04-11)
+1.19.3 (2023-12-01)
 -------------------
+- Update base compatibility tag to ``base-v5``.
 - Do not mount cache directories in LXD base instances.
-- Update base compatibility tag from ``base-v4`` to ``base-v8``
-
-1.20.2 (2024-03-15)
--------------------
-- Parse LXD versions with "LTS" suffix
 
 1.20.1 (2023-11-30)
 -------------------
@@ -59,11 +63,6 @@ included in each version.
 -------------------
 - Snaps injected from the host will have their base snap injected into
   the instance.
-
-1.19.3 (2023-12-01)
--------------------
-- Update base compatibility tag to ``base-v5``.
-- Do not mount cache directories in LXD base instances.
 
 1.19.2 (2023-11-02)
 -------------------
@@ -116,6 +115,12 @@ included in each version.
 - Prevent race when two processes try to create the same project
   at the same time
 
+1.10.1 (2023-06-29)
+-------------------
+- Set hostname when launching LXD instances
+- Update Lunar image for Multipass to stable image
+- Pin dependency urllib3<2
+
 1.14.0 (2023-06-28)
 -------------------
 - Update Lunar image for Multipass to stable image
@@ -155,12 +160,6 @@ included in each version.
 - Add CentOS 7 base
 - Add default for ``launched_environment()`` parameter ``allow_unstable=False``
 - Trim suffixes from snap names when installing snaps.
-
-1.10.1 (2023-06-29)
--------------------
-- Set hostname when launching LXD instances
-- Update Lunar image for Multipass to stable image
-- Pin dependency urllib3<2
 
 1.10.0 (2023-03-31)
 -------------------
