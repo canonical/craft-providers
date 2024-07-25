@@ -7,6 +7,7 @@ Reference
    :maxdepth: 1
 
    bases
+   changelog
    executors
 
 Indices and tables
