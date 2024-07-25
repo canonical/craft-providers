@@ -23,7 +23,6 @@ framework that need to provide support for additional build environments.
    howto/index
    reference/index
    explanation/index
-   changelog
 
 .. grid:: 1 1 2 2
 
