@@ -53,7 +53,7 @@ class SnapInstallationError(ProviderError):
     """Unexpected error during snap installation."""
 
 
-class Snap(pydantic.BaseModel, extra=pydantic.Extra.forbid):
+class Snap(pydantic.BaseModel, extra="forbid"):
     """Details of snap to install in the base.
 
     :param name: name of snap
