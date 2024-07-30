@@ -49,7 +49,7 @@ def update_nested_dictionaries(
     return config_data
 
 
-class InstanceConfiguration(pydantic.BaseModel, extra=pydantic.Extra.forbid):
+class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
     """Instance configuration datastore.
 
     :param compatibility_tag: Compatibility tag for instance.
@@ -86,7 +86,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra=pydantic.Extra.forbid):
 
         :return: The newly created dictionary.
         """
-        return self.dict(by_alias=True, exclude_unset=True)
+        return self.model_dump(by_alias=True, exclude_unset=True)
 
     @classmethod
     def load(
