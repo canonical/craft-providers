@@ -5,6 +5,11 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+1.25.0 (2024-07-24)
+-------------------
+- Use Ubuntu 24.04 buildd image for Multipass
+- Remove Ubuntu 23.10 (Mantic) support
+
 1.24.1 (2024-02-07)
 -------------------
 - Improve detection of installed LXD
