@@ -19,7 +19,7 @@
 
 # Backward compatible, will be removed in 2.0
 import sys
-from typing import Dict, NamedTuple, Tuple, Type, Union
+from typing import Dict, Literal, NamedTuple, Tuple, Type, Union, overload
 
 from craft_providers.errors import BaseCompatibilityError, BaseConfigurationError
 from craft_providers.base import Base
@@ -67,9 +67,21 @@ BASE_NAME_TO_BASE_ALIAS: Dict[BaseName, BaseAlias] = {
 }
 
 
+@overload
 def get_base_alias(
-    base_name: Tuple[str, str],
-) -> BaseAlias:
+    base_name: Tuple[Literal["ubuntu"], str]
+) -> ubuntu.BuilddBaseAlias: ...
+@overload
+def get_base_alias(
+    base_name: Tuple[Literal["centos"], str]
+) -> centos.CentOSBaseAlias: ...
+@overload
+def get_base_alias(
+    base_name: Tuple[Literal["almalinux"], str]
+) -> almalinux.AlmaLinuxBaseAlias: ...
+@overload
+def get_base_alias(base_name: BaseName) -> BaseAlias: ...
+def get_base_alias(base_name):
     """Return a Base alias from a base (name, version) tuple."""
     base_name = BaseName(*base_name)
     if base_name.name == "ubuntu" and base_name in BASE_NAME_TO_BASE_ALIAS:
@@ -83,9 +95,15 @@ def get_base_alias(
     raise BaseConfigurationError(f"Base alias not found for {base_name}")
 
 
+@overload
+def get_base_from_alias(alias: ubuntu.BuilddBaseAlias) -> Type[ubuntu.BuilddBase]: ...
+@overload
+def get_base_from_alias(alias: centos.CentOSBaseAlias) -> Type[centos.CentOSBase]: ...
+@overload
 def get_base_from_alias(
-    alias: BaseAlias,
-) -> Type[Base]:
+    alias: almalinux.AlmaLinuxBaseAlias,
+) -> Type[almalinux.AlmaLinuxBase]: ...
+def get_base_from_alias(alias: BaseAlias) -> Type[Base]:
     """Return a Base class from a known base alias."""
     if isinstance(alias, ubuntu.BuilddBaseAlias):
         return ubuntu.BuilddBase
