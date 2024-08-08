@@ -30,7 +30,7 @@ from .lxc import LXC
 from .lxd import LXD
 from .lxd_instance import LXDInstance
 from .lxd_provider import LXDProvider
-from .remotes import configure_buildd_image_remote, get_remote_image
+from .remotes import get_remote_image
 
 __all__ = [
     "LXC",
@@ -46,6 +46,5 @@ __all__ = [
     "is_initialized",
     "is_user_permitted",
     "ensure_lxd_is_ready",
-    "configure_buildd_image_remote",
     "launch",
 ]

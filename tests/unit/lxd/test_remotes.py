@@ -21,7 +21,6 @@ from unittest.mock import call
 import pytest
 from craft_providers import lxd
 from craft_providers.bases import ubuntu
-from craft_providers.errors import BaseConfigurationError
 from craft_providers.lxd import remotes
 
 
@@ -158,26 +157,6 @@ def test_get_image_remote(provider_base_alias, image_name):
     assert remote_image.image_name == image_name
 
 
-@pytest.mark.parametrize(
-    ("provider_base_alias", "image_name"),
-    [
-        (ubuntu.BuilddBaseAlias.BIONIC, "core18"),
-        (ubuntu.BuilddBaseAlias.FOCAL, "core20"),
-        (ubuntu.BuilddBaseAlias.JAMMY, "core22"),
-        (ubuntu.BuilddBaseAlias.NOBLE, "core24"),
-        (ubuntu.BuilddBaseAlias.ORACULAR, "oracular"),
-        (ubuntu.BuilddBaseAlias.DEVEL, "devel"),
-    ],
-)
-def test_get_image_remote_deprecated(provider_base_alias, image_name):
-    """Verify `get_remote_image()` returns a RemoteImage.
-    temporary backward compatibility before 2.0
-    """
-    remote_image = lxd.remotes.get_remote_image(str(provider_base_alias.value))
-
-    assert remote_image.image_name == image_name
-
-
 def test_get_image_remote_xenial_error():
     """Raise an error when retrieving a xenial image.
 
@@ -202,31 +181,3 @@ def test_get_image_remote_error():
     assert "could not find a lxd remote image for the provider base " in str(
         raised.value
     )
-
-
-def test_get_image_remote_deprecated_error():
-    """Raise an error for an unknown provider base."""
-    with pytest.raises(BaseConfigurationError) as raised:
-        lxd.remotes.get_remote_image("8.04")
-
-    assert (
-        str(raised.value)
-        == "Base alias not found for BaseName(name='ubuntu', version='8.04')"
-    )
-
-
-def test_configure_buildd_image_remote(
-    mock_lxc, logs, mock_get_remote_image, mock_remote_image
-):
-    """Verify deprecated `configure_buildd_image_remote()` call."""
-
-    with pytest.warns(DeprecationWarning) as warning:
-        name = lxd.remotes.configure_buildd_image_remote(lxc=mock_lxc)
-
-    assert str(warning[0].message) == (
-        "configure_buildd_image_remote() is deprecated. "
-        "Use get_remote_image() and RemoteImage.add_remote()."
-    )
-    mock_get_remote_image.assert_called_once()
-    mock_remote_image.add_remote.assert_called_once_with(mock_lxc)
-    assert name == remotes.BUILDD_RELEASES_REMOTE_NAME

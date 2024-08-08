@@ -19,13 +19,12 @@
 """Manages LXD remotes and provides access to remote images."""
 
 import logging
-import warnings
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Union
+from typing import Dict
 
 from craft_providers import Base
-from craft_providers.bases import BaseName, almalinux, centos, get_base_alias, ubuntu
+from craft_providers.bases import almalinux, centos, ubuntu
 
 from .errors import LXDError
 from .lxc import LXC
@@ -174,18 +173,13 @@ _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
 }
 
 
-def get_remote_image(provider_base: Union[Base, str]) -> RemoteImage:
+def get_remote_image(provider_base: Base) -> RemoteImage:
     """Get a RemoteImage for a particular provider base.
 
     :param provider_base: string containing the provider base
 
     :returns: the RemoteImage for the provider base
     """
-    # temporary backward compatibility before 2.0
-    if isinstance(provider_base, str):
-        alias = get_base_alias(BaseName("ubuntu", provider_base))
-        provider_base = ubuntu.BuilddBase(alias=alias)  # type: ignore
-
     image = _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE.get(provider_base.alias)
     if not image:
         raise LXDError(
@@ -196,29 +190,3 @@ def get_remote_image(provider_base: Union[Base, str]) -> RemoteImage:
         )
 
     return image
-
-
-def configure_buildd_image_remote(lxc: LXC = LXC()) -> str:
-    """Configure the default buildd image remote.
-
-    This is a deprecated function to maintain the existing API. It will be
-    removed with the release of craft-providers 2.0.
-    Applications should call `get_remote_image()` and `RemoteImage.add_remote()`.
-
-    :param lxc: LXC client.
-
-    :returns: Name of remote to pass to launcher.
-    """
-    warnings.warn(
-        message=(
-            "configure_buildd_image_remote() is deprecated. "
-            "Use get_remote_image() and RemoteImage.add_remote()."
-        ),
-        category=DeprecationWarning,
-    )
-    # configure the buildd remote for core22
-    base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-    image = get_remote_image(base)
-    image.add_remote(lxc)
-
-    return BUILDD_RELEASES_REMOTE_NAME

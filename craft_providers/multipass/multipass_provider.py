@@ -21,7 +21,7 @@ import logging
 import pathlib
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Iterator, Optional
+from typing import Dict, Iterator
 
 from craft_providers import Base, Executor, Provider, base
 from craft_providers.bases import ubuntu
@@ -188,7 +188,6 @@ class MultipassProvider(Provider):
         project_name: str,
         project_path: pathlib.Path,
         base_configuration: base.Base,
-        build_base: Optional[str] = None,
         instance_name: str,
         allow_unstable: bool = False,
     ) -> Iterator[Executor]:
@@ -201,19 +200,11 @@ class MultipassProvider(Provider):
         :param project_name: Name of the project.
         :param project_path: Path to project.
         :param base_configuration: Base configuration to apply to instance.
-        :param build_base: Base to build from. (Deprecated)
         :param instance_name: Name of the instance to launch.
         :param allow_unstable: If true, allow unstable images to be launched.
 
         :raises MultipassError: If the instance cannot be launched or configured.
         """
-        if build_base:
-            logger.warning(
-                "Deprecated: Parameter 'build_base' is deprecated and should "
-                "not be used. The build base now comes from the "
-                "base_configuration's alias."
-            )
-
         image = _get_remote_image(base_configuration)
 
         # only allow launching unstable images when opted-in with `allow_unstable`

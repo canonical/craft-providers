@@ -25,7 +25,7 @@ import contextlib
 import logging
 import pathlib
 from abc import ABC, abstractmethod
-from typing import Generator, Optional
+from typing import Generator
 
 from .base import Base
 from .executor import Executor
@@ -95,7 +95,6 @@ class Provider(ABC):
         project_name: str,
         project_path: pathlib.Path,
         base_configuration: Base,
-        build_base: Optional[str] = None,
         instance_name: str,
         allow_unstable: bool = False,
     ) -> Generator[Executor, None, None]:
@@ -108,7 +107,6 @@ class Provider(ABC):
         :param project_name: Name of project.
         :param project_path: Path to project.
         :param base_configuration: Base configuration to apply to instance.
-        :param build_base: Base to build from. (Deprecated)
         :param instance_name: Name of the instance to launch.
         :param allow_unstable: If true, allow unstable images to be launched.
         """

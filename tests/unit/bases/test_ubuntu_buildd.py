@@ -32,7 +32,6 @@ from craft_providers.errors import (
 )
 from craft_providers.instance_config import InstanceConfiguration
 from logassert import Exact  # type: ignore
-from pydantic import ValidationError
 
 from tests.unit.conftest import DEFAULT_FAKE_CMD
 
@@ -1182,8 +1181,10 @@ def test_update_setup_status(fake_executor, mock_load, status):
     ]
 
 
-def test_ensure_config_compatible_validation_error(fake_executor, mock_load):
-    mock_load.side_effect = ValidationError("foo", InstanceConfiguration)
+def test_ensure_config_compatible_validation_error(
+    fake_executor, mock_load, fake_validation_error
+):
+    mock_load.side_effect = fake_validation_error
 
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
@@ -1216,28 +1217,32 @@ def test_ensure_setup_completed(fake_executor, logs, mock_load):
     assert "Instance has already been setup." in logs.debug
 
 
-@pytest.mark.parametrize(
-    ("error", "error_message"),
-    [
-        (
-            ValidationError("foo", InstanceConfiguration),
-            "failed to parse instance configuration file",
-        ),
-        (FileNotFoundError, "failed to find instance config file"),
-    ],
-)
-def test_ensure_setup_completed_load_error(
-    error, error_message, fake_executor, mock_load
+def test_ensure_setup_completed_validation_error(
+    fake_executor, mock_load, fake_validation_error
 ):
     """Raise an error when the instance config cannot be loaded."""
-    mock_load.side_effect = error
+    mock_load.side_effect = fake_validation_error
 
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     with pytest.raises(BaseCompatibilityError) as raised:
         base_config._ensure_setup_completed(executor=fake_executor)
 
-    assert raised.value == BaseCompatibilityError(error_message)
+    assert raised.value == BaseCompatibilityError(
+        "failed to parse instance configuration file"
+    )
+
+
+def test_ensure_setup_completed_file_not_found_error(fake_executor, mock_load):
+    """Raise an error when the instance config cannot be loaded."""
+    mock_load.side_effect = FileNotFoundError
+
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+
+    with pytest.raises(BaseCompatibilityError) as raised:
+        base_config._ensure_setup_completed(executor=fake_executor)
+
+    assert raised.value == BaseCompatibilityError("failed to find instance config file")
 
 
 def test_ensure_setup_completed_empty_config(fake_executor, mock_load):
