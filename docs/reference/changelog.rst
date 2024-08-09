@@ -4,6 +4,20 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+2.0.0 (2024-Aug-09)
+-------------------
+Breaking changes:
+
+- Set minimum Python version to 3.10
+- Migrate to Pydantic 2
+
+Removal of deprecated features:
+
+ - string type parameter for ``lxd.remotes.get_remote_image()``
+ - parameter ``build_base`` in ``provider.Provider.launched_enviroment()``
+ - parameter ``use_snapshots`` in ``lxd.launcher.launch()``
+ - ``configure_buildd_image_remote()`` in ``lxd.remotes``
+
 1.25.0 (2024-Jul-24)
 --------------------
 - Use Ubuntu 24.04 buildd image for Multipass
