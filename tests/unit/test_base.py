@@ -61,12 +61,12 @@ class FakeBase(base.Base):
         pass
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_base() -> base.Base:
     return FakeBase()
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_executor():
     return mock.Mock(spec=Executor)
 

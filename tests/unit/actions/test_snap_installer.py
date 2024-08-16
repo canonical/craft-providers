@@ -35,7 +35,7 @@ from craft_providers.instance_config import InstanceConfiguration
 from logassert import Exact  # type: ignore
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_requests():
     """Mock requests_unixsocket."""
     with mock.patch(

@@ -24,12 +24,12 @@ from craft_providers.bases import ubuntu
 from craft_providers.lxd import remotes
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_lxc(mocker):
     return mocker.patch("craft_providers.lxd.launcher.LXC", spec=lxd.LXC)
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_remote_image(mocker):
     return remotes.RemoteImage(
         image_name="test-image-name",
@@ -39,14 +39,14 @@ def fake_remote_image(mocker):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_remote_image(mocker):
     return mocker.patch(
         "craft_providers.lxd.remotes.RemoteImage", spec=remotes.RemoteImage
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_get_remote_image(mocker, mock_remote_image):
     return mocker.patch(
         "craft_providers.lxd.remotes.get_remote_image", return_value=mock_remote_image

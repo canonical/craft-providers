@@ -50,7 +50,7 @@ _INVALID_INSTANCE = {
 }
 
 
-@pytest.fixture()
+@pytest.fixture
 def project_path(tmp_path):
     project_path = tmp_path / "git" / "project"
     project_path.mkdir(parents=True)
@@ -82,7 +82,7 @@ def mock_lxc(project_path):
         yield lxc
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_named_temporary_file():
     with mock.patch(
         "craft_providers.lxd.lxd_instance.tempfile.NamedTemporaryFile",
@@ -92,19 +92,19 @@ def mock_named_temporary_file():
         yield mock_tf.return_value
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_shutil_copyfileobj():
     with mock.patch.object(shutil, "copyfileobj") as mock_copyfileobj:
         yield mock_copyfileobj
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_os_unlink():
     with mock.patch.object(os, "unlink") as mock_unlink:
         yield mock_unlink
 
 
-@pytest.fixture()
+@pytest.fixture
 def instance(mock_lxc):
     return LXDInstance(name=_TEST_INSTANCE["name"], lxc=mock_lxc)
 

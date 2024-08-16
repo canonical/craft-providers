@@ -29,7 +29,7 @@ from freezegun import freeze_time
 from logassert import Exact  # type: ignore
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_base_configuration():
     mock_base = Mock(spec=Base)
     mock_base.compatibility_tag = "mock-compat-tag-v200"
@@ -37,19 +37,19 @@ def mock_base_configuration():
     return mock_base
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_lxc(mocker):
     _mock_lxc = mocker.patch("craft_providers.lxd.launcher.LXC", spec=lxd.LXC)
     _mock_lxc.return_value.project_list.return_value = ["default", "test-project"]
     return _mock_lxc.return_value
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_platform(mocker):
     mocker.patch("sys.platform", "linux")
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_timezone(fake_process):
     fake_process.register_subprocess(
         ["timedatectl", "show", "-p", "Timezone", "--value"],
@@ -58,7 +58,7 @@ def mock_timezone(fake_process):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_instance():
     """Returns a fake LXD Instance"""
     instance = MagicMock()
@@ -73,7 +73,7 @@ def fake_instance():
     return instance
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_base_instance(fake_process):
     """Returns a fake base LXD Instance"""
     base_instance = MagicMock()
@@ -101,7 +101,7 @@ def fake_base_instance(fake_process):
     return base_instance
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_lxd_instance(fake_instance, fake_base_instance, mocker):
     """Mock LXD instance to return fake_instance then fake_base_instance."""
     return mocker.patch(
@@ -111,17 +111,17 @@ def mock_lxd_instance(fake_instance, fake_base_instance, mocker):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_is_valid(mocker):
     return mocker.patch("craft_providers.lxd.launcher._is_valid", return_value=True)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_check_id_map(mocker):
     return mocker.patch("craft_providers.lxd.launcher._check_id_map", return_value=True)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_disable_timer_update_thread(mocker):
     return mocker.patch("craft_providers.lxd.launcher.InstanceTimer.run")
 

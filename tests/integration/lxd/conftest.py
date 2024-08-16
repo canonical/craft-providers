@@ -56,8 +56,8 @@ def installed_lxd_required(installed_lxd):
     """All LXD integration tests required LXD to be installed."""
 
 
-@pytest.fixture()
-@pytest.mark.with_sudo()
+@pytest.fixture
+@pytest.mark.with_sudo
 def installed_lxd_without_init(uninstalled_lxd):
     """Ensure lxd is installed, but not initialized.
 
@@ -134,18 +134,18 @@ def tmp_instance(
     assert instance_name not in lxc.list_names(project=project, remote=remote)
 
 
-@pytest.fixture()
+@pytest.fixture
 def lxc():
     return LXC()
 
 
-@pytest.fixture()
+@pytest.fixture
 def project_name():
     """Create temporary LXD project and assert expected properties."""
     return "ptest-" + "".join(random.choices(string.ascii_uppercase, k=4))
 
 
-@pytest.fixture()
+@pytest.fixture
 def project(lxc, project_name):
     """Create temporary LXD project and assert expected properties."""
     lxc_project.create_with_default_profile(lxc=lxc, project=project_name)

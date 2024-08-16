@@ -26,7 +26,7 @@ from craft_providers.instance_config import InstanceConfiguration
 from pydantic import ValidationError
 
 
-@pytest.fixture()
+@pytest.fixture
 def default_config_data():
     return {
         "compatibility_tag": "tag-foo-v2",
@@ -38,13 +38,13 @@ def default_config_data():
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_executor():
     executor_mock = mock.Mock(spec=Executor)
     return executor_mock
 
 
-@pytest.fixture()
+@pytest.fixture
 def config_fixture(fake_home_temporary_file):
     """Creates an instance config file containing data passed to the fixture."""
 

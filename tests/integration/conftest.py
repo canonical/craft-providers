@@ -61,7 +61,7 @@ def is_installed_dangerously(snap_name: str) -> bool:
     return get_host_snap_info(snap_name)["revision"].startswith("x")
 
 
-@pytest.fixture()
+@pytest.fixture
 def home_tmp_path():
     """Provide a temporary directory located in user's home directory.
 
@@ -74,7 +74,7 @@ def home_tmp_path():
         yield pathlib.Path(temp_dir)
 
 
-@pytest.fixture()
+@pytest.fixture
 def instance_name():
     """Provide a random name for an instance to launch."""
     return generate_instance_name()
@@ -105,7 +105,7 @@ def installed_lxd():
         pytest.skip("lxd not installed, skipped")
 
 
-@pytest.fixture()
+@pytest.fixture
 def uninstalled_lxd():
     """Uninstall Lxd prior to test, if environment allows it.
 
@@ -150,7 +150,7 @@ def installed_multipass():
         pytest.skip("multipass not installed, skipped")
 
 
-@pytest.fixture()
+@pytest.fixture
 def uninstalled_multipass():
     """Uninstall Multipass prior to test, if environment allows it.
 
@@ -180,7 +180,7 @@ def uninstalled_multipass():
         multipass.install()
 
 
-@pytest.fixture()
+@pytest.fixture
 def core22_lxd_instance(installed_lxd, instance_name):
     """Fully configured buildd-based core22 LXD instance."""
     base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
@@ -237,7 +237,7 @@ def installed_snap():
     return _installed_snap
 
 
-@pytest.fixture()
+@pytest.fixture
 def dangerously_installed_snap(tmpdir):
     """Fixture to provide contextmanager for a dangerously installed snap.
 

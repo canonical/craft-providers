@@ -86,7 +86,7 @@ EXAMPLE_LIST = """\
 """
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_details_from_process_error():
     details = "<details>"
     with mock.patch(
@@ -96,7 +96,7 @@ def mock_details_from_process_error():
         yield mock_details
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_details_from_command_error():
     details = "<details>"
     with mock.patch(

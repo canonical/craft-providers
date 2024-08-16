@@ -22,7 +22,7 @@ from pathlib import Path
 import pytest
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_executor_local_pull(fake_executor):
     """Provide an executor that copies the file locally on 'pull'."""
 
@@ -33,7 +33,7 @@ def fake_executor_local_pull(fake_executor):
     return fake_executor
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_home_temp_file(mocker, tmp_path):
     """Mock `home_temporary_file()`."""
 

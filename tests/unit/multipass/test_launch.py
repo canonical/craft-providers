@@ -21,12 +21,12 @@ import pytest
 from craft_providers import Base, bases, multipass
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_base_configuration():
     return mock.Mock(spec=Base)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_multipass_instance():
     with mock.patch(
         "craft_providers.multipass._launch.MultipassInstance",

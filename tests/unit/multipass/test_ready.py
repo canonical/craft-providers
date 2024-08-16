@@ -26,7 +26,7 @@ from craft_providers.multipass import (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_is_installed():
     with mock.patch(
         "craft_providers.multipass._ready.is_installed", return_value=True
@@ -34,7 +34,7 @@ def mock_is_installed():
         yield mock_is_installed
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_multipass():
     mock_client = mock.Mock(spec=Multipass)
     mock_client.is_supported_version.return_value = True

@@ -26,7 +26,7 @@ from craft_providers.lxd.lxc import StdinType
 from freezegun import freeze_time
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_getpid(mocker):
     return mocker.patch("os.getpid", return_value=123)
 

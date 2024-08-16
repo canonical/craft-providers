@@ -23,7 +23,7 @@ from craft_providers import multipass
 from craft_providers.bases import ubuntu
 
 
-@pytest.fixture()
+@pytest.fixture
 def simple_file(home_tmp_path):
     """Create a file in the home directory (accessible by Multipass)."""
     file = home_tmp_path / "src.txt"
@@ -31,7 +31,7 @@ def simple_file(home_tmp_path):
     return file
 
 
-@pytest.mark.smoketest()
+@pytest.mark.smoketest
 def test_smoketest(instance_name, home_tmp_path):
     """Launch an instance and run some basic tasks."""
 

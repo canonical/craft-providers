@@ -27,7 +27,7 @@ from craft_providers.multipass.multipass_provider import (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_buildd_base_configuration(mocker):
     mock_base_config = mocker.patch(
         "craft_providers.bases.ubuntu.BuilddBase", autospec=True
@@ -37,7 +37,7 @@ def mock_buildd_base_configuration(mocker):
     return mock_base_config
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_multipass(mocker):
     return mocker.patch("craft_providers.multipass.Multipass", autospec=True)
 
@@ -50,7 +50,7 @@ def mock_ensure_multipass_is_ready(mocker):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_install(mocker):
     return mocker.patch("craft_providers.multipass.multipass_provider.install")
 
@@ -62,14 +62,14 @@ def mock_is_installed(mocker):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_launch(mocker):
     return mocker.patch(
         "craft_providers.multipass.multipass_provider.launch", autospec=True
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_remote_image(mocker):
     """Returns a mock RemoteImage object."""
     _mock_remote_image = mocker.patch(

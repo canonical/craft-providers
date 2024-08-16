@@ -25,7 +25,7 @@ from craft_providers.lxd import LXDError, lxd_instance_status
 from . import conftest
 
 
-@pytest.fixture()
+@pytest.fixture
 def instance(instance_name, session_project):
     with conftest.tmp_instance(
         name=instance_name, project=session_project

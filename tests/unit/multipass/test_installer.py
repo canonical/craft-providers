@@ -26,7 +26,7 @@ from craft_providers import multipass
 pytestmark = pytest.mark.usefixtures("instant_sleep")
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_details_from_process_error():
     details = "<details>"
     with mock.patch(
