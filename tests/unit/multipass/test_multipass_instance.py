@@ -76,7 +76,7 @@ EXAMPLE_INFO = {
 }
 
 
-@pytest.fixture()
+@pytest.fixture
 def project_path(tmp_path):
     project_path = tmp_path / "git" / "project"
     project_path.mkdir(parents=True)
@@ -99,12 +99,12 @@ def mock_multipass(project_path):
         yield multipass_mock
 
 
-@pytest.fixture()
+@pytest.fixture
 def instance(mock_multipass):
     return MultipassInstance(name="test-instance", multipass=mock_multipass)
 
 
-@pytest.fixture()
+@pytest.fixture
 def simple_file(tmp_path):
     """Create a file in the test directory."""
     file = tmp_path / "src.txt"

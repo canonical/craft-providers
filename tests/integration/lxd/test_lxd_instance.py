@@ -32,7 +32,7 @@ pytestmark = [
 ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def instance(instance_name, project):
     with conftest.tmp_instance(
         name=instance_name,

@@ -29,7 +29,7 @@ from . import conftest
 pytestmark = pytest.mark.flaky(reruns=3, reruns_delay=2)
 
 
-@pytest.fixture()
+@pytest.fixture
 def instance(instance_name):
     with conftest.tmp_instance(
         instance_name=instance_name,
@@ -46,7 +46,7 @@ def reusable_instance(reusable_instance_name):
         yield MultipassInstance(name=tmp_instance)
 
 
-@pytest.fixture()
+@pytest.fixture
 def simple_file(home_tmp_path):
     """Create a file in the home directory (accessible by Multipass)."""
     file = home_tmp_path / "src.txt"

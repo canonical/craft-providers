@@ -54,7 +54,7 @@ def get_base_instance():
     return _base_instance
 
 
-@pytest.fixture()
+@pytest.fixture
 def base_configuration(tmp_path):
     """Returns a simple base configuration."""
     return ubuntu.BuilddBase(
@@ -64,7 +64,7 @@ def base_configuration(tmp_path):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def core22_instance(instance_name):
     """Yields a minimally setup core22 instance.
 
@@ -97,7 +97,7 @@ def core22_instance(instance_name):
             instance.delete()
 
 
-@pytest.fixture()
+@pytest.fixture
 def get_instance_and_base_instance(
     base_configuration, get_base_instance, instance_name
 ):

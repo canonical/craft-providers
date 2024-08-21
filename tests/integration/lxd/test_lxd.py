@@ -20,7 +20,7 @@ import pytest
 from craft_providers.lxd import LXD
 
 
-@pytest.fixture()
+@pytest.fixture
 def lxd():
     return LXD()
 

@@ -35,7 +35,7 @@ from logassert import Exact  # type: ignore
 from tests.unit.conftest import DEFAULT_FAKE_CMD
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_load(mocker):
     return mocker.patch(
         "craft_providers.instance_config.InstanceConfiguration.load",
@@ -43,22 +43,22 @@ def mock_load(mocker):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_filesystem(fs):
     return fs
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_install_from_store(mocker):
     return mocker.patch("craft_providers.actions.snap_installer.install_from_store")
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_inject_from_host(mocker):
     return mocker.patch("craft_providers.actions.snap_installer.inject_from_host")
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_get_os_release(mocker):
     return mocker.patch.object(
         centos.CentOSBase,

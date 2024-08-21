@@ -29,7 +29,7 @@ from . import conftest
 pytestmark = [pytest.mark.xdist_group("multipass_launch_tests")]
 
 
-@pytest.fixture()
+@pytest.fixture
 def core22_instance(instance_name):
     """Yields a minimally setup core22 instance.
 

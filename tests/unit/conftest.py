@@ -129,12 +129,12 @@ class FakeExecutor(Executor):
         return True
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_executor():
     return FakeExecutor()
 
 
-@pytest.fixture()
+@pytest.fixture
 def responses():
     """Simple helper to use responses module as a fixture.
 
@@ -181,7 +181,7 @@ def fake_home_temporary_file(monkeypatch, tmp_path):
     return temp_file
 
 
-@pytest.fixture()
+@pytest.fixture
 def stub_verify_network(fake_process):
     """Ensures network check for Executor.execute_run(verify_network=True) succeeds."""
     fake_process.register_subprocess(
@@ -190,7 +190,7 @@ def stub_verify_network(fake_process):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_validation_error():
     """Returns a stubbed ValidationError for pydantic."""
     return ValidationError.from_exception_data(

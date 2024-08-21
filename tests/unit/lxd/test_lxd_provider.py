@@ -23,7 +23,7 @@ from craft_providers.errors import BaseConfigurationError
 from craft_providers.lxd import LXDError, LXDProvider, LXDUnstableImageError
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_remote_image(mocker):
     _mock_remote_image = mocker.patch("craft_providers.lxd.remotes.RemoteImage")
     _mock_remote_image.image_name = "test-image-name"
@@ -31,7 +31,7 @@ def mock_remote_image(mocker):
     return _mock_remote_image
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_get_remote_image(mock_remote_image, mocker):
     _mock_get_remote_image = mocker.patch(
         "craft_providers.lxd.lxd_provider.get_remote_image",
@@ -40,7 +40,7 @@ def mock_get_remote_image(mock_remote_image, mocker):
     return _mock_get_remote_image
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_buildd_base_configuration(mocker):
     mock_base_config = mocker.patch(
         "craft_providers.bases.ubuntu.BuilddBase", autospec=True
@@ -50,7 +50,7 @@ def mock_buildd_base_configuration(mocker):
     return mock_base_config
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_lxc(mocker):
     return mocker.patch("craft_providers.lxd.LXC", autospec=True)
 
@@ -62,7 +62,7 @@ def mock_ensure_lxd_is_ready(mocker):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_install(mocker):
     return mocker.patch("craft_providers.lxd.lxd_provider.install")
 
@@ -74,7 +74,7 @@ def mock_is_installed(mocker):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_launch(mocker):
     return mocker.patch("craft_providers.lxd.lxd_provider.launch", autospec=True)
 

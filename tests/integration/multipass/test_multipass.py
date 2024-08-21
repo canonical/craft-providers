@@ -24,7 +24,7 @@ from craft_providers.multipass import Multipass
 from . import conftest
 
 
-@pytest.fixture()
+@pytest.fixture
 def instance(instance_name):
     with conftest.tmp_instance(
         instance_name=instance_name,
@@ -32,7 +32,7 @@ def instance(instance_name):
         yield tmp_instance
 
 
-@pytest.fixture()
+@pytest.fixture
 def multipass():
     return Multipass()
 
@@ -181,7 +181,7 @@ def test_transfer_destination_io(instance, multipass, home_tmp_path):
     assert out_path.read_text() == "this is a test"
 
 
-@pytest.mark.slow()
+@pytest.mark.slow
 def test_transfer_destination_io_large(instance, multipass, home_tmp_path):
     test_file = home_tmp_path / "test.txt"
 
@@ -224,7 +224,7 @@ def test_transfer_source_io(instance, multipass):
     assert proc.stdout == b"this is a test"
 
 
-@pytest.mark.slow()
+@pytest.mark.slow
 def test_transfer_source_io_large(instance, multipass, home_tmp_path):
     test_file = home_tmp_path / "test.txt"
 
