@@ -55,7 +55,7 @@ lint = [
 ]
 types = [
     "mypy[reports]==1.10.0",
-    "pyright==1.1.376",
+    "pyright==1.1.377",
 ]
 docs = [
     "pyspelling==2.10",
