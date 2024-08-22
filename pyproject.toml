@@ -35,7 +35,7 @@ dev = [
     "freezegun==1.5.1",
     "logassert==7",
     "pyfakefs==5.4.1",
-    "pytest==8.2.0",
+    "pytest==8.3.2",
     "pytest-cov==5.0.0",
     "pytest-mock==3.14.0",
     "pytest-rerunfailures==14.0",
