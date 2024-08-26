@@ -15,6 +15,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
+import re
 from unittest import mock
 
 import pytest
@@ -23,7 +24,9 @@ from craft_providers import Base, bases, multipass
 
 @pytest.fixture()
 def mock_base_configuration():
-    return mock.Mock(spec=Base)
+    _mock_base_configuration = mock.Mock(spec=Base)
+    _mock_base_configuration.alias = bases.BuilddBaseAlias.JAMMY
+    return _mock_base_configuration
 
 
 @pytest.fixture()
@@ -123,4 +126,65 @@ def test_launch_with_existing_instance_incompatible_without_auto_clean(
     ]
     assert mock_base_configuration.mock_calls == [
         mock.call.warmup(executor=mock_multipass_instance)
+    ]
+
+
+@pytest.mark.parametrize("exists", [True, False])
+@pytest.mark.parametrize("version", ["1.13.0", "1.14.0"])
+def test_noble_less_than_minimum_version(
+    fake_process, exists, version, mock_base_configuration, mock_multipass_instance
+):
+    mock_multipass_instance.exists.return_value = exists
+    mock_base_configuration.alias = bases.BuilddBaseAlias.NOBLE
+    mock_multipass_instance._multipass = mock.Mock(spec=multipass.Multipass)
+    mock_multipass_instance._multipass.version.return_value = (
+        version,
+        version,
+    )
+    fake_process.register_subprocess(
+        ["multipass", "version"],
+        stdout=f"multipass  {version}\nmultipassd {version}\n".encode(),
+    )
+    error = re.escape(
+        f"Multipass {version!r} does not support Ubuntu 24.04 (Noble).\n"
+        "Upgrade to Multipass 1.14.1 or newer."
+    )
+
+    with pytest.raises(multipass.MultipassError, match=error):
+        multipass.launch(
+            "test-instance",
+            base_configuration=mock_base_configuration,
+            image_name="24.04",
+        )
+
+
+@pytest.mark.parametrize("version", ["1.14.1", "1.15.0", "1.15.1", "1.16.0"])
+def test_noble_greater_or_equal_to_minimum_version(
+    fake_process, version, mock_base_configuration, mock_multipass_instance
+):
+    mock_multipass_instance.exists.return_value = False
+    mock_base_configuration.alias = bases.BuilddBaseAlias.NOBLE
+    mock_multipass_instance._multipass = mock.Mock(spec=multipass.Multipass)
+    mock_multipass_instance._multipass.version.return_value = (
+        version,
+        version,
+    )
+    fake_process.register_subprocess(
+        ["multipass", "version"],
+        stdout=f"multipass  {version}\nmultipassd {version}\n".encode(),
+    )
+
+    multipass.launch(
+        "test-instance",
+        base_configuration=mock_base_configuration,
+        image_name="24.04",
+    )
+
+    assert mock_multipass_instance.mock_calls == [
+        mock.call._multipass.version(),
+        mock.call.exists(),
+        mock.call.launch(cpus=2, disk_gb=64, mem_gb=2, image="24.04"),
+    ]
+    assert mock_base_configuration.mock_calls == [
+        mock.call.setup(executor=mock_multipass_instance)
     ]

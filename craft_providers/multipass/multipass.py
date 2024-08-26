@@ -48,6 +48,7 @@ class Multipass:
     :cvar minimum_required_version: Minimum required version for compatibility.
     """
 
+    # TODO: bump to 1.14.1 once it is released (#638)
     minimum_required_version = "1.7"
 
     def __init__(
