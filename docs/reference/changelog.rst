@@ -4,10 +4,20 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+2.0.1 (2024-08-28)
+------------------
+- Require Multipass>=1.14.1 when launching Ubuntu 24.04 (Noble) VMs, which
+  adds support for the 24.04 buildd image
+
+- .. note::
+
+   2.0.1 includes changes from the 1.24.2 release.
+
 1.24.2 (2024-08-27)
 -------------------
 - Remove Ubuntu 23.10 (Mantic) support
-- Require Multipass>=1.14.1 when launching Ubuntu 24.04 (Noble) VMs
+- Require Multipass>=1.14.1 when launching Ubuntu 24.04 (Noble) VMs, which
+  adds support for the 24.04 buildd image
 
 2.0.0 (2024-Aug-09)
 -------------------
