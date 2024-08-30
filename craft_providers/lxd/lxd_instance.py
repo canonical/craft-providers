@@ -670,9 +670,11 @@ class LXDInstance(Executor):
         try:
             base_url = "https://contracts.canonical.com"
             endpoint = "/v1/guest/token"
-            response = requests.get(base_url + endpoint, headers={
-                "Authorization": f"Bearer {machine_token}"
-            })
+            response = requests.get(
+                base_url + endpoint,
+                headers={"Authorization": f"Bearer {machine_token}"},
+                timeout=15,
+            )
             if response.status_code != 200:
                 # fallback mechanism
                 return machine_token
@@ -681,7 +683,7 @@ class LXDInstance(Executor):
             if not guest_token:
                 # fallback to machine token
                 return machine_token
-            return guest_token
+            return guest_token  # noqa: TRY300
         except requests.exceptions.JSONDecodeError:
             # recrived data was not in json format
             return machine_token
