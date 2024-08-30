@@ -19,6 +19,7 @@
 
 import hashlib
 import io
+import json
 import logging
 import os
 import pathlib
@@ -27,6 +28,8 @@ import shutil
 import subprocess
 import tempfile
 from typing import Any, Dict, List, Optional
+
+import requests
 
 from craft_providers.const import TIMEOUT_SIMPLE
 from craft_providers.errors import details_from_called_process_error
@@ -647,3 +650,41 @@ class LXDInstance(Executor):
             project=self.project,
             remote=self.remote,
         )
+
+    def retrieve_pro_host_token(self) -> str:
+        """Get the machine token from the pro host."""
+        try:
+            with open("/var/lib/ubuntu-advantage/private/machine-token.json") as fd:
+                content = json.load(fd)
+                return content.get("machineToken", "")
+        except (FileNotFoundError, PermissionError):
+            return ""
+
+    def request_pro_guest_token(self) -> str:
+        """Request a guest token from contracts API."""
+        machine_token = self.retrieve_pro_host_token()
+        if not machine_token:
+            # host is not pro
+            return ""
+
+        try:
+            base_url = "https://contracts.canonical.com"
+            endpoint = "/v1/guest/token"
+            response = requests.get(base_url + endpoint, headers={
+                "Authorization": f"Bearer {machine_token}"
+            })
+            if response.status_code != 200:
+                # fallback mechanism
+                return machine_token
+
+            guest_token = response.json().get("guestToken", "")
+            if not guest_token:
+                # fallback to machine token
+                return machine_token
+            return guest_token
+        except requests.exceptions.JSONDecodeError:
+            # recrived data was not in json format
+            return machine_token
+        except requests.exceptions.RequestException:
+            # guest token acquiring failed
+            return machine_token
