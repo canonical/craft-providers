@@ -41,6 +41,12 @@ from craft_providers.util import env_cmd
 logger = logging.getLogger(__name__)
 
 
+class MachineTokenError(Exception):
+    """Exception occurring when machine-token.json isn't accessible."""
+
+    pass
+
+
 class LXDInstance(Executor):
     """LXD Instance Lifecycle."""
 
@@ -657,15 +663,20 @@ class LXDInstance(Executor):
             with open("/var/lib/ubuntu-advantage/private/machine-token.json") as fd:
                 content = json.load(fd)
                 return content.get("machineToken", "")
-        except (FileNotFoundError, PermissionError):
-            return ""
+        except FileNotFoundError:
+            raise MachineTokenError("Machine token file does not exist.")
+        except PermissionError:
+            raise MachineTokenError(
+                "Machine token file is not accessible. Make sure you are \
+                running with root access."
+            )
 
     def request_pro_guest_token(self) -> str:
         """Request a guest token from contracts API."""
         machine_token = self.retrieve_pro_host_token()
         if not machine_token:
             # host is not pro
-            return ""
+            raise MachineTokenError("Retrieved Machine Token is empty.")
 
         try:
             base_url = "https://contracts.canonical.com"
@@ -677,16 +688,30 @@ class LXDInstance(Executor):
             )
             if response.status_code != 200:
                 # fallback mechanism
+                logger.info(
+                    "Could not obtain a guest token. Falling back to machine \
+                    token."
+                )
                 return machine_token
 
             guest_token = response.json().get("guestToken", "")
             if not guest_token:
                 # fallback to machine token
+                logger.info("Guest token is empty. Falling back to machine token.")
                 return machine_token
+            logger.info("Guest token received successfully.")
             return guest_token  # noqa: TRY300
         except requests.exceptions.JSONDecodeError:
             # recrived data was not in json format
+            logger.info(
+                "Error decoding JSON data when retrieving guest token. Falling\
+                back to machine token."
+            )
             return machine_token
         except requests.exceptions.RequestException:
             # guest token acquiring failed
+            logger.info(
+                "Request error when trying to retrieve the guest token. \
+                Falling back to machine token."
+            )
             return machine_token
