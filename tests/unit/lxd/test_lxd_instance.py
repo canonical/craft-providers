@@ -17,6 +17,7 @@
 
 import hashlib
 import io
+import json
 import os
 import pathlib
 import shutil
@@ -29,6 +30,7 @@ from unittest.mock import call
 import pytest
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, LXDInstance
+from craft_providers.lxd.errors import MachineTokenError
 from logassert import Exact  # type: ignore
 
 # These names include invalid characters so a lxd-compatible instance_name
@@ -1049,4 +1051,74 @@ def test_set_instance_name_invalid(mock_lxc, name):
     assert error.value == LXDError(
         brief=f"failed to create LXD instance with name {name!r}.",
         details="name must contain at least one alphanumeric character",
+    )
+
+
+@pytest.fixture
+def mock_machinetoken_open_success():
+    with mock.patch(
+        "builtins.open",
+        new_callable=mock.mock_open,
+        read_data=json.dumps({"machineToken": "test_token"}),
+    ) as mock_file:
+        yield mock_file
+
+
+@pytest.fixture
+def mock_machinetoken_open_notoken():
+    with mock.patch(
+        "builtins.open",
+        new_callable=mock.mock_open,
+        read_data=json.dumps({"machineToken": ""}),
+    ) as mock_file:
+        yield mock_file
+
+
+@pytest.fixture
+def mock_machinetoken_open_filenotfound():
+    with mock.patch(
+        "builtins.open",
+        side_effect=FileNotFoundError,
+    ) as mock_file:
+        yield mock_file
+
+
+@pytest.fixture
+def mock_machinetoken_open_nopermission():
+    with mock.patch(
+        "builtins.open",
+        side_effect=PermissionError,
+    ) as mock_file:
+        yield mock_file
+
+
+@pytest.mark.usefixtures("mock_machinetoken_open_success")
+def test_retrieve_pro_host_token_success(instance):
+    assert instance.retrieve_pro_host_token() == "test_token"
+
+
+@pytest.mark.usefixtures("mock_machinetoken_open_notoken")
+def test_retrieve_pro_host_token_notoken(instance):
+    with pytest.raises(MachineTokenError) as excinfo:
+        instance.retrieve_pro_host_token()
+
+    assert str(excinfo.value) == "No token in machine token file."
+
+
+@pytest.mark.usefixtures("mock_machinetoken_open_filenotfound")
+def test_retrieve_pro_host_token_filenotfound(instance):
+    with pytest.raises(MachineTokenError) as excinfo:
+        instance.retrieve_pro_host_token()
+
+    assert str(excinfo.value) == "Machine token file does not exist."
+
+
+@pytest.mark.usefixtures("mock_machinetoken_open_nopermission")
+def test_retrieve_pro_host_token_nopermission(instance):
+    with pytest.raises(MachineTokenError) as excinfo:
+        instance.retrieve_pro_host_token()
+
+    assert str(excinfo.value) == (
+        "Machine token file is not accessible. Make sure you are running with "
+        "root access."
     )

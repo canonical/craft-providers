@@ -62,3 +62,7 @@ class LXDUnstableImageError(LXDError):
                 "experimental use only."
             ),
         )
+
+
+class MachineTokenError(Exception):
+    """Exception occurring when machine-token.json isn't accessible."""

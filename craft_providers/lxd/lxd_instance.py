@@ -34,17 +34,11 @@ import requests
 from craft_providers.const import TIMEOUT_SIMPLE
 from craft_providers.errors import details_from_called_process_error
 from craft_providers.executor import Executor
-from craft_providers.lxd.errors import LXDError
+from craft_providers.lxd.errors import LXDError, MachineTokenError
 from craft_providers.lxd.lxc import LXC
 from craft_providers.util import env_cmd
 
 logger = logging.getLogger(__name__)
-
-
-class MachineTokenError(Exception):
-    """Exception occurring when machine-token.json isn't accessible."""
-
-    pass
 
 
 class LXDInstance(Executor):
@@ -662,13 +656,16 @@ class LXDInstance(Executor):
         try:
             with open("/var/lib/ubuntu-advantage/private/machine-token.json") as fd:
                 content = json.load(fd)
-                return content.get("machineToken", "")
+                machine_token = content.get("machineToken", "")
+                if not machine_token:
+                    raise MachineTokenError("No token in machine token file.")
+                return machine_token
         except FileNotFoundError:
             raise MachineTokenError("Machine token file does not exist.")
         except PermissionError:
             raise MachineTokenError(
-                "Machine token file is not accessible. Make sure you are \
-                running with root access."
+                "Machine token file is not accessible. Make sure you are "
+                "running with root access."
             )
 
     def request_pro_guest_token(self) -> str:
