@@ -32,6 +32,7 @@ from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, LXDInstance
 from craft_providers.lxd.errors import MachineTokenError
 from logassert import Exact  # type: ignore
+from requests.exceptions import JSONDecodeError, RequestException
 
 # These names include invalid characters so a lxd-compatible instance_name
 # is generated. This ensures an Instance's `name` and `instance_name` are
@@ -50,6 +51,9 @@ _INVALID_INSTANCE = {
     "name": "invalid-instance-$",
     "instance-name": "invalid-instance-86be3150e96a80a04e31",
 }
+
+_CONTRACTS_API_URL = "https://contracts.canonical.com"
+_CONTRACTS_API_ENDPOINT = "/v1/guest/token"
 
 
 @pytest.fixture
@@ -1122,3 +1126,92 @@ def test_retrieve_pro_host_token_nopermission(instance):
         "Machine token file is not accessible. Make sure you are running with "
         "root access."
     )
+
+
+@pytest.fixture
+def mock_retrieve_pro_host_token(instance):
+    return mock.patch.object(
+        instance, "retrieve_pro_host_token", return_value="mock_machine_token"
+    )
+
+
+@mock.patch("requests.get")
+def test_request_pro_guest_token_success(
+    mock_get, instance, mock_retrieve_pro_host_token
+):
+    """Test successful guest token retrieval."""
+    mock_response = mock.Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"guestToken": "mock_guest_token"}
+    mock_get.return_value = mock_response
+
+    with mock_retrieve_pro_host_token:
+        guest_token = instance.request_pro_guest_token()
+
+    assert guest_token == "mock_guest_token"
+    mock_get.assert_called_once_with(
+        _CONTRACTS_API_URL + _CONTRACTS_API_ENDPOINT,
+        headers={"Authorization": "Bearer mock_machine_token"},
+        timeout=15,
+    )
+
+
+@mock.patch("requests.get")
+def test_request_pro_guest_token_fallback_due_to_status_code(
+    mock_get, instance, mock_retrieve_pro_host_token
+):
+    """Test fallback to machine token due to non-200 status code."""
+    mock_response = mock.Mock()
+    mock_response.status_code = 400
+    mock_get.return_value = mock_response
+
+    with mock_retrieve_pro_host_token:
+        token = instance.request_pro_guest_token()
+
+    assert token == "mock_machine_token"
+    mock_get.assert_called_once()
+
+
+@mock.patch("requests.get")
+def test_request_pro_guest_token_fallback_due_to_empty_guest_token(
+    mock_get, instance, mock_retrieve_pro_host_token
+):
+    """Test fallback to machine token due to empty guest token."""
+    mock_response = mock.Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"guestToken": ""}
+    mock_get.return_value = mock_response
+
+    with mock_retrieve_pro_host_token:
+        token = instance.request_pro_guest_token()
+
+    assert token == "mock_machine_token"
+    mock_get.assert_called_once()
+
+
+@mock.patch("requests.get")
+def test_request_pro_guest_token_fallback_due_to_json_decode_error(
+    mock_get, instance, mock_retrieve_pro_host_token
+):
+    """Test fallback to machine token due to JSONDecodeError."""
+    mock_get.side_effect = JSONDecodeError("Error", "json", 0)
+
+    with mock_retrieve_pro_host_token:
+        token = instance.request_pro_guest_token()
+
+    assert token == "mock_machine_token"
+    mock_get.assert_called_once()
+
+
+@mock.patch("requests.get")
+def test_request_pro_guest_token_fallback_due_to_request_exception(
+    mock_get, instance, mock_retrieve_pro_host_token
+):
+    """Test fallback to machine token due to RequestException."""
+    mock_get.side_effect = RequestException
+
+    with mock_retrieve_pro_host_token:
+        token = instance.request_pro_guest_token()
+
+    assert token == "mock_machine_token"
+    mock_get.assert_called_once()

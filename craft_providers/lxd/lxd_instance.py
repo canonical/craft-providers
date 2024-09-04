@@ -671,9 +671,6 @@ class LXDInstance(Executor):
     def request_pro_guest_token(self) -> str:
         """Request a guest token from contracts API."""
         machine_token = self.retrieve_pro_host_token()
-        if not machine_token:
-            # host is not pro
-            raise MachineTokenError("Retrieved Machine Token is empty.")
 
         try:
             base_url = "https://contracts.canonical.com"
