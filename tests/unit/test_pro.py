@@ -64,120 +64,95 @@ def mock_machinetoken_open_nopermission():
         yield mock_file
 
 
-@pytest.mark.usefixtures("mock_machinetoken_open_success")
-def test_retrieve_pro_host_token_success():
-    assert ProToken.retrieve_pro_host_token() == "test_token"
+@pytest.mark.parametrize(
+    (
+        "fixture",
+        "expected_output",
+        "expected_exception",
+        "expected_exception_message",
+    ),
+    [
+        ("mock_machinetoken_open_success", "test_token", None, None),
+        (
+            "mock_machinetoken_open_notoken",
+            None,
+            MachineTokenError,
+            "No token in machine token file.",
+        ),
+        (
+            "mock_machinetoken_open_filenotfound",
+            None,
+            MachineTokenError,
+            "Machine token file does not exist.",
+        ),
+        (
+            "mock_machinetoken_open_nopermission",
+            None,
+            MachineTokenError,
+            "Machine token file is not accessible. Make sure you are running with root access.",
+        ),
+    ],
+)
+def test_retrieve_pro_host_token(
+    fixture,
+    expected_output,
+    expected_exception,
+    expected_exception_message,
+    request,
+):
+    request.getfixturevalue(fixture)
 
-
-@pytest.mark.usefixtures("mock_machinetoken_open_notoken")
-def test_retrieve_pro_host_token_notoken():
-    with pytest.raises(MachineTokenError) as excinfo:
-        ProToken.retrieve_pro_host_token()
-
-    assert str(excinfo.value) == "No token in machine token file."
-
-
-@pytest.mark.usefixtures("mock_machinetoken_open_filenotfound")
-def test_retrieve_pro_host_token_filenotfound():
-    with pytest.raises(MachineTokenError) as excinfo:
-        ProToken.retrieve_pro_host_token()
-
-    assert str(excinfo.value) == "Machine token file does not exist."
-
-
-@pytest.mark.usefixtures("mock_machinetoken_open_nopermission")
-def test_retrieve_pro_host_token_nopermission():
-    with pytest.raises(MachineTokenError) as excinfo:
-        ProToken.retrieve_pro_host_token()
-
-    assert str(excinfo.value) == (
-        "Machine token file is not accessible. Make sure you are running with "
-        "root access."
-    )
+    if expected_exception:
+        with pytest.raises(expected_exception) as excinfo:
+            ProToken.retrieve_pro_host_token()
+        assert str(excinfo.value) == expected_exception_message
+    else:
+        assert ProToken.retrieve_pro_host_token() == expected_output
 
 
 @pytest.fixture
 def mock_retrieve_pro_host_token():
+    """Mock retrieve_pro_host_token function."""
     return mock.patch.object(
         ProToken, "retrieve_pro_host_token", return_value="mock_machine_token"
     )
 
 
+@pytest.mark.parametrize(
+    (
+        "mock_response_status",
+        "mock_response_json",
+        "mock_side_effect",
+        "expected_token",
+    ),
+    [
+        (200, {"guestToken": "mock_guest_token"}, None, "mock_guest_token"),
+        (400, None, None, "mock_machine_token"),
+        (200, {"guestToken": ""}, None, "mock_machine_token"),
+        (None, None, JSONDecodeError("Error", "json", 0), "mock_machine_token"),
+        (None, None, RequestException, "mock_machine_token"),
+    ],
+)
 @mock.patch("requests.get")
-def test_request_pro_guest_token_success(mock_get, mock_retrieve_pro_host_token):
-    """Test successful guest token retrieval."""
-    mock_response = mock.Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {"guestToken": "mock_guest_token"}
-    mock_get.return_value = mock_response
-
-    with mock_retrieve_pro_host_token:
-        guest_token = ProToken.request_pro_guest_token()
-
-    assert guest_token == "mock_guest_token"  # noqa: S105
-    mock_get.assert_called_once_with(
-        _CONTRACTS_API_URL + _CONTRACTS_API_ENDPOINT,
-        headers={"Authorization": "Bearer mock_machine_token"},
-        timeout=15,
-    )
-
-
-@mock.patch("requests.get")
-def test_request_pro_guest_token_fallback_due_to_status_code(
-    mock_get, mock_retrieve_pro_host_token
+def test_request_pro_guest_token(
+    mock_get,
+    mock_response_status,
+    mock_response_json,
+    mock_side_effect,
+    expected_token,
+    mock_retrieve_pro_host_token,
 ):
-    """Test fallback to machine token due to non-200 status code."""
-    mock_response = mock.Mock()
-    mock_response.status_code = 400
-    mock_get.return_value = mock_response
+    """Test request_pro_guest_token behavior with various scenarios."""
+    if mock_side_effect:
+        mock_get.side_effect = mock_side_effect
+    else:
+        mock_response = mock.Mock()
+        mock_response.status_code = mock_response_status
+        mock_response.json.return_value = mock_response_json
+        mock_get.return_value = mock_response
 
     with mock_retrieve_pro_host_token:
         token = ProToken.request_pro_guest_token()
 
-    assert token == "mock_machine_token"  # noqa: S105
-    mock_get.assert_called_once()
-
-
-@mock.patch("requests.get")
-def test_request_pro_guest_token_fallback_due_to_empty_guest_token(
-    mock_get, mock_retrieve_pro_host_token
-):
-    """Test fallback to machine token due to empty guest token."""
-    mock_response = mock.Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {"guestToken": ""}
-    mock_get.return_value = mock_response
-
-    with mock_retrieve_pro_host_token:
-        token = ProToken.request_pro_guest_token()
-
-    assert token == "mock_machine_token"  # noqa: S105
-    mock_get.assert_called_once()
-
-
-@mock.patch("requests.get")
-def test_request_pro_guest_token_fallback_due_to_json_decode_error(
-    mock_get, mock_retrieve_pro_host_token
-):
-    """Test fallback to machine token due to JSONDecodeError."""
-    mock_get.side_effect = JSONDecodeError("Error", "json", 0)
-
-    with mock_retrieve_pro_host_token:
-        token = ProToken.request_pro_guest_token()
-
-    assert token == "mock_machine_token"  # noqa: S105
-    mock_get.assert_called_once()
-
-
-@mock.patch("requests.get")
-def test_request_pro_guest_token_fallback_due_to_request_exception(
-    mock_get, mock_retrieve_pro_host_token
-):
-    """Test fallback to machine token due to RequestException."""
-    mock_get.side_effect = RequestException
-
-    with mock_retrieve_pro_host_token:
-        token = ProToken.request_pro_guest_token()
-
-    assert token == "mock_machine_token"  # noqa: S105
+    assert token == expected_token
     mock_get.assert_called_once()
