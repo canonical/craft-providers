@@ -19,7 +19,10 @@
 
 import logging
 
+import packaging.version
+
 from craft_providers import Base, bases
+from craft_providers.multipass.errors import MultipassError
 from craft_providers.multipass.multipass_instance import MultipassInstance
 
 logger = logging.getLogger(__name__)
@@ -54,6 +57,15 @@ def launch(
     :raises MultipassError: on unexpected Multipass error.
     """
     instance = MultipassInstance(name=name)
+
+    # TODO: drop this after 1.14.1 is released to latest/stable (#638)
+    if base_configuration.alias == bases.ubuntu.BuilddBaseAlias.NOBLE:
+        version, _ = instance._multipass.version()
+        if packaging.version.parse(version) < packaging.version.Version("1.14.1"):
+            raise MultipassError(
+                brief=f"Multipass {version!r} does not support Ubuntu 24.04 (Noble).",
+                resolution="Upgrade to Multipass 1.14.1 or newer.",
+            )
 
     if instance.exists():
         # TODO: Warn if existing instance doesn't match cpu/disk/mem specs.
