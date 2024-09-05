@@ -1148,7 +1148,7 @@ def test_request_pro_guest_token_success(
     with mock_retrieve_pro_host_token:
         guest_token = instance.request_pro_guest_token()
 
-    assert guest_token == "mock_guest_token"
+    assert guest_token == "mock_guest_token"  # noqa: S105
     mock_get.assert_called_once_with(
         _CONTRACTS_API_URL + _CONTRACTS_API_ENDPOINT,
         headers={"Authorization": "Bearer mock_machine_token"},
@@ -1168,7 +1168,7 @@ def test_request_pro_guest_token_fallback_due_to_status_code(
     with mock_retrieve_pro_host_token:
         token = instance.request_pro_guest_token()
 
-    assert token == "mock_machine_token"
+    assert token == "mock_machine_token"  # noqa: S105
     mock_get.assert_called_once()
 
 
@@ -1185,7 +1185,7 @@ def test_request_pro_guest_token_fallback_due_to_empty_guest_token(
     with mock_retrieve_pro_host_token:
         token = instance.request_pro_guest_token()
 
-    assert token == "mock_machine_token"
+    assert token == "mock_machine_token"  # noqa: S105
     mock_get.assert_called_once()
 
 
@@ -1199,7 +1199,7 @@ def test_request_pro_guest_token_fallback_due_to_json_decode_error(
     with mock_retrieve_pro_host_token:
         token = instance.request_pro_guest_token()
 
-    assert token == "mock_machine_token"
+    assert token == "mock_machine_token"  # noqa: S105
     mock_get.assert_called_once()
 
 
@@ -1213,5 +1213,5 @@ def test_request_pro_guest_token_fallback_due_to_request_exception(
     with mock_retrieve_pro_host_token:
         token = instance.request_pro_guest_token()
 
-    assert token == "mock_machine_token"
+    assert token == "mock_machine_token"  # noqa: S105
     mock_get.assert_called_once()
