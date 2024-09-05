@@ -17,7 +17,6 @@
 
 import hashlib
 import io
-import json
 import os
 import pathlib
 import shutil
@@ -30,9 +29,7 @@ from unittest.mock import call
 import pytest
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, LXDInstance
-from craft_providers.lxd.errors import MachineTokenError
 from logassert import Exact  # type: ignore
-from requests.exceptions import JSONDecodeError, RequestException
 
 # These names include invalid characters so a lxd-compatible instance_name
 # is generated. This ensures an Instance's `name` and `instance_name` are
@@ -51,9 +48,6 @@ _INVALID_INSTANCE = {
     "name": "invalid-instance-$",
     "instance-name": "invalid-instance-86be3150e96a80a04e31",
 }
-
-_CONTRACTS_API_URL = "https://contracts.canonical.com"
-_CONTRACTS_API_ENDPOINT = "/v1/guest/token"
 
 
 @pytest.fixture
@@ -1056,162 +1050,3 @@ def test_set_instance_name_invalid(mock_lxc, name):
         brief=f"failed to create LXD instance with name {name!r}.",
         details="name must contain at least one alphanumeric character",
     )
-
-
-@pytest.fixture
-def mock_machinetoken_open_success():
-    with mock.patch(
-        "builtins.open",
-        new_callable=mock.mock_open,
-        read_data=json.dumps({"machineToken": "test_token"}),
-    ) as mock_file:
-        yield mock_file
-
-
-@pytest.fixture
-def mock_machinetoken_open_notoken():
-    with mock.patch(
-        "builtins.open",
-        new_callable=mock.mock_open,
-        read_data=json.dumps({"machineToken": ""}),
-    ) as mock_file:
-        yield mock_file
-
-
-@pytest.fixture
-def mock_machinetoken_open_filenotfound():
-    with mock.patch(
-        "builtins.open",
-        side_effect=FileNotFoundError,
-    ) as mock_file:
-        yield mock_file
-
-
-@pytest.fixture
-def mock_machinetoken_open_nopermission():
-    with mock.patch(
-        "builtins.open",
-        side_effect=PermissionError,
-    ) as mock_file:
-        yield mock_file
-
-
-@pytest.mark.usefixtures("mock_machinetoken_open_success")
-def test_retrieve_pro_host_token_success(instance):
-    assert instance.retrieve_pro_host_token() == "test_token"
-
-
-@pytest.mark.usefixtures("mock_machinetoken_open_notoken")
-def test_retrieve_pro_host_token_notoken(instance):
-    with pytest.raises(MachineTokenError) as excinfo:
-        instance.retrieve_pro_host_token()
-
-    assert str(excinfo.value) == "No token in machine token file."
-
-
-@pytest.mark.usefixtures("mock_machinetoken_open_filenotfound")
-def test_retrieve_pro_host_token_filenotfound(instance):
-    with pytest.raises(MachineTokenError) as excinfo:
-        instance.retrieve_pro_host_token()
-
-    assert str(excinfo.value) == "Machine token file does not exist."
-
-
-@pytest.mark.usefixtures("mock_machinetoken_open_nopermission")
-def test_retrieve_pro_host_token_nopermission(instance):
-    with pytest.raises(MachineTokenError) as excinfo:
-        instance.retrieve_pro_host_token()
-
-    assert str(excinfo.value) == (
-        "Machine token file is not accessible. Make sure you are running with "
-        "root access."
-    )
-
-
-@pytest.fixture
-def mock_retrieve_pro_host_token(instance):
-    return mock.patch.object(
-        instance, "retrieve_pro_host_token", return_value="mock_machine_token"
-    )
-
-
-@mock.patch("requests.get")
-def test_request_pro_guest_token_success(
-    mock_get, instance, mock_retrieve_pro_host_token
-):
-    """Test successful guest token retrieval."""
-    mock_response = mock.Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {"guestToken": "mock_guest_token"}
-    mock_get.return_value = mock_response
-
-    with mock_retrieve_pro_host_token:
-        guest_token = instance.request_pro_guest_token()
-
-    assert guest_token == "mock_guest_token"  # noqa: S105
-    mock_get.assert_called_once_with(
-        _CONTRACTS_API_URL + _CONTRACTS_API_ENDPOINT,
-        headers={"Authorization": "Bearer mock_machine_token"},
-        timeout=15,
-    )
-
-
-@mock.patch("requests.get")
-def test_request_pro_guest_token_fallback_due_to_status_code(
-    mock_get, instance, mock_retrieve_pro_host_token
-):
-    """Test fallback to machine token due to non-200 status code."""
-    mock_response = mock.Mock()
-    mock_response.status_code = 400
-    mock_get.return_value = mock_response
-
-    with mock_retrieve_pro_host_token:
-        token = instance.request_pro_guest_token()
-
-    assert token == "mock_machine_token"  # noqa: S105
-    mock_get.assert_called_once()
-
-
-@mock.patch("requests.get")
-def test_request_pro_guest_token_fallback_due_to_empty_guest_token(
-    mock_get, instance, mock_retrieve_pro_host_token
-):
-    """Test fallback to machine token due to empty guest token."""
-    mock_response = mock.Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {"guestToken": ""}
-    mock_get.return_value = mock_response
-
-    with mock_retrieve_pro_host_token:
-        token = instance.request_pro_guest_token()
-
-    assert token == "mock_machine_token"  # noqa: S105
-    mock_get.assert_called_once()
-
-
-@mock.patch("requests.get")
-def test_request_pro_guest_token_fallback_due_to_json_decode_error(
-    mock_get, instance, mock_retrieve_pro_host_token
-):
-    """Test fallback to machine token due to JSONDecodeError."""
-    mock_get.side_effect = JSONDecodeError("Error", "json", 0)
-
-    with mock_retrieve_pro_host_token:
-        token = instance.request_pro_guest_token()
-
-    assert token == "mock_machine_token"  # noqa: S105
-    mock_get.assert_called_once()
-
-
-@mock.patch("requests.get")
-def test_request_pro_guest_token_fallback_due_to_request_exception(
-    mock_get, instance, mock_retrieve_pro_host_token
-):
-    """Test fallback to machine token due to RequestException."""
-    mock_get.side_effect = RequestException
-
-    with mock_retrieve_pro_host_token:
-        token = instance.request_pro_guest_token()
-
-    assert token == "mock_machine_token"  # noqa: S105
-    mock_get.assert_called_once()

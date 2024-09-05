@@ -131,3 +131,7 @@ class NetworkError(ProviderError):
             f"see {url} for further reference."
         )
         super().__init__(brief=brief, resolution=resolution)
+
+
+class MachineTokenError(Exception):
+    """Exception occurring when machine-token.json isn't accessible."""

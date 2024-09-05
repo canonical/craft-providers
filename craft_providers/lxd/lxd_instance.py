@@ -19,7 +19,6 @@
 
 import hashlib
 import io
-import json
 import logging
 import os
 import pathlib
@@ -29,12 +28,10 @@ import subprocess
 import tempfile
 from typing import Any, Dict, List, Optional
 
-import requests
-
 from craft_providers.const import TIMEOUT_SIMPLE
 from craft_providers.errors import details_from_called_process_error
 from craft_providers.executor import Executor
-from craft_providers.lxd.errors import LXDError, MachineTokenError
+from craft_providers.lxd.errors import LXDError
 from craft_providers.lxd.lxc import LXC
 from craft_providers.util import env_cmd
 
@@ -650,62 +647,3 @@ class LXDInstance(Executor):
             project=self.project,
             remote=self.remote,
         )
-
-    def retrieve_pro_host_token(self) -> str:
-        """Get the machine token from the pro host."""
-        try:
-            with open("/var/lib/ubuntu-advantage/private/machine-token.json") as fd:
-                content = json.load(fd)
-                machine_token = content.get("machineToken", "")
-                if not machine_token:
-                    raise MachineTokenError("No token in machine token file.")
-                return machine_token
-        except FileNotFoundError:
-            raise MachineTokenError("Machine token file does not exist.")
-        except PermissionError:
-            raise MachineTokenError(
-                "Machine token file is not accessible. Make sure you are "
-                "running with root access."
-            )
-
-    def request_pro_guest_token(self) -> str:
-        """Request a guest token from contracts API."""
-        machine_token = self.retrieve_pro_host_token()
-
-        try:
-            base_url = "https://contracts.canonical.com"
-            endpoint = "/v1/guest/token"
-            response = requests.get(
-                base_url + endpoint,
-                headers={"Authorization": f"Bearer {machine_token}"},
-                timeout=15,
-            )
-            if response.status_code != 200:
-                # fallback mechanism
-                logger.info(
-                    "Could not obtain a guest token. Falling back to machine \
-                    token."
-                )
-                return machine_token
-
-            guest_token = response.json().get("guestToken", "")
-            if not guest_token:
-                # fallback to machine token
-                logger.info("Guest token is empty. Falling back to machine token.")
-                return machine_token
-            logger.info("Guest token received successfully.")
-            return guest_token  # noqa: TRY300
-        except requests.exceptions.JSONDecodeError:
-            # recrived data was not in json format
-            logger.info(
-                "Error decoding JSON data when retrieving guest token. Falling\
-                back to machine token."
-            )
-            return machine_token
-        except requests.exceptions.RequestException:
-            # guest token acquiring failed
-            logger.info(
-                "Request error when trying to retrieve the guest token. \
-                Falling back to machine token."
-            )
-            return machine_token
