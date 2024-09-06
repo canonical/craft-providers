@@ -41,7 +41,7 @@ dev = [
     "pytest-rerunfailures==14.0",
     "pytest-subprocess==1.5.2",
     "pytest-xdist==3.6.1",
-    "pytest-time==0.3.1",
+    "pytest-time==0.3.2",
     "responses==0.25.3",
     # types-requests>=2.31.0.7 requires urllib3>=2
     "types-requests==2.31.0.6",
@@ -54,8 +54,8 @@ lint = [
     "yamllint==1.35.1",
 ]
 types = [
-    "mypy[reports]==1.11.1",
-    "pyright==1.1.377",
+    "mypy[reports]==1.11.2",
+    "pyright==1.1.379",
 ]
 docs = [
     "pyspelling==2.10",
