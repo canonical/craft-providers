@@ -133,5 +133,5 @@ class NetworkError(ProviderError):
         super().__init__(brief=brief, resolution=resolution)
 
 
-class MachineTokenError(Exception):
+class MachineTokenError(ProviderError):
     """Exception occurring when machine-token.json isn't accessible."""
