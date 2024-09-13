@@ -1050,3 +1050,15 @@ def test_set_instance_name_invalid(mock_lxc, name):
         brief=f"failed to create LXD instance with name {name!r}.",
         details="name must contain at least one alphanumeric character",
     )
+
+
+def test_is_pro_enabled(mock_lxc, instance):
+    instance.is_pro_enabled()
+
+    assert mock_lxc.mock_calls == [
+        mock.call.is_pro_enabled(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+        )
+    ]
