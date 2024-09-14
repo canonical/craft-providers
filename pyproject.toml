@@ -59,7 +59,7 @@ types = [
 ]
 docs = [
     "pyspelling==2.10",
-    "sphinx-autobuild==2024.4.16",
+    "sphinx-autobuild==2024.9.3",
     "sphinx-lint==0.9.1",
     "sphinx-tabs==3.4.5",
     "canonical-sphinx~=0.1"
