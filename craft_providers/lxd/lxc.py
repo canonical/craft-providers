@@ -1246,10 +1246,7 @@ class LXC:
             "-",
         ]
         try:
-            payload = json.dumps({
-                "token": pro_token,
-                "auto_enable_services": False
-            })
+            payload = json.dumps({"token": pro_token, "auto_enable_services": False})
 
             proc = self._run_lxc(
                 command,
