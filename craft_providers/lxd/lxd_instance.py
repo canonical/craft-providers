@@ -647,3 +647,16 @@ class LXDInstance(Executor):
             project=self.project,
             remote=self.remote,
         )
+
+    def is_pro_enabled(self) -> bool:
+        """Check whether the instance is Pro enabled.
+
+        :returns: True if the instance is Pro enabled.
+
+        :raises: LXDError: On unexpected error.
+        """
+        return self.lxc.is_pro_enabled(
+            instance_name=self.instance_name,
+            project=self.project,
+            remote=self.remote,
+        )

@@ -2579,3 +2579,121 @@ def test_yaml_loader_invalid_timestamp():
 
     assert "last_used_at" in obj
     assert isinstance(obj["last_used_at"], str)
+
+
+def test_is_pro_enabled_success(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ],
+        stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"contract_remaining_days": 2912917, "contract_status": "active", "is_attached": true, "is_attached_and_contract_valid": true}, "meta": {"environment_vars": []}, "type": "IsAttached"}, "errors": [], "result": "success", "version": "32.3.1~24.04", "warnings": []}""",
+    )
+
+    assert (
+        LXC().is_pro_enabled(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+        is True
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_pro_enabled_failed(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ],
+        stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"contract_remaining_days": 2912917, "contract_status": "active", "is_attached": true, "is_attached_and_contract_valid": true}, "meta": {"environment_vars": []}, "type": "IsAttached"}, "errors": [], "result": "failure", "version": "32.3.1~24.04", "warnings": []}""",
+        returncode=0,
+    )
+
+    with pytest.raises(LXDError) as exc_info:
+        LXC().is_pro_enabled(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert exc_info.value == LXDError(
+        brief="Failed to get a successful response from `pro` command on 'test-instance'.",
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_pro_enabled_json_error(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ],
+        stdout=b"random",
+    )
+
+    with pytest.raises(LXDError) as exc_info:
+        LXC().is_pro_enabled(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert exc_info.value == LXDError(
+        brief="Failed to parse JSON response of `pro` command on 'test-instance'.",
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_pro_enabled_process_error(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ],
+        returncode=127,
+    )
+
+    with pytest.raises(LXDError) as exc_info:
+        LXC().is_pro_enabled(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert exc_info.value == LXDError(
+        brief="Failed to run `pro` command on 'test-instance'.",
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
+    )
+
+    assert len(fake_process.calls) == 1
