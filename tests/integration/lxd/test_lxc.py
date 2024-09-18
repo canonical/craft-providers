@@ -33,6 +33,17 @@ def instance(instance_name, session_project):
         yield tmp_instance
 
 
+@pytest.fixture
+def instance_alma(instance_name, session_project):
+    with conftest.tmp_instance(
+        name=instance_name,
+        project=session_project,
+        image="almalinux/9",
+        image_remote="images",
+    ) as tmp_instance:
+        yield tmp_instance
+
+
 def test_launch_default_config(instance, lxc, session_project):
     """Verify default config values when launching."""
     status = lxc.config_get(
@@ -271,3 +282,25 @@ def test_info(instance, lxc, session_project):
     data = lxc.info(instance_name=instance, project=session_project)
 
     assert data["Name"] == instance
+
+
+def test_is_pro_enabled_ubuntu(instance, lxc, session_project):
+    """Test the scenario where Pro client is installed."""
+    result = lxc.is_pro_enabled(
+        instance_name=instance,
+        project=session_project,
+    )
+
+    # Assert the instance is not Pro enabled
+    assert result is False
+
+
+def test_is_pro_enabled_alma(instance_alma, lxc, session_project):
+    """Test the scenario where Pro client is not installed."""
+    with pytest.raises(LXDError) as raised:
+        lxc.is_pro_enabled(
+            instance_name=instance_alma,
+            project=session_project,
+        )
+
+    assert raised.value.brief == (f"Failed to run `pro` command on {instance_alma!r}.")
