@@ -1237,9 +1237,10 @@ class LXC:
         :raises LXDError: on unexpected error.
         """
         command = [
+            "exec",
+            f"{remote}:{instance_name}",
             "pro",
             "api",
-            f"{remote}:{instance_name}",
             "u.pro.attach.token.full_token_attach.v1",
             "--data",
             "-",
