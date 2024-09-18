@@ -20,6 +20,7 @@
 import builtins
 import contextlib
 import enum
+import json
 import logging
 import os
 import pathlib
@@ -1215,3 +1216,47 @@ class LXC:
             brief="Could not determine lxd version.",
             details="Didn't find string 'Server version' in output",
         )
+
+    def is_pro_enabled(
+        self,
+        *,
+        instance_name: str,
+        project: str = "default",
+        remote: str = "local",
+    ) -> bool:
+        """Check whether Pro is enabled on the instance.
+
+        :param instance_name: Name of instance.
+
+        :returns: True if instance is attached.
+        """
+        command = [
+            "exec",
+            f"{remote}:{instance_name}",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ]
+
+        try:
+            proc = self._run_lxc(command, capture_output=True, project=project)
+            data = json.loads(proc.stdout)
+            if data.get("result") == "success":
+                if data.get("data", {}).get("attributes", {}).get("is_attached"):
+                    logger.debug("Managed instance is Pro enabled.")
+                    return True
+                logger.debug("Managed instance is not Pro enabled.")
+                return False
+
+            raise LXDError(
+                brief=f"Failed to get a successful response from `pro` command on {instance_name!r}.",
+            )
+        except json.JSONDecodeError as error:
+            raise LXDError(
+                brief=f"Failed to parse JSON response of `pro` command on {instance_name!r}.",
+            ) from error
+        except subprocess.CalledProcessError as error:
+            raise LXDError(
+                brief=f"Failed to run `pro` command on {instance_name!r}.",
+                details=errors.details_from_called_process_error(error),
+            ) from error

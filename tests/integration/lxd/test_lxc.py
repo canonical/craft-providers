@@ -285,3 +285,25 @@ def test_info(instance, lxc, session_project):
     data = lxc.info(instance_name=instance, project=session_project)
 
     assert data["Name"] == instance
+
+
+def test_is_pro_enabled_ubuntu(instance, lxc, session_project):
+    """Test the scenario where Pro client is installed."""
+    result = lxc.is_pro_enabled(
+        instance_name=instance,
+        project=session_project,
+    )
+
+    # Assert the instance is not Pro enabled
+    assert result is False
+
+
+def test_is_pro_enabled_alma(instance_alma, lxc, session_project):
+    """Test the scenario where Pro client is not installed."""
+    with pytest.raises(LXDError) as raised:
+        lxc.is_pro_enabled(
+            instance_name=instance_alma,
+            project=session_project,
+        )
+
+    assert raised.value.brief == (f"Failed to run `pro` command on {instance_alma!r}.")
