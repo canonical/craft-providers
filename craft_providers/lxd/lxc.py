@@ -1237,9 +1237,11 @@ class LXC:
         :raises LXDError: on unexpected error.
         """
         command = [
+            "exec",
+            f"{remote}:{instance_name}",
+            "--",
             "pro",
             "api",
-            f"{remote}:{instance_name}",
             "u.pro.services.enable.v1",
             "--data",
             json.dumps({"service": service}),
@@ -1251,6 +1253,9 @@ class LXC:
                 project=project,
             )
 
+            # No need to parse the output here, as an output with
+            # "result": "failure" will also have a return code != 0
+            # hence triggering a CalledProcesssError exception
             logger.debug(f"Pro service {service!r} successfully enabled on instance.")
         except json.JSONDecodeError as error:
             raise LXDError(

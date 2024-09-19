@@ -660,3 +660,17 @@ class LXDInstance(Executor):
             project=self.project,
             remote=self.remote,
         )
+
+    def enable_pro_service(self, service: str) -> None:
+        """Enable a Pro service on the instance.
+
+        :param service: Pro service to enable.
+
+        :raises: LXDError: On unexpected error.
+        """
+        self.lxc.enable_pro_service(
+            instance_name=self.instance_name,
+            service=service,
+            project=self.project,
+            remote=self.remote,
+        )

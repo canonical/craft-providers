@@ -2697,3 +2697,105 @@ def test_is_pro_enabled_process_error(fake_process):
     )
 
     assert len(fake_process.calls) == 1
+
+
+def test_enable_pro_service_success(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.services.enable.v1",
+            "--data",
+            '{"service": "esm-infra"}',
+        ],
+        stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"disabled": [], "enabled": ["esm-infra"], "messages": [], "reboot_required": false}, "meta": {"environment_vars": []}, "type": "EnableService"}, "errors": [], "result": "success", "version": "32.3.1~24.04", "warnings": []}""",
+    )
+
+    assert (
+        LXC().enable_pro_service(
+            instance_name="test-instance",
+            service="esm-infra",
+            project="test-project",
+            remote="test-remote",
+        )
+        is None
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_enable_pro_service_failed(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.services.enable.v1",
+            "--data",
+            '{"service": "invalid"}',
+        ],
+        stdout=b"""{"_schema_version": "v1", "data": {"meta": {"environment_vars": []}}, "errors": [{"code": "entitlement-not-found", "meta": {"entitlement_name": "invalid"}, "title": "could not find entitlement named \"invalid\""}], "result": "failure", "version": "32.3.1~24.04", "warnings": []}""",
+        returncode=1,
+    )
+
+    with pytest.raises(LXDError) as exc_info:
+        LXC().enable_pro_service(
+            instance_name="test-instance",
+            service="invalid",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert (
+        exc_info.value.brief
+        == "Failed to enable Pro service 'invalid' on instance 'test-instance'."
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_enable_pro_service_process_error(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.services.enable.v1",
+            "--data",
+            '{"service": "esm-infra"}',
+        ],
+        returncode=127,
+    )
+
+    with pytest.raises(LXDError) as exc_info:
+        LXC().enable_pro_service(
+            instance_name="test-instance",
+            service="esm-infra",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert exc_info.value == LXDError(
+        brief="Failed to enable Pro service 'esm-infra' on instance 'test-instance'.",
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
+    )
+
+    assert len(fake_process.calls) == 1
