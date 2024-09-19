@@ -2699,6 +2699,108 @@ def test_is_pro_enabled_process_error(fake_process):
     assert len(fake_process.calls) == 1
 
 
+def test_attach_pro_subscription_success(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.attach.token.full_token_attach.v1",
+            "--data",
+            "-",
+        ],
+        stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"enabled": [], "reboot_required": false}, "meta": {"environment_vars": []}, "type": "FullTokenAttach"}, "errors": [], "result": "success", "version": "32.3.1~24.04", "warnings": []}""",
+    )
+
+    assert (
+        LXC().attach_pro_subscription(
+            instance_name="test-instance",
+            pro_token="random",  # noqa: S106
+            project="test-project",
+            remote="test-remote",
+        )
+        is None
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_attach_pro_subscription_failed(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.attach.token.full_token_attach.v1",
+            "--data",
+            "-",
+        ],
+        stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"enabled": [], "reboot_required": false}, "meta": {"environment_vars": []}, "type": "FullTokenAttach"}, "errors": ["Unknown"], "result": "failure", "version": "32.3.1~24.04", "warnings": []}""",
+        returncode=1,
+    )
+
+    with pytest.raises(LXDError) as exc_info:
+        LXC().attach_pro_subscription(
+            instance_name="test-instance",
+            pro_token="random",  # noqa: S106
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert (
+        exc_info.value.brief
+        == "Failed to attach 'test-instance' to a Pro subscription."
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_attach_pro_subscription_process_error(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.attach.token.full_token_attach.v1",
+            "--data",
+            "-",
+        ],
+        returncode=127,
+    )
+
+    with pytest.raises(LXDError) as exc_info:
+        LXC().attach_pro_subscription(
+            instance_name="test-instance",
+            pro_token="random",  # noqa: S106
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert exc_info.value == LXDError(
+        brief="Failed to attach 'test-instance' to a Pro subscription.",
+        details=errors.details_from_called_process_error(
+            exc_info.value.__cause__  # type: ignore
+        ),
+    )
+
+    assert len(fake_process.calls) == 1
+
+
 def test_enable_pro_service_success(fake_process):
     fake_process.register_subprocess(
         [

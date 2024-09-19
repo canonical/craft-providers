@@ -28,6 +28,7 @@ import subprocess
 import tempfile
 from typing import Any, Dict, List, Optional
 
+from craft_providers import pro
 from craft_providers.const import TIMEOUT_SIMPLE
 from craft_providers.errors import details_from_called_process_error
 from craft_providers.executor import Executor
@@ -657,6 +658,15 @@ class LXDInstance(Executor):
         """
         return self.lxc.is_pro_enabled(
             instance_name=self.instance_name,
+            project=self.project,
+            remote=self.remote,
+        )
+
+    def attach_pro_subscription(self):
+        """Attach the instance to a Pro subscription."""
+        self.lxc.attach_pro_subscription(
+            instance_name=self.instance_name,
+            pro_token=pro.request_pro_guest_token(),
             project=self.project,
             remote=self.remote,
         )
