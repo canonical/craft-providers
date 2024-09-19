@@ -1259,7 +1259,9 @@ class LXC:
             # No need to parse the output here, as an output with
             # "result": "failure" will also have a return code != 0
             # hence triggering a CalledProcesssError exception
-            logger.debug("Managed instance successfully attached to a Pro subscription.")
+            logger.debug(
+                "Managed instance successfully attached to a Pro subscription."
+            )
         except json.JSONDecodeError as error:
             raise LXDError(
                 brief=f"Failed to parse JSON response of `pro` command on {instance_name!r}.",
