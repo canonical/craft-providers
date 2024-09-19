@@ -304,3 +304,17 @@ def test_is_pro_enabled_alma(instance_alma, lxc, session_project):
         )
 
     assert raised.value.brief == (f"Failed to run `pro` command on {instance_alma!r}.")
+
+
+def test_enable_pro_service(instance, lxc, session_project):
+    """Test the scenario where Pro client is not installed."""
+    with pytest.raises(LXDError) as raised:
+        lxc.enable_pro_service(
+            instance_name=instance,
+            service="esm-infra",
+            project=session_project,
+        )
+
+    assert raised.value.brief == (
+        f"Failed to enable Pro service 'esm-infra' on instance {instance!r}."
+    )
