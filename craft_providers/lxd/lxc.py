@@ -1260,3 +1260,56 @@ class LXC:
                 brief=f"Failed to run `pro` command on {instance_name!r}.",
                 details=errors.details_from_called_process_error(error),
             ) from error
+
+    def attach_pro_subscription(
+        self,
+        *,
+        instance_name: str,
+        pro_token: str,
+        project: str = "default",
+        remote: str = "local",
+    ) -> None:
+        """Attach the instance to a managed subscription.
+
+        :param instance_name: Name of instance to attach.
+        :param pro_token: Pro token.
+        :param project: Name of LXD project.
+        :param remote: Name of LXD remote.
+
+        :raises LXDError: on unexpected error.
+        """
+        command = [
+            "exec",
+            f"{remote}:{instance_name}",
+            "--",
+            "pro",
+            "api",
+            "u.pro.attach.token.full_token_attach.v1",
+            "--data",
+            "-",
+        ]
+        try:
+            payload = json.dumps({"token": pro_token, "auto_enable_services": False})
+
+            self._run_lxc(
+                command,
+                capture_output=True,
+                project=project,
+                input=payload.encode(),
+            )
+
+            # No need to parse the output here, as an output with
+            # "result": "failure" will also have a return code != 0
+            # hence triggering a CalledProcesssError exception
+            logger.debug(
+                "Managed instance successfully attached to a Pro subscription."
+            )
+        except json.JSONDecodeError as error:
+            raise LXDError(
+                brief=f"Failed to parse JSON response of `pro` command on {instance_name!r}.",
+            ) from error
+        except subprocess.CalledProcessError as error:
+            raise LXDError(
+                brief=f"Failed to attach {instance_name!r} to a Pro subscription.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
