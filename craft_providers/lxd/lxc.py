@@ -1239,6 +1239,7 @@ class LXC:
         command = [
             "exec",
             f"{remote}:{instance_name}",
+            "--",
             "pro",
             "api",
             "u.pro.attach.token.full_token_attach.v1",
@@ -1248,26 +1249,23 @@ class LXC:
         try:
             payload = json.dumps({"token": pro_token, "auto_enable_services": False})
 
-            proc = self._run_lxc(
+            self._run_lxc(
                 command,
                 capture_output=True,
                 project=project,
                 input=payload.encode(),
             )
 
-            data = json.loads(proc.stdout)
-            if data.get("result") != "success":
-                raise LXDError(
-                    brief=f"Failed to get a successful response from `pro` command on {instance_name!r}.",
-                )
-
-            logger.debug("Managed instance successfully attached to Pro subscription.")
+            # No need to parse the output here, as an output with
+            # "result": "failure" will also have a return code != 0
+            # hence triggering a CalledProcesssError exception
+            logger.debug("Managed instance successfully attached to a Pro subscription.")
         except json.JSONDecodeError as error:
             raise LXDError(
                 brief=f"Failed to parse JSON response of `pro` command on {instance_name!r}.",
             ) from error
         except subprocess.CalledProcessError as error:
             raise LXDError(
-                brief=f"Failed to attach {instance_name!r} to Pro subscription.",
+                brief=f"Failed to attach {instance_name!r} to a Pro subscription.",
                 details=errors.details_from_called_process_error(error),
             ) from error

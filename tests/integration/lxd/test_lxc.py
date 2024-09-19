@@ -316,5 +316,5 @@ def test_attach_pro_subscription(instance, lxc, session_project):
         )
 
     assert raised.value.brief == (
-        f"Failed to get a successful response from `pro` command on {instance!r}."
+        f"Failed to attach {instance!r} to a Pro subscription."
     )
