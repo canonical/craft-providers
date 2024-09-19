@@ -1218,3 +1218,46 @@ class LXC:
                 brief=f"Failed to run `pro` command on {instance_name!r}.",
                 details=errors.details_from_called_process_error(error),
             ) from error
+
+    def enable_pro_service(
+        self,
+        *,
+        instance_name: str,
+        service: str,
+        project: str = "default",
+        remote: str = "local",
+    ) -> None:
+        """Enable a Pro service on the instance.
+
+        :param instance_name: Name of instance.
+        :param service: Name of a single service to enable.
+        :param project: Name of LXD project.
+        :param remote: Name of LXD remote.
+
+        :raises LXDError: on unexpected error.
+        """
+        command = [
+            "pro",
+            "api",
+            f"{remote}:{instance_name}",
+            "u.pro.services.enable.v1",
+            "--data",
+            json.dumps({"service": service}),
+        ]
+        try:
+            self._run_lxc(
+                command,
+                capture_output=True,
+                project=project,
+            )
+
+            logger.debug(f"Pro service {service!r} successfully enabled on instance.")
+        except json.JSONDecodeError as error:
+            raise LXDError(
+                brief=f"Failed to parse JSON response of `pro` command on {instance_name!r}.",
+            ) from error
+        except subprocess.CalledProcessError as error:
+            raise LXDError(
+                brief=f"Failed to enable Pro service {service!r} on instance {instance_name!r}.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
