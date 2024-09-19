@@ -304,3 +304,17 @@ def test_is_pro_enabled_alma(instance_alma, lxc, session_project):
         )
 
     assert raised.value.brief == (f"Failed to run `pro` command on {instance_alma!r}.")
+
+
+def test_attach_pro_subscription(instance, lxc, session_project):
+    """Test the attachment scenario with a fake Pro token."""
+    with pytest.raises(LXDError) as raised:
+        lxc.attach_pro_subscription(
+            instance_name=instance,
+            pro_token="random",  # noqa: S106
+            project=session_project,
+        )
+
+    assert raised.value.brief == (
+        f"Failed to attach {instance!r} to a Pro subscription."
+    )
