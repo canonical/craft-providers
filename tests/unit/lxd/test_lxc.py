@@ -2818,18 +2818,34 @@ def test_enable_pro_service_success(fake_process):
         ],
         stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"disabled": [], "enabled": ["esm-infra"], "messages": [], "reboot_required": false}, "meta": {"environment_vars": []}, "type": "EnableService"}, "errors": [], "result": "success", "version": "32.3.1~24.04", "warnings": []}""",
     )
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.services.enable.v1",
+            "--data",
+            '{"service": "esm-apps"}',
+        ],
+        stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"disabled": [], "enabled": ["esm-apps"], "messages": [], "reboot_required": false}, "meta": {"environment_vars": []}, "type": "EnableService"}, "errors": [], "result": "success", "version": "32.3.1~24.04", "warnings": []}""",
+    )
 
     assert (
         LXC().enable_pro_service(
             instance_name="test-instance",
-            service="esm-infra",
+            services=["esm-infra", "esm-apps"],
             project="test-project",
             remote="test-remote",
         )
         is None
     )
 
-    assert len(fake_process.calls) == 1
+    assert len(fake_process.calls) == 2
 
 
 def test_enable_pro_service_failed(fake_process):
@@ -2854,7 +2870,7 @@ def test_enable_pro_service_failed(fake_process):
     with pytest.raises(LXDError) as exc_info:
         LXC().enable_pro_service(
             instance_name="test-instance",
-            service="invalid",
+            services=["invalid"],
             project="test-project",
             remote="test-remote",
         )
@@ -2888,7 +2904,7 @@ def test_enable_pro_service_process_error(fake_process):
     with pytest.raises(LXDError) as exc_info:
         LXC().enable_pro_service(
             instance_name="test-instance",
-            service="esm-infra",
+            services=["esm-infra"],
             project="test-project",
             remote="test-remote",
         )

@@ -325,7 +325,7 @@ def test_enable_pro_service(instance, lxc, session_project):
     with pytest.raises(LXDError) as raised:
         lxc.enable_pro_service(
             instance_name=instance,
-            service="esm-infra",
+            services=["esm-infra"],
             project=session_project,
         )
 
