@@ -26,7 +26,7 @@ import re
 import shutil
 import subprocess
 import tempfile
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from craft_providers import pro
 from craft_providers.const import TIMEOUT_SIMPLE
@@ -667,6 +667,20 @@ class LXDInstance(Executor):
         self.lxc.attach_pro_subscription(
             instance_name=self.instance_name,
             pro_token=pro.request_pro_guest_token(),
+            project=self.project,
+            remote=self.remote,
+        )
+
+    def enable_pro_service(self, services: Iterable[str]) -> None:
+        """Enable a Pro service on the instance.
+
+        :param services: Pro services to enable.
+
+        :raises: LXDError: On unexpected error.
+        """
+        self.lxc.enable_pro_service(
+            instance_name=self.instance_name,
+            services=services,
             project=self.project,
             remote=self.remote,
         )

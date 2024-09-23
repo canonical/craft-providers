@@ -318,3 +318,17 @@ def test_attach_pro_subscription(instance, lxc, session_project):
     assert raised.value.brief == (
         f"Failed to attach {instance!r} to a Pro subscription."
     )
+
+
+def test_enable_pro_service(instance, lxc, session_project):
+    """Test the scenario where Pro client is not installed."""
+    with pytest.raises(LXDError) as raised:
+        lxc.enable_pro_service(
+            instance_name=instance,
+            services=["esm-infra"],
+            project=session_project,
+        )
+
+    assert raised.value.brief == (
+        f"Failed to enable Pro service 'esm-infra' on instance {instance!r}."
+    )
