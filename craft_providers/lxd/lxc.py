@@ -31,7 +31,7 @@ import time
 from collections import deque
 from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable, Iterable
 
 import yaml
 
@@ -1313,3 +1313,54 @@ class LXC:
                 brief=f"Failed to attach {instance_name!r} to a Pro subscription.",
                 details=errors.details_from_called_process_error(error),
             ) from error
+
+    def enable_pro_service(
+        self,
+        *,
+        instance_name: str,
+        services: Iterable[str],
+        project: str = "default",
+        remote: str = "local",
+    ) -> None:
+        """Enable a Pro service on the instance.
+
+        :param instance_name: Name of instance.
+        :param services: Name of services to enable.
+        :param project: Name of LXD project.
+        :param remote: Name of LXD remote.
+
+        :raises LXDError: on unexpected error.
+        """
+        for service in services:
+            command = [
+                "exec",
+                f"{remote}:{instance_name}",
+                "--",
+                "pro",
+                "api",
+                "u.pro.services.enable.v1",
+                "--data",
+                json.dumps({"service": service}),
+            ]
+            try:
+                self._run_lxc(
+                    command,
+                    capture_output=True,
+                    project=project,
+                )
+
+                # No need to parse the output here, as an output with
+                # "result": "failure" will also have a return code != 0
+                # hence triggering a CalledProcesssError exception
+                logger.debug(
+                    f"Pro service {service!r} successfully enabled on instance."
+                )
+            except json.JSONDecodeError as error:
+                raise LXDError(
+                    brief=f"Failed to parse JSON response of `pro` command on {instance_name!r}.",
+                ) from error
+            except subprocess.CalledProcessError as error:
+                raise LXDError(
+                    brief=f"Failed to enable Pro service {service!r} on instance {instance_name!r}.",
+                    details=errors.details_from_called_process_error(error),
+                ) from error

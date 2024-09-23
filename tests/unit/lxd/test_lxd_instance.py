@@ -1218,3 +1218,16 @@ def test_is_pro_enabled(mock_lxc, instance):
             remote=instance.remote,
         )
     ]
+
+
+def test_enable_pro_service(mock_lxc, instance):
+    instance.enable_pro_service(["esm-apps"])
+
+    assert mock_lxc.mock_calls == [
+        mock.call.enable_pro_service(
+            instance_name=instance.instance_name,
+            services=["esm-apps"],
+            project=instance.project,
+            remote=instance.remote,
+        )
+    ]
