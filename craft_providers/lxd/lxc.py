@@ -1322,3 +1322,97 @@ class LXC:
                     brief=f"Failed to enable Pro service {service!r} on instance {instance_name!r}.",
                     details=errors.details_from_called_process_error(error),
                 ) from error
+
+    def is_pro_installed(
+        self,
+        *,
+        instance_name: str,
+        project: str = "default",
+        remote: str = "local",
+    ) -> bool:
+        """Check whether Ubuntu Pro Client is installed in the instance.
+
+        :param instance_name: Name of instance.
+        :param project: Name of LXD project.
+        :param remote: Name of LXD remote.
+
+        :raises LXDError: on unexpected error.
+        """
+        command = [
+            "exec",
+            f"{remote}:{instance_name}",
+            "pro",
+            "version",
+        ]
+        try:
+            self._run_lxc(
+                command,
+                capture_output=True,
+                project=project,
+            )
+
+            logger.debug("Ubuntu Pro Client is installed in managed instance.")
+            return True  # noqa: TRY300
+        except subprocess.CalledProcessError:
+            logger.debug("Ubuntu Pro Client is not installed in managed instance.")
+            return False
+
+    def install_pro_client(
+        self,
+        *,
+        instance_name: str,
+        project: str = "default",
+        remote: str = "local",
+    ) -> None:
+        """Install Ubuntu Pro Client in the instance.
+
+        :param instance_name: Name of instance.
+        :param project: Name of LXD project.
+        :param remote: Name of LXD remote.
+
+        :raises LXDError: on unexpected error.
+        """
+        command = [
+            "exec",
+            f"{remote}:{instance_name}",
+            "--",
+            "apt",
+            "install",
+            "-y",
+            "ubuntu-advantage-tools",
+        ]
+        try:
+            self._run_lxc(
+                command,
+                capture_output=True,
+                project=project,
+            )
+
+            if not self.is_pro_installed(
+                instance_name=instance_name,
+                project=project,
+                remote=remote,
+            ):
+                command = [
+                    "exec",
+                    f"{remote}:{instance_name}",
+                    "--",
+                    "apt",
+                    "install",
+                    "-y",
+                    "ubuntu-advantage-tools=27.11.2~$(lsb_release -rs).1",
+                ]
+                self._run_lxc(
+                    command,
+                    capture_output=True,
+                    project=project,
+                )
+
+            logger.debug(
+                "Ubuntu Pro Client successfully installed in managed instance."
+            )
+        except subprocess.CalledProcessError as error:
+            raise LXDError(
+                brief=f"Failed to install Ubuntu Pro Client in instance {instance_name!r}.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
