@@ -5,13 +5,8 @@ dependencies = [
     "packaging>=14.1",
     "pydantic~=2.4",
     "pyyaml",
-    # see https://github.com/psf/requests/issues/6707
-    "requests<2.32",
-    "requests_unixsocket",
-    # Needed until requests-unixsocket supports urllib3 v2
-    # https://github.com/msabramo/requests-unixsocket/pull/69
-    # When updating this, remove the constraints from renovate.json.
-    "urllib3<2",
+    "requests>=2.31",
+    "requests_unixsocket2>=0.4.0",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -43,7 +38,6 @@ dev = [
     "pytest-xdist==3.6.1",
     "pytest-time==0.3.2",
     "responses==0.25.3",
-    # types-requests>=2.31.0.7 requires urllib3>=2
     "types-requests==2.31.0.6",
     "types-setuptools==73.0.0.20240822",
     "types-pyyaml==6.0.12.20240917",

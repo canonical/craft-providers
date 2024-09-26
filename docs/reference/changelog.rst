@@ -4,6 +4,10 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+X.Y.Z (2024-MM-DD)
+------------------
+- ``requests-unixsocket`` dependency is replaced with ``requests-unixsocket2``
+
 2.0.1 (2024-08-28)
 ------------------
 - Require Multipass>=1.14.1 when launching Ubuntu 24.04 (Noble) VMs, which
