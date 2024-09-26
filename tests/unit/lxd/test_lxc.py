@@ -2917,3 +2917,155 @@ def test_enable_pro_service_process_error(fake_process):
     )
 
     assert len(fake_process.calls) == 1
+
+
+def test_is_pro_installed_success(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "pro",
+            "version",
+        ],
+        stdout="32.3.1~22.04",
+    )
+
+    assert (
+        LXC().is_pro_installed(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+        is True
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_pro_installed_failure(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "pro",
+            "version",
+        ],
+        returncode=127,
+    )
+
+    assert (
+        LXC().is_pro_installed(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+        is False
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_install_pro_client_success1(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "apt",
+            "install",
+            "-y",
+            "ubuntu-advantage-tools",
+        ],
+        stdout="placeholder",
+    )
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "pro",
+            "version",
+        ],
+        stdout="32.3.1~22.04",
+    )
+
+    assert (
+        LXC().install_pro_client(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+        is None
+    )
+
+    assert len(fake_process.calls) == 2
+
+
+def test_install_pro_client_success2(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "apt",
+            "install",
+            "-y",
+            "ubuntu-advantage-tools",
+        ],
+        stdout="placeholder",
+    )
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "pro",
+            "version",
+        ],
+        returncode=127,
+    )
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "apt",
+            "install",
+            "-y",
+            "ubuntu-advantage-tools=27.11.2~$(lsb_release -rs).1",
+        ],
+        stdout="placeholder",
+    )
+
+    assert (
+        LXC().install_pro_client(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+        is None
+    )
+
+    assert len(fake_process.calls) == 3
