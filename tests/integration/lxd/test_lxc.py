@@ -332,3 +332,18 @@ def test_enable_pro_service(instance, lxc, session_project):
     assert raised.value.brief == (
         f"Failed to enable Pro service 'esm-infra' on instance {instance!r}."
     )
+
+
+def test_install_pro_client(instance, lxc, session_project):
+    """Test the scenario of installing the Pro Client."""
+    lxc.install_pro_client(
+        instance_name=instance,
+        project=session_project,
+    )
+
+    assert (
+        lxc.is_pro_installed(
+            instance_name=instance,
+            project=session_project,
+        )
+    ) is True
