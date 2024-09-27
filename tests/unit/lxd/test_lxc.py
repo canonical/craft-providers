@@ -2631,8 +2631,9 @@ def test_is_pro_enabled_failed(fake_process):
             remote="test-remote",
         )
 
-    assert exc_info.value == LXDError(
-        brief="Failed to get a successful response from `pro` command on 'test-instance'.",
+    assert (
+        exc_info.value.brief
+        == "Failed to get a successful response from `pro` command on 'test-instance'."
     )
 
     assert len(fake_process.calls) == 1
@@ -2689,11 +2690,8 @@ def test_is_pro_enabled_process_error(fake_process):
             remote="test-remote",
         )
 
-    assert exc_info.value == LXDError(
-        brief="Failed to run `pro` command on 'test-instance'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
+    assert (
+        exc_info.value.brief == "Ubuntu Pro Client is not installed on 'test-instance'."
     )
 
     assert len(fake_process.calls) == 1
@@ -2759,7 +2757,7 @@ def test_attach_pro_subscription_failed(fake_process):
 
     assert (
         exc_info.value.brief
-        == "Failed to attach 'test-instance' to a Pro subscription."
+        == "Invalid token used to attach 'test-instance' to a Pro subscription."
     )
 
     assert len(fake_process.calls) == 1
@@ -2791,11 +2789,8 @@ def test_attach_pro_subscription_process_error(fake_process):
             remote="test-remote",
         )
 
-    assert exc_info.value == LXDError(
-        brief="Failed to attach 'test-instance' to a Pro subscription.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
+    assert (
+        exc_info.value.brief == "Ubuntu Pro Client is not installed on 'test-instance'."
     )
 
     assert len(fake_process.calls) == 1
@@ -2877,7 +2872,7 @@ def test_enable_pro_service_failed(fake_process):
 
     assert (
         exc_info.value.brief
-        == "Failed to enable Pro service 'invalid' on instance 'test-instance'."
+        == "Failed to enable Pro service 'invalid' on unattached instance 'test-instance'."
     )
 
     assert len(fake_process.calls) == 1
@@ -2909,11 +2904,8 @@ def test_enable_pro_service_process_error(fake_process):
             remote="test-remote",
         )
 
-    assert exc_info.value == LXDError(
-        brief="Failed to enable Pro service 'esm-infra' on instance 'test-instance'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
+    assert (
+        exc_info.value.brief == "Ubuntu Pro Client is not installed on 'test-instance'."
     )
 
     assert len(fake_process.calls) == 1
