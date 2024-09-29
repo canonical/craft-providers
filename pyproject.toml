@@ -53,7 +53,7 @@ lint = [
     "yamllint==1.32.0",
 ]
 types = [
-    "mypy[reports]==1.6.1",
+    "mypy[reports]==1.11.2",
     "pyright==1.1.332",
 ]
 docs = [
