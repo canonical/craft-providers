@@ -8,6 +8,8 @@ included in each version.
 1.20.4 (2024-09-27)
 -------------------
 - ``requests-unixsocket`` dependency is replaced with ``requests-unixsocket2``
+- Fix a bug where signed aliased snaps couldn't be injected into the build
+  environment.
 
 1.20.3 (2024-04-11)
 -------------------
