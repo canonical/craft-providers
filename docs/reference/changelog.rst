@@ -8,6 +8,15 @@ X.Y.Z (2024-MM-DD)
 ------------------
 - ``requests-unixsocket`` dependency is replaced with ``requests-unixsocket2``
 
+2.0.3 (2024-10-02)
+------------------
+- Fix a bug where signed aliased snaps couldn't be injected into the build
+  environment.
+
+2.0.2 (2024-09-26)
+------------------
+- Improve multipass version parsing
+
 2.0.1 (2024-08-28)
 ------------------
 - Require Multipass>=1.14.1 when launching Ubuntu 24.04 (Noble) VMs, which
