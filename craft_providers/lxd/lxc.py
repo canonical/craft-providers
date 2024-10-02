@@ -16,6 +16,7 @@
 #
 
 """LXC wrapper."""
+
 import contextlib
 import enum
 import json
@@ -1202,12 +1203,10 @@ class LXC:
             )
             if proc.returncode == 0:
                 data = json.loads(proc.stdout)
-                if data.get("result") == "success" and data.get("data", {}).get(
-                    "attributes", {}
-                ).get("is_attached"):
-                    logger.debug("Managed instance is Pro enabled.")
-                    return True
                 if data.get("result") == "success":
+                    if data.get("data", {}).get("attributes", {}).get("is_attached"):
+                        logger.debug("Managed instance is Pro enabled.")
+                        return True
                     logger.debug("Managed instance is not Pro enabled.")
                     return False
 
@@ -1276,7 +1275,7 @@ class LXC:
                 )
             elif proc.returncode == 2:
                 logger.debug(
-                    "Managed instance is already attached to a Pro subscription."
+                    "Instance {instance_name!r} is already attached to a Pro subscription."
                 )
             else:
                 raise LXDError(

@@ -2581,7 +2581,7 @@ def test_yaml_loader_invalid_timestamp():
     assert isinstance(obj["last_used_at"], str)
 
 
-def test_is_pro_enabled_success(fake_process):
+def test_is_pro_enabled_success_true(fake_process):
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2603,6 +2603,33 @@ def test_is_pro_enabled_success(fake_process):
             remote="test-remote",
         )
         is True
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_pro_enabled_success_false(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ],
+        stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"contract_remaining_days": 2912917, "contract_status": "active", "is_attached": false, "is_attached_and_contract_valid": false}, "meta": {"environment_vars": []}, "type": "IsAttached"}, "errors": [], "result": "success", "version": "32.3.1~24.04", "warnings": []}""",
+    )
+
+    assert (
+        LXC().is_pro_enabled(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+        is False
     )
 
     assert len(fake_process.calls) == 1
@@ -2759,6 +2786,37 @@ def test_attach_pro_subscription_failed(fake_process):
         exc_info.value.brief
         == "Invalid token used to attach 'test-instance' to a Pro subscription."
     )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_attach_pro_subscription_already_attached(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.attach.token.full_token_attach.v1",
+            "--data",
+            "-",
+        ],
+        stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"enabled": [], "reboot_required": false}, "meta": {"environment_vars": []}, "type": "FullTokenAttach"}, "errors": ["Already attached"], "result": "failure", "version": "32.3.1~24.04", "warnings": []}""",
+        returncode=2,
+    )
+
+    assert (
+        LXC().attach_pro_subscription(
+            instance_name="test-instance",
+            pro_token="random",  # noqa: S106
+            project="test-project",
+            remote="test-remote",
+        )
+    ) is None
 
     assert len(fake_process.calls) == 1
 
@@ -3061,3 +3119,45 @@ def test_install_pro_client_success2(fake_process):
     )
 
     assert len(fake_process.calls) == 3
+
+
+def test_install_pro_client_process_error(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "apt",
+            "install",
+            "-y",
+            "ubuntu-advantage-tools",
+        ],
+        returncode=99,
+    )
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "pro",
+            "version",
+        ],
+        returncode=127,
+    )
+
+    assert (
+        LXC().is_pro_installed(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+        is False
+    )
+
+    assert len(fake_process.calls) == 1
