@@ -4,6 +4,11 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+2.0.3 (2024-10-02)
+------------------
+- Fix a bug where signed aliased snaps couldn't be injected into the build
+  environment.
+
 2.0.2 (2024-09-26)
 ------------------
 - Improve multipass version parsing
