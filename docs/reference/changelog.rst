@@ -13,6 +13,12 @@ X.Y.Z (2024-MM-DD)
 - Fix a bug where signed aliased snaps couldn't be injected into the build
   environment.
 
+1.20.4 (2024-09-27)
+-------------------
+- ``requests-unixsocket`` dependency is replaced with ``requests-unixsocket2``
+- Fix a bug where signed aliased snaps couldn't be injected into the build
+  environment.
+
 2.0.2 (2024-09-26)
 ------------------
 - Improve multipass version parsing
