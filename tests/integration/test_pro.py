@@ -19,7 +19,7 @@ import json
 
 from craft_providers import pro
 
-MACHINE_TOKEN = "test_token"  # noqa: S105
+from tests.unit.test_pro import CONTRACT_ID, MACHINE_ID, MACHINE_TOKEN
 
 
 def setup_machine_token_file(tmp_path, content):
@@ -32,7 +32,21 @@ def setup_machine_token_file(tmp_path, content):
     return machine_token_file
 
 
-def test_retrieve_pro_host_token(tmp_path, monkeypatch):
-    token_file = setup_machine_token_file(tmp_path, {"machineToken": MACHINE_TOKEN})
+def test_retrieve_pro_host_info(tmp_path, monkeypatch):
+    token_file = setup_machine_token_file(
+        tmp_path,
+        {
+            "machineToken": MACHINE_TOKEN,
+            "machineTokenInfo": {
+                "machineId": MACHINE_ID,
+                "contractInfo": {
+                    "id": CONTRACT_ID,
+                },
+            },
+        },
+    )
     monkeypatch.setattr(pro, "Path", lambda x: token_file)
-    assert pro.retrieve_pro_host_token() == MACHINE_TOKEN
+    output = pro.retrieve_pro_host_info()
+    assert output[0] == MACHINE_TOKEN
+    assert output[1] == MACHINE_ID
+    assert output[2] == CONTRACT_ID
