@@ -24,26 +24,16 @@ framework that need to provide support for additional build environments.
    reference/index
    explanation/index
 
-.. grid:: 1 1 2 2
+.. list-table::
 
-   .. grid-item-card:: :ref:`Tutorial <tutorial>`
-
-      **Get started** with a hands-on introduction to Craft Providers
-
-   .. grid-item-card:: :ref:`How-to guides <howto>`
-
-      **Step-by-step guides** covering key operations and common tasks
-
-.. grid:: 1 1 2 2
-   :reverse:
-
-   .. grid-item-card:: :ref:`Reference <reference>`
-
-      **Technical information** about Craft Providers
-
-   .. grid-item-card:: :ref:`Explanation <explanation>`
-
-      **Discussion and clarification** of key topics
+    * - | :ref:`Tutorial <tutorial>`
+        | **Get started** with a hands-on introduction to Craft Providers
+      - | :ref:`How-to guides <howto>`
+        | **Step-by-step guides** covering key operations and common tasks
+    * - | :ref:`Reference <reference>`
+        | **Technical information** about Craft Providers
+      - | :ref:`Explanation <explanation>`
+        | **Discussion and clarification** of key topics
 
 Project and community
 =====================

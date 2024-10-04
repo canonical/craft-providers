@@ -46,7 +46,7 @@ dev = [
     # types-requests>=2.31.0.7 requires urllib3>=2
     "types-requests==2.31.0.6",
     "types-setuptools==73.0.0.20240822",
-    "types-pyyaml==6.0.12.20240808",
+    "types-pyyaml==6.0.12.20240917",
 ]
 lint = [
     "black==24.8.0",
@@ -55,14 +55,14 @@ lint = [
 ]
 types = [
     "mypy[reports]==1.11.2",
-    "pyright==1.1.380",
+    "pyright==1.1.382.post1",
 ]
 docs = [
     "pyspelling==2.10",
-    "sphinx-autobuild==2024.9.3",
-    "sphinx-lint==0.9.1",
+    "sphinx-autobuild==2024.9.19",
+    "sphinx-lint==1.0.0",
     "sphinx-tabs==3.4.5",
-    "canonical-sphinx~=0.1"
+    "canonical-sphinx~=0.2.0"
 ]
 
 [build-system]
