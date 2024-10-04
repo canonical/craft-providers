@@ -18,8 +18,8 @@
 
 import json
 import logging
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple
 
 import requests
 
@@ -28,7 +28,16 @@ from craft_providers.errors import GuestTokenError, MachineTokenError
 logger = logging.getLogger(__name__)
 
 
-def retrieve_pro_host_info() -> Tuple[str, str, str]:
+@dataclass
+class ProHostInfo:
+    """Dataclass for info obtained from a pro host."""
+
+    machine_token: str
+    machine_id: str
+    contract_id: str
+
+
+def retrieve_pro_host_info() -> ProHostInfo:
     """Get the machine info from the pro host."""
     try:
         token_file = Path("/var/lib/ubuntu-advantage/private/machine-token.json")
@@ -44,7 +53,7 @@ def retrieve_pro_host_info() -> Tuple[str, str, str]:
             raise MachineTokenError("No machineId in machine token file.")
         if not contract_id:
             raise MachineTokenError("No contractID in machine token file.")
-        return machine_token, machine_id, contract_id  # noqa: TRY300
+        return ProHostInfo(machine_token, machine_id, contract_id)
     except FileNotFoundError:
         raise MachineTokenError("Machine token file does not exist.")
     except PermissionError:
@@ -56,17 +65,15 @@ def retrieve_pro_host_info() -> Tuple[str, str, str]:
 
 def request_pro_guest_token() -> str:
     """Request a guest token from contracts API."""
-    machine_token, machine_id, contract_id = retrieve_pro_host_info()
+    info = retrieve_pro_host_info()
 
     try:
         base_url = "https://contracts.canonical.com"
-        endpoint = (
-            f"/v1/contracts/{contract_id}/context/machines/{machine_id}/guest-token"
-        )
+        endpoint = f"/v1/contracts/{info.contract_id}/context/machines/{info.machine_id}/guest-token"
         response = requests.get(
             base_url + endpoint,
-            headers={"Authorization": f"Bearer {machine_token}"},
-            timeout=15,
+            headers={"Authorization": f"Bearer {info.machine_token}"},
+            timeout=20,
         )
         response.raise_for_status()
 

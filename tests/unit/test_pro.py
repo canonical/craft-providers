@@ -114,9 +114,9 @@ def mock_machinetoken_open_nopermission(mocker):
 
 def test_retrieve_pro_host_info_success(mock_machinetoken_open_success):
     output = pro.retrieve_pro_host_info()
-    assert output[0] == MACHINE_TOKEN
-    assert output[1] == MACHINE_ID
-    assert output[2] == CONTRACT_ID
+    assert output.machine_token == MACHINE_TOKEN
+    assert output.machine_id == MACHINE_ID
+    assert output.contract_id == CONTRACT_ID
 
 
 def test_retrieve_pro_host_info_no_machinetoken(mock_machinetoken_open_no_machinetoken):
@@ -155,7 +155,7 @@ def mock_retrieve_pro_host_info(mocker):
     return mocker.patch.object(
         pro,
         "retrieve_pro_host_info",
-        return_value=(MACHINE_TOKEN, MACHINE_ID, CONTRACT_ID),
+        return_value=pro.ProHostInfo(MACHINE_TOKEN, MACHINE_ID, CONTRACT_ID),
     )
 
 

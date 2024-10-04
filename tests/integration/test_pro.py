@@ -47,6 +47,6 @@ def test_retrieve_pro_host_info(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(pro, "Path", lambda x: token_file)
     output = pro.retrieve_pro_host_info()
-    assert output[0] == MACHINE_TOKEN
-    assert output[1] == MACHINE_ID
-    assert output[2] == CONTRACT_ID
+    assert output.machine_token == MACHINE_TOKEN
+    assert output.machine_id == MACHINE_ID
+    assert output.contract_id == CONTRACT_ID
