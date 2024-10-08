@@ -1418,11 +1418,12 @@ class LXC:
                 project=project,
             )
 
-            logger.debug("Ubuntu Pro Client is installed in managed instance.")
-            return True  # noqa: TRY300
         except subprocess.CalledProcessError:
             logger.debug(f"Ubuntu Pro Client is not installed on {instance_name!r}.")
             return False
+        else:
+            logger.debug("Ubuntu Pro Client is installed in managed instance.")
+            return True
 
     def install_pro_client(
         self,

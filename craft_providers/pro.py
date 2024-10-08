@@ -18,24 +18,42 @@
 
 import json
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 
 import requests
 
-from craft_providers.errors import MachineTokenError
+from craft_providers.errors import GuestTokenError, MachineTokenError
 
 logger = logging.getLogger(__name__)
 
 
-def retrieve_pro_host_token() -> str:
-    """Get the machine token from the pro host."""
+@dataclass
+class ProHostInfo:
+    """Dataclass for info obtained from a pro host."""
+
+    machine_token: str
+    machine_id: str
+    contract_id: str
+
+
+def retrieve_pro_host_info() -> ProHostInfo:
+    """Get the machine info from the pro host."""
     try:
         token_file = Path("/var/lib/ubuntu-advantage/private/machine-token.json")
         content = json.loads(token_file.read_text())
         machine_token = content.get("machineToken", "")
+        machine_id = content.get("machineTokenInfo", {}).get("machineId")
+        contract_id = (
+            content.get("machineTokenInfo", {}).get("contractInfo", {}).get("id")
+        )
         if not machine_token:
-            raise MachineTokenError("No token in machine token file.")
-        return machine_token  # noqa: TRY300
+            raise MachineTokenError("No machineToken in machine token file.")
+        if not machine_id:
+            raise MachineTokenError("No machineId in machine token file.")
+        if not contract_id:
+            raise MachineTokenError("No contractID in machine token file.")
+        return ProHostInfo(machine_token, machine_id, contract_id)
     except FileNotFoundError:
         raise MachineTokenError("Machine token file does not exist.")
     except PermissionError:
@@ -47,42 +65,30 @@ def retrieve_pro_host_token() -> str:
 
 def request_pro_guest_token() -> str:
     """Request a guest token from contracts API."""
-    machine_token = retrieve_pro_host_token()
+    info = retrieve_pro_host_info()
 
     try:
         base_url = "https://contracts.canonical.com"
-        endpoint = "/v1/guest/token"
+        endpoint = f"/v1/contracts/{info.contract_id}/context/machines/{info.machine_id}/guest-token"
         response = requests.get(
             base_url + endpoint,
-            headers={"Authorization": f"Bearer {machine_token}"},
-            timeout=15,
+            headers={"Authorization": f"Bearer {info.machine_token}"},
+            timeout=20,
         )
-        if response.status_code != 200:
-            # fallback mechanism
-            logger.info(
-                "Could not obtain a guest token. Falling back to machine \
-                token."
-            )
-            return machine_token
+        response.raise_for_status()
 
         guest_token = response.json().get("guestToken", "")
         if not guest_token:
-            # fallback to machine token
-            logger.info("Guest token is empty. Falling back to machine token.")
-            return machine_token
+            raise GuestTokenError(brief="API response does not contain a guest token.")
         logger.info("Guest token received successfully.")
         return guest_token  # noqa: TRY300
     except requests.exceptions.JSONDecodeError:
         # recrived data was not in json format
-        logger.info(
-            "Error decoding JSON data when retrieving guest token. Falling\
-            back to machine token."
+        raise GuestTokenError(
+            brief="Error decoding JSON data when retrieving guest token."
         )
-        return machine_token
     except requests.exceptions.RequestException:
         # guest token acquiring failed
-        logger.info(
-            "Request error when trying to retrieve the guest token. \
-            Falling back to machine token."
+        raise GuestTokenError(
+            brief="Request error when trying to retrieve the guest token."
         )
-        return machine_token

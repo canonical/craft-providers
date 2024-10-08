@@ -135,3 +135,7 @@ class NetworkError(ProviderError):
 
 class MachineTokenError(ProviderError):
     """Exception occurring when machine-token.json isn't accessible."""
+
+
+class GuestTokenError(ProviderError):
+    """Exception occurring when guest token was not successfully obtained."""
