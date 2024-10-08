@@ -770,3 +770,14 @@ class LXDInstance(Executor):
             project=self.project,
             remote=self.remote,
         )
+
+    def install_pro_client(self) -> None:
+        """Install Ubuntu Pro Client in the instance.
+
+        :raises: LXDError: On unexpected error.
+        """
+        self.lxc.install_pro_client(
+            instance_name=self.instance_name,
+            project=self.project,
+            remote=self.remote,
+        )

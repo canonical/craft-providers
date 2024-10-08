@@ -1231,3 +1231,15 @@ def test_enable_pro_service(mock_lxc, instance):
             remote=instance.remote,
         )
     ]
+
+
+def test_install_pro_client(mock_lxc, instance):
+    instance.install_pro_client()
+
+    assert mock_lxc.mock_calls == [
+        mock.call.install_pro_client(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+        )
+    ]
