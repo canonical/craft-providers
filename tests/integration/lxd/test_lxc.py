@@ -284,7 +284,7 @@ def test_info(instance, lxc, session_project):
     assert data["Name"] == instance
 
 
-def test_is_pro_enabled_ubuntu(instance, lxc, session_project):
+def test_is_pro_enabled_ubuntu_success(instance, lxc, session_project):
     """Test the scenario where Pro client is installed."""
     result = lxc.is_pro_enabled(
         instance_name=instance,
@@ -295,7 +295,7 @@ def test_is_pro_enabled_ubuntu(instance, lxc, session_project):
     assert result is False
 
 
-def test_is_pro_enabled_alma(instance_alma, lxc, session_project):
+def test_is_pro_enabled_alma_failure(instance_alma, lxc, session_project):
     """Test the scenario where Pro client is not installed."""
     with pytest.raises(LXDError) as raised:
         lxc.is_pro_enabled(
@@ -303,10 +303,12 @@ def test_is_pro_enabled_alma(instance_alma, lxc, session_project):
             project=session_project,
         )
 
-    assert raised.value.brief == (f"Failed to run `pro` command on {instance_alma!r}.")
+    assert raised.value.brief == (
+        f"Ubuntu Pro Client is not installed on {instance_alma!r}."
+    )
 
 
-def test_attach_pro_subscription(instance, lxc, session_project):
+def test_attach_pro_subscription_success(instance, lxc, session_project):
     """Test the attachment scenario with a fake Pro token."""
     with pytest.raises(LXDError) as raised:
         lxc.attach_pro_subscription(
@@ -316,12 +318,26 @@ def test_attach_pro_subscription(instance, lxc, session_project):
         )
 
     assert raised.value.brief == (
-        f"Failed to attach {instance!r} to a Pro subscription."
+        f"Invalid token used to attach {instance!r} to a Pro subscription."
     )
 
 
-def test_enable_pro_service(instance, lxc, session_project):
-    """Test the scenario where Pro client is not installed."""
+def test_attach_pro_subscription_failure(instance_alma, lxc, session_project):
+    """Test the attachment scenario with a fake Pro token."""
+    with pytest.raises(LXDError) as raised:
+        lxc.attach_pro_subscription(
+            instance_name=instance_alma,
+            pro_token="random",  # noqa: S106
+            project=session_project,
+        )
+
+    assert raised.value.brief == (
+        f"Ubuntu Pro Client is not installed on {instance_alma!r}."
+    )
+
+
+def test_enable_pro_service_success(instance, lxc, session_project):
+    """Test the scenario to enable a Pro service."""
     with pytest.raises(LXDError) as raised:
         lxc.enable_pro_service(
             instance_name=instance,
@@ -330,5 +346,34 @@ def test_enable_pro_service(instance, lxc, session_project):
         )
 
     assert raised.value.brief == (
-        f"Failed to enable Pro service 'esm-infra' on instance {instance!r}."
+        f"Failed to enable Pro service 'esm-infra' on unattached instance {instance!r}."
     )
+
+
+def test_enable_pro_service_failure(instance_alma, lxc, session_project):
+    """Test the scenario to enable a Pro service."""
+    with pytest.raises(LXDError) as raised:
+        lxc.enable_pro_service(
+            instance_name=instance_alma,
+            services=["esm-infra"],
+            project=session_project,
+        )
+
+    assert raised.value.brief == (
+        f"Ubuntu Pro Client is not installed on {instance_alma!r}."
+    )
+
+
+def test_install_pro_client(instance, lxc, session_project):
+    """Test the scenario of installing the Pro Client."""
+    lxc.install_pro_client(
+        instance_name=instance,
+        project=session_project,
+    )
+
+    assert (
+        lxc.is_pro_installed(
+            instance_name=instance,
+            project=session_project,
+        )
+    ) is True
