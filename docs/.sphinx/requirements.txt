@@ -11,4 +11,4 @@ sphinxext-opengraph==0.8.2
 sphinx-lint==0.8.1
 sphinx-notfound-page==1.0.4
 sphinx-reredirects==0.1.5
-sphinx-tabs==3.4.5
+sphinx-tabs==3.4.7
