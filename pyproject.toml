@@ -38,7 +38,7 @@ dev = [
     "pytest-xdist==3.6.1",
     "pytest-time==0.3.2",
     "responses==0.25.3",
-    "types-requests==2.32.0.20240914",
+    "types-requests==2.32.0.20241016",
     "types-setuptools==73.0.0.20240822",
     "types-pyyaml==6.0.12.20240917",
 ]
@@ -49,7 +49,7 @@ lint = [
 ]
 types = [
     "mypy[reports]==1.12.0",
-    "pyright==1.1.384",
+    "pyright==1.1.385",
 ]
 docs = [
     "pyspelling==2.10",
