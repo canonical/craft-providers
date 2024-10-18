@@ -48,8 +48,7 @@ class Multipass:
     :cvar minimum_required_version: Minimum required version for compatibility.
     """
 
-    # TODO: bump to 1.14.1 once it is released (#638)
-    minimum_required_version = "1.7"
+    minimum_required_version = "1.14.1"
 
     def __init__(
         self, *, multipass_path: pathlib.Path = pathlib.Path("multipass")

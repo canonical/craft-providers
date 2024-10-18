@@ -4,6 +4,10 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+X.Y.Z (2024-MMM-DD)
+-------------------
+- Require Multipass>=1.14.1
+
 2.0.4 (2024-Oct-03)
 -------------------
 - ``requests-unixsocket`` dependency is replaced with ``requests-unixsocket2``
