@@ -78,6 +78,9 @@ class LXDInstance(Executor):
         else:
             self.lxc = lxc
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(name={self.name!r}, default_command_environment={self.default_command_environment!r}, project={self.project!r}, remote={self.remote!r})"
+
     def _set_instance_name(self) -> None:
         """Convert a name to a LXD-compatible name.
 

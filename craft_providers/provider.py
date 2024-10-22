@@ -25,6 +25,7 @@ import contextlib
 import logging
 import pathlib
 from abc import ABC, abstractmethod
+from collections.abc import Collection
 from typing import Generator
 
 from .base import Base
@@ -77,6 +78,10 @@ class Provider(ABC):
 
         :returns: True if installed.
         """
+
+    @abstractmethod
+    def list_instances(self) -> Collection[Executor]:
+        """Get a collection of existing instances for this provider."""
 
     @abstractmethod
     def create_environment(self, *, instance_name: str) -> Executor:
