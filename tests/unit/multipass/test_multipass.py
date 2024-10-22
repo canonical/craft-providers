@@ -204,7 +204,7 @@ def test_info_error(fake_process, mock_details_from_process_error):
 @pytest.mark.parametrize(
     "version_output",
     [
-        b"multipass  1.7.0\nmultipassd 1.7.0\n",
+        b"multipass  1.14.1\nmultipassd 1.14.1\n",
         b"multipass   1.15.0-dev.354+g533e02ffc\nmultipassd  1.15.0-dev.354+g533e02ffc\n",  # Snap multipass, edge channel
         b"multipass   1.15.0-dev.2929.pr661+gc67ef6641.mac\nmultipassd  1.15.0-dev.2929.pr661+gc67ef6641.mac",  # Dev build on a mac
     ],
@@ -221,6 +221,8 @@ def test_is_supported_version(fake_process, version_output):
     "version_output",
     [
         b"multipass  1.4.0\nmultipassd 1.4.0\n",
+        b"multipass  1.7.0\nmultipassd 1.7.0\n",
+        b"multipass  1.14.0\nmultipassd 1.14.0\n",
         b"multipass  1.invalid.15.999\nmultipassd 999\n",
     ],
 )

@@ -22,6 +22,7 @@ Kubeflow
 Kubernetes
 Launchpad
 LTS
+MMM
 Makefile
 Matrix
 Mattermost
