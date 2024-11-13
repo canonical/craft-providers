@@ -19,6 +19,7 @@
 import contextlib
 import logging
 import pathlib
+from collections.abc import Collection
 from datetime import timedelta
 from typing import Iterator
 
@@ -86,6 +87,15 @@ class LXDProvider(Provider):
         :returns: True if installed.
         """
         return is_installed()
+
+    def list_instances(self) -> Collection[LXDInstance]:
+        """Get a collection of existing instances for this LXD provider."""
+        return [
+            LXDInstance(name=name, project=self.lxd_project, remote=self.lxd_remote)
+            for name in self.lxc.list_names(
+                project=self.lxd_project, remote=self.lxd_remote
+            )
+        ]
 
     def create_environment(self, *, instance_name: str) -> Executor:
         """Create a bare environment for specified base.
