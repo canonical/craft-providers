@@ -48,8 +48,7 @@ class Multipass:
     :cvar minimum_required_version: Minimum required version for compatibility.
     """
 
-    # TODO: bump to 1.14.1 once it is released (#638)
-    minimum_required_version = "1.7"
+    minimum_required_version = "1.14.1"
 
     def __init__(
         self, *, multipass_path: pathlib.Path = pathlib.Path("multipass")
@@ -159,7 +158,17 @@ class Multipass:
         minimum_version = packaging.version.parse(self.minimum_required_version)
         version, _ = self.version()
 
-        return packaging.version.parse(version) >= minimum_version
+        parsed_version = None
+        while parsed_version is None:
+            try:
+                parsed_version = packaging.version.parse(version)
+            except packaging.version.InvalidVersion:
+                # This catches versions such as: 1.15.0-dev.2929.pr661, which are
+                # compliant, but not pep440 compliant. We can lob off sections until
+                # we get a pep440 cempliant version.
+                version = version.rpartition(".")[0]
+
+        return parsed_version >= minimum_version
 
     def launch(
         self,
