@@ -31,18 +31,25 @@ def simple_file(home_tmp_path):
     return file
 
 
+@pytest.mark.parametrize(
+    ("image_name", "base_alias"),
+    [
+        ("snapcraft:core22", ubuntu.BuilddBaseAlias.JAMMY),
+        ("snapcraft:core24", ubuntu.BuilddBaseAlias.NOBLE),
+    ],
+)
 @pytest.mark.smoketest
-def test_smoketest(instance_name, home_tmp_path):
+def test_smoketest(instance_name, base_alias, home_tmp_path, image_name):
     """Launch an instance and run some basic tasks."""
 
     assert multipass.is_installed()
 
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    base_configuration = ubuntu.BuilddBase(alias=base_alias)
 
     instance = multipass.launch(
         name=instance_name,
         base_configuration=base_configuration,
-        image_name="snapcraft:core22",
+        image_name=image_name,
         cpus=2,
         disk_gb=8,
         mem_gb=4,
@@ -106,29 +113,3 @@ def test_smoketest(instance_name, home_tmp_path):
 
     # test delete instance
     assert instance.exists() is False
-
-
-@pytest.mark.smoketest
-def test_multipass_noble_failure(instance_name):
-    """Test that Multipass<1.14.1 fails for Ubuntu 24.04 (Noble).
-
-    This test acts as an xfail - it will start failing once Multipass 1.14.1 is released
-    on homebrew and can be removed (#628).
-    """
-    base_configuration = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.NOBLE)
-    error = (
-        r"Multipass '\d+\.\d+\.\d+' does not support Ubuntu 24\.04 \(Noble\)\.\n"
-        r"Upgrade to Multipass 1\.14\.1 or newer\."
-    )
-
-    assert multipass.is_installed()
-
-    with pytest.raises(multipass.MultipassError, match=error):
-        multipass.launch(
-            name=instance_name,
-            base_configuration=base_configuration,
-            image_name="snapcraft:core24",
-            cpus=2,
-            disk_gb=8,
-            mem_gb=4,
-        )

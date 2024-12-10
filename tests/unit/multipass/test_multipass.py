@@ -201,20 +201,33 @@ def test_info_error(fake_process, mock_details_from_process_error):
     )
 
 
-def test_is_supported_version(fake_process):
-    fake_process.register_subprocess(
-        ["multipass", "version"], stdout=b"multipass  1.7.0\nmultipassd 1.7.0\n"
-    )
+@pytest.mark.parametrize(
+    "version_output",
+    [
+        b"multipass  1.14.1\nmultipassd 1.14.1\n",
+        b"multipass   1.15.0-dev.354+g533e02ffc\nmultipassd  1.15.0-dev.354+g533e02ffc\n",  # Snap multipass, edge channel
+        b"multipass   1.15.0-dev.2929.pr661+gc67ef6641.mac\nmultipassd  1.15.0-dev.2929.pr661+gc67ef6641.mac",  # Dev build on a mac
+    ],
+)
+def test_is_supported_version(fake_process, version_output):
+    fake_process.register_subprocess(["multipass", "version"], stdout=version_output)
 
     assert Multipass().is_supported_version() is True
 
     assert len(fake_process.calls) == 1
 
 
-def test_is_supported_version_false(fake_process):
-    fake_process.register_subprocess(
-        ["multipass", "version"], stdout=b"multipass  1.4.0\nmultipassd 1.4.0\n"
-    )
+@pytest.mark.parametrize(
+    "version_output",
+    [
+        b"multipass  1.4.0\nmultipassd 1.4.0\n",
+        b"multipass  1.7.0\nmultipassd 1.7.0\n",
+        b"multipass  1.14.0\nmultipassd 1.14.0\n",
+        b"multipass  1.invalid.15.999\nmultipassd 999\n",
+    ],
+)
+def test_is_supported_version_false(fake_process, version_output):
+    fake_process.register_subprocess(["multipass", "version"], stdout=version_output)
 
     assert Multipass().is_supported_version() is False
 
@@ -717,6 +730,16 @@ def test_wait_until_ready_timeout_error(
                 "some\r\nother\r\nnotice\r\n"
             ),
             ("1.6.2", "1.6.3"),
+        ),
+        pytest.param(
+            b"multipass   1.15.0-dev.354+g533e02ffc\nmultipassd  1.15.0-dev.354+g533e02ffc\n",
+            ("1.15.0-dev.354", "1.15.0-dev.354"),
+            id="snap-edge-channel",
+        ),
+        pytest.param(
+            b"multipass   1.15.0-dev.2929.pr661+gc67ef6641.mac\nmultipassd  1.15.0-dev.2929.pr661+gc67ef6641.mac",
+            ("1.15.0-dev.2929.pr661", "1.15.0-dev.2929.pr661"),
+            id="macos-dev-build",
         ),
     ],
 )

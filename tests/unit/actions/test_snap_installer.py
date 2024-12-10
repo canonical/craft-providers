@@ -404,7 +404,16 @@ def test_inject_from_host_dangerous(
     }
 
 
+@pytest.mark.parametrize(
+    ("snap_name", "snap_instance_name"),
+    [
+        pytest.param("test-name", "test-name", id="non-aliased"),
+        pytest.param("test-name", "test-name_suffix", id="aliased"),
+    ],
+)
 def test_inject_from_host_not_dangerous(
+    snap_instance_name,
+    snap_name,
     config_fixture,
     mock_get_host_snap_info,
     mock_requests,
@@ -427,7 +436,7 @@ def test_inject_from_host_not_dangerous(
             "snap",
             "known",
             "snap-declaration",
-            "snap-name=test-name",
+            f"snap-name={snap_name}",
         ]
     )
     fake_process.register_subprocess(
@@ -452,7 +461,7 @@ def test_inject_from_host_not_dangerous(
             "fake-executor",
             "snap",
             "ack",
-            "/tmp/test-name.assert",
+            f"/tmp/{snap_name}.assert",
         ]
     )
     fake_process.register_subprocess(
@@ -460,20 +469,29 @@ def test_inject_from_host_not_dangerous(
             "fake-executor",
             "snap",
             "install",
-            "/tmp/test-name.snap",
+            f"/tmp/{snap_name}.snap",
         ]
     )
 
     snap_installer.inject_from_host(
-        executor=fake_executor, snap_name="test-name", classic=False
+        executor=fake_executor, snap_name=snap_instance_name, classic=False
     )
 
     mock_requests.get.assert_called_with(
-        "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-name/file"
+        f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{snap_instance_name}/file"
     )
 
     assert len(fake_process.calls) == 6
-    assert Exact("Installing snap 'test-name' from host (classic=False)") in logs.debug
+    if snap_instance_name == snap_name:
+        assert (
+            rf"Installing snap {snap_instance_name!r} from host \(classic=False\)"
+            in logs.debug
+        )
+    else:
+        assert (
+            rf"Installing snap {snap_instance_name!r} from host as {snap_name!r} in instance \(classic=False\)\."
+            in logs.debug
+        )
     assert "Revisions found: host='2', target='1'" in logs.debug
 
     # check saved config
@@ -484,7 +502,7 @@ def test_inject_from_host_not_dangerous(
     )
     config = InstanceConfiguration(**yaml.safe_load(saved_config_record["content"]))
     assert config.snaps is not None
-    assert config.snaps["test-name"] == {
+    assert config.snaps[snap_name] == {
         "revision": "2",
         "source": snap_installer.SNAP_SRC_HOST,
     }
