@@ -25,7 +25,6 @@ from craft_providers.hookutil import (
     remove_hook,
 )
 
-
 PROJECT_NAME = "fakeproj"
 
 

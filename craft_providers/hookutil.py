@@ -126,7 +126,7 @@ class HookHelper:
         # Didn't find our project name
         raise HookError(f"Project {self._project} does not exist in LXD.")
 
-    def dprint(self, *args: Any, **kwargs: Any) -> None:
+    def dprint(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
         """Print messages to stderr if debug=True.
 
         Can treat this like normal print(), except can also pass an instance
@@ -147,7 +147,7 @@ class HookHelper:
 
     def lxc(
         self,
-        *args: Any,
+        *args: Any,  # noqa: ANN401
         fail_msg: str | None = None,
         proj: bool = True,
         json_out: bool = True,
