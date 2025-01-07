@@ -32,6 +32,7 @@ def test_no_projects():
     """Make sure HookError is raised if there is no corresponding lxc project."""
     # Use our own mock HookHelper rather than the fixture, we need to do things a little
     # differently here
+    HookHelper._check_has_lxd = MagicMock()
     original_lxc_func = HookHelper.lxc
 
     def fake_lxc(self, *args, **kwargs):
@@ -50,6 +51,7 @@ def test_no_projects():
 def fake_hookhelper():
     def fake_hookhelper(instance_list):
         HookHelper._check_project_exists = MagicMock()  # raise nothing
+        HookHelper._check_has_lxd = MagicMock()
         helper = HookHelper(project_name=PROJECT_NAME, simulate=False, debug=True)
 
         original_lxc_func = helper.lxc
