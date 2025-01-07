@@ -31,12 +31,11 @@ from typing import Any
 
 from typing_extensions import Self
 
-from FOOcraft import constants
-
-_CURRENT_COMPATIBILITY_TAG = f"{constants.APP_NAME}-buildd-base-v7"
+# These are interpolated once HookHelper is instantiated with the name of the project
+_CURRENT_COMPATIBILITY_TAG = "{PROJECT_NAME}-buildd-base-v7"
 _BASE_INSTANCE_START_STRING = "base-instance"
 _CURRENT_BASE_INSTANCE_START_STRING = (
-    f"{_BASE_INSTANCE_START_STRING}-{_CURRENT_COMPATIBILITY_TAG}-"
+    "{_BASE_INSTANCE_START_STRING}-{_CURRENT_COMPATIBILITY_TAG}-"
 )
 
 
@@ -82,10 +81,22 @@ class Instance:
 class HookHelper:
     """Hook business logic."""
 
-    def __init__(self, *, app_name: str, simulate: bool, debug: bool) -> None:
+    def __init__(self, *, project_name: str, simulate: bool, debug: bool) -> None:
+        global _CURRENT_COMPATIBILITY_TAG, _CURRENT_BASE_INSTANCE_START_STRING
+
         self.simulate = simulate
         self.debug = debug
-        self._project = app_name
+        self._project = project_name
+
+        _CURRENT_COMPATIBILITY_TAG = str.format(
+            _CURRENT_COMPATIBILITY_TAG,
+            PROJECT_NAME=project_name,
+        )
+        _CURRENT_BASE_INSTANCE_START_STRING = str.format(
+            _CURRENT_BASE_INSTANCE_START_STRING,
+            _BASE_INSTANCE_START_STRING=_BASE_INSTANCE_START_STRING,
+            _CURRENT_COMPATIBILITY_TAG=_CURRENT_COMPATIBILITY_TAG,
+        )
 
         self._check_has_lxd()
         self._check_project_exists()
