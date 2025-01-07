@@ -82,7 +82,7 @@ class HookHelper:
     """Hook business logic."""
 
     def __init__(self, *, project_name: str, simulate: bool, debug: bool) -> None:
-        global _CURRENT_COMPATIBILITY_TAG, _CURRENT_BASE_INSTANCE_START_STRING
+        global _CURRENT_COMPATIBILITY_TAG, _CURRENT_BASE_INSTANCE_START_STRING  # noqa: PLW0603
 
         self.simulate = simulate
         self.debug = debug
