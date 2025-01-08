@@ -15,10 +15,10 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
-import hashlib
 import io
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -29,7 +29,6 @@ from unittest.mock import call
 import pytest
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, LXDInstance
-from logassert import Exact  # type: ignore
 
 # These names include invalid characters so a lxd-compatible instance_name
 # is generated. This ensures an Instance's `name` and `instance_name` are
@@ -949,104 +948,36 @@ def test_unmount_error(mock_lxc, instance):
 
 
 @pytest.mark.parametrize(
-    "name",
+    ("name", "expected_instance_name"),
     [
-        "t",
-        "test",
-        "test1",
-        "test-1",
-        "this-is-40-characters-xxxxxxxxxxxxxxxxxx",
-        "this-is-63-characters-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    ],
-)
-def test_set_instance_name_unchanged(logs, mock_lxc, name):
-    """Verify names that are already compliant are not changed."""
-    instance = LXDInstance(
-        name=name,
-        lxc=mock_lxc,
-    )
-
-    assert instance.instance_name == name
-    assert Exact(f"Set LXD instance name to {name!r}") in logs.debug
-
-
-@pytest.mark.parametrize(
-    ("name", "expected_name"),
-    [
-        # trim away invalid beginning characters
-        ("1test", "test"),
-        ("123test", "test"),
-        ("-test", "test"),
-        ("1-2-3-test", "test"),
-        # trim away invalid ending characters
-        ("test-", "test"),
-        ("test--", "test"),
-        ("test1-", "test1"),
-        # trim away invalid characters
-        ("test$", "test"),
-        ("test-!@#$%^&*()test", "test-test"),
-        ("$1test", "test"),
-        ("test-$", "test"),
-        # this name contains invalid characters so it gets converted, even
-        # though it is 63 characters
+        ("simple-name", "simple-name"),
         (
-            "this-is-63-characters-with-invalid-characters-$$$xxxxxxxxxxxxxX",
-            "this-is-63-characters-with-invalid-chara",
-        ),
-        # this name is longer than 63 characters, so it gets converted
-        (
-            "this-is-70-characters-and-valid-xxxxxxxXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-            "this-is-70-characters-and-valid-xxxxxxxX",
+            "$$$-this-is-70-characters-with-invalid-characters-$$$xxxxxxxxxxxxxxxxX",
+            "this-is-70-characters-with-invalid-chara-bf117c12825011de054e",
         ),
     ],
 )
-def test_set_instance_name(logs, mock_lxc, name, expected_name):
+def test_instance_name(logs, mock_lxc, name, expected_instance_name):
     """Verify name is compliant with LXD naming conventions."""
-    instance = LXDInstance(
-        name=name,
-        lxc=mock_lxc,
+    instance = LXDInstance(name=name, lxc=mock_lxc)
+
+    assert instance.name == name
+    assert instance.instance_name == expected_instance_name
+    assert len(instance.instance_name) <= 63
+    assert (
+        re.escape(
+            f"Converted name {name!r} to instance name {instance.instance_name!r}"
+        )
+        in logs.debug
     )
 
-    # compute hash
-    hashed_name = hashlib.sha1(name.encode()).hexdigest()[:20]
 
-    assert instance.instance_name == f"{expected_name}-{hashed_name}"
-    assert len(instance.instance_name) <= 63
-    assert Exact(f"Set LXD instance name to {instance.instance_name!r}") in logs.debug
-
-
-def test_set_instance_name_hash_value(mock_lxc):
-    """Verify hash is formatted as expected.
-
-    The first 20 characters of the SHA-1 hash of
-    "hello-world$" is 'b993dc52118c0f489570'
-
-    The name "hello-world$" should be hashed, not the trimmed name "hello-world".
-    """
-    instance = LXDInstance(
-        name="hello-world$",
-        lxc=mock_lxc,
-    )
-
-    assert instance.instance_name == "hello-world-b993dc52118c0f489570"
-    assert len(instance.instance_name) <= 63
-
-
-@pytest.mark.parametrize(
-    "name",
-    [
-        "",
-        "-",
-        "$$$",
-        "-$-$-",
-    ],
-)
-def test_set_instance_name_invalid(mock_lxc, name):
+def test_set_instance_name_invalid(mock_lxc):
     """Verify invalid names raise an error."""
     with pytest.raises(LXDError) as error:
-        LXDInstance(name=name, lxc=mock_lxc)
+        LXDInstance(name="-", lxc=mock_lxc)
 
     assert error.value == LXDError(
-        brief=f"failed to create LXD instance with name {name!r}.",
+        brief="failed to create an instance with name '-'.",
         details="name must contain at least one alphanumeric character",
     )

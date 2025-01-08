@@ -18,14 +18,17 @@
 """Executor module."""
 
 import contextlib
+import hashlib
 import io
 import logging
 import pathlib
+import re
 import subprocess
 from abc import ABC, abstractmethod
 from typing import Dict, Generator, List, Optional
 
 import craft_providers.util.temp_paths
+from craft_providers.errors import ProviderError
 
 logger = logging.getLogger(__name__)
 
@@ -187,3 +190,61 @@ class Executor(ABC):
 
         :returns: True if instance is running.
         """
+
+
+def get_instance_name(name: str, error_class: type[ProviderError]) -> str:
+    """Get an instance-friendly name from a name.
+
+    LXD and Multipass instance names have the same naming convention
+    as Linux hostnames.
+
+    Naming convention:
+    - between 1 and 63 characters long
+    - made up exclusively of letters, numbers, and hyphens from the ASCII table
+    - not begin with a digit or a hyphen
+    - not end with a hyphen
+
+    To create an instance name, invalid characters are removed, the name is
+    truncated to 40 characters, then a hash is appended:
+    <truncated-name>-<hash-of-name>
+    └     1 - 40   ┘1└     20     ┘
+
+    :param name: the name to convert
+    :param error_class: the exception class to raise if name is invalid
+
+    :raises error_class: if name contains no alphanumeric characters
+    :returns: the instance name
+    """
+    # remove anything that is not an alphanumeric characters or hyphen
+    name_with_valid_chars = re.sub(r"[^\w-]", "", name)
+    if not name_with_valid_chars:
+        raise error_class(
+            brief=f"failed to create an instance with name {name!r}.",
+            details="name must contain at least one alphanumeric character",
+        )
+
+    # trim digits and hyphens from the beginning and hyphens from the end
+    trimmed_name = re.compile(r"^[0-9-]*(?P<valid_name>.*?)[-]*$").search(
+        name_with_valid_chars
+    )
+    if not trimmed_name or not trimmed_name.group("valid_name"):
+        raise error_class(
+            brief=f"failed to create an instance with name {name!r}.",
+            details="name must contain at least one alphanumeric character",
+        )
+    valid_name = trimmed_name.group("valid_name")
+
+    # if the original name satisfies the naming convention, then use the original name
+    if name == valid_name and len(name) <= 63:
+        instance_name = name
+
+    # else, continue converting the name
+    else:
+        # truncate to 40 characters
+        truncated_name = valid_name[:40]
+        # hash the entire name, not the truncated name
+        hashed_name = hashlib.sha1(name.encode()).hexdigest()[:20]
+        instance_name = f"{truncated_name}-{hashed_name}"
+
+    logger.debug("Converted name %r to instance name %r", name, instance_name)
+    return instance_name

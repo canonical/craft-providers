@@ -4,9 +4,10 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
-X.Y.Z (2024-MMM-DD)
+2.1.0 (2025-Jan-09)
 -------------------
 - Require Multipass>=1.14.1
+- Use Multipass-compatible instance names
 
 2.0.4 (2024-Oct-03)
 -------------------

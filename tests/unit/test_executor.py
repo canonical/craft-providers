@@ -16,10 +16,14 @@
 #
 
 import contextlib
+import hashlib
+import re
 import shutil
 from pathlib import Path
 
 import pytest
+from craft_providers.errors import ProviderError
+from craft_providers.executor import get_instance_name
 
 
 @pytest.fixture
@@ -103,3 +107,101 @@ def test_temporarypull_temp_file_cleaned(
 
     # file is removed afterwards
     assert not localfilepath.exists()  # pyright: ignore [reportUnboundVariable]
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "t",
+        "test",
+        "test1",
+        "test-1",
+        "this-is-40-characters-xxxxxxxxxxxxxxxxxx",
+        "this-is-63-characters-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    ],
+)
+def test_set_instance_name_unchanged(logs, name):
+    """Verify names that are already compliant are not changed."""
+    instance_name = get_instance_name(name, ProviderError)
+
+    assert instance_name == name
+    assert re.escape(f"Converted name {name!r} to instance name {name!r}") in logs.debug
+
+
+@pytest.mark.parametrize(
+    ("name", "expected_name"),
+    [
+        # trim away invalid beginning characters
+        ("1test", "test"),
+        ("123test", "test"),
+        ("-test", "test"),
+        ("1-2-3-test", "test"),
+        # trim away invalid ending characters
+        ("test-", "test"),
+        ("test--", "test"),
+        ("test1-", "test1"),
+        # trim away invalid characters
+        ("test$", "test"),
+        ("test-!@#$%^&*()test", "test-test"),
+        ("$1test", "test"),
+        ("test-$", "test"),
+        # this name contains invalid characters so it gets converted, even
+        # though it is 63 characters
+        (
+            "this-is-63-characters-with-invalid-characters-$$$xxxxxxxxxxxxxX",
+            "this-is-63-characters-with-invalid-chara",
+        ),
+        # this name is longer than 63 characters, so it gets converted
+        (
+            "this-is-70-characters-and-valid-xxxxxxxXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "this-is-70-characters-and-valid-xxxxxxxX",
+        ),
+    ],
+)
+def test_set_instance_name(logs, name, expected_name):
+    """Verify name is compliant with naming conventions."""
+    # compute hash
+    hashed_name = hashlib.sha1(name.encode()).hexdigest()[:20]
+
+    instance_name = get_instance_name(name, ProviderError)
+
+    assert instance_name == f"{expected_name}-{hashed_name}"
+    assert len(instance_name) <= 63
+    assert (
+        re.escape(f"Converted name {name!r} to instance name {instance_name!r}")
+        in logs.debug
+    )
+
+
+def test_set_instance_name_hash_value():
+    """Verify hash is formatted as expected.
+
+    The first 20 characters of the SHA-1 hash of
+    "hello-world$" is 'b993dc52118c0f489570'
+
+    The name "hello-world$" should be hashed, not the trimmed name "hello-world".
+    """
+    instance_name = get_instance_name("hello-world$", ProviderError)
+
+    assert instance_name == "hello-world-b993dc52118c0f489570"
+    assert len(instance_name) <= 63
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "",
+        "-",
+        "$$$",
+        "-$-$-",
+    ],
+)
+def test_set_instance_name_invalid(name):
+    """Verify invalid names raise an error."""
+    with pytest.raises(ProviderError) as error:
+        get_instance_name(name, ProviderError)
+
+    assert error.value == ProviderError(
+        brief=f"failed to create an instance with name {name!r}.",
+        details="name must contain at least one alphanumeric character",
+    )
