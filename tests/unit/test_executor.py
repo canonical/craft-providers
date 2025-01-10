@@ -145,6 +145,7 @@ def test_set_instance_name_unchanged(logs, name):
         ("test-!@#$%^&*()test", "test-test"),
         ("$1test", "test"),
         ("test-$", "test"),
+        ("test-𝔣𝔯𝔞𝔨𝔱𝔲𝔯'𝔡 𝔭𝔩𝔞𝔱𝔣𝔬𝔯𝔪", "test"),  # noqa: RUF001 (ambiguous-unicode)
         # this name contains invalid characters so it gets converted, even
         # though it is 63 characters
         (
@@ -194,6 +195,7 @@ def test_set_instance_name_hash_value():
         "-",
         "$$$",
         "-$-$-",
+        "𝔣𝔯𝔞𝔨𝔱𝔲𝔯'𝔡 𝔭𝔩𝔞𝔱𝔣𝔬𝔯𝔪",  # noqa: RUF001 (ambiguous-unicode)
     ],
 )
 def test_set_instance_name_invalid(name):

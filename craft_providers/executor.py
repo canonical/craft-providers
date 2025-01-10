@@ -215,8 +215,8 @@ def get_instance_name(name: str, error_class: type[ProviderError]) -> str:
     :raises error_class: if name contains no alphanumeric characters
     :returns: the instance name
     """
-    # remove anything that is not an alphanumeric characters or hyphen
-    name_with_valid_chars = re.sub(r"[^\w-]", "", name)
+    # remove anything that is not an alphanumeric character or hyphen
+    name_with_valid_chars = re.sub(r"[^\w-]", "", name, flags=re.ASCII)
     if not name_with_valid_chars:
         raise error_class(
             brief=f"failed to create an instance with name {name!r}.",
