@@ -31,12 +31,7 @@ from typing import Any
 
 from typing_extensions import Self
 
-# These are interpolated once HookHelper is instantiated with the name of the project
-_CURRENT_COMPATIBILITY_TAG = "{PROJECT_NAME}-buildd-base-v7"
 _BASE_INSTANCE_START_STRING = "base-instance"
-_CURRENT_BASE_INSTANCE_START_STRING = (
-    "{_BASE_INSTANCE_START_STRING}-{_CURRENT_COMPATIBILITY_TAG}-"
-)
 
 
 class HookError(Exception):
@@ -49,6 +44,7 @@ class LXDInstance:
 
     name: str
     expanded_config: dict[str, str]
+    _project_name: str | None = None
 
     def base_instance_name(self) -> str:
         """Get the full name of the base instance this instance was created from."""
@@ -60,43 +56,41 @@ class LXDInstance:
 
     def is_current_base_instance(self) -> bool:
         """Return true if this is a base instance with the current compat tag."""
-        return self.name.startswith(_CURRENT_BASE_INSTANCE_START_STRING)
+        if not self._project_name:
+            raise HookError("Cannot determine if {self.name} is a current base instance")
+        current_compatibility_tag = f"{self._project_name}-buildd-base-v7"
+        current_base_instance_start_string = f"{_BASE_INSTANCE_START_STRING}-{current_compatibility_tag}-"
+        return self.name.startswith(current_base_instance_start_string)
 
     def is_base_instance(self) -> bool:
         """Return true if this is a base instance."""
         return self.name.startswith(_BASE_INSTANCE_START_STRING)
 
     @classmethod
-    def unmarshal(cls, src: dict[str, str]) -> Self:
+    def unmarshal(
+        cls,
+        src: dict[str, str],
+        project_name: str | None = None,
+    ) -> Self:
         """Use this rather than init - the lxc output has a lot of extra fields."""
-        return cls(
+        instance = cls(
             **{  # type: ignore[arg-type]
                 k: v
                 for k, v in src.items()
                 if k in {f.name for f in dataclasses.fields(cls)}
             }
         )
+        instance._project_name = project_name
+        return instance
 
 
 class HookHelper:
     """Hook business logic."""
 
     def __init__(self, *, project_name: str, simulate: bool, debug: bool) -> None:
-        global _CURRENT_COMPATIBILITY_TAG, _CURRENT_BASE_INSTANCE_START_STRING  # noqa: PLW0603
-
         self.simulate = simulate
         self.debug = debug
-        self._project = project_name
-
-        _CURRENT_COMPATIBILITY_TAG = str.format(
-            _CURRENT_COMPATIBILITY_TAG,
-            PROJECT_NAME=project_name,
-        )
-        _CURRENT_BASE_INSTANCE_START_STRING = str.format(
-            _CURRENT_BASE_INSTANCE_START_STRING,
-            _BASE_INSTANCE_START_STRING=_BASE_INSTANCE_START_STRING,
-            _CURRENT_COMPATIBILITY_TAG=_CURRENT_COMPATIBILITY_TAG,
-        )
+        self._project_name = project_name
 
         self._check_has_lxd()
         self._check_project_exists()
@@ -120,11 +114,11 @@ class HookHelper:
     def _check_project_exists(self) -> None:
         """Raise HookError if lxc doesn't know about this app."""
         for project in self.lxc("project", "list", proj=False):
-            if project["name"] == self._project:
+            if project["name"] == self._project_name:
                 return
 
         # Didn't find our project name
-        raise HookError(f"Project {self._project} does not exist in LXD.")
+        raise HookError(f"Project {self._project_name} does not exist in LXD.")
 
     def dprint(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
         """Print messages to stderr if debug=True.
@@ -162,7 +156,7 @@ class HookHelper:
         if json_out:
             lxc_args += ["--format", "json"]
         if proj:
-            lxc_args += ["--project", self._project]
+            lxc_args += ["--project", self._project_name]
         lxc_args += args
 
         try:
@@ -189,7 +183,7 @@ class HookHelper:
     def delete_instance(self, instance: LXDInstance) -> None:
         """Delete the specified lxc instance."""
         print(
-            f"Removing old instance {instance.name} in LXD {self._project} project..."
+            f"Removing old instance {instance.name} in LXD {self._project_name} project..."
         )
         if self.simulate:
             return
@@ -212,13 +206,13 @@ class HookHelper:
 
     def delete_project(self) -> None:
         """Delete this lxc project."""
-        print(f"Removing project {self._project}")
+        print(f"Removing project {self._project_name}")
         if self.simulate:
             return
         self.lxc(
             "project",
             "delete",
-            self._project,
+            self._project_name,
             proj=False,
             json_out=False,
         )
@@ -229,7 +223,13 @@ class HookHelper:
 
     def list_instances(self) -> list[LXDInstance]:
         """Return a list of all instance objects for the project."""
-        return [LXDInstance.unmarshal(instance) for instance in self.lxc("list")]
+        return [
+            LXDInstance.unmarshal(
+                instance,
+                project_name=self._project_name,
+            )
+            for instance in self.lxc("list")
+        ]
 
     def list_base_instances(self) -> list[LXDInstance]:
         """Return a list of all base instance objects for the project."""
