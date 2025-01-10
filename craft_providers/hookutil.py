@@ -57,9 +57,13 @@ class LXDInstance:
     def is_current_base_instance(self) -> bool:
         """Return true if this is a base instance with the current compat tag."""
         if not self._project_name:
-            raise HookError("Cannot determine if {self.name} is a current base instance")
+            raise HookError(
+                "Cannot determine if {self.name} is a current base instance"
+            )
         current_compatibility_tag = f"{self._project_name}-buildd-base-v7"
-        current_base_instance_start_string = f"{_BASE_INSTANCE_START_STRING}-{current_compatibility_tag}-"
+        current_base_instance_start_string = (
+            f"{_BASE_INSTANCE_START_STRING}-{current_compatibility_tag}-"
+        )
         return self.name.startswith(current_base_instance_start_string)
 
     def is_base_instance(self) -> bool:
