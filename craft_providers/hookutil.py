@@ -50,7 +50,7 @@ class LXDInstance:
     name: str
     expanded_config: dict[str, str]
 
-    def base(self) -> str:
+    def base_instance_name(self) -> str:
         """Get the full name of the base instance this instance was created from."""
         try:
             return self.expanded_config["image.description"]
@@ -255,7 +255,7 @@ def configure_hook(lxc: HookHelper) -> None:
         # old (not future) and delete it.
         lxc.dprint(instance, "Base instance uses old compatibility tag")
         lxc.delete_instance(instance)
-        delete_base_full_names.add(instance.base())
+        delete_base_full_names.add(instance.base_instance_name())
 
     if not delete_base_full_names:
         lxc.dprint("No instances to delete")
@@ -263,7 +263,7 @@ def configure_hook(lxc: HookHelper) -> None:
 
     # Find the child instances of the bases we deleted and delete them too
     for instance in lxc.list_instances():
-        if instance.base() not in delete_base_full_names:
+        if instance.base_instance_name() not in delete_base_full_names:
             continue
         lxc.dprint("Base instance was deleted")
         lxc.delete_instance(instance)
