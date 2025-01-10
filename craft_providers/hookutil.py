@@ -44,7 +44,7 @@ class HookError(Exception):
 
 
 @dataclasses.dataclass
-class Instance:
+class LXDInstance:
     """Represents an lxc instance."""
 
     name: str
@@ -138,7 +138,7 @@ class HookHelper:
             kwargs["file"] = sys.stderr
 
         print_args = list(args)
-        if len(args) >= 1 and isinstance(args[0], Instance):
+        if len(args) >= 1 and isinstance(args[0], LXDInstance):
             # First arg quacks like an instance object
             instance = print_args.pop(0)
             print_args += [":", instance.name]
@@ -186,7 +186,7 @@ class HookHelper:
             except json.decoder.JSONDecodeError as e:
                 raise HookError(f"Didn't get back JSON: {out}") from e
 
-    def delete_instance(self, instance: Instance) -> None:
+    def delete_instance(self, instance: LXDInstance) -> None:
         """Delete the specified lxc instance."""
         print(
             f"Removing old instance {instance.name} in LXD {self._project} project..."
@@ -227,11 +227,11 @@ class HookHelper:
         """Return fingerprints of all images associated with the lxc project."""
         return [image["fingerprint"] for image in self.lxc("image", "list")]
 
-    def list_instances(self) -> list[Instance]:
+    def list_instances(self) -> list[LXDInstance]:
         """Return a list of all instance objects for the project."""
-        return [Instance.unmarshal(instance) for instance in self.lxc("list")]
+        return [LXDInstance.unmarshal(instance) for instance in self.lxc("list")]
 
-    def list_base_instances(self) -> list[Instance]:
+    def list_base_instances(self) -> list[LXDInstance]:
         """Return a list of all base instance objects for the project."""
         base_instances = []
         for instance in self.list_instances():
