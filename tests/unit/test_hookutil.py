@@ -20,7 +20,7 @@ import pytest
 from craft_providers.hookutil import (
     HookError,
     HookHelper,
-    Instance,
+    LXDInstance,
     configure_hook,
     remove_hook,
 )
@@ -74,7 +74,7 @@ def fake_hookhelper():
 def assert_instances_deleted(helper, instances):
     """Transform json list to instance calls for passing to assert_has_calls."""
     helper.delete_instance.assert_has_calls(
-        [call(Instance.from_dict(instance)) for instance in instances], any_order=True
+        [call(LXDInstance.unmarshal(instance)) for instance in instances], any_order=True
     )
 
 
