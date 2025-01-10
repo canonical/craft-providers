@@ -26,7 +26,7 @@ from craft_providers import errors
 from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE
 from craft_providers.util import env_cmd
 
-from .. import Executor
+from ..executor import Executor, get_instance_name
 from .errors import MultipassError
 from .multipass import Multipass
 
@@ -59,9 +59,10 @@ def _rootify_multipass_command(
 
 
 class MultipassInstance(Executor):
-    """Multipass Instance Lifecycle.
+    """Wrapper for a Multipass instance.
 
-    :param name: Name of multipass instance.
+    :ivar name: The provided name for the instance.
+    :ivar instance_name: The normalized name actually used for the instance.
     """
 
     def __init__(
@@ -70,9 +71,17 @@ class MultipassInstance(Executor):
         name: str,
         multipass: Optional[Multipass] = None,
     ) -> None:
+        """Set up the wrapper class.
+
+        :param name: The name of the MultipassInstance.
+        :param multipass: The Multipass wrapper to use.
+
+        :raises MultipassError: If the name is invalid.
+        """
         super().__init__()
 
         self.name = name
+        self.instance_name = get_instance_name(name, MultipassError)
 
         if multipass is not None:
             self._multipass = multipass
@@ -146,7 +155,7 @@ class MultipassInstance(Executor):
             tmp_file_path = self._create_temp_file()
 
             self._multipass.transfer_source_io(
-                source=content, destination=f"{self.name}:{tmp_file_path}"
+                source=content, destination=f"{self.instance_name}:{tmp_file_path}"
             )
 
             # now that the file has been transferred, its ownership can be set
@@ -174,7 +183,7 @@ class MultipassInstance(Executor):
             raise MultipassError(
                 brief=(
                     f"Failed to create file {destination.as_posix()!r}"
-                    f" in Multipass instance {self.name!r}."
+                    f" in Multipass instance {self.instance_name!r}."
                 ),
                 details=errors.details_from_called_process_error(error),
             ) from error
@@ -182,7 +191,7 @@ class MultipassInstance(Executor):
     def delete(self) -> None:
         """Delete instance and purge."""
         return self._multipass.delete(
-            instance_name=self.name,
+            instance_name=self.instance_name,
             purge=True,
         )
 
@@ -215,7 +224,7 @@ class MultipassInstance(Executor):
         :returns: Popen instance.
         """
         return self._multipass.exec(
-            instance_name=self.name,
+            instance_name=self.instance_name,
             command=_rootify_multipass_command(command, cwd=cwd, env=env),
             runner=subprocess.Popen,
             timeout=timeout,
@@ -255,7 +264,7 @@ class MultipassInstance(Executor):
         :raises subprocess.CalledProcessError: if command fails and check is True.
         """
         return self._multipass.exec(
-            instance_name=self.name,
+            instance_name=self.instance_name,
             command=_rootify_multipass_command(command, cwd=cwd, env=env),
             runner=subprocess.run,
             timeout=timeout,
@@ -272,7 +281,7 @@ class MultipassInstance(Executor):
         """
         vm_list = self._multipass.list()
 
-        return self.name in vm_list
+        return self.instance_name in vm_list
 
     def _get_info(self) -> Dict[str, Any]:
         """Get configuration and state for instance.
@@ -282,15 +291,15 @@ class MultipassInstance(Executor):
 
         :raises MultipassError: If unable to parse VM info.
         """
-        info_data = self._multipass.info(instance_name=self.name).get("info")
+        info_data = self._multipass.info(instance_name=self.instance_name).get("info")
 
-        if info_data is None or self.name not in info_data:
+        if info_data is None or self.instance_name not in info_data:
             raise MultipassError(
                 brief="Malformed multipass info",
                 details=f"Returned data: {info_data!r}",
             )
 
-        return info_data[self.name]
+        return info_data[self.instance_name]
 
     def is_mounted(
         self, *, host_source: pathlib.Path, target: pathlib.PurePath
@@ -349,7 +358,7 @@ class MultipassInstance(Executor):
         :raises MultipassError: On unexpected failure.
         """
         self._multipass.launch(
-            instance_name=self.name,
+            instance_name=self.instance_name,
             image=image,
             cpus=str(cpus),
             disk=f"{disk_gb!s}G",
@@ -376,7 +385,7 @@ class MultipassInstance(Executor):
 
         self._multipass.mount(
             source=host_source,
-            target=f"{self.name}:{target.as_posix()}",
+            target=f"{self.instance_name}:{target.as_posix()}",
         )
 
     def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:
@@ -402,7 +411,8 @@ class MultipassInstance(Executor):
             raise FileNotFoundError(f"Directory not found: {str(destination.parent)!r}")
 
         self._multipass.transfer(
-            source=f"{self.name}:{source.as_posix()}", destination=str(destination)
+            source=f"{self.instance_name}:{source.as_posix()}",
+            destination=str(destination),
         )
 
     def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:
@@ -441,7 +451,7 @@ class MultipassInstance(Executor):
 
             # push the file to a location where the `ubuntu` user has access
             self._multipass.transfer(
-                source=str(source), destination=f"{self.name}:{tmp_file_path}"
+                source=str(source), destination=f"{self.instance_name}:{tmp_file_path}"
             )
 
             # if the destination was a directory, then we need to specify the filename
@@ -461,7 +471,7 @@ class MultipassInstance(Executor):
             raise MultipassError(
                 brief=(
                     f"Failed to push file {destination.as_posix()!r}"
-                    f" into Multipass instance {self.name!r}."
+                    f" into Multipass instance {self.instance_name!r}."
                 ),
                 details=errors.details_from_called_process_error(error),
             ) from error
@@ -471,7 +481,7 @@ class MultipassInstance(Executor):
 
         :raises MultipassError: On unexpected failure.
         """
-        self._multipass.start(instance_name=self.name)
+        self._multipass.start(instance_name=self.instance_name)
 
     def stop(self, *, delay_mins: int = 0) -> None:
         """Stop instance.
@@ -480,7 +490,7 @@ class MultipassInstance(Executor):
 
         :raises MultipassError: On unexpected failure.
         """
-        self._multipass.stop(instance_name=self.name, delay_mins=delay_mins)
+        self._multipass.stop(instance_name=self.instance_name, delay_mins=delay_mins)
 
     def unmount(self, target: pathlib.Path) -> None:
         """Unmount mount target shared with host.
@@ -489,7 +499,7 @@ class MultipassInstance(Executor):
 
         :raises MultipassError: On failure to unmount target.
         """
-        mount = f"{self.name}:{target.as_posix()}"
+        mount = f"{self.instance_name}:{target.as_posix()}"
 
         self._multipass.umount(mount=mount)
 
@@ -498,4 +508,4 @@ class MultipassInstance(Executor):
 
         :raises MultipassError: On failure to unmount target.
         """
-        self._multipass.umount(mount=self.name)
+        self._multipass.umount(mount=self.instance_name)

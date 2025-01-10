@@ -17,12 +17,10 @@
 
 """LXD Instance Executor."""
 
-import hashlib
 import io
 import logging
 import os
 import pathlib
-import re
 import shutil
 import subprocess
 import tempfile
@@ -30,7 +28,7 @@ from typing import Any, Dict, List, Optional
 
 from craft_providers.const import TIMEOUT_SIMPLE
 from craft_providers.errors import details_from_called_process_error
-from craft_providers.executor import Executor
+from craft_providers.executor import Executor, get_instance_name
 from craft_providers.lxd.errors import LXDError
 from craft_providers.lxd.lxc import LXC
 from craft_providers.util import env_cmd
@@ -39,7 +37,14 @@ logger = logging.getLogger(__name__)
 
 
 class LXDInstance(Executor):
-    """LXD Instance Lifecycle."""
+    """Wrapper for a LXD Instance.
+
+    :ivar name: The provided name for the instance.
+    :ivar instance_name: The normalized name actually used for the instance.
+    :ivar project: The name of the LXD project.
+    :ivar remote: The name of the LXD remote.
+    :ivar lxc: The LXC wrapper to use.
+    """
 
     def __init__(
         self,
@@ -55,11 +60,13 @@ class LXDInstance(Executor):
         To comply with LXD naming conventions, the supplied name is converted to a
         LXD-compatible name before creating the instance.
 
-        :param name: Unique name of the lxd instance
-        :param default_command_environment: command environment
-        :param project: name of lxd project
-        :param remote: name of lxd remote
-        :param lxc: LXC instance object
+        :param name: The name of the LXDInstance.
+        :param default_command_environment: The command environment.
+        :param project: The name of the LXD project.
+        :param remote: The name of the LXD remote.
+        :param lxc: The LXC wrapper to use.
+
+        :raises LXDError: If the name is invalid.
         """
         super().__init__()
 
@@ -69,7 +76,7 @@ class LXDInstance(Executor):
             self.default_command_environment = {}
 
         self.name = name
-        self._set_instance_name()
+        self.instance_name = get_instance_name(name, LXDError)
         self.project = project
         self.remote = remote
 
@@ -77,57 +84,6 @@ class LXDInstance(Executor):
             self.lxc = LXC()
         else:
             self.lxc = lxc
-
-    def _set_instance_name(self) -> None:
-        """Convert a name to a LXD-compatible name.
-
-        LXD naming convention:
-        - between 1 and 63 characters long
-        - made up exclusively of letters, numbers, and hyphens from the ASCII table
-        - not begin with a digit or a hyphen
-        - not end with a hyphen
-
-        To create a LXD-compatible name, invalid characters are removed, the name is
-        truncated to 40 characters, then a hash is appended:
-        <truncated-name>-<hash-of-name>
-        └     1 - 40   ┘1└     20     ┘
-
-        :param name: name of instance
-        :raises LXDError: if name contains no alphanumeric characters
-        """
-        # remove anything that is not an alphanumeric characters or hyphen
-        name_with_valid_chars = re.sub(r"[^\w-]", "", self.name)
-        if not name_with_valid_chars:
-            raise LXDError(
-                brief=f"failed to create LXD instance with name {self.name!r}.",
-                details="name must contain at least one alphanumeric character",
-            )
-
-        # trim digits and hyphens from the beginning and hyphens from the end
-        trimmed_name = re.compile(r"^[0-9-]*(?P<valid_name>.*?)[-]*$").search(
-            name_with_valid_chars
-        )
-        if not trimmed_name or not trimmed_name.group("valid_name"):
-            raise LXDError(
-                brief=f"failed to create LXD instance with name {self.name!r}.",
-                details="name must contain at least one alphanumeric character",
-            )
-        valid_name = trimmed_name.group("valid_name")
-
-        # if the original name meets LXD's naming convention, then use the original name
-        if self.name == valid_name and len(self.name) <= 63:
-            instance_name = self.name
-
-        # else, continue converting the name
-        else:
-            # truncate to 40 characters
-            truncated_name = valid_name[:40]
-            # hash the entire name, not the truncated name
-            hashed_name = hashlib.sha1(self.name.encode()).hexdigest()[:20]
-            instance_name = f"{truncated_name}-{hashed_name}"
-
-        self.instance_name = instance_name
-        logger.debug("Set LXD instance name to %r", instance_name)
 
     def _finalize_lxc_command(
         self,
