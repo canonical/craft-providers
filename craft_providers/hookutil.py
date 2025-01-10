@@ -67,7 +67,7 @@ class Instance:
         return self.name.startswith(_BASE_INSTANCE_START_STRING)
 
     @classmethod
-    def from_dict(cls, src: dict[str, str]) -> Self:
+    def unmarshal(cls, src: dict[str, str]) -> Self:
         """Use this rather than init - the lxc output has a lot of extra fields."""
         return cls(
             **{  # type: ignore[arg-type]
@@ -229,7 +229,7 @@ class HookHelper:
 
     def list_instances(self) -> list[Instance]:
         """Return a list of all instance objects for the project."""
-        return [Instance.from_dict(instance) for instance in self.lxc("list")]
+        return [Instance.unmarshal(instance) for instance in self.lxc("list")]
 
     def list_base_instances(self) -> list[Instance]:
         """Return a list of all base instance objects for the project."""
