@@ -25,13 +25,18 @@ From that, the thing we care most about is the compatibility tag:
 
 import dataclasses
 import json
+import re
 import subprocess
 import sys
 from typing import Any
 
 from typing_extensions import Self
 
+from craft_providers import Base
+
+
 _BASE_INSTANCE_START_STRING = "base-instance"
+_CURRENT_COMPATIBILITY_TAG_REGEX = re.compile(f"^{_BASE_INSTANCE_START_STRING}.*-{Base.compatibility_tag}-.*")
 
 
 class HookError(Exception):
@@ -44,7 +49,6 @@ class LXDInstance:
 
     name: str
     expanded_config: dict[str, str]
-    _project_name: str | None = None
 
     def base_instance_name(self) -> str:
         """Get the full name of the base instance this instance was created from."""
@@ -56,15 +60,7 @@ class LXDInstance:
 
     def is_current_base_instance(self) -> bool:
         """Return true if this is a base instance with the current compat tag."""
-        if not self._project_name:
-            raise HookError(
-                "Cannot determine if {self.name} is a current base instance"
-            )
-        current_compatibility_tag = f"{self._project_name}-buildd-base-v7"
-        current_base_instance_start_string = (
-            f"{_BASE_INSTANCE_START_STRING}-{current_compatibility_tag}-"
-        )
-        return self.name.startswith(current_base_instance_start_string)
+        return bool(re.match(_CURRENT_COMPATIBILITY_TAG_REGEX, self.name))
 
     def is_base_instance(self) -> bool:
         """Return true if this is a base instance."""
@@ -74,18 +70,15 @@ class LXDInstance:
     def unmarshal(
         cls,
         src: dict[str, str],
-        project_name: str | None = None,
     ) -> Self:
         """Use this rather than init - the lxc output has a lot of extra fields."""
-        instance = cls(
+        return cls(
             **{  # type: ignore[arg-type]
                 k: v
                 for k, v in src.items()
                 if k in {f.name for f in dataclasses.fields(cls)}
             }
         )
-        instance._project_name = project_name
-        return instance
 
 
 class HookHelper:
@@ -187,7 +180,7 @@ class HookHelper:
     def delete_instance(self, instance: LXDInstance) -> None:
         """Delete the specified lxc instance."""
         print(
-            f"Removing old instance {instance.name} in LXD {self._project_name} project..."
+            f" > Removing instance {instance.name} in LXD {self._project_name} project..."
         )
         if self.simulate:
             return
@@ -228,10 +221,7 @@ class HookHelper:
     def list_instances(self) -> list[LXDInstance]:
         """Return a list of all instance objects for the project."""
         return [
-            LXDInstance.unmarshal(
-                instance,
-                project_name=self._project_name,
-            )
+            LXDInstance.unmarshal(instance)
             for instance in self.lxc("list")
         ]
 
@@ -253,24 +243,29 @@ def configure_hook(lxc: HookHelper) -> None:
     delete_base_full_names = set()
     for instance in lxc.list_base_instances():
         if instance.is_current_base_instance():
+            lxc.dprint(instance, "Base instance is current")
             continue
 
         # This is a base instance but it doesn't match the compat tag, assume it's
         # old (not future) and delete it.
-        lxc.dprint(instance, "Base instance uses old compatibility tag")
+        lxc.dprint(instance, "Base instance uses old compatibility tag, deleting")
         lxc.delete_instance(instance)
         delete_base_full_names.add(instance.base_instance_name())
 
     if not delete_base_full_names:
-        lxc.dprint("No instances to delete")
+        lxc.dprint("No base instances were deleted, so no derived instances to delete")
         return
 
     # Find the child instances of the bases we deleted and delete them too
+    did_delete = False
     for instance in lxc.list_instances():
         if instance.base_instance_name() not in delete_base_full_names:
             continue
-        lxc.dprint("Base instance was deleted")
+        lxc.dprint(instance, "Base instance was deleted, deleting derived instance")
         lxc.delete_instance(instance)
+        did_delete = True
+    if not did_delete:
+        lxc.dprint("Found no instances derived from deleted base instances")
 
 
 def remove_hook(lxc: HookHelper) -> None:
