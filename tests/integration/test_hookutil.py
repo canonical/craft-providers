@@ -20,7 +20,7 @@
 import pytest
 from craft_providers import lxd
 from craft_providers.bases import ubuntu
-from craft_providers.hookutil import HookHelper, configure_hook, remove_hook
+from craft_providers.hookutil import HookError, HookHelper, configure_hook, remove_hook
 
 
 FAKE_PROJECT = "boopcraft"
@@ -63,7 +63,30 @@ def test_configure_hook(spawn_lxd_instance):
     assert current_instance.exists(), "Current non-base instance should exist"
     assert not outdated_base_instance.exists(), "Outdated base instance should not exist"
 
+    current_instance.delete()
+    helper._check_project_exists()  # raises exception if project doesn't exist
 
 
-def test_remove_hook():
-    pass
+def test_remove_hook(spawn_lxd_instance):
+    # Create a current non-base instance (the base instance is also created internally)
+    current_instance = spawn_lxd_instance(
+        "boopcraft-myproject-on-amd64-for-amd64-59510339",
+        is_base_instance=False,
+    )
+
+    # Create an outdated instance that would have been created by craft-providers>=1.7.0<1.8.0
+    outdated_base_instance = spawn_lxd_instance(
+        "base-instance-buildd-base-v00--be83d276b0c767e3ad60",
+        is_base_instance=True,
+    )
+
+    helper = HookHelper(project_name=FAKE_PROJECT, simulate=False, debug=True)
+    remove_hook(helper)
+
+    assert not current_instance.exists(), "Current non-base instance should not exist"
+    assert not outdated_base_instance.exists(), "Outdated base instance should not exist"
+
+    with pytest.raises(HookError) as e:
+        helper._check_project_exists()
+        assert e == HookError(f"Project {FAKE_PROJECT} does not exist in LXD.")
+
