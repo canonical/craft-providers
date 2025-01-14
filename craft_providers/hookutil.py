@@ -36,7 +36,9 @@ from craft_providers import Base
 
 
 _BASE_INSTANCE_START_STRING = "base-instance"
-_CURRENT_COMPATIBILITY_TAG_REGEX = re.compile(f"^{_BASE_INSTANCE_START_STRING}.*-{Base.compatibility_tag}-.*")
+_CURRENT_COMPATIBILITY_TAG_REGEX = re.compile(
+    f"^{_BASE_INSTANCE_START_STRING}.*-{Base.compatibility_tag}-.*"
+)
 
 
 class HookError(Exception):
@@ -220,10 +222,7 @@ class HookHelper:
 
     def list_instances(self) -> list[LXDInstance]:
         """Return a list of all instance objects for the project."""
-        return [
-            LXDInstance.unmarshal(instance)
-            for instance in self.lxc("list")
-        ]
+        return [LXDInstance.unmarshal(instance) for instance in self.lxc("list")]
 
     def list_base_instances(self) -> list[LXDInstance]:
         """Return a list of all base instance objects for the project."""

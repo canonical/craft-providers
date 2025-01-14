@@ -29,6 +29,7 @@ FAKE_PROJECT = "boopcraft"
 @pytest.fixture
 def spawn_lxd_instance(installed_lxd):
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+
     def spawn_lxd_instance(name, *, is_base_instance):
         """Create a long-lived LXD instance under our fake project."""
         return lxd.launch(
@@ -39,8 +40,8 @@ def spawn_lxd_instance(installed_lxd):
             project=FAKE_PROJECT,
             auto_create_project=True,
             use_base_instance=not is_base_instance,
-            #ephemeral=True,
         )
+
     return spawn_lxd_instance
 
 
@@ -61,7 +62,9 @@ def test_configure_hook(spawn_lxd_instance):
     configure_hook(helper)
 
     assert current_instance.exists(), "Current non-base instance should exist"
-    assert not outdated_base_instance.exists(), "Outdated base instance should not exist"
+    assert (
+        not outdated_base_instance.exists()
+    ), "Outdated base instance should not exist"
 
     current_instance.delete()
     helper._check_project_exists()  # raises exception if project doesn't exist
@@ -84,9 +87,10 @@ def test_remove_hook(spawn_lxd_instance):
     remove_hook(helper)
 
     assert not current_instance.exists(), "Current non-base instance should not exist"
-    assert not outdated_base_instance.exists(), "Outdated base instance should not exist"
+    assert (
+        not outdated_base_instance.exists()
+    ), "Outdated base instance should not exist"
 
     with pytest.raises(HookError) as e:
         helper._check_project_exists()
         assert e == HookError(f"Project {FAKE_PROJECT} does not exist in LXD.")
-
