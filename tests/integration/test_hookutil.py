@@ -22,7 +22,6 @@ from craft_providers import lxd
 from craft_providers.bases import ubuntu
 from craft_providers.hookutil import HookError, HookHelper, configure_hook, remove_hook
 
-
 FAKE_PROJECT = "boopcraft"
 
 
