@@ -25,6 +25,7 @@ import shutil
 import subprocess
 import tempfile
 from typing import Any, Dict, List, Optional
+import warnings
 
 from craft_providers.const import TIMEOUT_SIMPLE
 from craft_providers.errors import details_from_called_process_error
@@ -54,6 +55,7 @@ class LXDInstance(Executor):
         project: str = "default",
         remote: str = "local",
         lxc: Optional[LXC] = None,
+        intercept_mknod: bool = True,
     ) -> None:
         """Create an LXD executor.
 
@@ -65,6 +67,7 @@ class LXDInstance(Executor):
         :param project: The name of the LXD project.
         :param remote: The name of the LXD remote.
         :param lxc: The LXC wrapper to use.
+        :param intercept_mknod: If the host can, tell LXD instance to intercept mknod
 
         :raises LXDError: If the name is invalid.
         """
@@ -79,6 +82,7 @@ class LXDInstance(Executor):
         self.instance_name = get_instance_name(name, LXDError)
         self.project = project
         self.remote = remote
+        self._intercept_mknod = intercept_mknod
 
         if lxc is None:
             self.lxc = LXC()
@@ -363,8 +367,14 @@ class LXDInstance(Executor):
                 uid = os.getuid()
             config_keys["raw.idmap"] = f"both {uid!s} 0"
 
-        if self._host_supports_mknod():
-            config_keys["security.syscalls.intercept.mknod"] = "true"
+        if self._intercept_mknod:
+            if not self._host_supports_mknod():
+                warnings.warn(
+                    "Application configured to intercept guest mknod calls, "
+                    "but the host OS does not support intercepting mknod."
+                )
+            else:
+                config_keys["security.syscalls.intercept.mknod"] = "true"
 
         self.lxc.launch(
             config_keys=config_keys,
