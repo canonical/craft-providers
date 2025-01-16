@@ -33,6 +33,7 @@ from typing import Any
 from typing_extensions import Self
 
 from craft_providers import Base
+from craft_providers import lxd
 
 _BASE_INSTANCE_START_STRING = "base-instance"
 _CURRENT_COMPATIBILITY_TAG_REGEX = re.compile(
@@ -102,12 +103,8 @@ class HookHelper:
         purposes of the configure and remove hooks we don't want to install LXD just to
         check that it has no stale images.
         """
-        try:
-            subprocess.run(
-                ["snap", "list", "lxd"], check=True, text=True, capture_output=True
-            )
-        except subprocess.CalledProcessError as e:
-            raise HookError("LXD is not installed.") from e
+        if not lxd.is_installed():
+            raise HookError("LXD is not installed.")
 
     def _check_project_exists(self) -> None:
         """Raise HookError if lxc doesn't know about this app."""
