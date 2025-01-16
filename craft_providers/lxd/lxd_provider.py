@@ -45,6 +45,7 @@ class LXDProvider(Provider):
     :param lxc: Optional lxc client to use.
     :param lxd_project: LXD project to use (default is default).
     :param lxd_remote: LXD remote to use (default is local).
+    :param intercept_mknod: If the host can, tell LXD instance to intercept mknod
     """
 
     def __init__(
@@ -53,10 +54,12 @@ class LXDProvider(Provider):
         lxc: LXC = LXC(),
         lxd_project: str = "default",
         lxd_remote: str = "local",
+        intercept_mknod: bool = True,
     ) -> None:
         self.lxc = lxc
         self.lxd_project = lxd_project
         self.lxd_remote = lxd_remote
+        self._intercept_mknod = intercept_mknod
 
     @property
     def name(self) -> str:
@@ -98,6 +101,7 @@ class LXDProvider(Provider):
             name=instance_name,
             project=self.lxd_project,
             remote=self.lxd_remote,
+            intercept_mknod=self._intercept_mknod,
         )
 
     @contextlib.contextmanager
