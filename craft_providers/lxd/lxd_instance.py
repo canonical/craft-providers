@@ -24,8 +24,8 @@ import pathlib
 import shutil
 import subprocess
 import tempfile
-from typing import Any, Dict, List, Optional
 import warnings
+from typing import Any, Dict, List, Optional
 
 from craft_providers.const import TIMEOUT_SIMPLE
 from craft_providers.errors import details_from_called_process_error
