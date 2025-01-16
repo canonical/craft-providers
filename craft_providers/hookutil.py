@@ -32,8 +32,7 @@ from typing import Any
 
 from typing_extensions import Self
 
-from craft_providers import Base
-from craft_providers import lxd
+from craft_providers import Base, lxd
 
 _BASE_INSTANCE_START_STRING = "base-instance"
 _CURRENT_COMPATIBILITY_TAG_REGEX = re.compile(
