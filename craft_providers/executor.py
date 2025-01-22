@@ -134,7 +134,11 @@ class Executor(ABC):
 
     @contextlib.contextmanager
     def modify_file(
-        self, *, source: pathlib.PurePath, missing_ok: bool = False
+        self,
+        *,
+        source: pathlib.PurePath,
+        missing_ok: bool = False,
+        pull_file: bool = True,
     ) -> Generator[Optional[pathlib.Path], None, None]:
         """Copy a file from the environment for modification via context manager.
         Upon exiting the context, the file is pushed back to the environment.
@@ -150,16 +154,17 @@ class Executor(ABC):
             directory does not exist (and `missing_ok` is False).
         :raises ProviderError: On error copying file content.
         """
-        # Improvement: add a kwarg to skip the pull step if we
-        # do not care about the state of the file in the environment if it exists.
-        with craft_providers.util.temp_paths.home_temporary_file() as tmp_file:
-            try:
-                self.pull_file(source=source, destination=tmp_file)
-            except FileNotFoundError:
-                tmp_file.touch()  # ensure the file exists.
 
-                if not missing_ok:
-                    raise
+        # Note: This is a convenience function to cache the pro services state in the
+        # environment. However, it may be better to use existing methods to reduce complexity.
+        with craft_providers.util.temp_paths.home_temporary_file() as tmp_file:
+            tmp_file.touch()  # ensure the file exists regardless
+            if pull_file:
+                try:
+                    self.pull_file(source=source, destination=tmp_file)
+                except FileNotFoundError:
+                    if not missing_ok:
+                        raise
             try:
                 yield tmp_file
             finally:
