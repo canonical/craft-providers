@@ -704,7 +704,7 @@ class LXDInstance(Executor):
                     return yaml.safe_load(fh)
 
         except FileNotFoundError:
-            return set()
+            return None
 
     @pro_services.setter
     def pro_services(self, services: set[str]) -> None:
