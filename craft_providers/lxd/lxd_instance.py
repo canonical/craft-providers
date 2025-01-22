@@ -27,6 +27,7 @@ import shutil
 import subprocess
 import tempfile
 from typing import Any, Dict, Iterable, List, Optional
+import yaml
 
 from craft_providers import pro
 from craft_providers.const import TIMEOUT_SIMPLE
@@ -37,6 +38,8 @@ from craft_providers.lxd.lxc import LXC
 from craft_providers.util import env_cmd
 
 logger = logging.getLogger(__name__)
+
+PRO_SERVICES_YAML = pathlib.Path("/root/pro-services.yaml")
 
 
 class LXDInstance(Executor):
@@ -684,6 +687,37 @@ class LXDInstance(Executor):
             project=self.project,
             remote=self.remote,
         )
+
+    @property
+    def pro_services(self) -> set[str]:
+        """Get the Pro services enabled on the instance."""
+
+        # first check if the services are cached in memory
+        if hasattr(self, "_pro_services"):
+            return self._pro_services
+        # then check the instance state
+        try:
+            with self.modify_file(
+                source=PRO_SERVICES_YAML,
+            ) as temp_state_path:
+                with open(temp_state_path, "r") as fh:
+                    return yaml.safe_load(fh)
+
+        except FileNotFoundError:
+            return set()
+
+    @pro_services.setter
+    def pro_services(self, services: set[str]) -> None:
+        """Set the Pro services enabled on the instance."""
+
+        self._pro_services = services  # cache the services in memory ...
+        # ... and write them to the instance
+        with self.modify_file(
+            source=PRO_SERVICES_YAML,
+            pull_file=False,
+        ) as temp_state_path:
+            with open(temp_state_path, "w") as fh:
+                yaml.safe_dump(set(services), fh)
 
     def install_pro_client(self) -> None:
         """Install Ubuntu Pro Client in the instance.
