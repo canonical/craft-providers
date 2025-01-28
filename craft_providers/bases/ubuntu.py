@@ -35,6 +35,7 @@ from craft_providers.errors import (
 )
 from craft_providers.executor import Executor
 from craft_providers.loopback_executor import LoopbackExecutor
+from craft_providers.util.os_release import parse_os_release
 
 logger = logging.getLogger(__name__)
 
@@ -300,7 +301,12 @@ def ensure_guest_compatible(base_configuration: Base, guest_instance: Executor) 
     # _get_os_release, which uses timeout values from the base_configuration instance and
     # nothing else.
     guest_base_alias = _get_buildd_base_alias(base_configuration, guest_instance)
+
+    # With loopback executor:
     host_base_alias = _get_buildd_base_alias(base_configuration, host_instance)
+
+    # Without loopback executor:
+    host_base_alias = BuilddBaseAlias(parse_os_release().get("VERSION_ID"))
 
     # If the host OS is focal (20.04) or older, and the guest OS is oracular (24.10)
     # or newer, then the host lxd must be >=5.0.4 or >=5.21.2, and kernel must be
