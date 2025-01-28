@@ -16,6 +16,7 @@
 #
 
 """LXC wrapper."""
+
 import contextlib
 import enum
 import logging
@@ -388,6 +389,8 @@ class LXC:
 
         if runner is subprocess.run:
             return runner(final_cmd, timeout=timeout, check=check, **kwargs)
+
+        # XXX: warn that timeout and check are ignored for Popen??
 
         return runner(final_cmd, **kwargs)
 
@@ -1176,3 +1179,25 @@ class LXC:
             time.sleep(3)
 
         raise LXDError(brief="Timed out waiting for instance to be ready.")
+
+    def get_version(self) -> str:
+        """Get the version of the lxd server.
+
+        :raises LXDError: on unexpected error.
+        """
+        try:
+            completed_process = self._run_lxc(["version"], capture_output=True)
+        except subprocess.CalledProcessError as error:
+            raise LXDError(
+                brief="Could not determine lxd version.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
+        for line in completed_process.stdout.splitlines():
+            if not line.startswith("Server version"):
+                continue
+            # In case there are ever colons in the version string
+            return ":".join(line.split(":")[1:])
+        raise LXDError(
+            brief="Could not determine lxd version.",
+            details="Didn't find string 'Server version' in output",
+        )

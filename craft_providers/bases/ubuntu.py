@@ -21,6 +21,7 @@ import io
 import logging
 import pathlib
 import subprocess
+from functools import total_ordering
 from textwrap import dedent
 from typing import Dict, List, Optional
 
@@ -29,13 +30,16 @@ from craft_providers.base import Base
 from craft_providers.errors import (
     BaseCompatibilityError,
     BaseConfigurationError,
+    ProviderError,
     details_from_called_process_error,
 )
 from craft_providers.executor import Executor
+from craft_providers.loopback_executor import LoopbackExecutor
 
 logger = logging.getLogger(__name__)
 
 
+@total_ordering
 class BuilddBaseAlias(enum.Enum):
     """Mappings for supported buildd images."""
 
@@ -46,6 +50,10 @@ class BuilddBaseAlias(enum.Enum):
     NOBLE = "24.04"
     ORACULAR = "24.10"
     DEVEL = "devel"
+
+    def __lt__(self, other):
+        # Devels are the greatest, luckily 'd' > [0-9]
+        return self.value < other.value
 
 
 class BuilddBase(Base):
@@ -271,3 +279,59 @@ class BuilddBase(Base):
 
 # Backward compatible, will be removed in 2.0
 default_command_environment = BuilddBase.default_command_environment
+
+
+def _get_buildd_base_alias(base: BuilddBase, executor: Executor) -> BuilddBaseAlias:
+    """Translate the os-version into a BuilddBaseAlias."""
+    os_release = base._get_os_release(executor=executor)
+    version_id = os_release.get("VERSION_ID")
+    return BuilddBaseAlias(version_id)
+
+
+def ensure_guest_compatible(base_configuration: Base, guest_instance: Executor) -> None:
+    """Ensure host is compatible with guest instance."""
+    if not issubclass(base_configuration, BuilddBase):
+        # Not ubuntu, not sure how to check
+        return
+
+    host_instance = LoopbackExecutor()
+
+    # Any base_configuration instance can work for this, all we need it for is to call
+    # _get_os_release, which uses timeout values from the base_configuration instance and
+    # nothing else.
+    guest_base_alias = _get_buildd_base_alias(base_configuration, guest_instance)
+    host_base_alias = _get_buildd_base_alias(base_configuration, host_instance)
+
+    # If the host OS is focal (20.04) or older, and the guest OS is oracular (24.10)
+    # or newer, then the host lxd must be >=5.0.4 or >=5.21.2, and kernel must be
+    # 5.15 or newer.  Otherwise, weird systemd failures will occur due to a mismatch
+    # between cgroupv1 and v2 support.
+    # https://discourse.ubuntu.com/t/lxd-5-0-4-lts-has-been-released/49681#p-123331-support-for-ubuntu-oracular-containers-on-cgroupv2-hosts
+    if (host_base_alias > BuilddBaseAlias.FOCAL or
+        guest_base_alias < BuilddBaseAlias.ORACULAR):
+        return
+
+    major, minor, patch = [int(vernum) for vernum in lxc.get_version().split(".")]
+    lxd_exception = ProviderError(
+        brief="This combination of guest and host OS versions requires a newer lxd version.",
+        resolution="Ensure you have lxd >=5.0.4 or >=5.21.2 installed - try the lxd snap.",
+    )
+    if major == 5:
+        # Major is 5, we care about patch versions given the minor
+        if minor == 0 and patch < 4:
+            raise lxd_exception
+        if minor == 21 and patch < 2:
+            raise lxd_exception
+    if major < 5:
+        raise lxd_exception
+
+    kernel_version = [int(vernum) for vernum in host_instance.execute_run(
+        ["uname", "-r"],
+        capture_output=True,
+        text=True
+    ).stdout.split(".")]
+    if (kernel_version[0] == 5 and kernel_version[1] < 15) or kernel_version[0] < 5:
+        raise ProviderError(
+            brief="This combination of guest and host OS versions requires a newer kernel version.",
+            resolution="Ensure you have kernel 5.15 or newer - try the HWE kernel.",
+        )
