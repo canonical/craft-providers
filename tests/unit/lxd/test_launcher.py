@@ -148,7 +148,6 @@ def test_launch_no_base_instance(
 
     assert mock_lxc.mock_calls == [
         call.project_list("local"),
-        call.get_server_version(),
     ]
     assert mock_lxd_instance.mock_calls == [
         call(
@@ -212,7 +211,6 @@ def test_launch_use_base_instance(
 
     assert mock_lxc.mock_calls == [
         call.project_list("test-remote"),
-        call.get_server_version(),
         call.copy(
             source_remote="test-remote",
             source_instance_name=fake_base_instance.instance_name,
@@ -314,7 +312,6 @@ def test_launch_use_existing_base_instance(
 
     expected_mock_lxc_calls = [
         call.project_list("test-remote"),
-        call.get_server_version(),
         call.copy(
             source_remote="test-remote",
             source_instance_name=fake_base_instance.instance_name,
@@ -443,7 +440,6 @@ def test_launch_existing_base_instance_invalid(
 
     assert mock_lxc.mock_calls == [
         call.project_list("test-remote"),
-        call.get_server_version(),
         call.copy(
             source_remote="test-remote",
             source_instance_name=fake_base_instance.instance_name,
@@ -552,7 +548,6 @@ def test_launch_all_opts(
 
     assert mock_lxc.mock_calls == [
         call.project_list("test-remote"),
-        call.get_server_version(),
     ]
     assert mock_lxd_instance.mock_calls == [
         call(
@@ -659,7 +654,6 @@ def test_launch_create_project(
             config=mock_lxc.profile_show.return_value,
             remote="test-remote",
         ),
-        call.get_server_version(),
     ]
     assert mock_lxd_instance.mock_calls == [
         call(
@@ -718,7 +712,6 @@ def test_launch_with_existing_instance_not_running(
 
     assert mock_lxc.mock_calls == [
         call.project_list("local"),
-        call.get_server_version(),
     ]
     assert mock_lxd_instance.mock_calls == [
         call(
@@ -756,7 +749,6 @@ def test_launch_with_existing_instance_running(
 
     assert mock_lxc.mock_calls == [
         call.project_list("local"),
-        call.get_server_version(),
     ]
     assert mock_lxd_instance.mock_calls == [
         call(
@@ -805,7 +797,6 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
 
     assert mock_lxc.mock_calls == [
         call.project_list("local"),
-        call.get_server_version(),
     ]
     assert mock_lxd_instance.mock_calls == [
         call(
@@ -904,7 +895,6 @@ def test_launch_with_existing_ephemeral_instance(
 
     assert mock_lxc.mock_calls == [
         call.project_list("local"),
-        call.get_server_version(),
     ]
     assert mock_lxd_instance.mock_calls == [
         call(

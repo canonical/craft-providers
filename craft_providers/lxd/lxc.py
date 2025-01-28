@@ -1188,7 +1188,7 @@ class LXC:
         :raises LXDError: on unexpected error.
         """
         try:
-            completed_process = self._run_lxc(["version"], capture_output=True)
+            completed_process = self._run_lxc(["version"], capture_output=True, text=True)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief="Could not determine lxd version.",

@@ -22,7 +22,7 @@ import pathlib
 from datetime import timedelta
 from typing import Iterator
 
-from craft_providers import Executor, Provider
+from craft_providers import Executor, Provider, bases
 from craft_providers.base import Base
 from craft_providers.errors import BaseConfigurationError
 
@@ -160,6 +160,15 @@ class LXDProvider(Provider):
             )
         except BaseConfigurationError as error:
             raise LXDError(str(error)) from error
+
+        # It would be ideal to check if the instance is compatible before creating/launching
+        # it, but unfortunately image_name can be a lot of things, so we have to read the OS
+        # release from the running instance.
+        bases.ubuntu.ensure_guest_compatible(
+            base_configuration,
+            instance,
+            self.lxc.get_server_version(),
+        )
 
         try:
             yield instance
