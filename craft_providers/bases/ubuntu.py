@@ -34,7 +34,6 @@ from craft_providers.errors import (
     details_from_called_process_error,
 )
 from craft_providers.executor import Executor
-from craft_providers.loopback_executor import LoopbackExecutor
 from craft_providers.lxd.lxd import LXD
 from craft_providers.util.os_release import parse_os_release
 
@@ -283,28 +282,14 @@ class BuilddBase(Base):
 default_command_environment = BuilddBase.default_command_environment
 
 
-def _get_buildd_base_alias(base: BuilddBase, executor: Executor) -> BuilddBaseAlias:
-    """Translate the os-version into a BuilddBaseAlias."""
-    os_release = base._get_os_release(executor=executor)
-    version_id = os_release.get("VERSION_ID")
-    return BuilddBaseAlias(version_id)
-
-
-def ensure_guest_compatible(base_configuration: Base, guest_instance: Executor) -> None:
+def ensure_guest_compatible(base_configuration: Base, instance: Executor) -> None:
     """Ensure host is compatible with guest instance."""
     if not issubclass(base_configuration, BuilddBase):
         # Not ubuntu, not sure how to check
         return
 
-    host_instance = LoopbackExecutor()
-
-    # Any base_configuration instance can work for this, all we need it for is to call
-    # _get_os_release, which uses timeout values from the base_configuration instance and
-    # nothing else.
-    guest_base_alias = _get_buildd_base_alias(base_configuration, guest_instance)
-
-    # With loopback executor:
-    host_base_alias = _get_buildd_base_alias(base_configuration, host_instance)
+    guest_os_release = base_configuration._get_os_release(executor=instance)
+    guest_base_alias = BuilddBaseAlias(guest_os_release.get("VERSION_ID"))
 
     # Without loopback executor:
     host_base_alias = BuilddBaseAlias(parse_os_release().get("VERSION_ID"))
