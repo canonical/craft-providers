@@ -51,7 +51,7 @@ class BuilddBaseAlias(enum.Enum):
     ORACULAR = "24.10"
     DEVEL = "devel"
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         # Devels are the greatest, luckily 'd' > [0-9]
         return self.value < other.value
 
@@ -331,8 +331,8 @@ def ensure_guest_compatible(
 
     kernel_version = [
         int(vernum)
-        for vernum in host_instance.execute_run(
-            ["uname", "-r"], capture_output=True, text=True
+        for vernum in subprocess.run(
+            ["uname", "-r"], capture_output=True, text=True, check=True
         ).stdout.split(".")
     ]
     if (kernel_version[0] == 5 and kernel_version[1] < 15) or kernel_version[0] < 5:
