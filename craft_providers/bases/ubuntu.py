@@ -35,6 +35,7 @@ from craft_providers.errors import (
 )
 from craft_providers.executor import Executor
 from craft_providers.loopback_executor import LoopbackExecutor
+from craft_providers.lxd.lxd import LXD
 from craft_providers.util.os_release import parse_os_release
 
 logger = logging.getLogger(__name__)
@@ -317,7 +318,15 @@ def ensure_guest_compatible(base_configuration: Base, guest_instance: Executor) 
         guest_base_alias < BuilddBaseAlias.ORACULAR):
         return
 
-    major, minor, patch = [int(vernum) for vernum in lxc.get_version().split(".")]
+    lxd = LXD()
+    lxd_version_split = [int(vernum) for vernum in lxd.version().split(".")]
+    major = lxd_version_split[0]
+    minor = lxd_version_split[1]
+    try:
+        patch = lxd_version_split[2]
+    except IndexError:
+        # LXD version strings sometimes omit the patch - call it zero
+        patch = 0
     lxd_exception = ProviderError(
         brief="This combination of guest and host OS versions requires a newer lxd version.",
         resolution="Ensure you have lxd >=5.0.4 or >=5.21.2 installed - try the lxd snap.",
