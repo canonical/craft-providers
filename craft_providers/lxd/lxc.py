@@ -1180,8 +1180,10 @@ class LXC:
 
         raise LXDError(brief="Timed out waiting for instance to be ready.")
 
-    def get_version(self) -> str:
+    def get_server_version(self) -> str:
         """Get the version of the lxd server.
+
+        Use over LXD.version when you need to get the server version but aren't root.
 
         :raises LXDError: on unexpected error.
         """

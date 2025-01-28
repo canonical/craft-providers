@@ -712,7 +712,11 @@ def launch(
     # It would be ideal to check if the instance is compatible before creating/launching
     # it, but unfortunately image_name can be a lot of things, so we have to read the OS
     # release from the running instance.
-    bases.ubuntu.ensure_guest_compatible(base_configuration, instance)
+    bases.ubuntu.ensure_guest_compatible(
+        base_configuration,
+        instance,
+        lxc.get_server_version(),
+    )
 
     # If the existing instance could not be launched, then continue on so a new
     # instance can be created (this can occur when `auto_clean` triggers the

@@ -34,7 +34,6 @@ from craft_providers.errors import (
     details_from_called_process_error,
 )
 from craft_providers.executor import Executor
-from craft_providers.lxd.lxd import LXD
 from craft_providers.util.os_release import parse_os_release
 
 logger = logging.getLogger(__name__)
@@ -282,9 +281,13 @@ class BuilddBase(Base):
 default_command_environment = BuilddBase.default_command_environment
 
 
-def ensure_guest_compatible(base_configuration: Base, instance: Executor) -> None:
+def ensure_guest_compatible(
+    base_configuration: Base,
+    instance: Executor,
+    lxd_version: str,
+) -> None:
     """Ensure host is compatible with guest instance."""
-    if not issubclass(base_configuration, BuilddBase):
+    if not issubclass(type(base_configuration), BuilddBase):
         # Not ubuntu, not sure how to check
         return
 
@@ -303,8 +306,7 @@ def ensure_guest_compatible(base_configuration: Base, instance: Executor) -> Non
         guest_base_alias < BuilddBaseAlias.ORACULAR):
         return
 
-    lxd = LXD()
-    lxd_version_split = [int(vernum) for vernum in lxd.version().split(".")]
+    lxd_version_split = [int(vernum) for vernum in lxd_version.split(".")]
     major = lxd_version_split[0]
     minor = lxd_version_split[1]
     try:
