@@ -302,8 +302,10 @@ def ensure_guest_compatible(
     # 5.15 or newer.  Otherwise, weird systemd failures will occur due to a mismatch
     # between cgroupv1 and v2 support.
     # https://discourse.ubuntu.com/t/lxd-5-0-4-lts-has-been-released/49681#p-123331-support-for-ubuntu-oracular-containers-on-cgroupv2-hosts
-    if (host_base_alias > BuilddBaseAlias.FOCAL or
-        guest_base_alias < BuilddBaseAlias.ORACULAR):
+    if (
+        host_base_alias > BuilddBaseAlias.FOCAL
+        or guest_base_alias < BuilddBaseAlias.ORACULAR
+    ):
         return
 
     lxd_version_split = [int(vernum) for vernum in lxd_version.split(".")]
@@ -327,11 +329,12 @@ def ensure_guest_compatible(
     if major < 5:
         raise lxd_exception
 
-    kernel_version = [int(vernum) for vernum in host_instance.execute_run(
-        ["uname", "-r"],
-        capture_output=True,
-        text=True
-    ).stdout.split(".")]
+    kernel_version = [
+        int(vernum)
+        for vernum in host_instance.execute_run(
+            ["uname", "-r"], capture_output=True, text=True
+        ).stdout.split(".")
+    ]
     if (kernel_version[0] == 5 and kernel_version[1] < 15) or kernel_version[0] < 5:
         raise ProviderError(
             brief="This combination of guest and host OS versions requires a newer kernel version.",
