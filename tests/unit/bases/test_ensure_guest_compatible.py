@@ -73,13 +73,21 @@ def test_ensure_guest_compatible_valid_ubuntu(
 VERSION_ID="{base_alias.value}"
 WOOP="dedoo"
 """
-
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
         stdout=fake_os_release,
     )
 
-    ubuntu.ensure_guest_compatible(guest_base, fake_executor, lxd_version)
+    # Mock the host os-release file contents
+    @contextlib.contextmanager
+    def fake_open(*args, **kwargs):
+        class Fake:
+            def read(self):
+                return f'VERSION_ID="{base_alias.value}"'
+        yield Fake()
+
+    with patch.object(craft_providers.util.os_release.Path, "open", fake_open):  # type: ignore[reportAttributeAccessIssue]
+        ubuntu.ensure_guest_compatible(guest_base, fake_executor, lxd_version)
 
     assert fake_get_os_release.counter == 1  # type: ignore[reportFunctionMemberAccess]
 
@@ -130,7 +138,6 @@ def test_ensure_guest_compatible_bad_lxd_versions(
         class Fake:
             def read(self):
                 return f'VERSION_ID="{host_base_alias.value}"'
-
         yield Fake()
 
     with (
@@ -188,7 +195,6 @@ def test_ensure_guest_compatible_bad_kernel_versions(
         class Fake:
             def read(self):
                 return f'VERSION_ID="{host_base_alias.value}"'
-
         yield Fake()
 
     # Mock the kernel version
