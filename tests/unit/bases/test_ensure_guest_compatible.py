@@ -57,10 +57,10 @@ def test_ensure_guest_compatible_valid_ubuntu(
     real_get_os_release = guest_base._get_os_release
 
     def fake_get_os_release(*args, **kwargs):
-        fake_get_os_release.counter += 1
+        fake_get_os_release.counter += 1  # type: ignore[reportFunctionMemberAccess]
         return real_get_os_release(*args, **kwargs)
 
-    fake_get_os_release.counter = 0
+    fake_get_os_release.counter = 0  # type: ignore[reportFunctionMemberAccess]
     guest_base._get_os_release = fake_get_os_release
 
     # Specifying an invalid version string will ensure that the code never gets to the
@@ -81,7 +81,7 @@ WOOP="dedoo"
 
     ubuntu.ensure_guest_compatible(guest_base, fake_executor, lxd_version)
 
-    assert fake_get_os_release.counter == 1
+    assert fake_get_os_release.counter == 1  # type: ignore[reportFunctionMemberAccess]
 
 
 @pytest.mark.parametrize(
@@ -137,7 +137,7 @@ def test_ensure_guest_compatible_bad_lxd_versions(
         yield Fake()
 
     with (
-        patch.object(craft_providers.util.os_release.Path, "open", fake_open),
+        patch.object(craft_providers.util.os_release.Path, "open", fake_open),  # type: ignore[reportAttributeAccessIssue]
         pytest.raises(ProviderError) as e,
     ):
         ubuntu.ensure_guest_compatible(guest_base, fake_executor, lxd_version)
@@ -204,7 +204,7 @@ def test_ensure_guest_compatible_bad_kernel_versions(
     )
 
     with (
-        patch.object(craft_providers.util.os_release.Path, "open", fake_open),
+        patch.object(craft_providers.util.os_release.Path, "open", fake_open),  # type: ignore[reportAttributeAccessIssue]
         pytest.raises(ProviderError) as e,
     ):
         ubuntu.ensure_guest_compatible(guest_base, fake_executor, lxd_version)
