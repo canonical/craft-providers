@@ -17,6 +17,7 @@
 import copy
 import io
 import pathlib
+import re
 import subprocess
 import sys
 from unittest import mock
@@ -844,3 +845,39 @@ def test_unmount_all(mock_multipass, instance):
     instance.unmount_all()
 
     assert mock_multipass.mock_calls == [mock.call.umount(mount="test-instance")]
+
+
+@pytest.mark.parametrize(
+    ("name", "expected_instance_name"),
+    [
+        ("simple-name", "simple-name"),
+        (
+            "$$$-this-is-70-characters-with-invalid-characters-$$$xxxxxxxxxxxxxxxxX",
+            "this-is-70-characters-with-invalid-chara-bf117c12825011de054e",
+        ),
+    ],
+)
+def test_instance_name(logs, mock_multipass, name, expected_instance_name):
+    """Verify name is compliant with Multipass naming conventions."""
+    instance = MultipassInstance(name=name, multipass=mock_multipass)
+
+    assert instance.name == name
+    assert instance.instance_name == expected_instance_name
+    assert len(instance.instance_name) <= 63
+    assert (
+        re.escape(
+            f"Converted name {name!r} to instance name {instance.instance_name!r}"
+        )
+        in logs.debug
+    )
+
+
+def test_set_instance_name_invalid(mock_multipass):
+    """Verify invalid names raise an error."""
+    with pytest.raises(MultipassError) as error:
+        MultipassInstance(name="-", multipass=mock_multipass)
+
+    assert error.value == MultipassError(
+        brief="failed to create an instance with name '-'.",
+        details="name must contain at least one alphanumeric character",
+    )
