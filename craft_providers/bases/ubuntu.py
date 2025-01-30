@@ -308,34 +308,34 @@ def ensure_guest_compatible(
     ):
         return
 
-    lxd_version_split = [int(vernum) for vernum in lxd_version.split(".")]
-    major = lxd_version_split[0]
-    minor = lxd_version_split[1]
+    lxd_version_split = lxd_version.split(".")
+    lxd_major = int(lxd_version_split[0])
+    lxd_minor = int(lxd_version_split[1])
     try:
-        patch = lxd_version_split[2]
+        lxd_patch = int(lxd_version_split[2])
     except IndexError:
         # LXD version strings sometimes omit the patch - call it zero
-        patch = 0
+        lxd_patch = 0
     lxd_exception = ProviderError(
         brief="This combination of guest and host OS versions requires a newer lxd version.",
         resolution="Ensure you have lxd >=5.0.4 or >=5.21.2 installed - try the lxd snap.",
     )
-    if major == 5:
+    if lxd_major == 5:
         # Major is 5, we care about patch versions given the minor
-        if minor == 0 and patch < 4:
+        if lxd_minor == 0 and lxd_patch < 4:
             raise lxd_exception
-        if minor == 21 and patch < 2:
+        if lxd_minor == 21 and lxd_patch < 2:
             raise lxd_exception
-    if major < 5:
+    if lxd_major < 5:
         raise lxd_exception
 
-    kernel_version = [
-        int(vernum)
-        for vernum in subprocess.run(
-            ["uname", "-r"], capture_output=True, text=True, check=True
-        ).stdout.split(".")
-    ]
-    if (kernel_version[0] == 5 and kernel_version[1] < 15) or kernel_version[0] < 5:
+    kernel_version = subprocess.run(
+        ["uname", "-r"], capture_output=True, text=True, check=True
+    ).stdout.split(".")
+    kernel_major = int(kernel_version[0])
+    kernel_minor = int(kernel_version[1])
+
+    if (kernel_major == 5 and kernel_minor < 15) or kernel_major < 5:
         raise ProviderError(
             brief="This combination of guest and host OS versions requires a newer kernel version.",
             resolution="Ensure you have kernel 5.15 or newer - try the HWE kernel.",
