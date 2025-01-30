@@ -84,6 +84,7 @@ WOOP="dedoo"
         class Fake:
             def read(self):
                 return f'VERSION_ID="{base_alias.value}"'
+
         yield Fake()
 
     with patch.object(craft_providers.util.os_release.Path, "open", fake_open):  # type: ignore[reportAttributeAccessIssue]
@@ -138,6 +139,7 @@ def test_ensure_guest_compatible_bad_lxd_versions(
         class Fake:
             def read(self):
                 return f'VERSION_ID="{host_base_alias.value}"'
+
         yield Fake()
 
     with (
@@ -195,6 +197,7 @@ def test_ensure_guest_compatible_bad_kernel_versions(
         class Fake:
             def read(self):
                 return f'VERSION_ID="{host_base_alias.value}"'
+
         yield Fake()
 
     # Mock the kernel version
