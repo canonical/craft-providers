@@ -118,9 +118,6 @@ def test_ensure_guest_compatible_bad_lxd_versions(
     guest_base._retry_wait = 0.01
     guest_base._timeout_simple = 1
 
-    print("SHOULD BE")
-    print("host:", host_base_alias, "guest:", guest_base_alias)
-
     # Mock the guest os-release file contents
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
@@ -178,9 +175,6 @@ def test_ensure_guest_compatible_bad_kernel_versions(
     guest_base = ubuntu.BuilddBase(alias=guest_base_alias)
     guest_base._retry_wait = 0.01
     guest_base._timeout_simple = 1
-
-    print("SHOULD BE")
-    print("host:", host_base_alias, "guest:", guest_base_alias)
 
     # Mock the guest os-release file contents
     fake_process.register_subprocess(
