@@ -24,8 +24,9 @@ import pathlib
 import shutil
 import subprocess
 import tempfile
-from typing import Any, Dict, Iterable, List, Optional
 import warnings
+from typing import Any, Dict, Iterable, List, Optional
+
 import yaml
 
 from craft_providers import pro
@@ -655,18 +656,17 @@ class LXDInstance(Executor):
         )
 
     @property
-    def pro_services(self) -> set[str]:
+    def pro_services(self) -> Optional[set[str]]:
         """Get the Pro services enabled on the instance."""
-
         # first check if the services are cached in memory
         if hasattr(self, "_pro_services"):
             return self._pro_services
         # then check the instance state
         try:
-            with self.modify_file(
+            with self.edit_file(
                 source=PRO_SERVICES_YAML,
             ) as temp_state_path:
-                with open(temp_state_path, "r") as fh:
+                with temp_state_path.open("r") as fh:
                     return yaml.safe_load(fh)
 
         except FileNotFoundError:
@@ -675,14 +675,13 @@ class LXDInstance(Executor):
     @pro_services.setter
     def pro_services(self, services: set[str]) -> None:
         """Set the Pro services enabled on the instance."""
-
         self._pro_services = services  # cache the services in memory ...
         # ... and write them to the instance
-        with self.modify_file(
+        with self.edit_file(
             source=PRO_SERVICES_YAML,
             pull_file=False,
         ) as temp_state_path:
-            with open(temp_state_path, "w") as fh:
+            with temp_state_path.open("w") as fh:
                 yaml.safe_dump(set(services), fh)
 
     def install_pro_client(self) -> None:

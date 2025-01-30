@@ -136,18 +136,18 @@ class Executor(ABC):
                 yield tmp_file
 
     @contextlib.contextmanager
-    def modify_file(
+    def edit_file(
         self,
         *,
         source: pathlib.PurePath,
         missing_ok: bool = False,
         pull_file: bool = True,
-    ) -> Generator[Optional[pathlib.Path], None, None]:
-        """Copy a file from the environment for modification via context manager.
-        Upon exiting the context, the file is pushed back to the environment.
-        If the environment file does not exist, a new file will be created for writing.
+    ) -> Generator[pathlib.Path, None, None]:
+        """Edit a file from the environment for modification via context manager.
 
-        The tememporary file is stored in a temporary path which is cleaned later.
+        A file is pulled from an environment for editing via a context manager. Upon
+        exiting, the file is pushed back to the environment. If the environment file
+        does not exist, a new file will be created.
 
         :param source: Environment file to copy.
         :param missing_ok: Do not raise an error if the file does not exist in the
@@ -157,7 +157,6 @@ class Executor(ABC):
             directory does not exist (and `missing_ok` is False).
         :raises ProviderError: On error copying file content.
         """
-
         # Note: This is a convenience function to cache the pro services state in the
         # environment. However, it may be better to use existing methods to reduce complexity.
         with craft_providers.util.temp_paths.home_temporary_file() as tmp_file:
