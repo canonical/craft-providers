@@ -19,7 +19,7 @@ from unittest.mock import MagicMock, patch
 
 import craft_providers
 import pytest
-from craft_providers.bases import centos, ubuntu
+from craft_providers.bases import centos, ensure_guest_compatible, ubuntu
 from craft_providers.errors import ProviderError
 
 from tests.unit.conftest import DEFAULT_FAKE_CMD
@@ -28,7 +28,7 @@ from tests.unit.conftest import DEFAULT_FAKE_CMD
 def test_ensure_guest_compatible_not_ubuntu(fake_executor, fake_process):
     base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
     base._get_os_release = MagicMock(spec=base._get_os_release)
-    ubuntu.ensure_guest_compatible(base, fake_executor, "")
+    ensure_guest_compatible(base, fake_executor, "")
 
     # The first thing that ensure_guest_compatible does is the base check.  The next
     # thing is to call _get_os_release on the base.  So if that isn't called then we
@@ -63,10 +63,7 @@ def test_ensure_guest_compatible_valid_ubuntu(
     fake_get_os_release.counter = 0  # type: ignore[reportFunctionMemberAccess]
     guest_base._get_os_release = fake_get_os_release
 
-    # Specifying an invalid version string will ensure that the code never gets to the
-    # point of parsing the lxd version string in the ensure_guest_compatible call -
-    # this would cause an IndexError after the split(".").
-    lxd_version = ""
+    lxd_version = "0.0.0"
 
     # Mock the host os-release file
     fake_os_release = f"""
@@ -88,69 +85,9 @@ WOOP="dedoo"
         yield Fake()
 
     with patch.object(craft_providers.util.os_release.Path, "open", fake_open):  # type: ignore[reportAttributeAccessIssue]
-        ubuntu.ensure_guest_compatible(guest_base, fake_executor, lxd_version)
+        ensure_guest_compatible(guest_base, fake_executor, lxd_version)
 
     assert fake_get_os_release.counter == 1  # type: ignore[reportFunctionMemberAccess]
-
-
-@pytest.mark.parametrize(
-    ("host_base_alias", "guest_base_alias", "lxd_version"),
-    [
-        # host FOCAL or older AND guest ORACULAR or newer
-        (
-            ubuntu.BuilddBaseAlias.BIONIC,
-            ubuntu.BuilddBaseAlias.ORACULAR,
-            "4.67.8901",
-        ),
-        (
-            ubuntu.BuilddBaseAlias.FOCAL,
-            ubuntu.BuilddBaseAlias.ORACULAR,
-            "5.0.3",
-        ),
-        (
-            ubuntu.BuilddBaseAlias.XENIAL,
-            ubuntu.BuilddBaseAlias.DEVEL,
-            "5.21",
-        ),
-    ],
-)
-def test_ensure_guest_compatible_bad_lxd_versions(
-    mocker,
-    fake_executor,
-    fake_process,
-    host_base_alias,
-    guest_base_alias,
-    lxd_version,
-):
-    """Various LXD versions must raise an exception when the host and guest OS match."""
-    guest_base = ubuntu.BuilddBase(alias=guest_base_alias)
-    guest_base._retry_wait = 0.01
-    guest_base._timeout_simple = 1
-
-    # Mock the guest os-release file contents
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
-        stdout=f'VERSION_ID="{guest_base_alias.value}"',
-    )
-
-    # Mock the host os-release file contents
-    @contextlib.contextmanager
-    def fake_open(*args, **kwargs):
-        class Fake:
-            def read(self):
-                return f'VERSION_ID="{host_base_alias.value}"'
-
-        yield Fake()
-
-    with (
-        patch.object(craft_providers.util.os_release.Path, "open", fake_open),  # type: ignore[reportAttributeAccessIssue]
-        pytest.raises(ProviderError) as e,
-    ):
-        ubuntu.ensure_guest_compatible(guest_base, fake_executor, lxd_version)
-    assert (
-        "This combination of guest and host OS versions requires a newer lxd version."
-        in str(e)
-    )
 
 
 @pytest.mark.parametrize(
@@ -168,6 +105,12 @@ def test_ensure_guest_compatible_bad_lxd_versions(
             ubuntu.BuilddBaseAlias.ORACULAR,
             "5.0.4",
             "2.6.32-51555-generic",
+        ),
+        (
+            ubuntu.BuilddBaseAlias.XENIAL,
+            ubuntu.BuilddBaseAlias.DEVEL,
+            "4.5",
+            "16.661",
         ),
     ],
 )
@@ -200,18 +143,13 @@ def test_ensure_guest_compatible_bad_kernel_versions(
 
         yield Fake()
 
-    # Mock the kernel version
-    fake_process.register_subprocess(
-        ["uname", "-r"],
-        stdout=kernel_version,
-    )
-
     with (
+        patch("platform.release", return_value=kernel_version),
         patch.object(craft_providers.util.os_release.Path, "open", fake_open),  # type: ignore[reportAttributeAccessIssue]
         pytest.raises(ProviderError) as e,
     ):
-        ubuntu.ensure_guest_compatible(guest_base, fake_executor, lxd_version)
+        ensure_guest_compatible(guest_base, fake_executor, lxd_version)
     assert (
-        "This combination of guest and host OS versions requires a newer kernel version."
+        "This combination of guest and host OS versions requires a newer kernel and/or lxd."
         in str(e)
     )
