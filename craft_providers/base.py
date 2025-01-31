@@ -147,7 +147,7 @@ class Base(ABC):
         truncated_name = hostname[:63]
 
         # remove anything that is not an alphanumeric character or hyphen
-        name_with_valid_chars = re.sub(r"[^\w-]", "", truncated_name)
+        name_with_valid_chars = re.sub(r"[^a-zA-Z0-9-]", "", truncated_name)
 
         # trim hyphens from the beginning and end
         valid_name = name_with_valid_chars.strip("-")
