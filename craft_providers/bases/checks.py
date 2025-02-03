@@ -17,24 +17,14 @@
 
 """Base compatibility checks."""
 
-import enum
-import io
 import logging
-import pathlib
 import platform
-import subprocess
-from functools import total_ordering
-from textwrap import dedent
-from typing import Dict, List, Optional, cast
+from typing import cast
 
-from craft_providers.actions.snap_installer import Snap
-from craft_providers.bases.ubuntu import BuilddBase, BuilddBaseAlias
 from craft_providers.base import Base
+from craft_providers.bases.ubuntu import BuilddBase, BuilddBaseAlias
 from craft_providers.errors import (
-    BaseCompatibilityError,
-    BaseConfigurationError,
     ProviderError,
-    details_from_called_process_error,
 )
 from craft_providers.executor import Executor
 from craft_providers.util.os_release import parse_os_release
@@ -67,8 +57,9 @@ def _lxd_version_match(
     """
     # First look for matching major/minor, and compare patch
     for affected_version in affected_versions:
-        if (affected_version[0] == system_version[0] and
-            affected_version[1] == system_version[1]
+        if (
+            affected_version[0] == system_version[0]
+            and affected_version[1] == system_version[1]
         ):
             return system_version[2] < affected_version[2]
 
@@ -112,13 +103,16 @@ def ensure_guest_compatible(
     # https://discourse.ubuntu.com/t/lxd-5-0-4-lts-has-been-released/49681#p-123331-support-for-ubuntu-oracular-containers-on-cgroupv2-hosts
 
     for invalid in INVALID_VERSIONS:
-        if (host_base_alias <= invalid["host_less_than_equal"] and
-            guest_base_alias >= invalid["guest_greater_than_equal"] and
-                (_lxd_version_match(
+        if (
+            host_base_alias <= invalid["host_less_than_equal"]
+            and guest_base_alias >= invalid["guest_greater_than_equal"]
+            and (
+                _lxd_version_match(
                     lxd_version_tup,
-                    cast(list[tuple[int, int, int]], invalid["lxd_less_than"])
-                ) or
-                kernel_version_tup < cast(tuple[int, int], invalid["kernel_less_than"])
+                    cast(list[tuple[int, int, int]], invalid["lxd_less_than"]),
+                )
+                or kernel_version_tup
+                < cast(tuple[int, int], invalid["kernel_less_than"])
             )
         ):
             raise ProviderError(

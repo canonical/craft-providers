@@ -30,11 +30,9 @@ from craft_providers.base import Base
 from craft_providers.errors import (
     BaseCompatibilityError,
     BaseConfigurationError,
-    ProviderError,
     details_from_called_process_error,
 )
 from craft_providers.executor import Executor
-from craft_providers.util.os_release import parse_os_release
 
 logger = logging.getLogger(__name__)
 
