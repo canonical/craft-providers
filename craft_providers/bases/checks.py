@@ -42,17 +42,6 @@ from craft_providers.util.os_release import parse_os_release
 logger = logging.getLogger(__name__)
 
 
-"""
-    XENIAL = "16.04"
-    BIONIC = "18.04"
-    FOCAL = "20.04"
-    JAMMY = "22.04"
-    NOBLE = "24.04"
-    ORACULAR = "24.10"
-    DEVEL = "devel"
-"""
-
-
 INVALID_VERSIONS = [
     {
         "host_less_than_equal": BuilddBaseAlias.FOCAL,
