@@ -87,7 +87,12 @@ def test_ensure_guest_compatible_valid_ubuntu(
 
         yield Fake()
 
-    with patch.object(craft_providers.util.os_release.Path, "open", fake_open):  # type: ignore[reportAttributeAccessIssue]
+    # Kernel version doesn't matter for this test, but setting it allows the test to
+    # pass on windows
+    with (
+        patch("platform.release", return_value="4.99"),
+        patch.object(craft_providers.util.os_release.Path, "open", fake_open),  # type: ignore[reportAttributeAccessIssue]
+    ):
         ensure_guest_compatible(guest_base, fake_executor, lxd_version)
 
     assert fake_get_os_release.counter == 1  # type: ignore[reportFunctionMemberAccess]
