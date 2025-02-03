@@ -15,6 +15,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 import contextlib
+import textwrap
 from unittest.mock import MagicMock, patch
 
 import craft_providers
@@ -66,10 +67,12 @@ def test_ensure_guest_compatible_valid_ubuntu(
     lxd_version = "0.0.0"
 
     # Mock the host os-release file
-    fake_os_release = f"""
-VERSION_ID="{base_alias.value}"
-WOOP="dedoo"
-"""
+    fake_os_release = textwrap.dedent(
+        f"""\
+        VERSION_ID="{base_alias.value}"
+        WOOP="dedoo"
+        """
+    )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
         stdout=fake_os_release,
