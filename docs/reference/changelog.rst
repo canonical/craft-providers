@@ -4,9 +4,17 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
-X.Y.Z (2024-MMM-DD)
+2.2.0 (2025-Jan-16)
+-------------------
+- ``hookutil.py`` now available for dependent projects to clean up lxd
+  instances.
+- Dependent projects can now disable lxd ``mknod`` interception via
+  ``LXDProvider``'s ``__init__``.
+
+2.1.0 (2025-Jan-10)
 -------------------
 - Require Multipass>=1.14.1
+- Use Multipass-compatible instance names
 
 2.0.4 (2024-Oct-03)
 -------------------

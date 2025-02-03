@@ -18,14 +18,17 @@
 """Executor module."""
 
 import contextlib
+import hashlib
 import io
 import logging
 import pathlib
+import re
 import subprocess
 from abc import ABC, abstractmethod
 from typing import Dict, Generator, List, Optional
 
 import craft_providers.util.temp_paths
+from craft_providers.errors import ProviderError
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +135,43 @@ class Executor(ABC):
             else:
                 yield tmp_file
 
+    @contextlib.contextmanager
+    def edit_file(
+        self,
+        *,
+        source: pathlib.PurePath,
+        missing_ok: bool = False,
+        pull_file: bool = True,
+    ) -> Generator[pathlib.Path, None, None]:
+        """Edit a file from the environment for modification via context manager.
+
+        A file is pulled from an environment for editing via a context manager. Upon
+        exiting, the file is pushed back to the environment. If the environment file
+        does not exist, a new file will be created.
+
+        :param source: Environment file to copy.
+        :param missing_ok: Do not raise an error if the file does not exist in the
+            environment; in this case the target is created as a new file.
+
+        :raises FileNotFoundError: If source file or destination's parent
+            directory does not exist (and `missing_ok` is False).
+        :raises ProviderError: On error copying file content.
+        """
+        # Note: This is a convenience function to cache the pro services state in the
+        # environment. However, it may be better to use existing methods to reduce complexity.
+        with craft_providers.util.temp_paths.home_temporary_file() as tmp_file:
+            tmp_file.touch()  # ensure the file exists regardless
+            if pull_file:
+                try:
+                    self.pull_file(source=source, destination=tmp_file)
+                except FileNotFoundError:
+                    if not missing_ok:
+                        raise
+            try:
+                yield tmp_file
+            finally:
+                self.push_file(source=tmp_file, destination=source)
+
     @abstractmethod
     def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:
         """Copy a file from the host into the environment.
@@ -187,3 +227,61 @@ class Executor(ABC):
 
         :returns: True if instance is running.
         """
+
+
+def get_instance_name(name: str, error_class: type[ProviderError]) -> str:
+    """Get an instance-friendly name from a name.
+
+    LXD and Multipass instance names have the same naming convention
+    as Linux hostnames.
+
+    Naming convention:
+    - between 1 and 63 characters long
+    - made up exclusively of letters, numbers, and hyphens from the ASCII table
+    - not begin with a digit or a hyphen
+    - not end with a hyphen
+
+    To create an instance name, invalid characters are removed, the name is
+    truncated to 40 characters, then a hash is appended:
+    <truncated-name>-<hash-of-name>
+    └     1 - 40   ┘1└     20     ┘
+
+    :param name: the name to convert
+    :param error_class: the exception class to raise if name is invalid
+
+    :raises error_class: if name contains no alphanumeric characters
+    :returns: the instance name
+    """
+    # remove anything that is not an alphanumeric character or hyphen
+    name_with_valid_chars = re.sub(r"[^\w-]", "", name, flags=re.ASCII)
+    if not name_with_valid_chars:
+        raise error_class(
+            brief=f"failed to create an instance with name {name!r}.",
+            details="name must contain at least one alphanumeric character",
+        )
+
+    # trim digits and hyphens from the beginning and hyphens from the end
+    trimmed_name = re.compile(r"^[0-9-]*(?P<valid_name>.*?)[-]*$").search(
+        name_with_valid_chars
+    )
+    if not trimmed_name or not trimmed_name.group("valid_name"):
+        raise error_class(
+            brief=f"failed to create an instance with name {name!r}.",
+            details="name must contain at least one alphanumeric character",
+        )
+    valid_name = trimmed_name.group("valid_name")
+
+    # if the original name satisfies the naming convention, then use the original name
+    if name == valid_name and len(name) <= 63:
+        instance_name = name
+
+    # else, continue converting the name
+    else:
+        # truncate to 40 characters
+        truncated_name = valid_name[:40]
+        # hash the entire name, not the truncated name
+        hashed_name = hashlib.sha1(name.encode()).hexdigest()[:20]
+        instance_name = f"{truncated_name}-{hashed_name}"
+
+    logger.debug("Converted name %r to instance name %r", name, instance_name)
+    return instance_name
