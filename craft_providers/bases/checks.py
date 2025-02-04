@@ -84,7 +84,8 @@ def ensure_guest_compatible(
 
     host_base_alias = BuilddBaseAlias(parse_os_release().get("VERSION_ID"))
 
-    lxd_version_split = lxd_version.split(".")
+    # Strip off anything after the first space - sometimes "LTS" is appended
+    lxd_version_split = lxd_version.split(" ")[0].split(".")
     lxd_major = int(lxd_version_split[0])
     lxd_minor = int(lxd_version_split[1])
     try:
