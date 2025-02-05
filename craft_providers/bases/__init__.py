@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2023 Canonical Ltd.
+# Copyright 2021-2025 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -20,6 +20,9 @@
 # Backward compatible, will be removed in 2.0
 import sys
 from typing import Dict, Literal, NamedTuple, Tuple, Type, Union, overload
+from typing_extensions import Self
+
+import craft_platforms
 
 from craft_providers.errors import BaseCompatibilityError, BaseConfigurationError
 from craft_providers.base import Base
@@ -48,10 +51,23 @@ __all__ = [
 
 
 class BaseName(NamedTuple):
-    """A base image, by distribution and version."""
+    """A base image, by distribution and version.
+
+    DEPRECATED: This class is deprecated and will be replaced with the craft_platforms
+    DistroBase class in a future major release.
+    """
 
     name: str
     version: str
+
+    @classmethod
+    def from_distro_base(cls, distro_base: craft_platforms.DistroBase) -> Self:
+        """Convert a DistroBase from craft-platforms to a craft-providers BaseName."""
+        return cls(name=distro_base.distribution, version=distro_base.series)
+
+    def to_distro_base(self) -> craft_platforms.DistroBase:
+        """Convert this to a craft-platforms DistroBase."""
+        return craft_platforms.DistroBase(distribution=self.name, series=self.version)
 
 
 BASE_NAME_TO_BASE_ALIAS: Dict[BaseName, BaseAlias] = {
@@ -80,9 +96,16 @@ def get_base_alias(
     base_name: Tuple[Literal["almalinux"], str]
 ) -> almalinux.AlmaLinuxBaseAlias: ...
 @overload
-def get_base_alias(base_name: BaseName) -> BaseAlias: ...
+def get_base_alias(base_name: BaseName | craft_platforms.DistroBase) -> BaseAlias: ...
 def get_base_alias(base_name):
-    """Return a Base alias from a base (name, version) tuple."""
+    """Return a Base alias from a base (name, version) tuple.
+
+    :param: base_name: A tuple of (distribution, series), a BaseName, or a DistroBase
+        of the same.
+    :returns: A BaseAlias corresponding to the base name.
+    """
+    if isinstance(base_name, craft_platforms.DistroBase):
+        base_name = BaseName.from_distro_base(base_name)
     base_name = BaseName(*base_name)
     if base_name.name == "ubuntu" and base_name in BASE_NAME_TO_BASE_ALIAS:
         return BASE_NAME_TO_BASE_ALIAS[base_name]
@@ -114,4 +137,4 @@ def get_base_from_alias(alias: BaseAlias) -> Type[Base]:
     if isinstance(alias, almalinux.AlmaLinuxBaseAlias):
         return almalinux.AlmaLinuxBase
 
-    raise BaseConfigurationError(f"Base not found for alias {alias}")
+    raise BaseConfigurationError(f"Base not found for alias {alias!r}")
