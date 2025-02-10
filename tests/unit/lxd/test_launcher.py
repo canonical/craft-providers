@@ -1033,7 +1033,10 @@ def test_name_matches_base_name(
 )
 def test_is_valid(creation_date, fake_instance):
     """Instances younger than the expiration date (inclusive) are valid."""
-    fake_instance.info.return_value = {"Created": creation_date, "Status": "STOPPED"}
+    fake_instance.info.return_value = {
+        "Created": creation_date,
+        "Status": lxd_instance_status.LXDInstanceState.STOPPED.value,
+    }
     fake_instance.config_get.return_value = (
         lxd_instance_status.ProviderInstanceStatus.FINISHED.value
     )
@@ -1052,7 +1055,7 @@ def test_is_valid_expired(fake_instance, mock_lxc):
     # 91 days old
     fake_instance.info.return_value = {
         "Created": "2022/09/07 11:05 UTC",
-        "Status": "STOPPED",
+        "Status": lxd_instance_status.LXDInstanceState.STOPPED.value,
     }
     fake_instance.config_get.return_value = (
         lxd_instance_status.ProviderInstanceStatus.FINISHED.value
@@ -1120,7 +1123,7 @@ def test_is_valid_wait_for_ready_error(logs, fake_instance, mocker):
     )
     fake_instance.info.return_value = {
         "Created": "2022/12/08 11:05 UTC",
-        "Status": "STOPPED",
+        "Status": lxd_instance_status.LXDInstanceState.STOPPED.value,
     }
 
     fake_instance.config_get.return_value = (
@@ -1312,7 +1315,9 @@ def test_timer_error_ignore(fake_instance, fake_process, mock_lxc, mocker):
 
 def test_wait_for_instance_ready(fake_instance, logs):
     """Return if the instance is ready."""
-    fake_instance.info.return_value = {"Status": "STOPPED"}
+    fake_instance.info.return_value = {
+        "Status": lxd_instance_status.LXDInstanceState.STOPPED.value,
+    }
     fake_instance.config_get.return_value = "FINISHED"
 
     lxd.launcher._wait_for_instance_ready(fake_instance)
@@ -1322,7 +1327,9 @@ def test_wait_for_instance_ready(fake_instance, logs):
 
 def test_wait_for_instance_pid_active(fake_instance, mocker):
     """If the instance is not ready and the pid is active, then check the status."""
-    fake_instance.info.return_value = {"Status": "STOPPED"}
+    fake_instance.info.return_value = {
+        "Status": lxd_instance_status.LXDInstanceState.STOPPED.value,
+    }
     # first call returns status, second returns the pid
     fake_instance.config_get.side_effect = ["PREPARING", "123"]
     # mock for the call `Path("/proc/123").exists()
@@ -1337,7 +1344,9 @@ def test_wait_for_instance_pid_active(fake_instance, mocker):
 def test_wait_for_instance_skip_pid_check(platform, fake_instance, mocker, logs):
     """Do not check for the pid if not on linux."""
     mocker.patch("sys.platform", platform)
-    fake_instance.info.return_value = {"Status": "STOPPED"}
+    fake_instance.info.return_value = {
+        "Status": lxd_instance_status.LXDInstanceState.STOPPED.value,
+    }
     # first call returns status, second returns the pid
     fake_instance.config_get.side_effect = ["PREPARING", "123"]
 
@@ -1350,7 +1359,9 @@ def test_wait_for_instance_skip_pid_check(platform, fake_instance, mocker, logs)
 @pytest.mark.usefixtures("mock_platform")
 def test_wait_for_instance_no_pid(fake_instance):
     """Raise an error if there is no pid in the config."""
-    fake_instance.info.return_value = {"Status": "STOPPED"}
+    fake_instance.info.return_value = {
+        "Status": lxd_instance_status.LXDInstanceState.STOPPED.value,
+    }
     # first call returns status, second returns an empty string for the pid
     fake_instance.config_get.side_effect = ["PREPARING", ""]
 
@@ -1367,7 +1378,9 @@ def test_wait_for_instance_no_pid(fake_instance):
 @pytest.mark.usefixtures("mock_platform")
 def test_wait_for_instance_pid_inactive(fake_instance, mocker):
     """Raise an error if the instance is not ready and the pid is inactive."""
-    fake_instance.info.return_value = {"Status": "STOPPED"}
+    fake_instance.info.return_value = {
+        "Status": lxd_instance_status.LXDInstanceState.STOPPED.value,
+    }
     # first call returns status, second returns the pid
     fake_instance.config_get.side_effect = ["PREPARING", "123"]
     # mock for the call `Path("/proc/123").exists()

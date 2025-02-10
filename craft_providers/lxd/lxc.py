@@ -32,7 +32,10 @@ from typing import Any, Callable, Dict, List, Optional
 import yaml
 
 from craft_providers import errors
-from craft_providers.lxd.lxd_instance_status import ProviderInstanceStatus
+from craft_providers.lxd.lxd_instance_status import (
+    LXDInstanceState,
+    ProviderInstanceStatus,
+)
 
 from .errors import LXDError
 
@@ -1164,7 +1167,7 @@ class LXC:
 
             if (
                 instance_status == ProviderInstanceStatus.FINISHED.value
-                and instance_info["Status"] == "STOPPED"
+                and instance_info["Status"] == LXDInstanceState.STOPPED.value
             ):
                 logger.debug("Instance %s is ready.", instance_name)
                 return
