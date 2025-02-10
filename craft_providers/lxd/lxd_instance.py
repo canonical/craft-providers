@@ -32,6 +32,7 @@ from craft_providers.errors import details_from_called_process_error
 from craft_providers.executor import Executor, get_instance_name
 from craft_providers.lxd.errors import LXDError
 from craft_providers.lxd.lxc import LXC
+from craft_providers.lxd.lxd_instance_status import LXDInstanceState
 from craft_providers.util import env_cmd
 
 logger = logging.getLogger(__name__)
@@ -338,7 +339,8 @@ class LXDInstance(Executor):
         if state is None:
             raise LXDError(brief=f"Instance {self.instance_name!r} does not exist.")
 
-        return state.get("status") == "Running"
+        # state is title-case in yaml output
+        return state.get("status") == LXDInstanceState.RUNNING.value.title()
 
     def launch(
         self,

@@ -29,6 +29,7 @@ from unittest.mock import call
 import pytest
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, LXDInstance
+from craft_providers.lxd.lxd_instance_status import LXDInstanceState
 
 # These names include invalid characters so a lxd-compatible instance_name
 # is generated. This ensures an Instance's `name` and `instance_name` are
@@ -60,8 +61,14 @@ def project_path(tmp_path):
 def mock_lxc(project_path):
     with mock.patch("craft_providers.lxd.lxd_instance.LXC", spec=LXC) as lxc:
         lxc.list.return_value = [
-            {"name": _TEST_INSTANCE["instance-name"], "status": "Running"},
-            {"name": _STOPPED_INSTANCE["instance-name"], "status": "Stopped"},
+            {
+                "name": _TEST_INSTANCE["instance-name"],
+                "status": LXDInstanceState.RUNNING.value.title(),
+            },
+            {
+                "name": _STOPPED_INSTANCE["instance-name"],
+                "status": LXDInstanceState.STOPPED.value.title(),
+            },
         ]
         lxc.config_device_show.return_value = {
             "test_mount": {

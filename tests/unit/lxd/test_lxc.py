@@ -23,6 +23,7 @@ import pytest
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, lxc
 from craft_providers.lxd.lxc import StdinType
+from craft_providers.lxd.lxd_instance_status import LXDInstanceState
 from freezegun import freeze_time
 
 
@@ -1255,8 +1256,8 @@ def test_check_instance_status_retry(fake_process, mocker):
     mocker.patch("time.sleep")
     mock_instance = mocker.patch("craft_providers.lxd.lxc.LXC.info")
     mock_instance.side_effect = [
-        {"Status": "STOPPED"},
-        {"Status": "STOPPED"},
+        {"Status": LXDInstanceState.STOPPED.value},
+        {"Status": LXDInstanceState.STOPPED.value},
     ]
     mock_instance_config = mocker.patch("craft_providers.lxd.lxc.LXC.config_get")
     mock_instance_config.side_effect = [
@@ -1276,7 +1277,7 @@ def test_check_instance_status_boot_failed(fake_process, mocker):
     time_time.return_value = 0
     mocker.patch("time.sleep")
     mock_instance = mocker.patch("craft_providers.lxd.lxc.LXC.info")
-    mock_instance.return_value = {"Status": "STOPPED"}
+    mock_instance.return_value = {"Status": LXDInstanceState.STOPPED.value}
     mock_instance_config = mocker.patch("craft_providers.lxd.lxc.LXC.config_get")
     mock_instance_config.side_effect = [
         "STARTING",
@@ -1295,12 +1296,12 @@ def test_check_instance_status_wait(fake_process, mocker):
     mocker.patch("time.sleep")
     mock_instance = mocker.patch("craft_providers.lxd.lxc.LXC.info")
     mock_instance.side_effect = [
-        {"Status": "STOPPED"},  # STARTING
-        {"Status": "RUNNING"},  # STARTING
-        {"Status": "RUNNING"},  # PREPARING
-        {"Status": "RUNNING"},  # PREPARING
-        {"Status": "RUNNING"},  # FINISHED
-        {"Status": "STOPPED"},  # FINISHED
+        {"Status": LXDInstanceState.STOPPED.value},  # STARTING
+        {"Status": LXDInstanceState.RUNNING.value},  # STARTING
+        {"Status": LXDInstanceState.RUNNING.value},  # PREPARING
+        {"Status": LXDInstanceState.RUNNING.value},  # PREPARING
+        {"Status": LXDInstanceState.RUNNING.value},  # FINISHED
+        {"Status": LXDInstanceState.STOPPED.value},  # FINISHED
     ]
     mock_instance_config = mocker.patch("craft_providers.lxd.lxc.LXC.config_get")
     mock_instance_config.side_effect = [
@@ -1405,18 +1406,18 @@ def test_check_instance_status_lxd_error_retry(fake_process, mocker):
             details="* Command that failed: 'lxc --project test-project info test-remote:test-instance'\n* Command exit code: 1",
             resolution=None,
         ),
-        {"Status": "STOPPED"},
-        {"Status": "RUNNING"},
-        {"Status": "RUNNING"},
+        {"Status": LXDInstanceState.STOPPED.value},
+        {"Status": LXDInstanceState.RUNNING.value},
+        {"Status": LXDInstanceState.RUNNING.value},
         LXDError(
             brief="Failed to get instance info.",
             details="* Command that failed: 'lxc --project test-project info test-remote:test-instance'\n* Command exit code: 1",
             resolution=None,
         ),
-        {"Status": "RUNNING"},
-        {"Status": "RUNNING"},
-        {"Status": "RUNNING"},
-        {"Status": "STOPPED"},
+        {"Status": LXDInstanceState.RUNNING.value},
+        {"Status": LXDInstanceState.RUNNING.value},
+        {"Status": LXDInstanceState.RUNNING.value},
+        {"Status": LXDInstanceState.STOPPED.value},
     ]
     mock_instance_config = mocker.patch("craft_providers.lxd.lxc.LXC.config_get")
     mock_instance_config.side_effect = [

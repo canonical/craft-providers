@@ -34,7 +34,7 @@ from craft_providers.errors import details_from_called_process_error
 from .errors import LXDError
 from .lxc import LXC
 from .lxd_instance import LXDInstance
-from .lxd_instance_status import ProviderInstanceStatus
+from .lxd_instance_status import LXDInstanceState, ProviderInstanceStatus
 from .project import create_with_default_profile
 
 logger = logging.getLogger(__name__)
@@ -585,7 +585,7 @@ def _wait_for_instance_ready(instance: LXDInstance) -> None:
     # check if the instance is ready
     if (
         instance_status == ProviderInstanceStatus.FINISHED.value
-        and instance_state == "STOPPED"
+        and instance_state == LXDInstanceState.STOPPED.value
     ):
         logger.debug("Instance %r is ready.", instance.instance_name)
         return
