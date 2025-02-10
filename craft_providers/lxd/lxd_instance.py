@@ -27,13 +27,13 @@ import tempfile
 import warnings
 from typing import Any, Dict, List, Optional
 
-from craft_providers.const import TIMEOUT_SIMPLE
+from craft_providers.const import RETRY_WAIT, TIMEOUT_SIMPLE
 from craft_providers.errors import details_from_called_process_error
 from craft_providers.executor import Executor, get_instance_name
 from craft_providers.lxd.errors import LXDError
 from craft_providers.lxd.lxc import LXC
 from craft_providers.lxd.lxd_instance_status import LXDInstanceState
-from craft_providers.util import env_cmd
+from craft_providers.util import env_cmd, retry
 
 logger = logging.getLogger(__name__)
 
@@ -508,31 +508,77 @@ class LXDInstance(Executor):
         )
 
     def start(self) -> None:
-        """Start instance.
+        """Start the instance.
 
-        :raises LXDError: on unexpected error.
+        :raises LXDError: If the instance fails to start.
         """
         logger.info("Starting instance")
         self.lxc.start(
             instance_name=self.instance_name, project=self.project, remote=self.remote
         )
 
-    def restart(self) -> None:
-        """Restart instance.
+        def _is_running(timeout: float) -> None:
+            """Raise an error if the instance isn't running."""
+            if self.is_running():
+                return
+            raise LXDError("Instance isn't running")
 
-        :raises LXDError: on unexpected error.
+        # `lxc start` is an asynchronous operation, so wait until the instance
+        # starts before returning.
+        retry.retry_until_timeout(
+            timeout=TIMEOUT_SIMPLE,
+            retry_wait=RETRY_WAIT,
+            func=_is_running,
+            error=LXDError(brief="Instance failed to start."),
+        )
+
+    def restart(self) -> None:
+        """Restart the instance.
+
+        :raises LXDError: If the instance fails to restart.
         """
         self.lxc.restart(
             instance_name=self.instance_name, project=self.project, remote=self.remote
         )
 
-    def stop(self) -> None:
-        """Stop instance.
+        def _is_running(timeout: float) -> None:
+            """Raise an error if the instance isn't running."""
+            if self.is_running():
+                return
+            raise LXDError(brief="Instance isn't running.")
 
-        :raises LXDError: on unexpected error.
+        # `lxc restart` is an asynchronous operation, so wait until the instance
+        # restarts before returning.
+        retry.retry_until_timeout(
+            timeout=TIMEOUT_SIMPLE,
+            retry_wait=RETRY_WAIT,
+            func=_is_running,
+            error=LXDError(brief="Instance failed to restart."),
+        )
+
+    def stop(self) -> None:
+        """Stop the instance.
+
+        :raises LXDError: If the instance fails to stop.
         """
         self.lxc.stop(
             instance_name=self.instance_name, project=self.project, remote=self.remote
+        )
+
+        def _is_stopped(timeout: float) -> None:
+            """Raise an error if the instance exists or isn't stopped."""
+            # ephemeral instances are deleted when 'stop' completes
+            if not self.exists() or self._get_state() == LXDInstanceState.STOPPED:
+                return
+            raise LXDError(brief="Instance hasn't stopped.")
+
+        # `lxc stop` is an asynchronous operation, so wait until the instance
+        # stops before returning.
+        retry.retry_until_timeout(
+            timeout=TIMEOUT_SIMPLE,
+            retry_wait=5,
+            func=_is_stopped,
+            error=LXDError(brief="Instance failed to stop."),
         )
 
     def supports_mount(self) -> bool:
