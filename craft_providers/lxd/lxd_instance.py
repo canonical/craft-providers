@@ -270,7 +270,7 @@ class LXDInstance(Executor):
 
         :raises LXDError: On unexpected error.
         """
-        return self._get_state() is not None
+        return self._get_instance_information() is not None
 
     def _get_disk_devices(self) -> Dict[str, Any]:
         """Query instance and return dictionary of disk devices."""
@@ -292,11 +292,11 @@ class LXDInstance(Executor):
 
         return disks
 
-    def _get_state(self) -> Optional[Dict[str, Any]]:
-        """Get state configuration for instance.
+    def _get_instance_information(self) -> Optional[Dict[str, Any]]:
+        """Get information for a LXD instance.
 
-        :returns: State information parsed from lxc if instance exists, else
-                  None.
+        :returns: A dictionary of all information for an instance, including the
+            instance's profile, devices, configuration, and status.
 
         :raises LXDError: On unexpected error.
         """
@@ -307,6 +307,23 @@ class LXDInstance(Executor):
                 return instance
 
         return None
+
+    def _get_state(self) -> LXDInstanceState:
+        """Get the state of an instance.
+
+        :raises LXDError: If the instance does not exist or has no state.
+        """
+        info = self._get_instance_information()
+        if info is None:
+            raise LXDError(brief=f"Instance {self.instance_name!r} does not exist.")
+
+        if state := info.get("status"):
+            return LXDInstanceState(state.upper())
+
+        raise LXDError(
+            brief=f"Instance {self.instance_name!r} has no state.",
+            details=f"Instance information: {info!r}",
+        )
 
     def is_mounted(
         self, *, host_source: pathlib.Path, target: pathlib.PurePath
@@ -333,14 +350,9 @@ class LXDInstance(Executor):
 
         :returns: True if instance is running.
 
-        :raises LXDError: On unexpected error.
+        :raises LXDError: If the instance doesn't exist or has no state.
         """
-        state = self._get_state()
-        if state is None:
-            raise LXDError(brief=f"Instance {self.instance_name!r} does not exist.")
-
-        # state is title-case in yaml output
-        return state.get("status") == LXDInstanceState.RUNNING.value.title()
+        return self._get_state() == LXDInstanceState.RUNNING
 
     def launch(
         self,
