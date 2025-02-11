@@ -4,6 +4,12 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+2.1.1 (2025-Feb-11)
+-------------------
+
+- Fix a bug where instances with underscores in their names would fail to
+  launch.
+
 2.1.0 (2025-Jan-10)
 -------------------
 - Require Multipass>=1.14.1
