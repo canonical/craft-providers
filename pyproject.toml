@@ -24,7 +24,7 @@ requires-python = ">=3.10"
 [project.scripts]
 craft-providers = "craft_providers.cli:main"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "coverage[toml]==7.6.4",
     "freezegun==1.5.1",
