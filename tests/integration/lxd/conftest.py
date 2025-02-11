@@ -16,6 +16,7 @@
 #
 
 """Fixtures for LXD integration tests."""
+
 import os
 import random
 import string

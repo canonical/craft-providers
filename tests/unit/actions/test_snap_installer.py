@@ -630,7 +630,7 @@ def test_inject_from_host_snapd_connection_error_using_pack_fallback(
             "snap",
             "pack",
             "/snap/test-name/current/",
-            f'--filename={pathlib.PurePosixPath(tmpdir / "test-name.snap")}',
+            f"--filename={pathlib.PurePosixPath(tmpdir / 'test-name.snap')}",
         ]
     )
     # register 'snap known' calls
@@ -678,7 +678,7 @@ def test_inject_from_host_snapd_http_error_using_pack_fallback(
             "snap",
             "pack",
             "/snap/test-name/current/",
-            f'--filename={pathlib.PurePosixPath(tmpdir / "test-name.snap")}',
+            f"--filename={pathlib.PurePosixPath(tmpdir / 'test-name.snap')}",
         ]
     )
     # register 'snap known' calls
