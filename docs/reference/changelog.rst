@@ -4,7 +4,7 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
-2.2.0 (2025-MMM-DD)
+2.2.0 (2025-Feb-11)
 -------------------
 
 New features:
