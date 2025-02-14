@@ -16,6 +16,7 @@
 #
 
 """Almalinux image(s)."""
+
 import enum
 import logging
 import pathlib
@@ -142,8 +143,7 @@ class AlmaLinuxBase(Base):
         if version_id != compat_version_id:
             raise BaseCompatibilityError(
                 reason=(
-                    f"Expected OS version {compat_version_id!r},"
-                    f" found {version_id!r}"
+                    f"Expected OS version {compat_version_id!r}, found {version_id!r}"
                 )
             )
 

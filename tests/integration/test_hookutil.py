@@ -61,9 +61,9 @@ def test_configure_hook(spawn_lxd_instance):
     configure_hook(helper)
 
     assert current_instance.exists(), "Current non-base instance should exist"
-    assert (
-        not outdated_base_instance.exists()
-    ), "Outdated base instance should not exist"
+    assert not outdated_base_instance.exists(), (
+        "Outdated base instance should not exist"
+    )
 
     current_instance.delete()
     helper._check_project_exists()  # raises exception if project doesn't exist
@@ -86,9 +86,9 @@ def test_remove_hook(spawn_lxd_instance):
     remove_hook(helper)
 
     assert not current_instance.exists(), "Current non-base instance should not exist"
-    assert (
-        not outdated_base_instance.exists()
-    ), "Outdated base instance should not exist"
+    assert not outdated_base_instance.exists(), (
+        "Outdated base instance should not exist"
+    )
 
     with pytest.raises(HookError) as e:
         helper._check_project_exists()

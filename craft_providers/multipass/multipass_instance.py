@@ -16,6 +16,7 @@
 #
 
 """Multipass Instance."""
+
 import io
 import logging
 import pathlib

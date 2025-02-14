@@ -16,6 +16,7 @@
 #
 
 """Fixtures for Multipass integration tests."""
+
 import subprocess
 import time
 from contextlib import contextmanager

@@ -16,6 +16,7 @@
 #
 
 """LXC wrapper."""
+
 import contextlib
 import enum
 import logging

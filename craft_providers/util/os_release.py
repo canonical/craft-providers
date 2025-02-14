@@ -16,6 +16,7 @@
 #
 
 """Parser for /etc/os-release."""
+
 from typing import Dict
 
 
