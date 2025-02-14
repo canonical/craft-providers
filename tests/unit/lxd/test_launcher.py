@@ -710,7 +710,9 @@ def test_launch_with_existing_instance_not_running(
         lxc=mock_lxc,
     )
 
-    assert mock_lxc.mock_calls == [call.project_list("local")]
+    assert mock_lxc.mock_calls == [
+        call.project_list("local"),
+    ]
     assert mock_lxd_instance.mock_calls == [
         call(
             name=fake_instance.name,
@@ -745,7 +747,9 @@ def test_launch_with_existing_instance_running(
         lxc=mock_lxc,
     )
 
-    assert mock_lxc.mock_calls == [call.project_list("local")]
+    assert mock_lxc.mock_calls == [
+        call.project_list("local"),
+    ]
     assert mock_lxd_instance.mock_calls == [
         call(
             name=fake_instance.name,

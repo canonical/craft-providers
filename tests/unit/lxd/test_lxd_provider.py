@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from datetime import timedelta
-from unittest.mock import call
+from unittest.mock import MagicMock, call
 
 import pytest
 from craft_providers.bases import ubuntu
@@ -42,9 +42,7 @@ def mock_get_remote_image(mock_remote_image, mocker):
 
 @pytest.fixture
 def mock_buildd_base_configuration(mocker):
-    mock_base_config = mocker.patch(
-        "craft_providers.bases.ubuntu.BuilddBase", autospec=True
-    )
+    mock_base_config = MagicMock(spec=ubuntu.BuilddBase)
     mock_base_config.alias = ubuntu.BuilddBaseAlias.JAMMY
     mock_base_config.compatibility_tag = "buildd-base-v2"
     return mock_base_config

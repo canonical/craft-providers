@@ -12,6 +12,7 @@ Charmhub
 cfg
 config
 config's
+Devels
 devel
 diataxis
 Diátaxis

@@ -27,6 +27,7 @@ from craft_providers.base import Base
 from . import almalinux, centos
 from . import ubuntu
 from . import ubuntu as buildd
+from .checks import ensure_guest_compatible
 from .ubuntu import BuilddBase, BuilddBaseAlias
 
 sys.modules["craft_providers.bases.buildd"] = buildd
@@ -36,8 +37,9 @@ BaseAlias = Union[
 ]
 
 __all__ = [
-    "ubuntu",
     "centos",
+    "ensure_guest_compatible",
+    "ubuntu",
     "BaseAlias",
     "BaseName",
     "BuilddBase",

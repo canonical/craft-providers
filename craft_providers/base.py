@@ -51,7 +51,7 @@ from craft_providers.errors import (
 from craft_providers.executor import Executor
 from craft_providers.instance_config import InstanceConfiguration
 from craft_providers.util import retry
-from craft_providers.util.os_release import parse_os_release
+from craft_providers.util.os_release import OS_RELEASE_FILE, parse_os_release
 
 logger = logging.getLogger(__name__)
 
@@ -244,7 +244,7 @@ class Base(ABC):
                 # Replace encoding errors if it somehow occurs with utf-8. This
                 # doesn't need to be perfect for checking compatibility.
                 proc = executor.execute_run(
-                    command=["cat", "/etc/os-release"],
+                    command=["cat", OS_RELEASE_FILE.as_posix()],
                     capture_output=True,
                     check=True,
                     text=True,
@@ -254,12 +254,12 @@ class Base(ABC):
                 )
             except subprocess.CalledProcessError as error:
                 raise BaseConfigurationError(
-                    brief="Failed to read /etc/os-release.",
+                    brief=f"Failed to read {OS_RELEASE_FILE}.",
                     details=details_from_called_process_error(error),
                 ) from error
             if not proc.stdout:
                 raise BaseConfigurationError(
-                    brief="Failed to read /etc/os-release.",
+                    brief=f"Failed to read {OS_RELEASE_FILE}.",
                     details="File appears to be empty.",
                 )
             return proc.stdout
