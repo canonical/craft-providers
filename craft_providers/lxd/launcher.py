@@ -708,16 +708,16 @@ def launch(
         remote=remote,
         default_command_environment=base_configuration.get_command_environment(),
     )
+
+    # If the existing instance could not be launched, then continue on so a new
+    # instance can be created (this can occur when `auto_clean` triggers the
+    # instance to be deleted or if the instance is supposed to be ephemeral)
     logger.debug(
         "Checking for instance %r in project %r in remote %r",
         instance.instance_name,
         project,
         remote,
     )
-
-    # if the existing instance could not be launched, then continue on so a new
-    # instance can be created (this can occur when `auto_clean` triggers the
-    # instance to be deleted or if the instance is supposed to be ephemeral)
     if instance.exists() and _launch_existing_instance(
         instance=instance,
         lxc=lxc,

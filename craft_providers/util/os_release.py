@@ -16,10 +16,14 @@
 #
 
 """Parser for /etc/os-release."""
+
+from pathlib import Path
 from typing import Dict
 
+OS_RELEASE_FILE = Path("/etc/os-release")
 
-def parse_os_release(content: str) -> Dict[str, str]:
+
+def parse_os_release(content: str | None = None) -> Dict[str, str]:
     """Parser for /etc/os-release.
 
     Format documentation at:
@@ -41,12 +45,17 @@ def parse_os_release(content: str) -> Dict[str, str]:
         VERSION_CODENAME=jammy
         UBUNTU_CODENAME=jammy
 
-    :param content: String contents of os-release file.
+    :param content: String contents of os-release file.  If None, will read contents of
+    file from host.
 
     :returns: Dictionary of key-mappings found in os-release. Values are
-              stripped of encapsulating quotes.
+    stripped of encapsulating quotes.
 
     """
+    if content is None:
+        with OS_RELEASE_FILE.open() as f:
+            content = f.read()
+
     mappings: Dict[str, str] = {}
 
     for line in content.splitlines():

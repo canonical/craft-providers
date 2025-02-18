@@ -21,6 +21,7 @@ import io
 import logging
 import pathlib
 import subprocess
+from functools import total_ordering
 from textwrap import dedent
 from typing import Dict, List, Optional
 
@@ -36,6 +37,7 @@ from craft_providers.executor import Executor
 logger = logging.getLogger(__name__)
 
 
+@total_ordering
 class BuilddBaseAlias(enum.Enum):
     """Mappings for supported buildd images."""
 
@@ -46,6 +48,10 @@ class BuilddBaseAlias(enum.Enum):
     NOBLE = "24.04"
     ORACULAR = "24.10"
     DEVEL = "devel"
+
+    def __lt__(self, other) -> bool:
+        # Devels are the greatest, luckily 'd' > [0-9]
+        return self.value < other.value
 
 
 class BuilddBase(Base):
