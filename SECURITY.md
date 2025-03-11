@@ -31,4 +31,4 @@ The [Ubuntu Security disclosure and embargo policy] contains more information ab
 what you can expect when you contact us and what we expect from you.
 
 [Private Security Report]: https://github.com/canonical/craft-providers/security/advisories/new
-[Ubuntu Security disclosure and embargo policy]: https://ubuntu.com/security/disclosure-policy:
+[Ubuntu Security disclosure and embargo policy]: https://ubuntu.com/security/disclosure-policy
