@@ -4,6 +4,14 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+X.Y.Z (upcoming)
+----------------
+
+Bug fixes:
+
+- Fix a race condition where multiple processes would fail to launch LXD
+  instances at the same time.
+
 2.2.0 (2025-Feb-11)
 -------------------
 
