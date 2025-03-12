@@ -4,8 +4,12 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
-X.Y.Z (upcoming)
+2.3.0 (upcoming)
 ----------------
+
+New features:
+
+- Add support for Ubuntu 25.04 (Plucky).
 
 Bug fixes:
 
