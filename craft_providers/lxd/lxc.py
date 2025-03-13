@@ -625,11 +625,15 @@ class LXC:
                     retry_count,
                 )
                 logger.debug(str(error))
-                # Ignore first 3 failed "create" attempts that other craft-providers
+                # Ignore first 3 failed "create" or "start" attempts that other craft-providers
                 # are creating the same instance.
-                # LXD: Instance is busy running a "create" operation
+                # LXD: Instance is busy running a "create" or "start" operation
                 if retry_count >= 2 or (
-                    error.stderr and '"create"' not in error.stderr.decode()
+                    error.stderr
+                    and all(
+                        state not in error.stderr.decode()
+                        for state in ('"create"', '"start"')
+                    )
                 ):
                     raise LXDError(
                         brief=f"Failed to launch instance {instance_name!r}.",

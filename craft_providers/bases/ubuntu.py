@@ -47,6 +47,7 @@ class BuilddBaseAlias(enum.Enum):
     JAMMY = "22.04"
     NOBLE = "24.04"
     ORACULAR = "24.10"
+    PLUCKY = "25.04"
     DEVEL = "devel"
 
     def __lt__(self, other) -> bool:

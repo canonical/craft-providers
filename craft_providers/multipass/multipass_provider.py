@@ -102,6 +102,9 @@ _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
     ubuntu.BuilddBaseAlias.ORACULAR: RemoteImage(
         remote=Remote.DAILY, image_name="oracular"
     ),
+    ubuntu.BuilddBaseAlias.PLUCKY: RemoteImage(
+        remote=Remote.DAILY, image_name="plucky"
+    ),
     # devel images are not available on macos
     ubuntu.BuilddBaseAlias.DEVEL: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="devel"
