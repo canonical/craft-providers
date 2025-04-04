@@ -151,7 +151,7 @@ class LXDProvider(Provider):
                 image_remote=image.remote_name,
                 auto_clean=True,
                 auto_create_project=True,
-                map_user_uid=True,
+                map_user_uid=False,
                 uid=project_path.stat().st_uid,
                 use_base_instance=True,
                 project=self.lxd_project,

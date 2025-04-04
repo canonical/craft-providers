@@ -595,7 +595,12 @@ class LXC:
         else:
             config_keys = _default_instance_metadata
 
-        command = ["launch", f"{image_remote}:{image}", f"{remote}:{instance_name}"]
+        command = [
+            "launch",
+            f"{image_remote}:{image}",
+            f"{remote}:{instance_name}",
+            "--vm",
+        ]
 
         if ephemeral:
             command.append("--ephemeral")

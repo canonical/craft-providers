@@ -381,14 +381,14 @@ class LXDInstance(Executor):
                 uid = os.getuid()
             config_keys["raw.idmap"] = f"both {uid!s} 0"
 
-        if self._intercept_mknod:
-            if not self._host_supports_mknod():
-                warnings.warn(
-                    "Application configured to intercept guest mknod calls, "
-                    "but the host OS does not support intercepting mknod."
-                )
-            else:
-                config_keys["security.syscalls.intercept.mknod"] = "true"
+        # if self._intercept_mknod:
+        #     if not self._host_supports_mknod():
+        #         warnings.warn(
+        #             "Application configured to intercept guest mknod calls, "
+        #             "but the host OS does not support intercepting mknod."
+        #         )
+        #     else:
+        #         config_keys["security.syscalls.intercept.mknod"] = "true"
 
         self.lxc.launch(
             config_keys=config_keys,
