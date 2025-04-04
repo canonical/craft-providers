@@ -34,7 +34,7 @@ from typing_extensions import Self
 
 from craft_providers import Base, lxd
 
-_BASE_INSTANCE_START_STRING = "base-instance"
+_BASE_INSTANCE_START_STRING = "bi"
 _CURRENT_COMPATIBILITY_TAG_REGEX = re.compile(
     f"^{_BASE_INSTANCE_START_STRING}.*-{Base.compatibility_tag}-.*"
 )
