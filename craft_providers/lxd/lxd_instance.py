@@ -24,6 +24,7 @@ import pathlib
 import shutil
 import subprocess
 import tempfile
+import time
 import warnings
 from typing import Any, Dict, List, Optional
 
@@ -399,6 +400,7 @@ class LXDInstance(Executor):
             project=self.project,
             remote=self.remote,
         )
+        time.sleep(15)
 
     def mount(self, *, host_source: pathlib.Path, target: pathlib.PurePath) -> None:
         """Mount host source directory to target mount point.
@@ -531,6 +533,7 @@ class LXDInstance(Executor):
             func=_is_running,
             error=LXDError(brief="Instance failed to start."),
         )
+        time.sleep(15)
 
     def restart(self) -> None:
         """Restart the instance.
