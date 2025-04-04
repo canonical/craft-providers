@@ -241,7 +241,7 @@ def get_instance_name(name: str, error_class: type[ProviderError]) -> str:
     # else, continue converting the name
     else:
         # truncate to 40 characters
-        truncated_name = valid_name[:40]
+        truncated_name = valid_name[:32]
         # hash the entire name, not the truncated name
         hashed_name = hashlib.sha1(name.encode()).hexdigest()[:20]
         instance_name = f"{truncated_name}-{hashed_name}"
