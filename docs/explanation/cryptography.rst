@@ -3,17 +3,18 @@
 Cryptographic technology in Craft Providers
 ===========================================
 
-Craft Providers uses cryptographic processes to communicate with local processes. It
-does not directly implement its own cryptography, but it does depend on external
-libraries to do so.
+Craft Providers uses cryptographic processes to communicate with local
+processes. It does not directly implement its own cryptography, but it does
+depend on external libraries to do so.
 
 Communication with local processes
 ----------------------------------
 
-Craft Providers uses the `requests <https://requests.readthedocs.io/en/latest/>`_
-library to communicate over Unix sockets with the local `snapd agent
-<https://snapcraft.io/docs/installing-snapd>`_. These requests are used to fetch
-information about required software. If the software is missing, Craft Providers will
-install it through snapd. This is done by querying the `snapd API
-<https://snapcraft.io/docs/snapd-api>`_ with URLs built dynamically and sanitized by
-`urllib <https://docs.python.org/3/library/urllib.html>`_.
+Craft Providers uses the `requests
+<https://requests.readthedocs.io/en/latest/>`_ library to communicate over Unix
+sockets with the local `snapd agent
+<https://snapcraft.io/docs/installing-snapd>`_. These requests are used to
+fetch information about required software. If the software is missing, Craft
+Providers will install it through snapd. This is done by querying the `snapd
+API <https://snapcraft.io/docs/snapd-api>`_ with URLs built dynamically and
+sanitized by `urllib <https://docs.python.org/3/library/urllib.html>`_.
