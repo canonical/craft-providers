@@ -682,7 +682,7 @@ class Base(ABC):
                     raise BaseConfigurationError(
                         brief=(
                             f"failed to inject host's snap {snap.name!r} "
-                            "into target environment. Check snapcraft status"
+                            "into target environment. Check snapcraft status "
                             "at https://status.snapcraft.io"
                         ),
                         details=error.details,
