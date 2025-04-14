@@ -511,7 +511,10 @@ def test_install_snaps_inject_from_host_error(fake_executor, mocker):
         base._install_snaps(executor=fake_executor)
 
     assert exc_info.value == BaseConfigurationError(
-        brief="failed to inject host's snap 'snap1' into target environment."
+        brief=(
+            "failed to inject host's snap 'snap1' into target environment. "
+            "Check snapcraft status at https://status.snapcraft.io"
+        )
     )
 
 
