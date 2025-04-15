@@ -3,9 +3,9 @@
 Cryptographic technology in Craft Providers
 ===========================================
 
-Craft Providers uses cryptographic processes to communicate with local
-processes. It does not directly implement its own cryptography, but it does
-depend on external libraries to do so.
+Craft Providers uses cryptographic technologies to communicate with processes
+running on the host system. It does not directly implement its own
+cryptography, but it does depend on external libraries to do so.
 
 Communication with local processes
 ----------------------------------
