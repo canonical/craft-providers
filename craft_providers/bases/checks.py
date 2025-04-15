@@ -110,10 +110,10 @@ def ensure_guest_compatible(
             and (
                 _lxd_version_match(
                     lxd_version_tup,
-                    cast(list[tuple[int, int, int]], invalid["lxd_less_than"]),
+                    cast("list[tuple[int, int, int]]", invalid["lxd_less_than"]),
                 )
                 or kernel_version_tup
-                < cast(tuple[int, int], invalid["kernel_less_than"])
+                < cast("tuple[int, int]", invalid["kernel_less_than"])
             )
         ):
             raise ProviderError(
