@@ -10,9 +10,9 @@ depend on external libraries to do so.
 Communication with local processes
 ----------------------------------
 
-Craft Providers uses the `requests
+Craft Providers uses the `Requests
 <https://requests.readthedocs.io/en/latest/>`_ library to communicate over Unix
-sockets with the local `snapd agent
+sockets with the local `snap daemon (snapd)
 <https://snapcraft.io/docs/installing-snapd>`_. These requests are used to
 fetch information about required software. If the software is missing, Craft
 Providers will install it through snapd. This is done by querying the `snapd
