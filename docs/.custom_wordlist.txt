@@ -10,6 +10,7 @@ Changelog
 charmcraft
 Charmhub
 Cryptographic
+cryptographic
 cfg
 config
 config's
@@ -56,6 +57,7 @@ readthedocs
 RemoteImage
 RemoteImage's
 rockcraft
+sanitized
 snapcraft
 snapd
 stdin
