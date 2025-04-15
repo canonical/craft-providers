@@ -9,6 +9,7 @@ CentOS
 Changelog
 charmcraft
 Charmhub
+Cryptographic
 cfg
 config
 config's
