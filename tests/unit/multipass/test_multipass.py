@@ -185,8 +185,7 @@ def test_info_error(fake_process, mock_details_from_process_error):
     fake_process.register_subprocess(
         ["multipass", "info", "test-instance", "--format", "json"],
         stderr=(
-            "info failed: The following errors occurred:\n"
-            'instance "foo" does not exist'
+            'info failed: The following errors occurred:\ninstance "foo" does not exist'
         ),
         returncode=1,
     )

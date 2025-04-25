@@ -72,15 +72,15 @@ BASE_NAME_TO_BASE_ALIAS: Dict[BaseName, BaseAlias] = {
 
 @overload
 def get_base_alias(
-    base_name: Tuple[Literal["ubuntu"], str]
+    base_name: Tuple[Literal["ubuntu"], str],
 ) -> ubuntu.BuilddBaseAlias: ...
 @overload
 def get_base_alias(
-    base_name: Tuple[Literal["centos"], str]
+    base_name: Tuple[Literal["centos"], str],
 ) -> centos.CentOSBaseAlias: ...
 @overload
 def get_base_alias(
-    base_name: Tuple[Literal["almalinux"], str]
+    base_name: Tuple[Literal["almalinux"], str],
 ) -> almalinux.AlmaLinuxBaseAlias: ...
 @overload
 def get_base_alias(base_name: BaseName) -> BaseAlias: ...
