@@ -17,7 +17,6 @@
 
 """Base configuration module."""
 
-
 import enum
 import io
 import logging

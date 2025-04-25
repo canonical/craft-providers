@@ -1230,9 +1230,9 @@ def test_launch_error(fake_process, mocker):
         occurrences=4,
     )
 
-    mocker.patch("craft_providers.lxd.lxc.LXC.check_instance_status").side_effect = (
-        LXDError("Failed to get instance status.")
-    )
+    mocker.patch(
+        "craft_providers.lxd.lxc.LXC.check_instance_status"
+    ).side_effect = LXDError("Failed to get instance status.")
 
     mocker.patch("time.sleep")
 
