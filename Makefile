@@ -3,7 +3,7 @@
 
 .PHONY: setup-tics
 setup-tics:
-	@ # Intentional no-op
+	python -m pip install --user tox
 
 .PHONY: test-coverage
 test-coverage:
