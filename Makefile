@@ -3,7 +3,7 @@
 
 .PHONY: setup-tics
 setup-tics:
-	python -m pip install --user tox
+	python -m pip install tox
 
 .PHONY: test-coverage
 test-coverage:
