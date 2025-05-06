@@ -15,7 +15,8 @@ build:
 sphinx:
   builder: dirhtml
   configuration: docs/conf.py
-  fail_on_warning: true
+  # Needs to be re-enabled once https://github.com/canonical/craft-cli/issues/342 is closed.
+  # fail_on_warning: true
 
 # If using Sphinx, optionally build your docs in additional formats such as PDF
 formats:
