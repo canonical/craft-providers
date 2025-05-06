@@ -13,7 +13,7 @@ else ifeq ($(OS),Windows_NT)
 else
 	curl -LsSf https://astral.sh/uv/install.sh | sh
 endif
-uv tool install tox
+	uv tool install tox
 
 
 .PHONY: test-coverage
