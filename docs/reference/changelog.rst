@@ -4,12 +4,13 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
-2.3.0 (upcoming)
-----------------
+2.3.0 (2025-May-09)
+-------------------
 
 New features:
 
 - Add support for Ubuntu 25.04 (Plucky).
+- Add support for Ubuntu 25.10 (Questing).
 
 Bug fixes:
 
