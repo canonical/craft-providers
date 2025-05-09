@@ -15,6 +15,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 """Tests for abstract Base's implementations."""
+
 import enum
 import pathlib
 import subprocess
