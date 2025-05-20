@@ -17,6 +17,7 @@
 
 import shutil
 
+import pytest
 from craft_providers import multipass
 
 
@@ -26,6 +27,7 @@ def test_is_installed():
     assert multipass.is_installed() is expected
 
 
+@pytest.mark.slow
 def test_install(uninstalled_multipass):
     assert multipass.is_installed() is False
 

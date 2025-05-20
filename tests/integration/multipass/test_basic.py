@@ -22,6 +22,8 @@ import pytest
 from craft_providers import multipass
 from craft_providers.bases import ubuntu
 
+pytestmark = [pytest.mark.slow]
+
 
 @pytest.fixture
 def simple_file(home_tmp_path):

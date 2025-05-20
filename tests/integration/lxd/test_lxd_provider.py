@@ -43,6 +43,7 @@ def test_create_environment(installed_lxd, instance_name):
     assert test_instance.exists() is False
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "alias", [*UBUNTU_BASES_PARAM, almalinux.AlmaLinuxBaseAlias.NINE]
 )
