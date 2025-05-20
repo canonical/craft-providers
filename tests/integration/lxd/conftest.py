@@ -180,10 +180,12 @@ def session_project(installed_lxd):
 
     expected_cfg = lxc.profile_show(profile="default", project="default")
     expected_cfg["used_by"] = []
-    del expected_cfg["project"]
+    if "project" in expected_cfg:
+        del expected_cfg["project"]
 
     actual_config = lxc.profile_show(profile="default", project=project_name)
-    del actual_config["project"]
+    if "project" in actual_config:
+        del actual_config["project"]
 
     assert actual_config == expected_cfg
 
