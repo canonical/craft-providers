@@ -62,18 +62,6 @@ ifeq ($(CI)_$(OS),1_Linux)  # Stuff to do specifically on Linux CI runners.
 	# In CI, delete the android SDK if it's installed. It's kinda huge!
 	echo "::group::Clean up disk"
 	sudo rm -rf /usr/local/lib/android/
-	# Likewise, configure LXD in CI
-	echo "::group::Configure LXD"
-	sudo groupadd --force --system lxd
-	sudo usermod --append --groups lxd $USER
-	sudo snap install lxd --channel=latest/candidate
-	sudo snap start lxd
-	sudo lxd waitready --timeout=30
-	sudo lxd init --auto
-	# iptables calls from https://github.com/canonical/setup-lxd/blob/main/action.yml
-	sudo iptables -I DOCKER-USER -i lxdbr0 -j ACCEPT
-	sudo iptables -I DOCKER-USER -o lxdbr0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-	echo "::endgroup::"
 endif
 
 
