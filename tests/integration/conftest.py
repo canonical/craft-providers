@@ -132,6 +132,12 @@ def uninstalled_lxd():
         pytest.skip("not configured to uninstall lxd, skipped")
 
     if sys.platform == "linux":
+        import grp
+
+        lxd_info = grp.getgrnam("lxd")
+        assert lxd_info.gr_gid in os.getgroups(), (
+            "Process not affiliated with lxd group"
+        )
         subprocess.run(["sudo", "snap", "remove", "lxd", "--purge"], check=True)
 
     yield
