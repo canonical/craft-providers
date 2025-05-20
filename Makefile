@@ -20,6 +20,11 @@ UV_TICS_GROUPS := "--group=tics"
 
 include common.mk
 
+ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+ifeq ($(CI)_$(OS),true_Linux)
+SHELL:=$(ROOT_DIR)tools/ci-shell.sh
+endif
+
 .PHONY: format
 format: format-ruff format-codespell format-prettier  ## Run all automatic formatters
 
@@ -58,6 +63,18 @@ else ifeq ($(shell which apt-get),)
 else
 	sudo $(APT) install $(APT_PACKAGES)
 endif
+ifeq ($(CI)_$(OS),true_Linux)  # Only do this in CI on Linux
+	# In CI, delete the android SDK if it's installed. It's kinda huge!
+	sudo rm -rf /usr/local/lib/android/
+	# Likewise, configure LXD in CI
+	echo "::group::Configure LXD"
+	sudo groupadd --force --system lxd
+	sudo usermod --append --groups lxd $(USER)
+	echo "::endgroup::"
+else ifeq ($(CI)_$(OS),true_Darwin)  # Only do this in CI on macOS
+	brew install multipass
+endif
+
 
 # If additional build dependencies need installing in order to build the linting env.
 .PHONY: install-lint-build-deps
