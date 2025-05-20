@@ -16,9 +16,8 @@ jobs:
     uses: canonical/starflow/.github/workflows/test-python.yaml@main
     with:
       # Fast tests run on several Ubuntu platforms and macos on ARM
-      fast-test-platforms: '["ubuntu-24.04", "ubuntu-24.04-arm", "macos-15"]'
+      fast-test-platforms: '["ubuntu-24.04", "ubuntu-24.04-arm", "macos-13"]'
       fast-test-python-versions: '["3.10", "3.12", "3.13"]'
-      fast-test-lxd-channels: '["5.0/candidate", "5.21/candidate", "5.21/edge", "latest/candidate"]'
       # Slow tests (which include everything that needs multipass) run on amd64 macos and several Ubuntu platforms
       slow-test-platforms: '["ubuntu-24.04", "ubuntu-24.04-arm", "macos-13"]'
       slow-test-python-versions: '["3.12"]'
