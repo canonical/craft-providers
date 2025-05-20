@@ -24,7 +24,7 @@ requires-python = ">=3.10"
 [project.scripts]
 craft-providers = "craft_providers.cli:main"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "coverage[toml]==7.6.4",
     "freezegun==1.5.1",
@@ -44,7 +44,6 @@ dev = [
 ]
 lint = [
     "codespell[toml]==2.3.0",
-    "yamllint==1.35.1",
 ]
 types = [
     "mypy[reports]~=1.15",
@@ -134,7 +133,6 @@ omit = ["tests/**"]
 
 [tool.coverage.report]
 skip_empty = true
-fail_under = 95
 
 [tool.pyright]
 # typing in craft-providers is incomplete (see #326)

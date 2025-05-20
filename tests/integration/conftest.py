@@ -99,7 +99,11 @@ def installed_lxd():
     if lxd.is_installed():
         return
 
-    if os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_LXD_INSTALL") == "1":
+    # Always install lxd in CI
+    if (
+        os.environ.get("CI")
+        or os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_LXD_INSTALL") == "1"
+    ):
         lxd.install()
     else:
         pytest.skip("lxd not installed, skipped")
@@ -121,7 +125,10 @@ def uninstalled_lxd():
     if not lxd.is_installed():
         pytest.skip("lxd not installed, skipped")
 
-    if os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_LXD_UNINSTALL") != "1":
+    if os.getenv("CI"):
+        # Always try uninstalling LXD in CI
+        pass
+    elif os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_LXD_UNINSTALL") != "1":
         pytest.skip("not configured to uninstall lxd, skipped")
 
     if sys.platform == "linux":
@@ -144,7 +151,10 @@ def installed_multipass():
     if multipass.is_installed():
         return
 
-    if os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL") == "1":
+    if os.environ.get("CI") and sys.platform == "darwin":
+        # Always do this on macos in CI
+        pass
+    elif os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL") == "1":
         multipass.install()
     else:
         pytest.skip("multipass not installed, skipped")
@@ -163,7 +173,10 @@ def uninstalled_multipass():
     if not multipass.is_installed():
         pytest.skip("multipass not installed, skipped")
 
-    if os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL") != "1":
+    if os.getenv("CI"):
+        # Always try uninstalling multipass in CI
+        pass
+    elif os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL") != "1":
         pytest.skip("not configured to uninstall multipass, skipped")
 
     if sys.platform == "linux":
@@ -218,7 +231,10 @@ def installed_snap():
             yield
         else:
             # Install it, if enabled to do so by environment.
-            if os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL") != "1":
+            if os.environ.get("CI") and sys.platform == "linux":
+                # Always do this on Linux in CI
+                pass
+            elif os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL") != "1":
                 pytest.skip(f"{snap_name!r} snap not installed, skipped")
 
             if try_path:
@@ -255,7 +271,10 @@ def dangerously_installed_snap(tmpdir):
         if snap_exists(snap_name) and is_installed_dangerously(snap_name):
             yield
         else:
-            if os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL") != "1":
+            if os.environ.get("CI") and sys.platform == "linux":
+                # Always do this on Linux in CI
+                pass
+            elif os.environ.get("CRAFT_PROVIDERS_TESTS_ENABLE_SNAP_INSTALL") != "1":
                 pytest.skip(f"{snap_name!r} snap not installed, skipped")
 
             # download the snap
