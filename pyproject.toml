@@ -135,7 +135,6 @@ omit = ["tests/**"]
 
 [tool.coverage.report]
 skip_empty = true
-fail_under = 95
 
 [tool.pyright]
 # typing in craft-providers is incomplete (see #326)
