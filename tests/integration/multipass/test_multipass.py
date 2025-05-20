@@ -23,6 +23,8 @@ from craft_providers.multipass import Multipass
 
 from . import conftest
 
+pytestmark = [pytest.mark.slow]
+
 
 @pytest.fixture
 def instance(instance_name):
