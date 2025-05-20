@@ -23,6 +23,7 @@ from craft_providers.lxd import LXDProvider, is_installed
 from .conftest import UBUNTU_BASES_PARAM
 
 
+@pytest.mark.slow
 def test_ensure_provider_is_available_not_installed(uninstalled_lxd):
     """Verify lxd is installed and configured."""
     assert is_installed() is False
@@ -30,6 +31,7 @@ def test_ensure_provider_is_available_not_installed(uninstalled_lxd):
     provider.ensure_provider_is_available()
 
 
+@pytest.mark.slow
 def test_ensure_provider_is_available_installed(installed_lxd):
     """Verify lxd is installed and configured."""
     assert is_installed() is True
@@ -37,12 +39,14 @@ def test_ensure_provider_is_available_installed(installed_lxd):
     provider.ensure_provider_is_available()
 
 
+@pytest.mark.slow
 def test_create_environment(installed_lxd, instance_name):
     provider = LXDProvider()
     test_instance = provider.create_environment(instance_name=instance_name)
     assert test_instance.exists() is False
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "alias", [*UBUNTU_BASES_PARAM, almalinux.AlmaLinuxBaseAlias.NINE]
 )

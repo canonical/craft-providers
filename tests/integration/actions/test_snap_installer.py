@@ -21,7 +21,10 @@ import logging
 import re
 from textwrap import dedent
 
+import pytest
 from craft_providers.actions import snap_installer
+
+pytestmark = [pytest.mark.slow]
 
 
 def test_inject_from_host(core22_lxd_instance, installed_snap, caplog):
