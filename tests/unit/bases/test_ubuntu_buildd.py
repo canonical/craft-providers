@@ -17,6 +17,7 @@
 import pathlib
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from textwrap import dedent
 from unittest.mock import ANY, call, patch
@@ -635,9 +636,12 @@ def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
 
 
 @pytest.mark.parametrize("alias", list(ubuntu.BuilddBaseAlias))
-@pytest.mark.parametrize("cache_path", [pathlib.Path("/tmp/fake-cache-dir")])
+@pytest.mark.parametrize(
+    "cache_path", [pathlib.Path(tempfile.gettempdir(), "fake-cache-dir")]
+)
 def test_mount_cache_dirs(fake_process, fake_executor, cache_path, alias):
     """Test mounting of cache directories with a cache directory set."""
+
     base = ubuntu.BuilddBase(alias=alias, cache_path=cache_path)
     host_cache_dir = cache_path / base.compatibility_tag / str(base.alias)
     user_cache_dir = pathlib.Path("/root/.cache")
