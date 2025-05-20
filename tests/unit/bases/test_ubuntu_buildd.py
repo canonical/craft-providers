@@ -639,11 +639,11 @@ def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
 @pytest.mark.parametrize(
     "cache_path", [pathlib.Path(tempfile.gettempdir(), "fake-cache-dir")]
 )
-def test_mount_cache_dirs(fake_process, fake_executor, cache_path, alias):
+def test_mount_cache_dirs(fake_process, fake_executor, cache_path: pathlib.Path, alias):
     """Test mounting of cache directories with a cache directory set."""
 
     base = ubuntu.BuilddBase(alias=alias, cache_path=cache_path)
-    host_cache_dir = cache_path / base.compatibility_tag / str(base.alias)
+    host_cache_dir = (cache_path / base.compatibility_tag / str(base.alias)).resolve()
     user_cache_dir = pathlib.Path("/root/.cache")
     fake_process.register(
         [*DEFAULT_FAKE_CMD, "bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
