@@ -18,8 +18,3 @@ repos:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
-  - repo: https://github.com/adrienverge/yamllint.git
-    # renovate: datasource=pypi;depName=yamllint
-    rev: "v1.35.1"
-    hooks:
-      - id: yamllint
