@@ -42,10 +42,6 @@ def install() -> str:
         _install_darwin()
     elif sys.platform == "linux":
         _install_linux()
-    elif sys.platform == "win32":
-        raise errors.MultipassInstallationError(
-            "automated installation not yet supported for Windows"
-        )
     else:
         raise errors.MultipassInstallationError(
             f"unsupported platform {sys.platform!r}"

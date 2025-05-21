@@ -107,17 +107,6 @@ def test_install_linux_error(
     )
 
 
-def test_install_windows_error(monkeypatch):
-    monkeypatch.setattr(sys, "platform", "win32")
-
-    with pytest.raises(multipass.MultipassInstallationError) as exc_info:
-        multipass.install()
-
-    assert exc_info.value == multipass.MultipassInstallationError(
-        reason="automated installation not yet supported for Windows",
-    )
-
-
 @pytest.mark.parametrize(
     ("which", "is_installed"), [("/path/to/multipass", True), (None, False)]
 )
