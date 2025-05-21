@@ -682,10 +682,12 @@ class Base(ABC):
                     raise BaseConfigurationError(
                         brief=(
                             f"failed to inject host's snap {snap.name!r} "
-                            "into target environment. Check snapcraft status "
-                            "at https://status.snapcraft.io"
+                            "into target environment."
                         ),
                         details=error.details,
+                        resolution=(
+                            "Check snapcraft status at https://status.snapcraft.io"
+                        ),
                     ) from error
 
     def wait_until_ready(self, executor: Executor) -> None:
