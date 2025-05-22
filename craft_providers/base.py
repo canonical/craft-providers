@@ -670,6 +670,9 @@ class Base(ABC):
                             f" channel {snap.channel!r} in target environment."
                         ),
                         details=error.details,
+                        resolution=(
+                            "Check Snap store status at https://status.snapcraft.io"
+                        ),
                     ) from error
             else:
                 try:
@@ -684,10 +687,7 @@ class Base(ABC):
                             f"failed to inject host's snap {snap.name!r} "
                             "into target environment."
                         ),
-                        details=error.details,
-                        resolution=(
-                            "Check snapcraft status at https://status.snapcraft.io"
-                        ),
+                        details=error.details
                     ) from error
 
     def wait_until_ready(self, executor: Executor) -> None:

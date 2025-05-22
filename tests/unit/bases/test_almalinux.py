@@ -491,7 +491,8 @@ def test_install_snaps_install_from_store_error(fake_executor, mocker):
         brief=(
             "failed to install snap 'snap1' from store"
             " channel 'candidate' in target environment."
-        )
+        ),
+        resolution="Check Snap store status at https://status.snapcraft.io",
     )
 
 
@@ -511,8 +512,7 @@ def test_install_snaps_inject_from_host_error(fake_executor, mocker):
         base._install_snaps(executor=fake_executor)
 
     assert exc_info.value == BaseConfigurationError(
-        brief="failed to inject host's snap 'snap1' into target environment.",
-        resolution="Check snapcraft status at https://status.snapcraft.io",
+        brief="failed to inject host's snap 'snap1' into target environment."
     )
 
 
