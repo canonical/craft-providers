@@ -16,6 +16,7 @@
 #
 
 """LXC wrapper."""
+
 import contextlib
 import enum
 import logging
@@ -32,7 +33,10 @@ from typing import Any, Callable, Dict, List, Optional
 import yaml
 
 from craft_providers import errors
-from craft_providers.lxd.lxd_instance_status import ProviderInstanceStatus
+from craft_providers.lxd.lxd_instance_status import (
+    LXDInstanceState,
+    ProviderInstanceStatus,
+)
 
 from .errors import LXDError
 
@@ -386,6 +390,8 @@ class LXC:
         if runner is subprocess.run:
             return runner(final_cmd, timeout=timeout, check=check, **kwargs)
 
+        # XXX: warn that timeout and check are ignored for Popen??
+
         return runner(final_cmd, **kwargs)
 
     def file_pull(
@@ -619,11 +625,15 @@ class LXC:
                     retry_count,
                 )
                 logger.debug(str(error))
-                # Ignore first 3 failed "create" attempts that other craft-providers
+                # Ignore first 3 failed "create" or "start" attempts that other craft-providers
                 # are creating the same instance.
-                # LXD: Instance is busy running a "create" operation
+                # LXD: Instance is busy running a "create" or "start" operation
                 if retry_count >= 2 or (
-                    error.stderr and '"create"' not in error.stderr.decode()
+                    error.stderr
+                    and all(
+                        state not in error.stderr.decode()
+                        for state in ('"create"', '"start"')
+                    )
                 ):
                     raise LXDError(
                         brief=f"Failed to launch instance {instance_name!r}.",
@@ -1164,7 +1174,7 @@ class LXC:
 
             if (
                 instance_status == ProviderInstanceStatus.FINISHED.value
-                and instance_info["Status"] == "STOPPED"
+                and instance_info["Status"] == LXDInstanceState.STOPPED.value
             ):
                 logger.debug("Instance %s is ready.", instance_name)
                 return
@@ -1173,3 +1183,29 @@ class LXC:
             time.sleep(3)
 
         raise LXDError(brief="Timed out waiting for instance to be ready.")
+
+    def get_server_version(self) -> str:
+        """Get the version of the lxd server.
+
+        Use over LXD.version when you need to get the server version but aren't root.
+
+        :raises LXDError: on unexpected error.
+        """
+        try:
+            completed_process = self._run_lxc(
+                ["version"], capture_output=True, text=True
+            )
+        except subprocess.CalledProcessError as error:
+            raise LXDError(
+                brief="Could not determine lxd version.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
+        for line in completed_process.stdout.splitlines():
+            if not line.startswith("Server version"):
+                continue
+            # In case there are ever colons in the version string
+            return ":".join(line.split(":")[1:])
+        raise LXDError(
+            brief="Could not determine lxd version.",
+            details="Didn't find string 'Server version' in output",
+        )

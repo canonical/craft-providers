@@ -15,6 +15,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 """Tests for abstract Base's implementations."""
+
 import enum
 import pathlib
 import subprocess
@@ -300,3 +301,9 @@ def test_get_os_release_exception(fake_base, mock_executor):
 
     with pytest.raises(BaseConfigurationError):
         fake_base._get_os_release(executor=mock_executor)
+
+
+def test_set_hostname(fake_base):
+    bad_name = "bad_123-ABC%-"
+    fake_base._set_hostname(bad_name)
+    assert fake_base._hostname == "bad123-ABC"

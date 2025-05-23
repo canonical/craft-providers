@@ -27,6 +27,7 @@ from craft_providers.base import Base
 from . import almalinux, centos
 from . import ubuntu
 from . import ubuntu as buildd
+from .checks import ensure_guest_compatible
 from .ubuntu import BuilddBase, BuilddBaseAlias
 
 sys.modules["craft_providers.bases.buildd"] = buildd
@@ -36,8 +37,9 @@ BaseAlias = Union[
 ]
 
 __all__ = [
-    "ubuntu",
     "centos",
+    "ensure_guest_compatible",
+    "ubuntu",
     "BaseAlias",
     "BaseName",
     "BuilddBase",
@@ -61,6 +63,8 @@ BASE_NAME_TO_BASE_ALIAS: Dict[BaseName, BaseAlias] = {
     BaseName("ubuntu", "22.04"): ubuntu.BuilddBaseAlias.JAMMY,
     BaseName("ubuntu", "24.04"): ubuntu.BuilddBaseAlias.NOBLE,
     BaseName("ubuntu", "24.10"): ubuntu.BuilddBaseAlias.ORACULAR,
+    BaseName("ubuntu", "25.04"): ubuntu.BuilddBaseAlias.PLUCKY,
+    BaseName("ubuntu", "25.10"): ubuntu.BuilddBaseAlias.QUESTING,
     BaseName("ubuntu", "devel"): ubuntu.BuilddBaseAlias.DEVEL,
     BaseName("centos", "7"): centos.CentOSBaseAlias.SEVEN,
     BaseName("almalinux", "9"): almalinux.AlmaLinuxBaseAlias.NINE,
@@ -69,15 +73,15 @@ BASE_NAME_TO_BASE_ALIAS: Dict[BaseName, BaseAlias] = {
 
 @overload
 def get_base_alias(
-    base_name: Tuple[Literal["ubuntu"], str]
+    base_name: Tuple[Literal["ubuntu"], str],
 ) -> ubuntu.BuilddBaseAlias: ...
 @overload
 def get_base_alias(
-    base_name: Tuple[Literal["centos"], str]
+    base_name: Tuple[Literal["centos"], str],
 ) -> centos.CentOSBaseAlias: ...
 @overload
 def get_base_alias(
-    base_name: Tuple[Literal["almalinux"], str]
+    base_name: Tuple[Literal["almalinux"], str],
 ) -> almalinux.AlmaLinuxBaseAlias: ...
 @overload
 def get_base_alias(base_name: BaseName) -> BaseAlias: ...

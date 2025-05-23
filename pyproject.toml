@@ -43,14 +43,22 @@ dev = [
     "types-pyyaml==6.0.12.20240917",
 ]
 lint = [
-    "black==24.10.0",
     "codespell[toml]==2.3.0",
     "yamllint==1.35.1",
 ]
 types = [
-    "mypy[reports]==1.13.0",
-    "pyright==1.1.386",
+    "mypy[reports]~=1.15",
 ]
+docs = [
+    "pyspelling==2.10",
+    "sphinx-autobuild==2024.10.3",
+    "sphinx-lint==1.0.0",
+    "sphinx-tabs==3.4.7",
+    "canonical-sphinx~=0.2.0"
+]
+tics = ["flake8", "pylint"]
+
+[dependency-groups]
 docs = [
     "pyspelling==2.10",
     "sphinx-autobuild==2024.10.3",
@@ -106,7 +114,8 @@ target-version = ["py38"]
 
 [tool.codespell]
 ignore-words-list = "buildd,crate,keyserver,comandos,ro,dedent,dedented"
-skip = ".tox,.git,build,.*_cache,__pycache__,*.tar,*.snap,*.png,./node_modules,./docs/_build,.direnv,.venv,venv,.vscode"
+ignore-words = "docs/.custom_wordlist.txt"
+skip = ".tox,.git,build,.*_cache,__pycache__,*.tar,*.snap,*.png,./node_modules,./docs/_build,.direnv,.venv,venv,.vscode,*.lock"
 quiet-level = 3
 check-filenames = true
 
@@ -130,7 +139,6 @@ markers = [
 
 [tool.coverage.run]
 branch = true
-parallel = true
 omit = ["tests/**"]
 
 [tool.coverage.report]
@@ -286,7 +294,6 @@ lint.ignore = [
     "PLR0915", # Too many statements
     "PLR2004", # Magic value used in comparison
     "PLW2901", # `for` loop variable `line` overwritten by assignment target
-    "PT004", # Fixture does not return anything, add leading underscore
     "PT011", # `pytest.raises(ValueError)` is too broad, set the `match` parameter or usea more specific exception
     "PT012", # `pytest.raises()` block should contain a single simple statement
     "PTH110", # `os.path.exists()` should be replaced by `Path.exists()`

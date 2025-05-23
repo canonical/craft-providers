@@ -34,7 +34,7 @@ from craft_providers.errors import details_from_called_process_error
 from .errors import LXDError
 from .lxc import LXC
 from .lxd_instance import LXDInstance
-from .lxd_instance_status import ProviderInstanceStatus
+from .lxd_instance_status import LXDInstanceState, ProviderInstanceStatus
 from .project import create_with_default_profile
 
 logger = logging.getLogger(__name__)
@@ -585,7 +585,7 @@ def _wait_for_instance_ready(instance: LXDInstance) -> None:
     # check if the instance is ready
     if (
         instance_status == ProviderInstanceStatus.FINISHED.value
-        and instance_state == "STOPPED"
+        and instance_state == LXDInstanceState.STOPPED.value
     ):
         logger.debug("Instance %r is ready.", instance.instance_name)
         return
@@ -708,16 +708,16 @@ def launch(
         remote=remote,
         default_command_environment=base_configuration.get_command_environment(),
     )
+
+    # If the existing instance could not be launched, then continue on so a new
+    # instance can be created (this can occur when `auto_clean` triggers the
+    # instance to be deleted or if the instance is supposed to be ephemeral)
     logger.debug(
         "Checking for instance %r in project %r in remote %r",
         instance.instance_name,
         project,
         remote,
     )
-
-    # if the existing instance could not be launched, then continue on so a new
-    # instance can be created (this can occur when `auto_clean` triggers the
-    # instance to be deleted or if the instance is supposed to be ephemeral)
     if instance.exists() and _launch_existing_instance(
         instance=instance,
         lxc=lxc,

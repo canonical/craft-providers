@@ -17,7 +17,6 @@
 
 """Base configuration module."""
 
-
 import enum
 import io
 import logging
@@ -51,7 +50,7 @@ from craft_providers.errors import (
 from craft_providers.executor import Executor
 from craft_providers.instance_config import InstanceConfiguration
 from craft_providers.util import retry
-from craft_providers.util.os_release import parse_os_release
+from craft_providers.util.os_release import OS_RELEASE_FILE, parse_os_release
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +146,7 @@ class Base(ABC):
         truncated_name = hostname[:63]
 
         # remove anything that is not an alphanumeric character or hyphen
-        name_with_valid_chars = re.sub(r"[^\w-]", "", truncated_name)
+        name_with_valid_chars = re.sub(r"[^a-zA-Z0-9-]", "", truncated_name)
 
         # trim hyphens from the beginning and end
         valid_name = name_with_valid_chars.strip("-")
@@ -244,7 +243,7 @@ class Base(ABC):
                 # Replace encoding errors if it somehow occurs with utf-8. This
                 # doesn't need to be perfect for checking compatibility.
                 proc = executor.execute_run(
-                    command=["cat", "/etc/os-release"],
+                    command=["cat", OS_RELEASE_FILE.as_posix()],
                     capture_output=True,
                     check=True,
                     text=True,
@@ -254,12 +253,12 @@ class Base(ABC):
                 )
             except subprocess.CalledProcessError as error:
                 raise BaseConfigurationError(
-                    brief="Failed to read /etc/os-release.",
+                    brief=f"Failed to read {OS_RELEASE_FILE}.",
                     details=details_from_called_process_error(error),
                 ) from error
             if not proc.stdout:
                 raise BaseConfigurationError(
-                    brief="Failed to read /etc/os-release.",
+                    brief=f"Failed to read {OS_RELEASE_FILE}.",
                     details="File appears to be empty.",
                 )
             return proc.stdout

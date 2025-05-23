@@ -16,11 +16,13 @@
 #
 
 """Ubuntu image(s)."""
+
 import enum
 import io
 import logging
 import pathlib
 import subprocess
+from functools import total_ordering
 from textwrap import dedent
 from typing import Dict, List, Optional
 
@@ -36,6 +38,7 @@ from craft_providers.executor import Executor
 logger = logging.getLogger(__name__)
 
 
+@total_ordering
 class BuilddBaseAlias(enum.Enum):
     """Mappings for supported buildd images."""
 
@@ -45,7 +48,13 @@ class BuilddBaseAlias(enum.Enum):
     JAMMY = "22.04"
     NOBLE = "24.04"
     ORACULAR = "24.10"
+    PLUCKY = "25.04"
+    QUESTING = "25.10"
     DEVEL = "devel"
+
+    def __lt__(self, other) -> bool:
+        # Devels are the greatest, luckily 'd' > [0-9]
+        return self.value < other.value
 
 
 class BuilddBase(Base):
@@ -181,8 +190,7 @@ class BuilddBase(Base):
         if version_id != compat_version_id:
             raise BaseCompatibilityError(
                 reason=(
-                    f"Expected OS version {compat_version_id!r},"
-                    f" found {version_id!r}"
+                    f"Expected OS version {compat_version_id!r}, found {version_id!r}"
                 )
             )
 
