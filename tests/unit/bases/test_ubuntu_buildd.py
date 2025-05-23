@@ -483,7 +483,8 @@ def test_install_snaps_install_from_store_error(fake_executor, mocker):
         brief=(
             "failed to install snap 'snap1' from store"
             " channel 'candidate' in target environment."
-        )
+        ),
+        resolution="Check Snap store status at https://status.snapcraft.io",
     )
 
 
