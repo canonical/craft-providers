@@ -18,7 +18,6 @@ Host support is targeted for:
 
 - Linux
 - Mac OS X
-- Windows
 
 License
 -------

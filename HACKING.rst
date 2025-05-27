@@ -94,7 +94,7 @@ GitHub Actions
 
 GitHub Actions is used for CI/CD. There are workflows for building
 documentation, linting, releasing, and running unit and integration tests.
-The workflows run on Linux, MacOS, and Windows. You can get ssh access
+The workflows run on Linux and MacOS. You can get ssh access
 into a runner using action-tmate_. To get ssh access:
 
 #. Go to Actions_

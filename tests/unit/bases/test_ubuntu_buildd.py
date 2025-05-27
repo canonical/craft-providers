@@ -16,7 +16,6 @@
 #
 import pathlib
 import subprocess
-import sys
 from pathlib import Path
 from textwrap import dedent
 from unittest.mock import ANY, call, patch
@@ -651,20 +650,12 @@ def test_mount_cache_dirs(fake_process, fake_executor, cache_path, alias):
 
     base._mount_shared_cache_dirs(fake_executor)
 
-    if sys.platform == "win32":
-        expected_mounts = [
-            {
-                "host_source": pathlib.WindowsPath("D:") / host_cache_dir / "pip",
-                "target": user_cache_dir / "pip",
-            }
-        ]
-    else:
-        expected_mounts = [
-            {
-                "host_source": host_cache_dir / "pip",
-                "target": user_cache_dir / "pip",
-            },
-        ]
+    expected_mounts = [
+        {
+            "host_source": host_cache_dir / "pip",
+            "target": user_cache_dir / "pip",
+        },
+    ]
     assert fake_executor.records_of_mount == expected_mounts
 
 
