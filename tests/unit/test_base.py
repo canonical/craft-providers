@@ -17,6 +17,7 @@
 """Tests for abstract Base's implementations."""
 
 import enum
+import logging
 import pathlib
 import subprocess
 import sys
@@ -25,7 +26,7 @@ from unittest import mock
 import pytest
 import pytest_subprocess.fake_popen
 from craft_providers import Executor, base
-from craft_providers.errors import BaseConfigurationError
+from craft_providers.errors import BaseConfigurationError, ProviderError
 
 from tests.unit.conftest import DEFAULT_FAKE_CMD
 
@@ -196,6 +197,36 @@ def test_mount_shared_cache_dirs_mkdir_failed(
 
     with pytest.raises(BaseConfigurationError):
         fake_base._mount_shared_cache_dirs(fake_executor)
+
+
+def test_mount_shared_cache_dirs_mount_failed(
+    caplog: pytest.LogCaptureFixture, fake_process, fake_base, fake_executor, mocker
+):
+    """Test mounting of cache directories with a cache directory set, but mkdir failed."""
+    caplog.set_level(logging.DEBUG)
+    error_msg = "Lol couldn't mount the cache dir"
+    cache_dir = pathlib.Path("/this/directory/should/not/exist")
+    fake_base._cache_path = cache_dir
+    user_cache_dir = pathlib.Path("/root/.cache")
+
+    fake_process.register(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
+        stdout=str(user_cache_dir),
+    )
+    fake_process.register(
+        [*DEFAULT_FAKE_CMD, "mkdir", "-p", "/root/.cache/pip"],
+    )
+    mocker.patch("pathlib.Path.mkdir")  # don't try to create the directory
+    mocker.patch.object(fake_executor, "mount", side_effect=ProviderError(error_msg))
+
+    fake_base._mount_shared_cache_dirs(fake_executor)
+
+    log_entries = caplog.get_records("call")
+    assert (
+        log_entries[0].message
+        == "Failed to mount cache in instance. Proceeding without cache."
+    )
+    assert log_entries[1].message == error_msg
 
 
 @pytest.mark.parametrize(

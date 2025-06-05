@@ -4,6 +4,13 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+2.3.1 (2025-Jun-05)
+-------------------
+
+Bug fixes:
+
+- Warn, but don't fail, on failures to mount a shared cache.
+
 2.3.0 (2025-May-09)
 -------------------
 
