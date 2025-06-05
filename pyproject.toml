@@ -125,6 +125,8 @@ markers = [
     "with_sudo: Test requires sudo",
     "slow: slow tests",
     "smoketest: basic tests",
+    "lxd_instance: tests that require launching a LXD instance",
+    "multipass_instance: tests that require launching a Multipass instance",
 ]
 
 [tool.coverage.run]
