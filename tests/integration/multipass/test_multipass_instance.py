@@ -29,6 +29,7 @@ from . import conftest
 pytestmark = [
     pytest.mark.flaky(reruns=3, reruns_delay=2),
     pytest.mark.slow,
+    pytest.mark.multipass_instance,
 ]
 
 

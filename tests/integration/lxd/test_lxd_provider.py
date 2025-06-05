@@ -50,6 +50,7 @@ def test_create_environment(installed_lxd, instance_name):
 @pytest.mark.parametrize(
     "alias", [*UBUNTU_BASES_PARAM, almalinux.AlmaLinuxBaseAlias.NINE]
 )
+@pytest.mark.lxd_instance
 def test_launched_environment(
     alias, installed_lxd, instance_name, tmp_path, session_provider
 ):

@@ -30,6 +30,7 @@ from .conftest import UBUNTU_BASES_PARAM
 pytestmark = [
     pytest.mark.flaky(reruns=3, reruns_delay=2),
     pytest.mark.slow,
+    pytest.mark.lxd_instance,
 ]
 
 
