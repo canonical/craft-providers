@@ -159,7 +159,11 @@ def project(lxc, project_name):
     expected_cfg = lxc.profile_show(profile="default", project="default")
     expected_cfg["used_by"] = []
 
-    assert lxc.profile_show(profile="default", project=project_name) == expected_cfg
+    actual_cfg = lxc.profile_show(profile="default", project=project_name)
+    actual_cfg.pop("project", None)
+    expected_cfg.pop("project", None)
+
+    assert actual_cfg == expected_cfg
 
     yield project_name
 
