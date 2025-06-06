@@ -45,6 +45,7 @@ from craft_providers.errors import (
     BaseCompatibilityError,
     BaseConfigurationError,
     NetworkError,
+    ProviderError,
     details_from_called_process_error,
 )
 from craft_providers.executor import Executor
@@ -834,7 +835,13 @@ class Base(ABC):
             ["mkdir", "-p", guest_pip_cache_path.as_posix()],
         )
 
-        executor.mount(host_source=host_pip_cache_path, target=guest_pip_cache_path)
+        try:
+            executor.mount(host_source=host_pip_cache_path, target=guest_pip_cache_path)
+        except ProviderError as exc:
+            logger.warning(
+                "Failed to mount cache in instance. Proceeding without cache."
+            )
+            logger.debug(exc)
 
     def _pre_setup_packages(self, executor: Executor) -> None:
         """Do anything before setting up the packages.
