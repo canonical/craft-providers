@@ -23,6 +23,7 @@ from craft_providers.bases.ubuntu import BuilddBase, BuilddBaseAlias
 from craft_providers.multipass import MultipassProvider, is_installed
 
 
+@pytest.mark.slow
 def test_ensure_provider_is_available_not_installed(uninstalled_multipass):
     """Verify multipass is installed and configured."""
     assert is_installed() is False
@@ -30,6 +31,7 @@ def test_ensure_provider_is_available_not_installed(uninstalled_multipass):
     provider.ensure_provider_is_available()
 
 
+@pytest.mark.slow
 def test_ensure_provider_is_available_installed(installed_multipass):
     """Verify multipass is installed and configured."""
     assert is_installed() is True
@@ -37,6 +39,7 @@ def test_ensure_provider_is_available_installed(installed_multipass):
     provider.ensure_provider_is_available()
 
 
+@pytest.mark.slow
 def test_create_environment(installed_multipass, instance_name):
     """Verify create environment does not produce an error."""
     provider = MultipassProvider()
@@ -50,6 +53,7 @@ ALIASES.remove(BuilddBaseAlias.XENIAL)
 
 @pytest.mark.slow
 @pytest.mark.parametrize("alias", ALIASES)
+@pytest.mark.multipass_instance
 def test_launched_environment(alias, installed_multipass, instance_name, tmp_path):
     """Verify `launched_environment()` creates and starts an instance then stops
     the instance when the method loses context."""

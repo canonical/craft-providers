@@ -26,7 +26,11 @@ from . import conftest
 
 # These tests can be flaky on a sufficiently busy system, because multipass will
 # sometime fail to talk to the VM. If they fail, retry them after a short delay.
-pytestmark = pytest.mark.flaky(reruns=3, reruns_delay=2)
+pytestmark = [
+    pytest.mark.flaky(reruns=3, reruns_delay=2),
+    pytest.mark.slow,
+    pytest.mark.multipass_instance,
+]
 
 
 @pytest.fixture

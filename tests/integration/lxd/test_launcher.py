@@ -33,6 +33,8 @@ from freezegun import freeze_time
 
 from . import conftest
 
+pytestmark = [pytest.mark.slow, pytest.mark.lxd_instance]
+
 
 @pytest.fixture(scope="session")
 def get_base_instance():

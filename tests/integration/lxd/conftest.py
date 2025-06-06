@@ -159,7 +159,11 @@ def project(lxc, project_name):
     expected_cfg = lxc.profile_show(profile="default", project="default")
     expected_cfg["used_by"] = []
 
-    assert lxc.profile_show(profile="default", project=project_name) == expected_cfg
+    actual_cfg = lxc.profile_show(profile="default", project=project_name)
+    actual_cfg.pop("project", None)
+    expected_cfg.pop("project", None)
+
+    assert actual_cfg == expected_cfg
 
     yield project_name
 
@@ -180,8 +184,14 @@ def session_project(installed_lxd):
 
     expected_cfg = lxc.profile_show(profile="default", project="default")
     expected_cfg["used_by"] = []
+    if "project" in expected_cfg:
+        del expected_cfg["project"]
 
-    assert lxc.profile_show(profile="default", project=project_name) == expected_cfg
+    actual_config = lxc.profile_show(profile="default", project=project_name)
+    if "project" in actual_config:
+        del actual_config["project"]
+
+    assert actual_config == expected_cfg
 
     yield project_name
 
