@@ -85,7 +85,7 @@ wheels = [
 
 [[package]]
 name = "canonical-sphinx"
-version = "0.2.0"
+version = "0.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "furo" },
@@ -93,9 +93,9 @@ dependencies = [
     { name = "myst-parser" },
     { name = "sphinx" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fe/2a/a77c673d5950d1ae1e065fddd038e547610fc9e1de41ef56b20d85fa87c2/canonical_sphinx-0.2.0.tar.gz", hash = "sha256:74d8dce67845924220d67f78bf85df379d8121e9b8e684338986dcccf9fff439", size = 56858, upload-time = "2024-09-30T03:12:37.988Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7b/86/7731f280e00073f53e041a0338d2c12b5a0007f96f1e01d93d97f04bb707/canonical_sphinx-0.4.1.tar.gz", hash = "sha256:288ac950fbbda5715e9569069da0116a5b1bff9352f561115e831da73dcbfffa", size = 1052442, upload-time = "2025-04-08T05:02:47.86Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/99/da/488d00806ddcc177c3e02049d8ab1d92aee0a334d6e2aed41a45a5c924f8/canonical_sphinx-0.2.0-py3-none-any.whl", hash = "sha256:c71ee6dbc15c084ad115f06b0f1c15f8269db3a896670e616b8945d6af089edd", size = 31067, upload-time = "2024-09-30T03:12:36.308Z" },
+    { url = "https://files.pythonhosted.org/packages/41/52/631041a7fb3c0928e6529a05a5ed56c8bbecf7452e83d50af18ea0cdb9fc/canonical_sphinx-0.4.1-py3-none-any.whl", hash = "sha256:e2e4142e9b7e01a8dff9ad8e7b68d62bd27ff9daa7998b56f449b9b2ef5c2125", size = 1029462, upload-time = "2025-04-08T05:02:46.132Z" },
 ]
 
 [[package]]
@@ -326,7 +326,7 @@ docs = [
 
 [package.metadata]
 requires-dist = [
-    { name = "canonical-sphinx", marker = "extra == 'docs'", specifier = "~=0.2.0" },
+    { name = "canonical-sphinx", marker = "extra == 'docs'", specifier = "~=0.4.1" },
     { name = "codespell", extras = ["toml"], marker = "extra == 'lint'", specifier = "==2.3.0" },
     { name = "coverage", extras = ["toml"], marker = "extra == 'dev'", specifier = "==7.6.4" },
     { name = "flake8", marker = "extra == 'tics'" },
@@ -361,7 +361,7 @@ provides-extras = ["dev", "docs", "lint", "tics", "types"]
 
 [package.metadata.requires-dev]
 docs = [
-    { name = "canonical-sphinx", specifier = "~=0.2.0" },
+    { name = "canonical-sphinx", specifier = "~=0.4.1" },
     { name = "pyspelling", specifier = "==2.10" },
     { name = "sphinx-autobuild", specifier = "==2024.10.3" },
     { name = "sphinx-lint", specifier = "==1.0.0" },
