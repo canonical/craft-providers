@@ -43,7 +43,7 @@ dev = [
     "types-pyyaml==6.0.12.20250516",
 ]
 lint = [
-    "codespell[toml]==2.3.0",
+    "codespell[toml]==2.4.1",
 ]
 types = [
     "mypy[reports]~=1.15",
