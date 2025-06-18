@@ -1,5 +1,5 @@
 #
-# Copyright 2021-2023 Canonical Ltd.
+# Copyright 2021-2025 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -77,12 +77,23 @@ def ensure_guest_compatible(
     """Ensure host is compatible with guest instance."""
     if not issubclass(type(base_configuration), BuilddBase):
         # Not ubuntu, not sure how to check
+        logger.debug(
+            f"Base alias configuration is {base_configuration.alias!r}: no checks for non Buildd"
+        )
         return
+
+    host_os_release = parse_os_release()
+    # Return early for non Ubuntu hosts
+    if host_os_release.get("ID") != "ubuntu":
+        logger.debug(
+            f"Host is {host_os_release.get('ID')}: no checks for non Ubuntu hosts"
+        )
+        return
+
+    host_base_alias = BuilddBaseAlias(host_os_release.get("VERSION_ID"))
 
     guest_os_release = base_configuration._get_os_release(executor=instance)
     guest_base_alias = BuilddBaseAlias(guest_os_release.get("VERSION_ID"))
-
-    host_base_alias = BuilddBaseAlias(parse_os_release().get("VERSION_ID"))
 
     # Strip off anything after the first space - sometimes "LTS" is appended
     lxd_version_split = lxd_version.strip().split(" ")[0].split(".")
