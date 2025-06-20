@@ -670,6 +670,9 @@ class Base(ABC):
                             f" channel {snap.channel!r} in target environment."
                         ),
                         details=error.details,
+                        resolution=(
+                            "Check Snap store status at https://status.snapcraft.io"
+                        ),
                     ) from error
             else:
                 try:

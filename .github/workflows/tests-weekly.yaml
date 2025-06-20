@@ -2,14 +2,14 @@ name: weekly-tests
 on:
   schedule:
     # Every Monday at 00:00 UTC
-    - cron: '0 0 * * 1'
+    - cron: "0 0 * * 1"
 
   # Allows triggering the workflow manually from the Actions tab
   workflow_dispatch:
     inputs:
       enable_ssh_access:
         type: boolean
-        description: 'Enable ssh access'
+        description: "Enable ssh access"
         required: false
         default: false
 
@@ -35,7 +35,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-          cache: 'pip'
+          cache: "pip"
       - name: Configure environment
         run: |
           echo "::group::pip install"
@@ -81,7 +81,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-          cache: 'pip'
+          cache: "pip"
       - name: Configure environment
         run: |
           echo "::group::pip install"

@@ -25,10 +25,12 @@ from craft_providers.lxd import LXDInstance
 from . import conftest
 
 pytestmark = [
+    pytest.mark.slow,
     # These tests are flaky on very busy systems.
     # https://github.com/lxc/lxd/issues/11422
     # https://github.com/lxc/lxd/issues/11890
     pytest.mark.flaky(reruns=2, reruns_delay=1),
+    pytest.mark.lxd_instance,
 ]
 
 

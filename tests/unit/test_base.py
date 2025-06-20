@@ -145,7 +145,7 @@ def test_wait_for_network_timeout(fake_base, fake_executor, fake_process, callba
 @pytest.mark.parametrize("cache_dir", [pathlib.Path("/tmp/fake-cache-dir")])
 def test_mount_shared_cache_dirs(fake_process, fake_base, fake_executor, cache_dir):
     """Test mounting of cache directories with a cache directory set."""
-    fake_base._cache_path = cache_dir
+    fake_base._cache_path = cache_dir.resolve()
     user_cache_dir = pathlib.Path("/root/.cache")
 
     fake_process.register(
@@ -170,7 +170,10 @@ def test_mount_shared_cache_dirs(fake_process, fake_base, fake_executor, cache_d
         }
     else:
         expected = {
-            "host_source": cache_dir / "base-v7" / "FakeBaseAlias.TREBLE" / "pip",
+            "host_source": cache_dir.resolve()
+            / "base-v7"
+            / "FakeBaseAlias.TREBLE"
+            / "pip",
             "target": user_cache_dir / "pip",
         }
     assert fake_executor.records_of_mount == [expected]

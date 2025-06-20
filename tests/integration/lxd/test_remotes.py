@@ -27,7 +27,11 @@ from .conftest import UBUNTU_BASES_PARAM
 # "Clean incompatible instance and retry the requested operation."
 # This is due to an upstream LXD bug that appears to still be present in LXD 5.14:
 # https://github.com/lxc/lxd/issues/11422
-pytestmark = pytest.mark.flaky(reruns=3, reruns_delay=2)
+pytestmark = [
+    pytest.mark.flaky(reruns=3, reruns_delay=2),
+    pytest.mark.slow,
+    pytest.mark.lxd_instance,
+]
 
 
 @pytest.mark.parametrize("alias", UBUNTU_BASES_PARAM)
