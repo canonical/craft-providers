@@ -4,12 +4,14 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
-2.3.1 (2025-Jun-05)
+2.3.1 (2025-Jun-19)
 -------------------
 
 Bug fixes:
 
 - Warn, but don't fail, on failures to mount a shared cache.
+- Fix issue where LXD failed to launch on non-Ubuntu distributions because
+  all OS identities were interpreted as Ubuntu versions.
 
 2.3.0 (2025-May-09)
 -------------------
