@@ -37,6 +37,40 @@ def test_ensure_guest_compatible_not_ubuntu(fake_executor, fake_process):
     base._get_os_release.assert_not_called()
 
 
+def test_ensure_guest_compatible_non_ubuntu_host(
+    fake_executor,
+    fake_process,
+):
+    """Check for combinations of host and guest OS unaffected by the lxd issue."""
+    guest_base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    guest_base._get_os_release = MagicMock(spec=guest_base._get_os_release)
+
+    # Mock the host os-release file
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout='ID="fedora"',
+    )
+
+    # Mock the host os-release file contents
+    @contextlib.contextmanager
+    def fake_open(*args, **kwargs):
+        class Fake:
+            def read(self):
+                return 'ID="fedora"'
+
+        yield Fake()
+
+    with (
+        patch.object(craft_providers.util.os_release.Path, "open", fake_open),  # type: ignore[reportAttributeAccessIssue]
+    ):
+        ensure_guest_compatible(guest_base, fake_executor, "4.0")
+
+    # The first thing that ensure_guest_compatible does is the base check.  The next
+    # thing is to call _get_os_release on the base.  So if that isn't called then we
+    # haven't progressed.
+    guest_base._get_os_release.assert_not_called()
+
+
 @pytest.mark.parametrize(
     "base_alias",
     [
@@ -69,6 +103,7 @@ def test_ensure_guest_compatible_valid_ubuntu(
     # Mock the host os-release file
     fake_os_release = textwrap.dedent(
         f"""\
+        ID="ubuntu"
         VERSION_ID="{base_alias.value}"
         WOOP="dedoo"
         """
@@ -83,7 +118,12 @@ def test_ensure_guest_compatible_valid_ubuntu(
     def fake_open(*args, **kwargs):
         class Fake:
             def read(self):
-                return f'VERSION_ID="{base_alias.value}"'
+                return textwrap.dedent(
+                    f"""\
+                    ID="ubuntu"
+                    VERSION_ID="{base_alias.value}"
+                    """
+                )
 
         yield Fake()
 
@@ -147,7 +187,12 @@ def test_ensure_guest_compatible_bad_kernel_versions(
     def fake_open(*args, **kwargs):
         class Fake:
             def read(self):
-                return f'VERSION_ID="{host_base_alias.value}"'
+                return textwrap.dedent(
+                    f"""\
+                    ID="ubuntu"
+                    VERSION_ID="{host_base_alias.value}"
+                    """
+                )
 
         yield Fake()
 
