@@ -140,6 +140,12 @@ _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
         remote_address=BUILDD_RELEASES_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
+    ubuntu.BuilddBaseAlias.LUNAR: RemoteImage(
+        image_name="lunar",
+        remote_name="ubuntu",
+        remote_address="https://cloud-images.ubuntu.com/releases",
+        remote_protocol=ProtocolType.SIMPLESTREAMS,
+    ),
     ubuntu.BuilddBaseAlias.NOBLE: RemoteImage(
         image_name="core24",
         remote_name=BUILDD_RELEASES_REMOTE_NAME,

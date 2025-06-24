@@ -26,6 +26,7 @@ from functools import total_ordering
 from textwrap import dedent
 from typing import Dict, List, Optional
 
+from craft_providers import util
 from craft_providers.actions.snap_installer import Snap
 from craft_providers.base import Base
 from craft_providers.errors import (
@@ -46,6 +47,7 @@ class BuilddBaseAlias(enum.Enum):
     BIONIC = "18.04"
     FOCAL = "20.04"
     JAMMY = "22.04"
+    LUNAR = "23.04"
     NOBLE = "24.04"
     ORACULAR = "24.10"
     PLUCKY = "25.04"
@@ -206,6 +208,21 @@ class BuilddBase(Base):
 
     def _pre_setup_packages(self, executor: Executor) -> None:
         """Configure apt, update database."""
+        # EOL bases need to point at old-releases.ubuntu.com
+        # TODO: We need to handle Deb822 sources too.
+        if util.is_eol(("ubuntu", self.alias.value)):
+            executor.execute_run(
+                [
+                    "sed",
+                    "-i",
+                    "-e",
+                    "s/archive.ubuntu.com/old-releases.ubuntu.com/",
+                    "-e",
+                    "s/security.ubuntu.com/old-releases.ubuntu.com/",
+                    "/etc/apt/sources.list",
+                ]
+            )
+
         executor.push_file_io(
             destination=pathlib.Path("/etc/apt/apt.conf.d/00no-recommends"),
             content=io.BytesIO(b'APT::Install-Recommends "false";\n'),

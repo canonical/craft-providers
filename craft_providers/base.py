@@ -347,6 +347,13 @@ class Base(ABC):
         error = BaseConfigurationError(
             brief="Timed out waiting for environment to be ready."
         )
+        # TODO: Workaround for lunar
+        # We'll need to figure out why it gets stuck on "starting" before prod.
+        if self.alias.name == "LUNAR":
+            import time
+
+            time.sleep(30)
+            return
         retry.retry_until_timeout(
             self._timeout_simple or TIMEOUT_SIMPLE,
             self._retry_wait,
@@ -428,6 +435,7 @@ class Base(ABC):
             ]
             self._execute_run(command, executor=executor, timeout=self._timeout_simple)
 
+            # if self.alias.name != "LUNAR":
             self._execute_run(
                 ["systemctl", "enable", "systemd-resolved"],
                 executor=executor,
@@ -544,6 +552,12 @@ class Base(ABC):
                 executor=executor,
                 timeout=TIMEOUT_SIMPLE,
             )
+            # TODO: Why is Lunar failing to load? For right now just ignore.
+            if self.alias.name == "LUNAR":
+                self._execute_run(
+                    ["snap", "wait", "system", "seed.loaded"],
+                    executor=executor,
+                )
             self._execute_run(
                 ["snap", "wait", "system", "seed.loaded"],
                 executor=executor,
