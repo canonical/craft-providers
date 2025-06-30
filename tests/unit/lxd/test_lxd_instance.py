@@ -29,7 +29,10 @@ from unittest.mock import call
 import pytest
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, LXDInstance
-from craft_providers.lxd.lxd_instance_status import LXDInstanceState
+from craft_providers.lxd.lxd_instance_status import (
+    LXDInstanceState,
+    ProviderInstanceStatus,
+)
 
 # These names include invalid characters so a lxd-compatible instance_name
 # is generated. This ensures an Instance's `name` and `instance_name` are
@@ -842,10 +845,15 @@ def test_push_file_no_parent_directory(mock_lxc, instance, tmp_path):
     assert str(exc_info.value) == "Directory not found: '/tmp'"
 
 
-def test_start(mock_lxc, instance):
+def test_start_from_stopped(mock_lxc, instance):
     instance.start()
 
     assert mock_lxc.mock_calls == [
+        mock.call.info(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+        ),
         mock.call.start(
             instance_name=instance.instance_name,
             project=instance.project,
@@ -854,6 +862,41 @@ def test_start(mock_lxc, instance):
         mock.call.list(
             project=instance.project,
             remote=instance.remote,
+        ),
+        mock.call.config_set(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+            key="user.craft_providers.status",
+            value="IN_USE",
+        ),
+    ]
+
+
+def test_start_from_running(mock_lxc, instance):
+    mock_lxc.info.return_value = {"Status": LXDInstanceState.RUNNING.value}
+    mock_lxc.config_get.return_value = ProviderInstanceStatus.AVAILABLE.value
+
+    instance.start()
+
+    assert mock_lxc.mock_calls == [
+        mock.call.info(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+        ),
+        mock.call.config_get(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+            key="user.craft_providers.status",
+        ),
+        mock.call.config_set(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+            key="user.craft_providers.status",
+            value="IN_USE",
         ),
     ]
 
@@ -937,7 +980,7 @@ def test_restart_timeout(mocker, mock_lxc, instance):
         instance.restart()
 
 
-def test_stop(mock_lxc, mocker):
+def test_stop_immediately(mock_lxc, mocker):
     """Stop an instance."""
     instance = LXDInstance(name=_STOPPED_INSTANCE["name"], lxc=mock_lxc)
     mocker.patch.object(instance, "exists", return_value=True)
@@ -953,6 +996,42 @@ def test_stop(mock_lxc, mocker):
         mock.call.list(
             project=instance.project,
             remote=instance.remote,
+        ),
+        mock.call.config_set(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+            key="user.craft_providers.status",
+            value=ProviderInstanceStatus.AVAILABLE.value,
+        ),
+    ]
+
+
+def test_stop_delay(mock_lxc, mocker):
+    """Stop an instance."""
+    instance = LXDInstance(name=_STOPPED_INSTANCE["name"], lxc=mock_lxc)
+    mocker.patch.object(instance, "exists", return_value=True)
+
+    instance.stop(delay_mins=1)
+
+    assert mock_lxc.mock_calls == [
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+            command=["shutdown", "+1", "Shutdown triggered by craft-providers."],
+            runner=mock.ANY,
+            timeout=None,
+            cwd=None,
+            check=True,
+            capture_output=True,
+        ),
+        mock.call.config_set(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+            key="user.craft_providers.status",
+            value=ProviderInstanceStatus.AVAILABLE.value,
         ),
     ]
 
