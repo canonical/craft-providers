@@ -366,7 +366,10 @@ def session_lxd_project(installed_lxd):
 
 @pytest.fixture(
     scope="session",
-    params=["lxd", "multipass"],
+    params=[
+        pytest.param("lxd", marks=[pytest.mark.lxd_instance]),
+        pytest.param("multipass", marks=[pytest.mark.multipass_instance]),
+    ],
 )
 def session_provider(request: pytest.FixtureRequest) -> Provider:
     match request.param:
