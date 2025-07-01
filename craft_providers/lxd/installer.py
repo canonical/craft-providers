@@ -24,9 +24,6 @@ import shutil
 import subprocess
 import sys
 
-import requests
-import requests_unixsocket  # type: ignore
-
 from craft_providers.errors import details_from_called_process_error
 
 from . import errors
@@ -107,6 +104,9 @@ def is_installed() -> bool:
 
     :returns: True if lxd is installed.
     """
+    import requests
+    import requests_unixsocket  # type: ignore
+
     logger.debug("Checking if LXD is installed.")
 
     # check if non-snap lxd socket exists (for Arch or NixOS)

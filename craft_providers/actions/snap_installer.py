@@ -27,8 +27,6 @@ import urllib.parse
 from typing import Any, Dict, Iterator, List, Optional
 
 import pydantic
-import requests
-import requests_unixsocket  # type: ignore
 
 from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE
 from craft_providers.errors import (
@@ -85,6 +83,9 @@ def _download_host_snap(
     *, snap_name: str, output: pathlib.Path, chunk_size: int = 64 * 1024
 ) -> None:
     """Download the current host snap using snapd's APIs."""
+    import requests
+    import requests_unixsocket  # type: ignore
+
     quoted_name = urllib.parse.quote(snap_name, safe="")
     url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}/file"
     try:
@@ -120,6 +121,9 @@ def _pack_host_snap(*, snap_name: str, output: pathlib.Path) -> None:
 
 def get_host_snap_info(snap_name: str) -> Dict[str, Any]:
     """Get info about a snap installed on the host."""
+    import requests
+    import requests_unixsocket  # type: ignore
+
     quoted_name = urllib.parse.quote(snap_name, safe="")
     url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}"
     try:
