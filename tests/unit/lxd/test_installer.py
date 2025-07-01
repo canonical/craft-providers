@@ -17,7 +17,7 @@
 
 import os
 import sys
-from typing import Any, Dict
+from typing import Any
 from unittest import mock
 from unittest.mock import call
 
@@ -321,7 +321,7 @@ def test_is_installed(
         def raise_for_status(self) -> None:
             pass
 
-        def json(self) -> Dict[str, Any]:
+        def json(self) -> dict[str, Any]:
             return status
 
     mock_get = mocker.patch("requests_unixsocket.get", return_value=FakeSnapInfo())

@@ -21,7 +21,6 @@
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict
 
 from craft_providers import Base
 from craft_providers.bases import almalinux, centos, ubuntu
@@ -121,7 +120,7 @@ class RemoteImage:
 
 
 # mapping from supported bases to actual lxd remote images
-_PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
+_PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: dict[Enum, RemoteImage] = {
     ubuntu.BuilddBaseAlias.BIONIC: RemoteImage(
         image_name="core18",
         remote_name=BUILDD_RELEASES_REMOTE_NAME,

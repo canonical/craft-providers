@@ -29,7 +29,7 @@ import sys
 from abc import ABC, abstractmethod
 from enum import Enum
 from textwrap import dedent
-from typing import Dict, List, Optional, Type, final
+from typing import final
 
 from pydantic import ValidationError
 
@@ -85,17 +85,17 @@ class Base(ABC):
         directories depend on the base implementation.
     """
 
-    _environment: Dict[str, Optional[str]]
+    _environment: dict[str, str | None]
     _hostname: str
     _instance_config_path = pathlib.PurePosixPath("/etc/craft-instance.conf")
-    _instance_config_class: Type[InstanceConfiguration] = InstanceConfiguration
-    _snaps: Optional[List[Snap]] = None
-    _packages: Optional[List[str]] = None
+    _instance_config_class: type[InstanceConfiguration] = InstanceConfiguration
+    _snaps: list[Snap] | None = None
+    _packages: list[str] | None = None
     _retry_wait: float = RETRY_WAIT
-    _timeout_simple: Optional[float] = TIMEOUT_SIMPLE
-    _timeout_complex: Optional[float] = TIMEOUT_COMPLEX
-    _timeout_unpredictable: Optional[float] = TIMEOUT_UNPREDICTABLE
-    _cache_path: Optional[pathlib.Path] = None
+    _timeout_simple: float | None = TIMEOUT_SIMPLE
+    _timeout_complex: float | None = TIMEOUT_COMPLEX
+    _timeout_unpredictable: float | None = TIMEOUT_UNPREDICTABLE
+    _cache_path: pathlib.Path | None = None
     alias: Enum
     compatibility_tag: str = "base-v7"
 
@@ -104,18 +104,18 @@ class Base(ABC):
         self,
         *,
         alias: enum.Enum,
-        compatibility_tag: Optional[str] = None,
-        environment: Optional[Dict[str, Optional[str]]] = None,
+        compatibility_tag: str | None = None,
+        environment: dict[str, str | None] | None = None,
         hostname: str = "craft-instance",
-        snaps: Optional[List] = None,
-        packages: Optional[List[str]] = None,
+        snaps: list | None = None,
+        packages: list[str] | None = None,
         use_default_packages: bool = True,
-        cache_path: Optional[pathlib.Path] = None,
+        cache_path: pathlib.Path | None = None,
     ) -> None:
         pass
 
     @staticmethod
-    def default_command_environment() -> Dict[str, Optional[str]]:
+    def default_command_environment() -> dict[str, str | None]:
         """Provide default command environment dictionary.
 
         The minimum environment for the image to be configured and function
@@ -231,7 +231,7 @@ class Base(ABC):
 
         logger.debug("Instance has already been setup.")
 
-    def _get_os_release(self, executor: Executor) -> Dict[str, str]:
+    def _get_os_release(self, executor: Executor) -> dict[str, str]:
         """Get the OS release information from an instance's /etc/os-release.
 
         :returns: Dictionary of key-mappings found in os-release.
@@ -281,7 +281,7 @@ class Base(ABC):
         :raises BaseConfigurationError: on other unexpected error.
         """
 
-    def get_command_environment(self) -> Dict[str, Optional[str]]:
+    def get_command_environment(self) -> dict[str, str | None]:
         """Get command environment to use when executing commands.
 
         :returns: Dictionary of environment, allowing None as a value to
@@ -987,7 +987,7 @@ class Base(ABC):
         self,
         *,
         executor: Executor,
-        timeout: Optional[float] = TIMEOUT_UNPREDICTABLE,
+        timeout: float | None = TIMEOUT_UNPREDICTABLE,
         mount_cache: bool = True,
     ) -> None:
         """Prepare base instance for use by the application.
@@ -1065,7 +1065,7 @@ class Base(ABC):
         self,
         *,
         executor: Executor,
-        timeout: Optional[float] = TIMEOUT_UNPREDICTABLE,
+        timeout: float | None = TIMEOUT_UNPREDICTABLE,
     ) -> None:
         """Prepare a previously created and setup instance for use by the application.
 
@@ -1132,13 +1132,13 @@ class Base(ABC):
     @classmethod
     def _execute_run(
         cls,
-        command: List[str],
+        command: list[str],
         *,
         executor: Executor,
         check: bool = True,
         capture_output: bool = True,
         text: bool = False,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
         verify_network=False,
     ) -> subprocess.CompletedProcess:
         """Run a command through the executor.

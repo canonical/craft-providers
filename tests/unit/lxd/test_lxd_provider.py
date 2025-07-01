@@ -194,11 +194,14 @@ def test_launched_environment_launch_base_configuration_error(
     mock_launch.side_effect = error
     provider = LXDProvider()
 
-    with pytest.raises(LXDError, match="fail") as raised, provider.launched_environment(
-        project_name="test-project",
-        project_path=tmp_path,
-        base_configuration=mock_buildd_base_configuration,
-        instance_name="test-instance-name",
+    with (
+        pytest.raises(LXDError, match="fail") as raised,
+        provider.launched_environment(
+            project_name="test-project",
+            project_path=tmp_path,
+            base_configuration=mock_buildd_base_configuration,
+            instance_name="test-instance-name",
+        ),
     ):
         pass
 
@@ -216,11 +219,14 @@ def test_launched_environment_unstable_error(
     mock_remote_image.is_stable = False
     provider = LXDProvider()
 
-    with pytest.raises(LXDUnstableImageError) as raised, provider.launched_environment(
-        project_name="test-project",
-        project_path=tmp_path,
-        base_configuration=mock_buildd_base_configuration,
-        instance_name="test-instance-name",
+    with (
+        pytest.raises(LXDUnstableImageError) as raised,
+        provider.launched_environment(
+            project_name="test-project",
+            project_path=tmp_path,
+            base_configuration=mock_buildd_base_configuration,
+            instance_name="test-instance-name",
+        ),
     ):
         pass
 

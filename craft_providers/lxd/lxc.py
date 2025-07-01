@@ -17,6 +17,7 @@
 
 """LXC wrapper."""
 
+import builtins
 import contextlib
 import enum
 import logging
@@ -27,8 +28,9 @@ import subprocess
 import threading
 import time
 from collections import deque
+from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 import yaml
 
@@ -73,10 +75,10 @@ class LXC:
 
     def _run_lxc(
         self,
-        command: List[str],
+        command: list[str],
         *,
         check: bool = True,
-        project: Optional[str] = None,
+        project: str | None = None,
         stdin: StdinType = StdinType.INTERACTIVE,
         **kwargs,
     ) -> subprocess.CompletedProcess:
@@ -176,7 +178,7 @@ class LXC:
 
     def config_device_show(
         self, *, instance_name: str, project: str = "default", remote: str = "local"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Show full device configuration.
 
         :param instance_name: Name of instance.
@@ -338,14 +340,14 @@ class LXC:
     def exec(
         self,
         *,
-        command: List[str],
+        command: list[str],
         instance_name: str,
-        cwd: Optional[str] = None,
-        mode: Optional[str] = None,
+        cwd: str | None = None,
+        mode: str | None = None,
         project: str = "default",
         remote: str = "local",
         runner: Callable = subprocess.run,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
         check: bool = False,
         **kwargs,
     ):
@@ -449,9 +451,9 @@ class LXC:
         destination: pathlib.PurePath,
         create_dirs: bool = False,
         recursive: bool = False,
-        gid: Optional[int] = None,
-        uid: Optional[int] = None,
-        mode: Optional[str] = None,
+        gid: int | None = None,
+        uid: int | None = None,
+        mode: str | None = None,
         project: str = "default",
         remote: str = "local",
     ) -> None:
@@ -524,10 +526,10 @@ class LXC:
     def info(
         self,
         *,
-        instance_name: Optional[str] = None,
+        instance_name: str | None = None,
         project: str = "default",
         remote: str = "local",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Show instance or server information.
 
         :param instance_name: Optional instance name.
@@ -566,7 +568,7 @@ class LXC:
         instance_name: str,
         image: str,
         image_remote: str,
-        config_keys: Optional[Dict[str, str]] = None,
+        config_keys: dict[str, str] | None = None,
         ephemeral: bool = False,
         project: str = "default",
         remote: str = "local",
@@ -583,7 +585,7 @@ class LXC:
 
         :raises LXDError: on unexpected error.
         """
-        _default_instance_metadata: Dict[str, str] = {
+        _default_instance_metadata: dict[str, str] = {
             "user.craft_providers.status": ProviderInstanceStatus.STARTING.value,
             "user.craft_providers.timer": datetime.now(timezone.utc).isoformat(),
             "user.craft_providers.pid": str(os.getpid()),
@@ -677,7 +679,7 @@ class LXC:
         *,
         image: str,
         image_remote: str,
-        alias: Optional[str] = None,
+        alias: str | None = None,
         project: str = "default",
         remote: str = "local",
     ) -> None:
@@ -727,7 +729,7 @@ class LXC:
 
     def image_list(
         self, *, project: str = "default", remote: str = "local"
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """List images.
 
         :param project: Name of LXD project.
@@ -759,7 +761,7 @@ class LXC:
         *,
         project: str = "default",
         remote: str = "local",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """List instances and their status.
 
         :param project: Name of LXD project.
@@ -792,7 +794,7 @@ class LXC:
 
     def list_names(
         self, *, project: str = "default", remote: str = "local"
-    ) -> List[str]:
+    ) -> builtins.list[str]:
         """List container names.
 
         A helper to get a list of container names from list().
@@ -818,7 +820,7 @@ class LXC:
         self,
         *,
         profile: str,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         project: str = "default",
         remote: str = "local",
     ) -> None:
@@ -845,7 +847,7 @@ class LXC:
 
     def profile_show(
         self, *, profile: str, project: str = "default", remote: str = "local"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get profile configuration.
 
         :param profile: Name of profile.
@@ -911,7 +913,7 @@ class LXC:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    def project_list(self, remote: str = "local") -> List[str]:
+    def project_list(self, remote: str = "local") -> builtins.list[str]:
         """Get list of projects.
 
         :param remote: Name of LXD remote to query.
@@ -946,7 +948,7 @@ class LXC:
         self,
         *,
         instance_name: str,
-        alias: Optional[str] = None,
+        alias: str | None = None,
         force: bool = False,
         image_remote: str = "local",
         project: str = "default",
@@ -1000,7 +1002,7 @@ class LXC:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    def remote_list(self) -> Dict[str, Any]:
+    def remote_list(self) -> dict[str, Any]:
         """Get list of remotes.
 
         :returns: dictionary with remote name mapping to config.
@@ -1129,8 +1131,8 @@ class LXC:
 
         :raises LXDError: If the instance is not ready.
         """
-        instance_status: Optional[str] = None
-        instance_info: Dict[str, Any] = {"Status": ""}
+        instance_status: str | None = None
+        instance_info: dict[str, Any] = {"Status": ""}
         start_time = time.time()
 
         # 20 * 3 seconds = 1 minute no change in timer
