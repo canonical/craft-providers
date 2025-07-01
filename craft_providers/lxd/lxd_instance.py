@@ -25,7 +25,7 @@ import shutil
 import subprocess
 import tempfile
 import warnings
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from craft_providers.const import RETRY_WAIT, TIMEOUT_SIMPLE
 from craft_providers.errors import details_from_called_process_error
@@ -52,10 +52,10 @@ class LXDInstance(Executor):
         self,
         *,
         name: str,
-        default_command_environment: Optional[Dict[str, Optional[str]]] = None,
+        default_command_environment: dict[str, str | None] | None = None,
         project: str = "default",
         remote: str = "local",
-        lxc: Optional[LXC] = None,
+        lxc: LXC | None = None,
         intercept_mknod: bool = True,
     ) -> None:
         """Create an LXD executor.
@@ -92,10 +92,10 @@ class LXDInstance(Executor):
 
     def _finalize_lxc_command(
         self,
-        command: List[str],
+        command: list[str],
         *,
-        env: Optional[Dict[str, Optional[str]]] = None,
-    ) -> List[str]:
+        env: dict[str, str | None] | None = None,
+    ) -> list[str]:
         """Wrap a command to run as root with specified environment.
 
         LXD will run commands as root.
@@ -187,11 +187,11 @@ class LXDInstance(Executor):
 
     def execute_popen(
         self,
-        command: List[str],
+        command: list[str],
         *,
-        cwd: Optional[pathlib.PurePath] = None,
-        env: Optional[Dict[str, Optional[str]]] = None,
-        timeout: Optional[float] = None,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        timeout: float | None = None,
         **kwargs,
     ) -> subprocess.Popen:
         """Execute a command in instance, using subprocess.Popen().
@@ -223,11 +223,11 @@ class LXDInstance(Executor):
 
     def execute_run(
         self,
-        command: List[str],
+        command: list[str],
         *,
-        cwd: Optional[pathlib.PurePath] = None,
-        env: Optional[Dict[str, Optional[str]]] = None,
-        timeout: Optional[float] = None,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        timeout: float | None = None,
         check: bool = False,
         **kwargs,
     ) -> subprocess.CompletedProcess:
@@ -272,7 +272,7 @@ class LXDInstance(Executor):
         """
         return self._get_instance_information() is not None
 
-    def _get_disk_devices(self) -> Dict[str, Any]:
+    def _get_disk_devices(self) -> dict[str, Any]:
         """Query instance and return dictionary of disk devices."""
         devices = self.lxc.config_device_show(
             instance_name=self.instance_name, project=self.project, remote=self.remote
@@ -292,7 +292,7 @@ class LXDInstance(Executor):
 
         return disks
 
-    def _get_instance_information(self) -> Optional[Dict[str, Any]]:
+    def _get_instance_information(self) -> dict[str, Any] | None:
         """Get information for a LXD instance.
 
         :returns: A dictionary of all information for an instance, including the
@@ -361,7 +361,7 @@ class LXDInstance(Executor):
         image_remote: str,
         map_user_uid: bool = False,
         ephemeral: bool = False,
-        uid: Optional[int] = None,
+        uid: int | None = None,
     ) -> None:
         """Launch instance.
 
@@ -666,7 +666,7 @@ class LXDInstance(Executor):
             remote=self.remote,
         )
 
-    def info(self) -> Dict[str, Any]:
+    def info(self) -> dict[str, Any]:
         """Get info for an instance."""
         return self.lxc.info(
             instance_name=self.instance_name,

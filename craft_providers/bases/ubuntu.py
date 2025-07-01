@@ -24,7 +24,6 @@ import pathlib
 import subprocess
 from functools import total_ordering
 from textwrap import dedent
-from typing import Dict, List, Optional
 
 from craft_providers.actions.snap_installer import Snap
 from craft_providers.base import Base
@@ -91,13 +90,13 @@ class BuilddBase(Base):
         self,
         *,
         alias: BuilddBaseAlias,
-        compatibility_tag: Optional[str] = None,
-        environment: Optional[Dict[str, Optional[str]]] = None,
+        compatibility_tag: str | None = None,
+        environment: dict[str, str | None] | None = None,
         hostname: str = "craft-buildd-instance",
-        snaps: Optional[List[Snap]] = None,
-        packages: Optional[List[str]] = None,
+        snaps: list[Snap] | None = None,
+        packages: list[str] | None = None,
         use_default_packages: bool = True,
-        cache_path: Optional[pathlib.Path] = None,
+        cache_path: pathlib.Path | None = None,
     ) -> None:
         # ignore enum subclass (see https://github.com/microsoft/pyright/issues/6750)
         self.alias: BuilddBaseAlias = alias  # pyright: ignore
@@ -123,7 +122,7 @@ class BuilddBase(Base):
 
         self._set_hostname(hostname)
 
-        self._packages: Optional[List[str]] = []
+        self._packages: list[str] | None = []
         if use_default_packages:
             self._packages.extend(
                 [

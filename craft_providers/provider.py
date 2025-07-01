@@ -25,7 +25,7 @@ import contextlib
 import logging
 import pathlib
 from abc import ABC, abstractmethod
-from typing import Generator
+from collections.abc import Generator
 
 from .base import Base
 from .executor import Executor

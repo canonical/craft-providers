@@ -27,7 +27,6 @@ import string
 import subprocess
 import sys
 import tempfile
-from typing import Optional
 
 import pytest
 from craft_providers import lxd, multipass
@@ -230,7 +229,7 @@ def installed_snap():
         pytest.skip("requires linux and snapd")
 
     @contextlib.contextmanager
-    def _installed_snap(snap_name, *, try_path: Optional[pathlib.Path] = None):
+    def _installed_snap(snap_name, *, try_path: pathlib.Path | None = None):
         """Ensure snap is installed or skip test."""
         # do nothing if already installed and not dangerous
         if snap_exists(snap_name) and not is_installed_dangerously(snap_name):

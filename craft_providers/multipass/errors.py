@@ -17,8 +17,6 @@
 
 """Multipass Errors."""
 
-from typing import Optional
-
 from craft_providers.errors import ProviderError
 
 
@@ -37,7 +35,7 @@ class MultipassInstallationError(MultipassError):
         self,
         reason: str,
         *,
-        details: Optional[str] = None,
+        details: str | None = None,
     ) -> None:
         brief = f"Failed to install Multipass: {reason}."
         resolution = (

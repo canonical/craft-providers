@@ -23,7 +23,7 @@ import string
 import subprocess
 import time
 from contextlib import contextmanager
-from typing import Any, Dict, Optional
+from typing import Any
 
 import pytest
 from craft_providers.bases import ubuntu
@@ -77,7 +77,7 @@ def installed_lxd_without_init(uninstalled_lxd):
 def tmp_instance(
     *,
     name: str,
-    config_keys: Optional[Dict[str, Any]] = None,
+    config_keys: dict[str, Any] | None = None,
     ephemeral: bool = True,
     image: str = "22.04",
     image_remote: str = "ubuntu",

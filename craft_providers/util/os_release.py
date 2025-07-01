@@ -18,12 +18,11 @@
 """Parser for /etc/os-release."""
 
 from pathlib import Path
-from typing import Dict
 
 OS_RELEASE_FILE = Path("/etc/os-release")
 
 
-def parse_os_release(content: str | None = None) -> Dict[str, str]:
+def parse_os_release(content: str | None = None) -> dict[str, str]:
     """Parser for /etc/os-release.
 
     Format documentation at:
@@ -56,7 +55,7 @@ def parse_os_release(content: str | None = None) -> Dict[str, str]:
         with OS_RELEASE_FILE.open() as f:
             content = f.read()
 
-    mappings: Dict[str, str] = {}
+    mappings: dict[str, str] = {}
 
     for line in content.splitlines():
         line = line.strip()
