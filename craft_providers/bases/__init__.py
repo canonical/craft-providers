@@ -19,7 +19,7 @@
 
 # Backward compatible, will be removed in 2.0
 import sys
-from typing import Dict, Literal, NamedTuple, Tuple, Type, Union, overload
+from typing import Literal, NamedTuple, overload
 
 from craft_providers.errors import BaseCompatibilityError, BaseConfigurationError
 from craft_providers.base import Base
@@ -32,9 +32,9 @@ from .ubuntu import BuilddBase, BuilddBaseAlias
 
 sys.modules["craft_providers.bases.buildd"] = buildd
 
-BaseAlias = Union[
-    ubuntu.BuilddBaseAlias, almalinux.AlmaLinuxBaseAlias, centos.CentOSBaseAlias
-]
+BaseAlias = (
+    ubuntu.BuilddBaseAlias | almalinux.AlmaLinuxBaseAlias | centos.CentOSBaseAlias
+)
 
 __all__ = [
     "centos",
