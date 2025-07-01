@@ -131,7 +131,7 @@ def uninstalled_lxd():
         pytest.skip("not configured to uninstall lxd, skipped")
 
     if sys.platform == "linux":
-        import grp
+        import grp  # noqa: PLC0415
 
         lxd_info = grp.getgrnam("lxd")
         assert lxd_info.gr_gid in os.getgroups(), (
