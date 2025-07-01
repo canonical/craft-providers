@@ -56,7 +56,7 @@ class BaseName(NamedTuple):
     version: str
 
 
-BASE_NAME_TO_BASE_ALIAS: Dict[BaseName, BaseAlias] = {
+BASE_NAME_TO_BASE_ALIAS: dict[BaseName, BaseAlias] = {
     BaseName("ubuntu", "16.04"): ubuntu.BuilddBaseAlias.XENIAL,
     BaseName("ubuntu", "18.04"): ubuntu.BuilddBaseAlias.BIONIC,
     BaseName("ubuntu", "20.04"): ubuntu.BuilddBaseAlias.FOCAL,
@@ -73,15 +73,15 @@ BASE_NAME_TO_BASE_ALIAS: Dict[BaseName, BaseAlias] = {
 
 @overload
 def get_base_alias(
-    base_name: Tuple[Literal["ubuntu"], str],
+    base_name: tuple[Literal["ubuntu"], str],
 ) -> ubuntu.BuilddBaseAlias: ...
 @overload
 def get_base_alias(
-    base_name: Tuple[Literal["centos"], str],
+    base_name: tuple[Literal["centos"], str],
 ) -> centos.CentOSBaseAlias: ...
 @overload
 def get_base_alias(
-    base_name: Tuple[Literal["almalinux"], str],
+    base_name: tuple[Literal["almalinux"], str],
 ) -> almalinux.AlmaLinuxBaseAlias: ...
 @overload
 def get_base_alias(base_name: BaseName) -> BaseAlias: ...
@@ -100,14 +100,14 @@ def get_base_alias(base_name):
 
 
 @overload
-def get_base_from_alias(alias: ubuntu.BuilddBaseAlias) -> Type[ubuntu.BuilddBase]: ...
+def get_base_from_alias(alias: ubuntu.BuilddBaseAlias) -> type[ubuntu.BuilddBase]: ...
 @overload
-def get_base_from_alias(alias: centos.CentOSBaseAlias) -> Type[centos.CentOSBase]: ...
+def get_base_from_alias(alias: centos.CentOSBaseAlias) -> type[centos.CentOSBase]: ...
 @overload
 def get_base_from_alias(
     alias: almalinux.AlmaLinuxBaseAlias,
-) -> Type[almalinux.AlmaLinuxBase]: ...
-def get_base_from_alias(alias: BaseAlias) -> Type[Base]:
+) -> type[almalinux.AlmaLinuxBase]: ...
+def get_base_from_alias(alias: BaseAlias) -> type[Base]:
     """Return a Base class from a known base alias."""
     if isinstance(alias, ubuntu.BuilddBaseAlias):
         return ubuntu.BuilddBase

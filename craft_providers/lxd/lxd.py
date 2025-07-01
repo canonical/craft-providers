@@ -20,7 +20,6 @@
 import logging
 import pathlib
 import subprocess
-from typing import Optional
 
 import packaging.version
 
@@ -122,7 +121,7 @@ class LXD:
         self,
         *,
         sudo: bool = False,
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
     ) -> None:
         """Wait until LXD is ready.
 
