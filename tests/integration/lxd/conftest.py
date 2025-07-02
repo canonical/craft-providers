@@ -171,5 +171,33 @@ def project(lxc, project_name):
 
 
 @pytest.fixture(scope="session")
+def session_project(installed_lxd):
+    lxc = LXC()
+    project_name = "craft-providers-test-session"
+    lxc_project.create_with_default_profile(lxc=lxc, project=project_name)
+
+    projects = lxc.project_list()
+    assert project_name in projects
+
+    instances = lxc.list(project=project_name)
+    assert instances == []
+
+    expected_cfg = lxc.profile_show(profile="default", project="default")
+    expected_cfg["used_by"] = []
+    if "project" in expected_cfg:
+        del expected_cfg["project"]
+
+    actual_config = lxc.profile_show(profile="default", project=project_name)
+    if "project" in actual_config:
+        del actual_config["project"]
+
+    assert actual_config == expected_cfg
+
+    yield project_name
+
+    lxc_project.purge(lxc=lxc, project=project_name)
+
+
+@pytest.fixture(scope="session")
 def session_provider(session_lxd_project):
     return LXDProvider(lxd_project=session_lxd_project)
