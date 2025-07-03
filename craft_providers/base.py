@@ -26,6 +26,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import time
 from abc import ABC, abstractmethod
 from enum import Enum
 from textwrap import dedent
@@ -352,7 +353,7 @@ class Base(ABC):
         if self.alias.name == "LUNAR":
             import time
 
-            time.sleep(30)
+            time.sleep(10)
             return
         retry.retry_until_timeout(
             self._timeout_simple or TIMEOUT_SIMPLE,
@@ -554,15 +555,13 @@ class Base(ABC):
             )
             # TODO: Why is Lunar failing to load? For right now just ignore.
             if self.alias.name == "LUNAR":
+                time.sleep(20)
+            else:
                 self._execute_run(
                     ["snap", "wait", "system", "seed.loaded"],
                     executor=executor,
+                    timeout=TIMEOUT_SIMPLE,
                 )
-            self._execute_run(
-                ["snap", "wait", "system", "seed.loaded"],
-                executor=executor,
-                timeout=TIMEOUT_SIMPLE,
-            )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to enable snapd service.",
