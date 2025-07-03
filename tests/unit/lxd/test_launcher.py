@@ -758,7 +758,11 @@ def test_launch_with_existing_instance_running(
             default_command_environment={"foo": "bar"},
         ),
     ]
-    assert fake_instance.mock_calls == [call.exists(), call.is_running()]
+    assert fake_instance.mock_calls == [
+        call.exists(),
+        call.is_running(),
+        call.execute_run(["shutdown", "-c"]),
+    ]
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.warmup(executor=fake_instance),

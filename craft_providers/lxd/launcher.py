@@ -394,6 +394,7 @@ def _launch_existing_instance(
 
     if instance.is_running():
         logger.debug("Instance exists and is running.")
+        instance.execute_run(["shutdown", "-c"])
     else:
         logger.debug("Instance exists and is not running. Starting instance.")
         instance.start()

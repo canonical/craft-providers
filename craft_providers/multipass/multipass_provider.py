@@ -196,6 +196,7 @@ class MultipassProvider(Provider):
         base_configuration: base.Base,
         instance_name: str,
         allow_unstable: bool = False,
+        shutdown_delay_mins: int | None = None,
     ) -> Iterator[Executor]:
         """Configure and launch environment for specified base.
 
@@ -208,9 +209,12 @@ class MultipassProvider(Provider):
         :param base_configuration: Base configuration to apply to instance.
         :param instance_name: Name of the instance to launch.
         :param allow_unstable: If true, allow unstable images to be launched.
+        :param shutdown_delay_mins: Minutes by which to delay shutdown when exiting
+            the instance.
 
         :raises MultipassError: If the instance cannot be launched or configured.
         """
+        shutdown_delay_mins = 0 if shutdown_delay_mins is None else shutdown_delay_mins
         image = _get_remote_image(base_configuration)
 
         # only allow launching unstable images when opted-in with `allow_unstable`
@@ -243,4 +247,4 @@ class MultipassProvider(Provider):
         finally:
             # Ensure to unmount everything and stop instance upon completion.
             instance.unmount_all()
-            instance.stop()
+            instance.stop(delay_mins=shutdown_delay_mins)

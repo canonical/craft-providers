@@ -199,5 +199,5 @@ def session_project(installed_lxd):
 
 
 @pytest.fixture(scope="session")
-def session_provider(session_project):
-    return LXDProvider(lxd_project=session_project)
+def session_provider(session_lxd_project):
+    return LXDProvider(lxd_project=session_lxd_project)

@@ -32,7 +32,10 @@ from craft_providers.errors import details_from_called_process_error
 from craft_providers.executor import Executor, get_instance_name
 from craft_providers.lxd.errors import LXDError
 from craft_providers.lxd.lxc import LXC
-from craft_providers.lxd.lxd_instance_status import LXDInstanceState
+from craft_providers.lxd.lxd_instance_status import (
+    LXDInstanceState,
+    ProviderInstanceStatus,
+)
 from craft_providers.util import env_cmd, retry
 
 logger = logging.getLogger(__name__)
@@ -513,6 +516,22 @@ class LXDInstance(Executor):
         :raises LXDError: If the instance fails to start.
         """
         logger.info("Starting instance")
+        if self.info().get("Status") == LXDInstanceState.RUNNING.value:
+            if (
+                state := self.config_get("user.craft_providers.status")
+            ) == ProviderInstanceStatus.FINISHED.value:
+                logger.debug("Instance already running but available.")
+                self.config_set(
+                    "user.craft_providers.status", ProviderInstanceStatus.IN_USE.value
+                )
+                self.execute_run(["shutdown", "-c"])
+                return
+            raise LXDError(
+                "Instance is already running but not available.",
+                details=f"Instance state is {state}",
+                resolution="The same instance cannot be used by multiple processes.",
+            )
+
         self.lxc.start(
             instance_name=self.instance_name, project=self.project, remote=self.remote
         )
@@ -530,6 +549,9 @@ class LXDInstance(Executor):
             retry_wait=RETRY_WAIT,
             func=_is_running,
             error=LXDError(brief="Instance failed to start."),
+        )
+        self.config_set(
+            "user.craft_providers.status", ProviderInstanceStatus.IN_USE.value
         )
 
     def restart(self) -> None:
@@ -556,11 +578,31 @@ class LXDInstance(Executor):
             error=LXDError(brief="Instance failed to restart."),
         )
 
-    def stop(self) -> None:
+    def stop(self, delay_mins: int | None = None) -> None:
         """Stop the instance.
 
+        :param delay_mins: minutes to delay the instance shutdown.
         :raises LXDError: If the instance fails to stop.
+
+        If delay_mins is 0 (the default), this method waits for the shutdown to finish.
+        If it's nonzero, the method returns after preparing the shutdown.
         """
+        if delay_mins is not None:
+            logger.debug(f"Shutting down after {delay_mins} minutes")
+            self.config_set(
+                "user.craft_providers.status", ProviderInstanceStatus.FINISHED.value
+            )
+            self.execute_run(
+                [
+                    "shutdown",
+                    f"+{delay_mins}",
+                    "Shutdown triggered by craft-providers.",
+                ],
+                capture_output=True,
+                check=True,
+            )
+            return
+
         self.lxc.stop(
             instance_name=self.instance_name, project=self.project, remote=self.remote
         )
@@ -580,6 +622,10 @@ class LXDInstance(Executor):
             func=_is_stopped,
             error=LXDError(brief="Instance failed to stop."),
         )
+        if self.exists():
+            self.config_set(
+                "user.craft_providers.status", ProviderInstanceStatus.FINISHED.value
+            )
 
     def supports_mount(self) -> bool:
         """Check if instance supports mounting from host.

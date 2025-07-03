@@ -24,7 +24,7 @@ from craft_providers.lxd import LXDError, lxd_instance_status
 
 from . import conftest
 
-pytestmark = [pytest.mark.slow]
+pytestmark = [pytest.mark.slow, pytest.mark.lxd_instance]
 
 
 @pytest.fixture

@@ -97,6 +97,7 @@ class Provider(ABC):
         base_configuration: Base,
         instance_name: str,
         allow_unstable: bool = False,
+        shutdown_delay_mins: int | None = None,
     ) -> Generator[Executor, None, None]:
         """Configure and launch environment for specified base.
 
@@ -109,4 +110,6 @@ class Provider(ABC):
         :param base_configuration: Base configuration to apply to instance.
         :param instance_name: Name of the instance to launch.
         :param allow_unstable: If true, allow unstable images to be launched.
+        :param shutdown_delay_mins: Minutes by which to delay shutdown when exiting
+            the instance.
         """
