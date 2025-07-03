@@ -875,7 +875,7 @@ def test_start_from_stopped(mock_lxc, instance):
 
 def test_start_from_running(mock_lxc, instance):
     mock_lxc.info.return_value = {"Status": LXDInstanceState.RUNNING.value}
-    mock_lxc.config_get.return_value = ProviderInstanceStatus.AVAILABLE.value
+    mock_lxc.config_get.return_value = ProviderInstanceStatus.FINISHED.value
 
     instance.start()
 
@@ -887,16 +887,26 @@ def test_start_from_running(mock_lxc, instance):
         ),
         mock.call.config_get(
             instance_name=instance.instance_name,
+            key="user.craft_providers.status",
             project=instance.project,
             remote=instance.remote,
-            key="user.craft_providers.status",
         ),
         mock.call.config_set(
             instance_name=instance.instance_name,
-            project=instance.project,
-            remote=instance.remote,
             key="user.craft_providers.status",
             value="IN_USE",
+            project=instance.project,
+            remote=instance.remote,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+            command=["shutdown", "-c"],
+            timeout=None,
+            cwd=None,
+            check=False,
+            runner=mock.ANY,
         ),
     ]
 
@@ -1002,7 +1012,7 @@ def test_stop_immediately(mock_lxc, mocker):
             project=instance.project,
             remote=instance.remote,
             key="user.craft_providers.status",
-            value=ProviderInstanceStatus.AVAILABLE.value,
+            value=ProviderInstanceStatus.FINISHED.value,
         ),
     ]
 
@@ -1015,6 +1025,13 @@ def test_stop_delay(mock_lxc, mocker):
     instance.stop(delay_mins=1)
 
     assert mock_lxc.mock_calls == [
+        mock.call.config_set(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+            key="user.craft_providers.status",
+            value=ProviderInstanceStatus.FINISHED.value,
+        ),
         mock.call.exec(
             instance_name=instance.instance_name,
             project=instance.project,
@@ -1025,13 +1042,6 @@ def test_stop_delay(mock_lxc, mocker):
             cwd=None,
             check=True,
             capture_output=True,
-        ),
-        mock.call.config_set(
-            instance_name=instance.instance_name,
-            project=instance.project,
-            remote=instance.remote,
-            key="user.craft_providers.status",
-            value=ProviderInstanceStatus.AVAILABLE.value,
         ),
     ]
 

@@ -179,7 +179,7 @@ def test_launched_environment(
 
     assert mock_launch.mock_calls == [
         call().unmount_all(),
-        call().stop(delay_mins=0),
+        call().stop(delay_mins=None),
     ]
 
 

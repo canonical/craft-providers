@@ -339,7 +339,7 @@ def empty_test_snap(installed_snap):
 @pytest.fixture(scope="session")
 def session_lxd_project(installed_lxd):
     lxc = lxd.LXC()
-    project_name = f"craft-providers-test-session-{os.getpid()}"
+    project_name = "craft-providers-test-session"
     lxc_project.create_with_default_profile(lxc=lxc, project=project_name)
 
     projects = lxc.project_list()

@@ -33,7 +33,6 @@ class ProviderInstanceStatus(Enum):
     FINISHED = "FINISHED"
     STARTING = "STARTING"
     IN_USE = "IN_USE"
-    AVAILABLE = "AVAILABLE"
 
 
 class LXDInstanceState(Enum):

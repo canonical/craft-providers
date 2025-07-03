@@ -113,7 +113,7 @@ class LXDProvider(Provider):
         base_configuration: Base,
         instance_name: str,
         allow_unstable: bool = False,
-        shutdown_delay_mins: int = 0,
+        shutdown_delay_mins: int | None = None,
     ) -> Iterator[Executor]:
         """Configure and launch environment for specified base.
 

@@ -519,11 +519,12 @@ class LXDInstance(Executor):
         if self.info().get("Status") == LXDInstanceState.RUNNING.value:
             if (
                 state := self.config_get("user.craft_providers.status")
-            ) == ProviderInstanceStatus.AVAILABLE.value:
+            ) == ProviderInstanceStatus.FINISHED.value:
                 logger.debug("Instance already running but available.")
                 self.config_set(
                     "user.craft_providers.status", ProviderInstanceStatus.IN_USE.value
                 )
+                self.execute_run(["shutdown", "-c"])
                 return
             raise LXDError(
                 "Instance is already running but not available.",
@@ -577,7 +578,7 @@ class LXDInstance(Executor):
             error=LXDError(brief="Instance failed to restart."),
         )
 
-    def stop(self, delay_mins: int = 0) -> None:
+    def stop(self, delay_mins: int | None = None) -> None:
         """Stop the instance.
 
         :param delay_mins: minutes to delay the instance shutdown.
@@ -586,8 +587,11 @@ class LXDInstance(Executor):
         If delay_mins is 0 (the default), this method waits for the shutdown to finish.
         If it's nonzero, the method returns after preparing the shutdown.
         """
-        if delay_mins > 0:
+        if delay_mins is not None:
             logger.debug(f"Shutting down after {delay_mins} minutes")
+            self.config_set(
+                "user.craft_providers.status", ProviderInstanceStatus.FINISHED.value
+            )
             self.execute_run(
                 [
                     "shutdown",
@@ -596,9 +600,6 @@ class LXDInstance(Executor):
                 ],
                 capture_output=True,
                 check=True,
-            )
-            self.config_set(
-                "user.craft_providers.status", ProviderInstanceStatus.AVAILABLE.value
             )
             return
 
@@ -623,7 +624,7 @@ class LXDInstance(Executor):
         )
         if self.exists():
             self.config_set(
-                "user.craft_providers.status", ProviderInstanceStatus.AVAILABLE.value
+                "user.craft_providers.status", ProviderInstanceStatus.FINISHED.value
             )
 
     def supports_mount(self) -> bool:

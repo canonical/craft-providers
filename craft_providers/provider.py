@@ -97,7 +97,7 @@ class Provider(ABC):
         base_configuration: Base,
         instance_name: str,
         allow_unstable: bool = False,
-        shutdown_delay_mins: int = 0,
+        shutdown_delay_mins: int | None = None,
     ) -> Generator[Executor, None, None]:
         """Configure and launch environment for specified base.
 

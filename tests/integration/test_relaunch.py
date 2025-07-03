@@ -60,43 +60,59 @@ def test_relaunch(
     base = base_cls(alias=base_alias)  # pyright: ignore[reportArgumentType]
     project_name = f"relaunch-{base_alias.name}"
 
-    # Set up both a file that should exist for the whole run and one that should
-    # disappear after a proper shutdown.
-    with session_provider.launched_environment(
-        project_name=project_name,
-        project_path=tmp_path,
-        base_configuration=base,
-        instance_name="relaunch-test",
-        allow_unstable=True,
-        shutdown_delay_mins=1,
-    ) as instance:
-        instance.execute_run(["touch", "/tmp/session-file"], check=True)
-        instance.execute_run(["touch", "/root/permanent-file"], check=True)
+    try:
+        # Set up both a file that should exist for the whole run and one that should
+        # disappear after a proper shutdown.
+        with session_provider.launched_environment(
+            project_name=project_name,
+            project_path=tmp_path,
+            base_configuration=base,
+            instance_name="relaunch-test",
+            allow_unstable=True,
+            shutdown_delay_mins=1,
+        ) as instance:
+            instance.execute_run(["touch", "/tmp/session-file"], check=True)
+            instance.execute_run(["touch", "/root/permanent-file"], check=True)
 
-    # Check that both files still exist after a delayed shutdown
-    with session_provider.launched_environment(
-        project_name=project_name,
-        project_path=tmp_path,
-        base_configuration=base,
-        instance_name="relaunch-test",
-        allow_unstable=True,
-        shutdown_delay_mins=0,
-    ) as instance:
-        instance.execute_run(["ls", "/tmp/session-file"], check=True)
-        instance.execute_run(["ls", "/root/permanent-file"], check=True)
-        # Check that the shutdown was properly cancelled.
-        time.sleep(70)
-        instance.execute_run(["date"], check=True)
+        assert instance.is_running()
 
-    # Check that the file in /tmp got deleted after a real shutdown, but that the
-    # permanent file is still there.
-    with session_provider.launched_environment(
-        project_name="craft-providers-integration-relaunch",
-        project_path=tmp_path,
-        base_configuration=base,
-        instance_name="relaunch-test",
-        allow_unstable=True,
-    ) as instance:
-        result = instance.execute_run(["ls", "/tmp/session-file"], check=False)
-        assert result.returncode == 2
-        instance.execute_run(["ls", "/root/permanent-file"], check=True)
+        # Check that both files still exist after a delayed shutdown
+        with session_provider.launched_environment(
+            project_name=project_name,
+            project_path=tmp_path,
+            base_configuration=base,
+            instance_name="relaunch-test",
+            allow_unstable=True,
+            shutdown_delay_mins=0,
+        ) as instance:
+            instance.execute_run(["ls", "/tmp/session-file"], check=True)
+            instance.execute_run(["ls", "/root/permanent-file"], check=True)
+            # Check that the shutdown was properly cancelled.
+            result = instance.execute_run(["shutdown", "--show"], check=False)
+            assert result.returncode == 1
+
+        # Instance will take a little while to shut down asynchronously. Wait until
+        # it's no longer running before moving on.
+        for _ in range(100):
+            if instance.is_running():
+                time.sleep(0.1)
+        assert not instance.is_running()
+
+        # Check that the file in /tmp got deleted after a real shutdown, but that the
+        # permanent file is still there.
+        with session_provider.launched_environment(
+            project_name="craft-providers-integration-relaunch",
+            project_path=tmp_path,
+            base_configuration=base,
+            instance_name="relaunch-test",
+            allow_unstable=True,
+            shutdown_delay_mins=None,
+        ) as instance:
+            result = instance.execute_run(["ls", "/tmp/session-file"], check=False)
+            assert result.returncode == 2
+            instance.execute_run(["ls", "/root/permanent-file"], check=True)
+
+    finally:
+        instance = locals().get("instance")
+        if instance is not None:
+            instance.delete()
