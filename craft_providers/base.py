@@ -330,6 +330,13 @@ class Base(ABC):
     def _setup_wait_for_system_ready(self, executor: Executor) -> None:
         """Wait until system is ready."""
         logger.debug("Waiting for environment to be ready...")
+        # TODO: Workaround for lunar
+        # We'll need to figure out why it gets stuck on "starting" before prod.
+        if self.alias.name in ("LUNAR", "MANTIC"):
+            import time
+
+            time.sleep(10)
+            return
 
         def assert_running(timeout: float) -> None:
             proc = self._execute_run(
@@ -348,13 +355,6 @@ class Base(ABC):
         error = BaseConfigurationError(
             brief="Timed out waiting for environment to be ready."
         )
-        # TODO: Workaround for lunar
-        # We'll need to figure out why it gets stuck on "starting" before prod.
-        if self.alias.name == "LUNAR":
-            import time
-
-            time.sleep(10)
-            return
         retry.retry_until_timeout(
             self._timeout_simple or TIMEOUT_SIMPLE,
             self._retry_wait,
@@ -554,7 +554,7 @@ class Base(ABC):
                 timeout=TIMEOUT_SIMPLE,
             )
             # TODO: Why is Lunar failing to load? For right now just ignore.
-            if self.alias.name == "LUNAR":
+            if self.alias.name in ("LUNAR", "MANTIC"):
                 time.sleep(20)
             else:
                 self._execute_run(
