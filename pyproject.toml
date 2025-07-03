@@ -37,7 +37,7 @@ dev = [
     "pytest-mock==3.11.1",
     "pytest-rerunfailures==12.0",
     "pytest-subprocess==1.5.2",
-    "pytest-xdist==3.3.1",
+    "pytest-xdist==3.8.0",
     "pytest-time==0.3.2",
     "responses==0.23.3",
     "types-requests==2.31.0.6",
