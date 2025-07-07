@@ -21,4 +21,4 @@
 # TODO: Pull this data from upstream
 def is_eol(base_name) -> bool:
     """Return True if the given base alias is *fully* EOL, dead as a can of spam (not ESM)."""
-    return base_name[1] in ("23.04", "18.04")
+    return base_name[1] in ("23.04", "23.10", "18.04")
