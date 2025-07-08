@@ -18,6 +18,7 @@
 """Ubuntu image(s)."""
 
 import enum
+import importlib.resources
 import io
 import logging
 import pathlib
@@ -217,6 +218,8 @@ class BuilddBase(Base):
             file_mode="0644",
         )
 
+        self._update_eol_sources(executor)
+
         try:
             self._execute_run(
                 ["apt-get", "update"],
@@ -227,6 +230,30 @@ class BuilddBase(Base):
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to update apt cache.",
+                details=details_from_called_process_error(error),
+            ) from error
+
+    def _update_eol_sources(self, executor: Executor) -> None:
+        """Update the sources for EOL bases."""
+        with importlib.resources.path(
+            "craft_providers.util", "sources.sh"
+        ) as sources_script:
+            executor.push_file(
+                source=sources_script, destination=pathlib.Path("/tmp/craft-sources.sh")
+            )
+
+        try:
+            output = self._execute_run(
+                ["bash", "/tmp/craft-sources.sh"],
+                executor=executor,
+                verify_network=True,
+                timeout=self._timeout_simple,
+            )
+            logger.debug("Updating EOL sources:")
+            logger.debug(output.stdout.decode())
+        except subprocess.CalledProcessError as error:
+            raise BaseConfigurationError(
+                brief="Failed to update EOL sources.",
                 details=details_from_called_process_error(error),
             ) from error
 
