@@ -510,6 +510,27 @@ class LXDInstance(Executor):
             uid=0,
         )
 
+    def _shutdown(self, delay_mins: int) -> None:
+        """Shutdown instance from inside the instance with a given delay.
+
+        :param delay_mins: How long to delay the shutdown.
+        """
+        if delay_mins < 0:
+            raise ValueError("Cannot delay for a negative amount of time.")
+        self.execute_run(
+            [
+                "shutdown",
+                f"+{delay_mins}",
+                "Shutdown triggered by craft-providers.",
+            ],
+            capture_output=True,
+            check=True,
+        )
+
+    def _cancel_shutdown(self) -> None:
+        """Cancel any scheduled shutdown on the instance."""
+        self.execute_run(["shutdown", "-c"])
+
     def start(self) -> None:
         """Start the instance.
 
@@ -524,7 +545,7 @@ class LXDInstance(Executor):
                 self.config_set(
                     "user.craft_providers.status", ProviderInstanceStatus.IN_USE.value
                 )
-                self.execute_run(["shutdown", "-c"])
+                self._cancel_shutdown()
                 return
             raise LXDError(
                 "Instance is already running but not available.",
@@ -592,15 +613,7 @@ class LXDInstance(Executor):
             self.config_set(
                 "user.craft_providers.status", ProviderInstanceStatus.FINISHED.value
             )
-            self.execute_run(
-                [
-                    "shutdown",
-                    f"+{delay_mins}",
-                    "Shutdown triggered by craft-providers.",
-                ],
-                capture_output=True,
-                check=True,
-            )
+            self._shutdown(delay_mins)
             return
 
         self.lxc.stop(
