@@ -19,10 +19,11 @@
 
 import io
 import pathlib
-from typing import Any, Optional
+from typing import Any
 
 import pydantic
 import yaml
+from typing_extensions import Self
 
 from craft_providers.errors import BaseConfigurationError, ProviderError
 from craft_providers.executor import Executor
@@ -67,7 +68,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
     snaps: dict[str, dict[str, Any]] | None = None
 
     @classmethod
-    def unmarshal(cls, data: dict[str, Any]) -> "InstanceConfiguration":
+    def unmarshal(cls, data: dict[str, Any]) -> Self:
         """Create and populate a new `InstanceConfig` object from dictionary data.
 
         The unmarshal method validates the data in the dictionary and populates
@@ -79,7 +80,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
 
         :raise BaseConfigurationError: If validation fails.
         """
-        return InstanceConfiguration(**data)
+        return cls(**data)
 
     def marshal(self) -> dict[str, Any]:
         """Create a dictionary containing the InstanceConfiguration data.
@@ -93,7 +94,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
         cls,
         executor: Executor,
         config_path: pathlib.PurePath = pathlib.PurePath("/etc/craft-instance.conf"),
-    ) -> Optional["InstanceConfiguration"]:
+    ) -> Self | None:
         """Load an instance config file from an environment.
 
         :param executor: Executor for instance.
