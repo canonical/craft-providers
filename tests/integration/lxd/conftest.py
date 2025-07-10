@@ -174,6 +174,8 @@ def project(lxc, project_name):
 def session_project(installed_lxd):
     lxc = LXC()
     project_name = "craft-providers-test-session"
+    # We could need to purge if previous tests were killed.
+    lxc_project.purge(lxc=lxc, project=project_name)
     lxc_project.create_with_default_profile(lxc=lxc, project=project_name)
 
     projects = lxc.project_list()
@@ -199,5 +201,5 @@ def session_project(installed_lxd):
 
 
 @pytest.fixture(scope="session")
-def session_provider(session_project):
-    return LXDProvider(lxd_project=session_project)
+def session_provider(session_lxd_project):
+    return LXDProvider(lxd_project=session_lxd_project)

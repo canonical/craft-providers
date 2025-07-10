@@ -32,6 +32,8 @@ import pytest
 from craft_providers import lxd, multipass
 from craft_providers.actions.snap_installer import get_host_snap_info
 from craft_providers.bases import ubuntu
+from craft_providers.lxd import project as lxc_project
+from craft_providers.provider import Provider
 
 
 def pytest_runtest_setup(item: pytest.Item):
@@ -331,3 +333,52 @@ def empty_test_snap(installed_snap):
 
         with installed_snap(snap_name, try_path=tmp_path):
             yield snap_name
+
+
+@pytest.fixture(scope="session")
+def session_lxd_project(installed_lxd):
+    lxc = lxd.LXC()
+    project_name = "craft-providers-test-session"
+    # We could need to purge if previous tests were killed.
+    lxc_project.purge(lxc=lxc, project=project_name)
+    lxc_project.create_with_default_profile(lxc=lxc, project=project_name)
+
+    projects = lxc.project_list()
+    assert project_name in projects
+
+    instances = lxc.list(project=project_name)
+    assert instances == []
+
+    expected_cfg = lxc.profile_show(profile="default", project="default")
+    expected_cfg["used_by"] = []
+    if "project" in expected_cfg:
+        del expected_cfg["project"]
+
+    actual_config = lxc.profile_show(profile="default", project=project_name)
+    if "project" in actual_config:
+        del actual_config["project"]
+
+    assert actual_config == expected_cfg
+
+    yield project_name
+
+    lxc_project.purge(lxc=lxc, project=project_name)
+
+
+@pytest.fixture(
+    scope="session",
+    params=[
+        pytest.param("lxd", marks=[pytest.mark.lxd_instance]),
+        pytest.param("multipass", marks=[pytest.mark.multipass_instance]),
+    ],
+)
+def session_provider(request: pytest.FixtureRequest) -> Provider:
+    match request.param:
+        case "lxd":
+            return lxd.LXDProvider(
+                lxd_project=request.getfixturevalue("session_lxd_project")
+            )
+        case "multipass":
+            return multipass.MultipassProvider()
+        case _:
+            raise ValueError(f"Unknown provider {request.param}")
