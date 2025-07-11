@@ -25,7 +25,7 @@ import pathlib
 import re
 import subprocess
 from abc import ABC, abstractmethod
-from typing import Dict, Generator, List, Optional
+from collections.abc import Generator
 
 import craft_providers.util.temp_paths
 from craft_providers.errors import ProviderError
@@ -39,11 +39,11 @@ class Executor(ABC):
     @abstractmethod
     def execute_popen(
         self,
-        command: List[str],
+        command: list[str],
         *,
-        cwd: Optional[pathlib.PurePath] = None,
-        env: Optional[Dict[str, Optional[str]]] = None,
-        timeout: Optional[float] = None,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        timeout: float | None = None,
         **kwargs,
     ) -> subprocess.Popen:
         """Execute a command in instance, using subprocess.Popen().
@@ -64,11 +64,11 @@ class Executor(ABC):
     @abstractmethod
     def execute_run(
         self,
-        command: List[str],
+        command: list[str],
         *,
-        cwd: Optional[pathlib.PurePath] = None,
-        env: Optional[Dict[str, Optional[str]]] = None,
-        timeout: Optional[float] = None,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        timeout: float | None = None,
         check: bool = False,
         **kwargs,
     ) -> subprocess.CompletedProcess:
@@ -106,7 +106,7 @@ class Executor(ABC):
     @contextlib.contextmanager
     def temporarily_pull_file(
         self, *, source: pathlib.PurePath, missing_ok: bool = False
-    ) -> Generator[Optional[pathlib.Path], None, None]:
+    ) -> Generator[pathlib.Path | None, None, None]:
         """Copy a file from the environment to a temporary file in the host.
 
         This is mainly a layer above `pull_file` that pulls the file into a

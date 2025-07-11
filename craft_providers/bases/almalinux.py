@@ -21,7 +21,6 @@ import enum
 import logging
 import pathlib
 import subprocess
-from typing import Dict, List, Optional
 
 from craft_providers.actions.snap_installer import Snap
 from craft_providers.base import Base
@@ -75,13 +74,13 @@ class AlmaLinuxBase(Base):
         self,
         *,
         alias: AlmaLinuxBaseAlias,
-        compatibility_tag: Optional[str] = None,
-        environment: Optional[Dict[str, Optional[str]]] = None,
+        compatibility_tag: str | None = None,
+        environment: dict[str, str | None] | None = None,
         hostname: str = "craft-almalinux-instance",
-        snaps: Optional[List[Snap]] = None,
-        packages: Optional[List[str]] = None,
+        snaps: list[Snap] | None = None,
+        packages: list[str] | None = None,
         use_default_packages: bool = True,
-        cache_path: Optional[pathlib.Path] = None,
+        cache_path: pathlib.Path | None = None,
     ) -> None:
         self._cache_path = cache_path
 
@@ -98,7 +97,7 @@ class AlmaLinuxBase(Base):
 
         self._set_hostname(hostname)
 
-        self._packages: Optional[List[str]] = []
+        self._packages: list[str] | None = []
         if use_default_packages:
             self._packages.extend(
                 [

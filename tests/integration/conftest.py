@@ -27,7 +27,6 @@ import string
 import subprocess
 import sys
 import tempfile
-from typing import Optional
 
 import pytest
 from craft_providers import lxd, multipass
@@ -134,7 +133,7 @@ def uninstalled_lxd():
         pytest.skip("not configured to uninstall lxd, skipped")
 
     if sys.platform == "linux":
-        import grp
+        import grp  # noqa: PLC0415
 
         lxd_info = grp.getgrnam("lxd")
         assert lxd_info.gr_gid in os.getgroups(), (
@@ -232,7 +231,7 @@ def installed_snap():
         pytest.skip("requires linux and snapd")
 
     @contextlib.contextmanager
-    def _installed_snap(snap_name, *, try_path: Optional[pathlib.Path] = None):
+    def _installed_snap(snap_name, *, try_path: pathlib.Path | None = None):
         """Ensure snap is installed or skip test."""
         # do nothing if already installed and not dangerous
         if snap_exists(snap_name) and not is_installed_dangerously(snap_name):

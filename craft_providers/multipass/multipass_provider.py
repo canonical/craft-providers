@@ -19,9 +19,9 @@
 import contextlib
 import logging
 import pathlib
+from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Iterator
 
 from craft_providers import Base, Executor, Provider, base
 from craft_providers.bases import ubuntu
@@ -86,7 +86,7 @@ class RemoteImage:
 
 
 # mapping of Provider bases to Multipass remote images
-_BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
+_BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: dict[Enum, RemoteImage] = {
     ubuntu.BuilddBaseAlias.BIONIC: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="18.04"
     ),

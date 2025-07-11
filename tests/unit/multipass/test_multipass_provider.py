@@ -236,11 +236,14 @@ def test_launched_environment_unstable_image_error(
     )
 
     provider = MultipassProvider()
-    with pytest.raises(MultipassError) as raised, provider.launched_environment(
-        project_name="test-project",
-        project_path=tmp_path,
-        base_configuration=mock_buildd_base_configuration,
-        instance_name="test-instance-name",
+    with (
+        pytest.raises(MultipassError) as raised,
+        provider.launched_environment(
+            project_name="test-project",
+            project_path=tmp_path,
+            base_configuration=mock_buildd_base_configuration,
+            instance_name="test-instance-name",
+        ),
     ):
         pass
 

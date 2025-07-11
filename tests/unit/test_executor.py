@@ -99,9 +99,10 @@ def test_temporarypull_temp_file_cleaned(
     source = tmp_path / "source.txt"
     source.write_text("test content")
 
-    with pytest.raises(ValueError), fake_executor_local_pull.temporarily_pull_file(
-        source=source
-    ) as localfilepath:
+    with (
+        pytest.raises(ValueError),
+        fake_executor_local_pull.temporarily_pull_file(source=source) as localfilepath,
+    ):
         # internal crash
         raise ValueError("boom")
 

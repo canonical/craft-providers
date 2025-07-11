@@ -29,7 +29,8 @@ import pathlib
 import shlex
 import subprocess
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from collections.abc import Callable
+from typing import Any
 
 import packaging.version
 
@@ -55,7 +56,7 @@ class Multipass:
     ) -> None:
         self.multipass_path = multipass_path
 
-    def _run(self, command: List[str], **kwargs) -> subprocess.CompletedProcess:
+    def _run(self, command: list[str], **kwargs) -> subprocess.CompletedProcess:
         """Execute a multipass command.
 
         It always checks the result (as no errors should pass silently) and captures the
@@ -90,10 +91,10 @@ class Multipass:
     def exec(
         self,
         *,
-        command: List[str],
+        command: list[str],
         instance_name: str,
         runner: Callable = subprocess.run,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
         check: bool = False,
         **kwargs,
     ):
@@ -128,7 +129,7 @@ class Multipass:
 
         return runner(final_cmd, **kwargs)
 
-    def info(self, *, instance_name: str) -> Dict[str, Any]:
+    def info(self, *, instance_name: str) -> dict[str, Any]:
         """Get information/state for instance.
 
         :returns: Parsed json data from info command.
@@ -175,9 +176,9 @@ class Multipass:
         *,
         instance_name: str,
         image: str,
-        cpus: Optional[str] = None,
-        mem: Optional[str] = None,
-        disk: Optional[str] = None,
+        cpus: str | None = None,
+        mem: str | None = None,
+        disk: str | None = None,
     ) -> None:
         """Launch multipass VM.
 
@@ -205,7 +206,7 @@ class Multipass:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    def list(self) -> List[str]:
+    def list(self) -> list[str]:
         """List names of VMs.
 
         :returns: Data from stdout if instance exists, else None.
@@ -230,8 +231,8 @@ class Multipass:
         *,
         source: pathlib.Path,
         target: str,
-        uid_map: Optional[Dict[str, str]] = None,
-        gid_map: Optional[Dict[str, str]] = None,
+        uid_map: dict[str, str] | None = None,
+        gid_map: dict[str, str] | None = None,
     ) -> None:
         """Mount host source path to target.
 
@@ -441,8 +442,8 @@ class Multipass:
             ) from error
 
     def wait_until_ready(
-        self, *, timeout: Optional[float] = None
-    ) -> Tuple[str, Optional[str]]:
+        self, *, timeout: float | None = None
+    ) -> tuple[str, str | None]:
         """Wait until Multipass is ready (upon install/startup).
 
         :param timeout: Timeout in seconds.
@@ -451,7 +452,7 @@ class Multipass:
             may be None if Multipass is not ready and the timeout limit is reached.
         """
         if timeout is not None:
-            deadline: Optional[float] = time.time() + timeout
+            deadline: float | None = time.time() + timeout
         else:
             deadline = None
 
@@ -470,7 +471,7 @@ class Multipass:
             brief="Timed out waiting for Multipass to become ready.",
         )
 
-    def version(self) -> Tuple[str, Optional[str]]:
+    def version(self) -> tuple[str, str | None]:
         """Get multipass and multipassd versions.
 
         :returns: Tuple of parsed versions (multipass, multipassd).  multipassd
