@@ -16,8 +16,6 @@
 #
 """LXD Errors."""
 
-from typing import Optional
-
 from craft_providers.errors import ProviderError
 
 LXD_INSTALL_HELP = (
@@ -41,7 +39,7 @@ class LXDInstallationError(LXDError):
         self,
         reason: str,
         *,
-        details: Optional[str] = None,
+        details: str | None = None,
     ) -> None:
         brief = f"Failed to install LXD: {reason}."
         resolution = LXD_INSTALL_HELP

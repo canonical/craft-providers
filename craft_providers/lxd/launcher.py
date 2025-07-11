@@ -26,7 +26,6 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
 
 from craft_providers import Base, ProviderError, bases
 from craft_providers.errors import details_from_called_process_error
@@ -85,13 +84,13 @@ class InstanceTimer(threading.Thread):
 def _create_instance(
     *,
     instance: LXDInstance,
-    base_instance: Optional[LXDInstance],
+    base_instance: LXDInstance | None,
     base_configuration: Base,
     image_name: str,
     image_remote: str,
     ephemeral: bool,
     map_user_uid: bool,
-    uid: Optional[int],
+    uid: int | None,
     project: str,
     remote: str,
     lxc: LXC,
@@ -340,7 +339,7 @@ def _launch_existing_instance(
     base_configuration: Base,
     ephemeral: bool,
     map_user_uid: bool,
-    uid: Optional[int],
+    uid: int | None,
 ) -> bool:
     """Start and warmup an existing instance.
 
@@ -423,7 +422,7 @@ def _check_id_map(
     project: str,
     remote: str,
     map_user_uid: bool,
-    uid: Optional[int],
+    uid: int | None,
 ) -> bool:
     """Check if the instance's id map matches the uid passed as an argument.
 
@@ -476,7 +475,7 @@ def _set_id_map(
     lxc: LXC = LXC(),
     project: str = "default",
     remote: str = "local",
-    uid: Optional[int] = None,
+    uid: int | None = None,
 ) -> None:
     """Configure the instance's id map.
 
@@ -649,7 +648,7 @@ def launch(
     auto_create_project: bool = False,
     ephemeral: bool = False,
     map_user_uid: bool = False,
-    uid: Optional[int] = None,
+    uid: int | None = None,
     use_base_instance: bool = False,
     project: str = "default",
     remote: str = "local",

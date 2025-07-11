@@ -18,7 +18,7 @@ import contextlib
 import io
 import pathlib
 import subprocess
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pytest
 import responses as responses_module
@@ -42,13 +42,13 @@ class FakeExecutor(Executor):
     """
 
     def __init__(self) -> None:
-        self.records_of_push_file_io: List[Dict[str, Any]] = []
-        self.records_of_pull_file: List[Dict[str, Any]] = []
-        self.records_of_push_file: List[Dict[str, Any]] = []
-        self.records_of_delete: List[Dict[str, Any]] = []
-        self.records_of_exists: List[Dict[str, Any]] = []
-        self.records_of_mount: List[Dict[str, Any]] = []
-        self.records_of_is_running: List[Dict[str, Any]] = []
+        self.records_of_push_file_io: list[dict[str, Any]] = []
+        self.records_of_pull_file: list[dict[str, Any]] = []
+        self.records_of_push_file: list[dict[str, Any]] = []
+        self.records_of_delete: list[dict[str, Any]] = []
+        self.records_of_exists: list[dict[str, Any]] = []
+        self.records_of_mount: list[dict[str, Any]] = []
+        self.records_of_is_running: list[dict[str, Any]] = []
 
     def push_file_io(
         self,
@@ -71,10 +71,10 @@ class FakeExecutor(Executor):
 
     def execute_popen(
         self,
-        command: List[str],
+        command: list[str],
         *,
-        cwd: Optional[pathlib.PurePath] = None,
-        env: Optional[Dict[str, Optional[str]]] = None,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
         **kwargs,
     ) -> subprocess.Popen:
         env_args = [] if env is None else env_cmd.formulate_command(env, chdir=cwd)
@@ -84,11 +84,11 @@ class FakeExecutor(Executor):
 
     def execute_run(
         self,
-        command: List[str],
+        command: list[str],
         *,
-        cwd: Optional[pathlib.PurePath] = None,
-        env: Optional[Dict[str, Optional[str]]] = None,
-        timeout: Optional[float] = None,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        timeout: float | None = None,
         check: bool = False,
         **kwargs,
     ) -> subprocess.CompletedProcess:

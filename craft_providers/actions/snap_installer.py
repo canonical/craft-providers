@@ -24,7 +24,8 @@ import pathlib
 import shlex
 import subprocess
 import urllib.parse
-from typing import Any, Dict, Iterator, List, Optional
+from collections.abc import Iterator
+from typing import Any
 
 import pydantic
 import requests
@@ -64,7 +65,7 @@ class Snap(pydantic.BaseModel, extra="forbid"):
     """
 
     name: str
-    channel: Optional[str] = "stable"
+    channel: str | None = "stable"
     classic: bool = False
 
     @pydantic.field_validator("channel")
@@ -118,7 +119,7 @@ def _pack_host_snap(*, snap_name: str, output: pathlib.Path) -> None:
     )
 
 
-def get_host_snap_info(snap_name: str) -> Dict[str, Any]:
+def get_host_snap_info(snap_name: str) -> dict[str, Any]:
     """Get info about a snap installed on the host."""
     quoted_name = urllib.parse.quote(snap_name, safe="")
     url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}"
@@ -135,7 +136,7 @@ def get_host_snap_info(snap_name: str) -> Dict[str, Any]:
 
 def _get_target_snap_revision_from_snapd(
     snap_name: str, executor: Executor
-) -> Optional[str]:
+) -> str | None:
     """Get the revision of the snap on the target."""
     quoted_name = urllib.parse.quote(snap_name, safe="")
     url = f"http://localhost/v2/snaps/{quoted_name}"
@@ -161,7 +162,7 @@ def _get_target_snap_revision_from_snapd(
 
 def _get_snap_revision_ensuring_source(
     snap_name: str, source: str, executor: Executor
-) -> Optional[str]:
+) -> str | None:
     """Get revision of snap on target and ensure the installation source."""
     instance_config = InstanceConfiguration.load(executor=executor)
     if instance_config is None or instance_config.snaps is None:
@@ -220,7 +221,7 @@ def _get_host_snap(snap_name: str) -> Iterator[pathlib.Path]:
         yield snap_path
 
 
-def _get_assertion(query: List[str]) -> bytes:
+def _get_assertion(query: list[str]) -> bytes:
     """Get an assertion from snapd.
 
     :param query: assertion query to pass to `snap known`
