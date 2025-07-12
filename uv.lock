@@ -85,7 +85,7 @@ wheels = [
 
 [[package]]
 name = "canonical-sphinx"
-version = "0.2.0"
+version = "0.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "furo" },
@@ -93,9 +93,9 @@ dependencies = [
     { name = "myst-parser" },
     { name = "sphinx" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fe/2a/a77c673d5950d1ae1e065fddd038e547610fc9e1de41ef56b20d85fa87c2/canonical_sphinx-0.2.0.tar.gz", hash = "sha256:74d8dce67845924220d67f78bf85df379d8121e9b8e684338986dcccf9fff439", size = 56858, upload-time = "2024-09-30T03:12:37.988Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bd/a8/a443501d97e331a880f4b99d1911be450420e3625018757ebfdd8d885e7c/canonical_sphinx-0.5.0.tar.gz", hash = "sha256:9e243266636cf8332002e33e86ade0021231cc3d78283051bf0448e2c564f281", size = 1053079, upload-time = "2025-07-09T03:22:12.395Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/99/da/488d00806ddcc177c3e02049d8ab1d92aee0a334d6e2aed41a45a5c924f8/canonical_sphinx-0.2.0-py3-none-any.whl", hash = "sha256:c71ee6dbc15c084ad115f06b0f1c15f8269db3a896670e616b8945d6af089edd", size = 31067, upload-time = "2024-09-30T03:12:36.308Z" },
+    { url = "https://files.pythonhosted.org/packages/23/12/edc11bf3210faa152ff604f764683cddc4bb3521df45ab6c5386d4d81b29/canonical_sphinx-0.5.0-py3-none-any.whl", hash = "sha256:1faa94d7ef3794dfde6f939e6d60e119c06001c1cabdf4e4994257001e8c4739", size = 1030527, upload-time = "2025-07-09T03:22:10.165Z" },
 ]
 
 [[package]]
@@ -325,7 +325,7 @@ types = [
 
 [package.metadata]
 requires-dist = [
-    { name = "canonical-sphinx", marker = "extra == 'docs'", specifier = "~=0.2.0" },
+    { name = "canonical-sphinx", marker = "extra == 'docs'", specifier = "~=0.5.0" },
     { name = "packaging", specifier = ">=14.1" },
     { name = "pydantic", specifier = "~=2.4" },
     { name = "pyspelling", marker = "extra == 'docs'", specifier = "==2.10" },
@@ -357,7 +357,7 @@ dev = [
     { name = "types-setuptools", specifier = "==75.2.0.20241019" },
 ]
 docs = [
-    { name = "canonical-sphinx", specifier = "~=0.2.0" },
+    { name = "canonical-sphinx", specifier = "~=0.5.0" },
     { name = "pyspelling", specifier = "==2.10" },
     { name = "sphinx-autobuild", specifier = "==2024.10.3" },
     { name = "sphinx-lint", specifier = "==1.0.0" },
