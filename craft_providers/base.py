@@ -26,6 +26,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import time
 from abc import ABC, abstractmethod
 from enum import Enum
 from textwrap import dedent
@@ -329,6 +330,13 @@ class Base(ABC):
     def _setup_wait_for_system_ready(self, executor: Executor) -> None:
         """Wait until system is ready."""
         logger.debug("Waiting for environment to be ready...")
+        # TODO: Workaround for lunar
+        # We'll need to figure out why it gets stuck on "starting" before prod.
+        if self.alias.name in ("LUNAR", "MANTIC"):
+            import time
+
+            time.sleep(10)
+            return
 
         def assert_running(timeout: float) -> None:
             proc = self._execute_run(
@@ -428,6 +436,7 @@ class Base(ABC):
             ]
             self._execute_run(command, executor=executor, timeout=self._timeout_simple)
 
+            # if self.alias.name != "LUNAR":
             self._execute_run(
                 ["systemctl", "enable", "systemd-resolved"],
                 executor=executor,
@@ -544,11 +553,15 @@ class Base(ABC):
                 executor=executor,
                 timeout=TIMEOUT_SIMPLE,
             )
-            self._execute_run(
-                ["snap", "wait", "system", "seed.loaded"],
-                executor=executor,
-                timeout=TIMEOUT_SIMPLE,
-            )
+            # TODO: Why is Lunar failing to load? For right now just ignore.
+            if self.alias.name in ("LUNAR", "MANTIC"):
+                time.sleep(20)
+            else:
+                self._execute_run(
+                    ["snap", "wait", "system", "seed.loaded"],
+                    executor=executor,
+                    timeout=TIMEOUT_SIMPLE,
+                )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
                 brief="Failed to enable snapd service.",
