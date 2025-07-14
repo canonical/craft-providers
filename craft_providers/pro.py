@@ -78,7 +78,7 @@ def retrieve_pro_host_info() -> ProHostInfo:
     return ProHostInfo(machine_token, machine_id, contract_id, contract_url)
 
 
-def request_pro_guest_token() -> (str, str):
+def request_pro_guest_token() -> tuple[str, str]:
     """Request a guest token and from contracts API."""
     info = retrieve_pro_host_info()
 
