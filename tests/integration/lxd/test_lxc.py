@@ -314,6 +314,7 @@ def test_attach_pro_subscription_success(instance, lxc, session_project):
         lxc.attach_pro_subscription(
             instance_name=instance,
             pro_token="random",  # noqa: S106
+            contract_url="random",
             project=session_project,
         )
 
@@ -328,6 +329,7 @@ def test_attach_pro_subscription_failure(instance_alma, lxc, session_project):
         lxc.attach_pro_subscription(
             instance_name=instance_alma,
             pro_token="random",  # noqa: S106
+            contract_url="random",
             project=session_project,
         )
 

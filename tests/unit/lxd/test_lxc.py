@@ -2724,7 +2724,7 @@ def test_is_pro_enabled_process_error(fake_process):
     assert len(fake_process.calls) == 1
 
 
-def test_attach_pro_subscription_success(fake_process):
+def test_attach_pro_subscription_success(mocker, fake_process):
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2742,20 +2742,37 @@ def test_attach_pro_subscription_success(fake_process):
         stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"enabled": [], "reboot_required": false}, "meta": {"environment_vars": []}, "type": "FullTokenAttach"}, "errors": [], "result": "success", "version": "32.3.1~24.04", "warnings": []}""",
     )
 
+    # patch loading Pro client configuration file
+    mocker.patch("yaml.safe_load", return_value={})
+
+    # fake push/pulling pulling pro configuration file
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "file",
+            fake_process.any(),
+        ],
+        stdout="",
+        occurrences=2,
+    )
+
     assert (
         LXC().attach_pro_subscription(
             instance_name="test-instance",
             pro_token="random",  # noqa: S106
+            contract_url="random",
             project="test-project",
             remote="test-remote",
         )
         is None
     )
 
-    assert len(fake_process.calls) == 1
+    assert len(fake_process.calls) == 3
 
 
-def test_attach_pro_subscription_failed(fake_process):
+def test_attach_pro_subscription_failed(mocker, fake_process):
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2774,10 +2791,27 @@ def test_attach_pro_subscription_failed(fake_process):
         returncode=1,
     )
 
+    # patch loading Pro client configuration file
+    mocker.patch("yaml.safe_load", return_value={})
+
+    # fake push/pulling pulling pro configuration file
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "file",
+            fake_process.any(),
+        ],
+        stdout="",
+        occurrences=2,
+    )
+
     with pytest.raises(LXDError) as exc_info:
         LXC().attach_pro_subscription(
             instance_name="test-instance",
             pro_token="random",  # noqa: S106
+            contract_url="random",
             project="test-project",
             remote="test-remote",
         )
@@ -2787,10 +2821,10 @@ def test_attach_pro_subscription_failed(fake_process):
         == "Invalid token used to attach 'test-instance' to a Pro subscription."
     )
 
-    assert len(fake_process.calls) == 1
+    assert len(fake_process.calls) == 3
 
 
-def test_attach_pro_subscription_already_attached(fake_process):
+def test_attach_pro_subscription_already_attached(mocker, fake_process):
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2809,19 +2843,36 @@ def test_attach_pro_subscription_already_attached(fake_process):
         returncode=2,
     )
 
+    # patch loading Pro client configuration file
+    mocker.patch("yaml.safe_load", return_value={})
+
+    # fake push/pulling pulling pro configuration file
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "file",
+            fake_process.any(),
+        ],
+        stdout="",
+        occurrences=2,
+    )
+
     assert (
         LXC().attach_pro_subscription(
             instance_name="test-instance",
             pro_token="random",  # noqa: S106
+            contract_url="random",
             project="test-project",
             remote="test-remote",
         )
     ) is None
 
-    assert len(fake_process.calls) == 1
+    assert len(fake_process.calls) == 3
 
 
-def test_attach_pro_subscription_process_error(fake_process):
+def test_attach_pro_subscription_process_error(mocker, fake_process):
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2839,10 +2890,27 @@ def test_attach_pro_subscription_process_error(fake_process):
         returncode=127,
     )
 
+    # patch loading Pro client configuration file
+    mocker.patch("yaml.safe_load", return_value={})
+
+    # fake push/pulling pulling pro configuration file
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "file",
+            fake_process.any(),
+        ],
+        stdout="",
+        occurrences=2,
+    )
+
     with pytest.raises(LXDError) as exc_info:
         LXC().attach_pro_subscription(
             instance_name="test-instance",
             pro_token="random",  # noqa: S106
+            contract_url="random",
             project="test-project",
             remote="test-remote",
         )
@@ -2851,7 +2919,7 @@ def test_attach_pro_subscription_process_error(fake_process):
         exc_info.value.brief == "Ubuntu Pro Client is not installed on 'test-instance'."
     )
 
-    assert len(fake_process.calls) == 1
+    assert len(fake_process.calls) == 3
 
 
 def test_enable_pro_service_success(fake_process):
