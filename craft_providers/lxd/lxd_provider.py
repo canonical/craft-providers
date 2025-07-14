@@ -19,8 +19,8 @@
 import contextlib
 import logging
 import pathlib
+from collections.abc import Iterator
 from datetime import timedelta
-from typing import Iterator
 
 from craft_providers import Executor, Provider, bases
 from craft_providers.base import Base

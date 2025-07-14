@@ -21,7 +21,7 @@ import io
 import logging
 import pathlib
 import subprocess
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from craft_providers import errors
 from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE
@@ -35,11 +35,11 @@ logger = logging.getLogger(__name__)
 
 
 def _rootify_multipass_command(
-    command: List[str],
+    command: list[str],
     *,
-    cwd: Optional[pathlib.PurePath] = None,
-    env: Optional[Dict[str, Optional[str]]] = None,
-) -> List[str]:
+    cwd: pathlib.PurePath | None = None,
+    env: dict[str, str | None] | None = None,
+) -> list[str]:
     """Wrap a command to run as root with specified environment.
 
     - Use sudo to run as root (Multipass defaults to ubuntu user).
@@ -70,7 +70,7 @@ class MultipassInstance(Executor):
         self,
         *,
         name: str,
-        multipass: Optional[Multipass] = None,
+        multipass: Multipass | None = None,
     ) -> None:
         """Set up the wrapper class.
 
@@ -198,11 +198,11 @@ class MultipassInstance(Executor):
 
     def execute_popen(
         self,
-        command: List[str],
+        command: list[str],
         *,
-        cwd: Optional[pathlib.PurePath] = None,
-        env: Optional[Dict[str, Optional[str]]] = None,
-        timeout: Optional[float] = None,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        timeout: float | None = None,
         **kwargs,
     ) -> subprocess.Popen:
         """Execute a process in the instance using subprocess.Popen().
@@ -234,11 +234,11 @@ class MultipassInstance(Executor):
 
     def execute_run(
         self,
-        command: List[str],
+        command: list[str],
         *,
-        cwd: Optional[pathlib.PurePath] = None,
-        env: Optional[Dict[str, Optional[str]]] = None,
-        timeout: Optional[float] = None,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        timeout: float | None = None,
         check: bool = False,
         **kwargs,
     ) -> subprocess.CompletedProcess:
@@ -284,7 +284,7 @@ class MultipassInstance(Executor):
 
         return self.instance_name in vm_list
 
-    def _get_info(self) -> Dict[str, Any]:
+    def _get_info(self) -> dict[str, Any]:
         """Get configuration and state for instance.
 
         :returns: State information parsed from multipass if instance exists,

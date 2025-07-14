@@ -109,9 +109,6 @@ craft_providers_docs = ["**"]
 [tool.distutils.bdist_wheel]
 universal = true
 
-[tool.black]
-target-version = ["py38"]
-
 [tool.codespell]
 ignore-words-list = "buildd,crate,keyserver,comandos,ro,dedent,dedented"
 ignore-words = "docs/.custom_wordlist.txt"
@@ -192,7 +189,6 @@ warn_untyped_fields = true
 
 [tool.ruff]
 line-length = 88
-target-version = "py38"
 src = ["craft_providers", "tests"]
 extend-exclude = [
     "docs",
