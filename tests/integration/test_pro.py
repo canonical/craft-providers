@@ -16,37 +16,54 @@
 #
 
 import json
+import yaml
 
 from craft_providers import pro
 
-from tests.unit.test_pro import CONTRACT_ID, MACHINE_ID, MACHINE_TOKEN
-
-
-def setup_machine_token_file(tmp_path, content):
-    machine_token_dir = tmp_path / "var" / "lib" / "ubuntu-advantage" / "private"
-    machine_token_dir.mkdir(parents=True, exist_ok=True)
-
-    machine_token_file = machine_token_dir / "machine-token.json"
-    machine_token_file.write_text(json.dumps(content))
-
-    return machine_token_file
+from tests.unit.test_pro import (
+    CONTRACT_ID,
+    MACHINE_ID,
+    MACHINE_TOKEN,
+    CONTRACTS_API_URL,
+)
 
 
 def test_retrieve_pro_host_info(tmp_path, monkeypatch):
-    token_file = setup_machine_token_file(
-        tmp_path,
-        {
-            "machineToken": MACHINE_TOKEN,
-            "machineTokenInfo": {
-                "machineId": MACHINE_ID,
-                "contractInfo": {
-                    "id": CONTRACT_ID,
+    machine_token_file = tmp_path / "machine-token.json"
+    pro_config_file = tmp_path / "uaclient.conf"
+
+    # Create mock file mapping
+    mock_file_mapping = {
+        "/var/lib/ubuntu-advantage/private/machine-token.json": machine_token_file,
+        "/etc/ubuntu-advantage/uaclient.conf": pro_config_file,
+    }
+
+    machine_token_file.write_text(
+        json.dumps(
+            {
+                "machineToken": MACHINE_TOKEN,
+                "machineTokenInfo": {
+                    "machineId": MACHINE_ID,
+                    "contractInfo": {
+                        "id": CONTRACT_ID,
+                    },
                 },
-            },
-        },
+            }
+        )
     )
-    monkeypatch.setattr(pro, "Path", lambda x: token_file)
+
+    pro_config_file.write_text(
+        yaml.safe_dump(
+            {
+                "contract_url": CONTRACTS_API_URL,
+                "log_level": "debug",
+            }
+        )
+    )
+
+    monkeypatch.setattr(pro, "Path", lambda x: mock_file_mapping.get(str(x), x))
     output = pro.retrieve_pro_host_info()
     assert output.machine_token == MACHINE_TOKEN
     assert output.machine_id == MACHINE_ID
     assert output.contract_id == CONTRACT_ID
+    assert output.contract_url == CONTRACTS_API_URL
