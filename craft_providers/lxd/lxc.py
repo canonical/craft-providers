@@ -25,6 +25,7 @@ import os
 import pathlib
 import shlex
 import subprocess
+import tempfile
 import threading
 import time
 from collections import deque
@@ -1232,6 +1233,7 @@ class LXC:
         *,
         instance_name: str,
         pro_token: str,
+        contract_url: str,
         project: str = "default",
         remote: str = "local",
     ) -> None:
@@ -1256,6 +1258,36 @@ class LXC:
         ]
         try:
             payload = json.dumps({"token": pro_token, "auto_enable_services": False})
+
+            # TODO: pull /etc/ubuntu-advantage/uaclient.conf load it as yaml
+            # and update the contract_url with the one provided.
+            # Then push it back to the instance.
+
+            pro_client_config = pathlib.PurePath("/etc/ubuntu-advantage/uaclient.conf")
+            with tempfile.NamedTemporaryFile() as tmp:
+                tmp_path = pathlib.Path(tmp.name)
+                self.file_pull(
+                    instance_name=instance_name,
+                    source=pro_client_config,
+                    destination=tmp_path,
+                    project=project,
+                )
+
+                config = yaml.safe_load(tmp.read())
+
+                config["contract_url"] = contract_url
+
+                tmp.seek(0)
+                tmp.write(yaml.dump(config).encode())
+                tmp.flush()
+
+                self.file_push(
+                    instance_name=instance_name,
+                    source=tmp_path,
+                    destination=pro_client_config,
+                    create_dirs=True,
+                    project=project,
+                )
 
             proc = self._run_lxc(
                 command,
