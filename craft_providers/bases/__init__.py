@@ -17,7 +17,6 @@
 
 """Collection of bases used to configure build environments."""
 
-# Backward compatible, will be removed in 2.0
 import sys
 from typing import Literal, NamedTuple, overload
 

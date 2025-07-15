@@ -191,7 +191,6 @@ warn_untyped_fields = true
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
 src = ["craft_providers", "tests"]
 extend-exclude = [
     "docs",

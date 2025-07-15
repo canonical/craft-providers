@@ -4,6 +4,13 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+2.4.0 (2025-Jul-11)
+-------------------
+
+New features:
+
+- Add opt-in shutdown delay for a launched environment.
+
 2.3.1 (2025-Jun-19)
 -------------------
 
