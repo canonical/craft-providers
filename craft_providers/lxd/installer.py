@@ -149,6 +149,9 @@ def is_user_permitted() -> bool:
 
     :returns: True if user has correct permissions.
     """
+    # try non-snap lxd socket first
+    if os.access("/var/lib/lxd/unix.socket", os.O_RDWR):
+        return True
     return os.access("/var/snap/lxd/common/lxd/unix.socket", os.O_RDWR)
 
 
