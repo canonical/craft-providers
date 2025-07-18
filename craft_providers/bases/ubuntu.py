@@ -251,15 +251,15 @@ class BuilddBase(Base):
         """
         codename = self._get_codename(executor)
 
-        if not self._is_old_release(codename):
-            logger.debug(
-                f"Not updating EOL sources because {self.alias.value} isn't on https://old-releases.ubuntu.com."
-            )
-            return
-
         if not self._is_eol(codename):
             logger.debug(
                 f"Not updating EOL sources because {self.alias.value} isn't EOL."
+            )
+            return
+
+        if not self._is_old_release(codename):
+            logger.debug(
+                f"Not updating EOL sources because {self.alias.value} isn't on https://old-releases.ubuntu.com."
             )
             return
 
@@ -331,31 +331,6 @@ class BuilddBase(Base):
         logger.debug(f"{self.alias.value} isn't available on {url}.")
         return False
 
-    def _get_distro_info(self) -> str:
-        """Get ubuntu's distro info from Launchpad.
-
-        :returns: A CSV string containing distro info for Ubuntu.
-
-        :raises BaseConfigurationError: If the distro info can't be retrieved.
-        """
-        url = (
-            "https://git.launchpad.net/ubuntu/+source/distro-info-data/plain/ubuntu.csv"
-        )
-
-        def _request(timeout: float) -> requests.Response:
-            return requests.get(url=url, timeout=self._timeout_simple)
-
-        logger.debug(f"Getting distro info from {url}.")
-        response = retry.retry_until_timeout(
-            timeout=self._timeout_simple or const.TIMEOUT_SIMPLE,
-            retry_wait=self._retry_wait,
-            func=_request,
-            error=BaseConfigurationError(brief=f"Failed to get {url}."),
-        )
-
-        response.raise_for_status()
-        return response.content.decode("utf-8")
-
     def _is_eol(self, codename: str) -> bool:
         """Check if a base is EOL.
 
@@ -365,8 +340,11 @@ class BuilddBase(Base):
 
         :raises BaseConfigurationError: If the EOL data can't be determined.
         """
-        distro_info = self._get_distro_info()
-        reader = csv.DictReader(io.StringIO(distro_info))
+        logger.debug(f"Getting EOL data for {self.alias.value} ({codename}).")
+        with importlib.resources.path(
+            "craft_providers.data", "ubuntu.csv"
+        ) as distro_info_file:
+            reader = csv.DictReader(io.StringIO(distro_info_file.read_text("utf-8")))
 
         for row in reader:
             if row.get("series") == codename:

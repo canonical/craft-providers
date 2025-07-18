@@ -105,7 +105,7 @@ craft_providers = "craft_providers"
 craft_providers_docs = "docs/base"
 
 [tool.setuptools.package-data]
-craft_providers = ["util/sources.sh"]
+craft_providers = ["util/sources.sh", "data/ubuntu.csv"]
 craft_providers_docs = ["**"]
 
 [tool.distutils.bdist_wheel]

@@ -89,13 +89,6 @@ def mock_requests_head(mocker, request):
     return mocker.patch("requests.head", return_value=mock_response)
 
 
-@pytest.fixture
-def mock_requests_get(mocker, request):
-    content = getattr(request, "param", None)
-    mock_response = mocker.Mock(content=content)
-    return mocker.patch("requests.get", return_value=mock_response)
-
-
 @pytest.mark.parametrize("alias", list(ubuntu.BuilddBaseAlias))
 @pytest.mark.parametrize(
     ("environment", "etc_environment_content"),
@@ -197,6 +190,11 @@ def test_setup(
     tag,
     expected_tag,
 ):
+    with importlib.resources.path(
+        "craft_providers.data", "ubuntu.csv"
+    ) as distro_info_file:
+        fake_filesystem.add_real_file(distro_info_file)
+
     mock_load.return_value = InstanceConfiguration(compatibility_tag=expected_tag)
 
     if environment is None:
@@ -276,7 +274,7 @@ def test_setup(
             ID_LIKE=debian
             VERSION_ID="{alias.value}"
             VERSION_CODENAME="test-name"
-            UBUNTU_CODENAME="test-name"
+            UBUNTU_CODENAME="noble"
             """
         ),
     )
@@ -1801,14 +1799,7 @@ def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executo
 
 @freeze_time("2027-01-01")
 @pytest.mark.parametrize("mock_requests_head", [200], indirect=True)
-@pytest.mark.parametrize(
-    "mock_requests_get",
-    [pytest.param((TEST_DIR / "ubuntu.csv").read_bytes(), id="ubuntu.csv")],
-    indirect=True,
-)
-def test_base_past_eol(
-    fake_process, fake_executor, mock_requests_head, mock_requests_get, logs
-):
+def test_base_past_eol(fake_process, fake_executor, mock_requests_head, logs):
     """Update the sources if the base is past its EOL date."""
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
     fake_process.register_subprocess(
@@ -1821,6 +1812,8 @@ def test_base_past_eol(
 
     base_config._update_eol_sources(fake_executor)
 
+    assert re.escape("Getting EOL data for 25.04 (plucky).") in logs.debug
+    assert re.escape("25.04 is EOL.") in logs.debug
     assert (
         re.escape("Checking for 25.04 (plucky) on https://old-releases.ubuntu.com.")
         in logs.debug
@@ -1829,13 +1822,6 @@ def test_base_past_eol(
         re.escape("25.04 is available on https://old-releases.ubuntu.com.")
         in logs.debug
     )
-    assert (
-        re.escape(
-            "Getting distro info from https://git.launchpad.net/ubuntu/+source/distro-info-data/plain/ubuntu.csv."
-        )
-        in logs.debug
-    )
-    assert re.escape("25.04 is EOL.") in logs.debug
     assert re.escape("Updating EOL sources.") in logs.debug
     with importlib.resources.path(
         "craft_providers.util", "sources.sh"
@@ -1847,14 +1833,7 @@ def test_base_past_eol(
 
 @freeze_time("2025-01-01")
 @pytest.mark.parametrize("mock_requests_head", [200], indirect=True)
-@pytest.mark.parametrize(
-    "mock_requests_get",
-    [pytest.param((TEST_DIR / "ubuntu.csv").read_bytes(), id="ubuntu.csv")],
-    indirect=True,
-)
-def test_base_not_past_eol(
-    fake_process, fake_executor, mock_requests_head, mock_requests_get, logs
-):
+def test_base_not_past_eol(fake_process, fake_executor, mock_requests_head, logs):
     """Don't update EOL sources if the base isn't past its EOL date."""
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
 
@@ -1868,6 +1847,7 @@ def test_base_not_past_eol(
     assert re.escape("Not updating EOL sources because 25.04 isn't EOL.") in logs.debug
 
 
+@freeze_time("2027-01-01")
 def test_base_not_on_old_releases(
     fake_process, fake_executor, mock_requests_head, logs
 ):
@@ -1888,6 +1868,7 @@ def test_base_not_on_old_releases(
     )
 
 
+@freeze_time("2027-01-01")
 def test_get_old_releases_retry(fake_process, fake_executor, mock_requests_head, logs):
     """Retry requests to https://old-releases.ubuntu.com."""
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
@@ -1911,9 +1892,8 @@ def test_get_old_releases_retry(fake_process, fake_executor, mock_requests_head,
     )
 
 
-def test_get_old_releases_error(
-    fake_process, fake_executor, mock_requests_head, mock_instant_sleep, logs
-):
+@freeze_time("2027-01-01")
+def test_get_old_releases_error(fake_process, fake_executor, mock_requests_head, logs):
     """Error if https://old-releases.ubuntu.com can't be reached."""
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
     mock_requests_head.side_effect = requests.ConnectionError()
@@ -1921,6 +1901,9 @@ def test_get_old_releases_error(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
         stdout="UBUNTU_CODENAME=plucky",
     )
+    # shorten the retries because mock_instant_sleep doesn't work well with freeze_time
+    base_config._retry_wait = 0.01
+    base_config._timeout_simple = 0.001
 
     expected_error = re.escape(
         "Failed to get https://old-releases.ubuntu.com/ubuntu/dists/plucky/."
@@ -1929,94 +1912,7 @@ def test_get_old_releases_error(
         base_config._update_eol_sources(fake_executor)
 
 
-@freeze_time("2025-01-01")
-@pytest.mark.parametrize("mock_requests_head", [200], indirect=True)
-@pytest.mark.parametrize(
-    "mock_requests_get",
-    [pytest.param((TEST_DIR / "ubuntu.csv").read_bytes(), id="ubuntu.csv")],
-    indirect=True,
-)
-def test_get_distro_info_retry(
-    fake_process,
-    fake_executor,
-    mock_requests_head,
-    mock_requests_get,
-    logs,
-):
-    """Retry requests to to get distro info from Launchpad."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
-    # freeze_time and mock_instant_sleep fight each other, so make the timeout and retry very short
-    base_config._timeout_simple = 0.01
-    base_config._retry_wait = 0.0001
-    mock_requests_get.side_effect = [
-        requests.ConnectionError(),
-        requests.ConnectionError(),
-        mock_requests_get.return_value,
-    ]
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
-        stdout="UBUNTU_CODENAME=plucky",
-    )
-
-    base_config._update_eol_sources(fake_executor)
-
-    assert re.escape("Not updating EOL sources because 25.04 isn't EOL.") in logs.debug
-
-
-@pytest.mark.parametrize("mock_requests_head", [200], indirect=True)
-def test_get_distro_info_connection_error(
-    fake_process,
-    fake_executor,
-    mock_requests_head,
-    mock_requests_get,
-    mock_instant_sleep,
-    logs,
-):
-    """Error if the distro info from Launchpad can't be reached."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
-    mock_requests_get.side_effect = requests.ConnectionError()
-
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
-        stdout="UBUNTU_CODENAME=plucky",
-    )
-
-    with pytest.raises(BaseConfigurationError) as raised:
-        base_config._update_eol_sources(fake_executor)
-
-    assert raised.value == BaseConfigurationError(
-        brief="Failed to get https://git.launchpad.net/ubuntu/+source/distro-info-data/plain/ubuntu.csv."
-    )
-
-
-@pytest.mark.parametrize("mock_requests_head", [200], indirect=True)
-@pytest.mark.parametrize(
-    "mock_requests_get",
-    [b"hello,world"],
-    indirect=True,
-)
-def test_get_distro_info_content_error(
-    fake_process, fake_executor, mock_requests_head, mock_requests_get, logs
-):
-    """Error if the contents of distro-info are invalid."""
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
-
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
-        stdout="UBUNTU_CODENAME=plucky",
-    )
-
-    with pytest.raises(BaseConfigurationError) as raised:
-        base_config._update_eol_sources(fake_executor)
-
-    assert raised.value == BaseConfigurationError(
-        brief="Couldn't get EOL data for 25.04."
-    )
-
-
-def test_get_codename_error(
-    fake_process, fake_executor, mock_requests_head, mock_requests_get, logs
-):
+def test_get_codename_error(fake_process, fake_executor, mock_requests_head, logs):
     """Error if the codename isn't in /etc/os-release."""
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
 
@@ -2036,13 +1932,8 @@ def test_get_codename_error(
 
 @freeze_time("2027-01-01")
 @pytest.mark.parametrize("mock_requests_head", [200], indirect=True)
-@pytest.mark.parametrize(
-    "mock_requests_get",
-    [pytest.param((TEST_DIR / "ubuntu.csv").read_bytes(), id="ubuntu.csv")],
-    indirect=True,
-)
 def test_update_eol_sources_error(
-    fake_process, fake_executor, mock_requests_head, mock_requests_get, logs
+    fake_process, fake_executor, mock_requests_head, logs
 ):
     """Error if the bash script fails to run in the instance."""
 
