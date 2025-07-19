@@ -27,7 +27,7 @@ craft-providers = "craft_providers.cli:main"
 [dependency-groups]
 dev = [
     "coverage[toml]==7.6.4",
-    "freezegun==1.5.2",
+    "freezegun==1.5.3",
     "logassert==7",
     "pyfakefs==5.7.1",
     "pytest==8.3.3",
@@ -69,7 +69,7 @@ docs = [
 
 [build-system]
 requires = [
-    "setuptools==75.9.1",
+    "setuptools==80.9.0",
     "setuptools_scm[toml]>=7.1"
 ]
 build-backend = "setuptools.build_meta"
