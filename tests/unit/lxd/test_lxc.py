@@ -31,6 +31,26 @@ def mock_getpid(mocker):
     return mocker.patch("os.getpid", return_value=123)
 
 
+@pytest.fixture
+def mock_pro_config_handling(mocker, fake_process):
+    """Mock Pro client configuration file handling."""
+    # load a mock empty configuration file
+    mocker.patch("yaml.safe_load", return_value={})
+
+    # mock push/pulling subprocess calls
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "file",
+            fake_process.any(),
+        ],
+        stdout="",
+        occurrences=2,
+    )
+
+
 def test_lxc_run_default(mocker, tmp_path):
     """Test _lxc_run with default arguments."""
     mock_run = mocker.patch("subprocess.run")
@@ -1171,9 +1191,9 @@ def test_launch_error(fake_process, mocker):
         occurrences=4,
     )
 
-    mocker.patch("craft_providers.lxd.lxc.LXC.check_instance_status").side_effect = (
-        LXDError("Failed to get instance status.")
-    )
+    mocker.patch(
+        "craft_providers.lxd.lxc.LXC.check_instance_status"
+    ).side_effect = LXDError("Failed to get instance status.")
 
     mocker.patch("time.sleep")
 
@@ -2724,7 +2744,7 @@ def test_is_pro_enabled_process_error(fake_process):
     assert len(fake_process.calls) == 1
 
 
-def test_attach_pro_subscription_success(mocker, fake_process):
+def test_attach_pro_subscription_success(mock_pro_config_handling, fake_process):
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2742,22 +2762,6 @@ def test_attach_pro_subscription_success(mocker, fake_process):
         stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"enabled": [], "reboot_required": false}, "meta": {"environment_vars": []}, "type": "FullTokenAttach"}, "errors": [], "result": "success", "version": "32.3.1~24.04", "warnings": []}""",
     )
 
-    # patch loading Pro client configuration file
-    mocker.patch("yaml.safe_load", return_value={})
-
-    # fake push/pulling pulling pro configuration file
-    fake_process.register_subprocess(
-        [
-            "lxc",
-            "--project",
-            "test-project",
-            "file",
-            fake_process.any(),
-        ],
-        stdout="",
-        occurrences=2,
-    )
-
     assert (
         LXC().attach_pro_subscription(
             instance_name="test-instance",
@@ -2772,7 +2776,7 @@ def test_attach_pro_subscription_success(mocker, fake_process):
     assert len(fake_process.calls) == 3
 
 
-def test_attach_pro_subscription_failed(mocker, fake_process):
+def test_attach_pro_subscription_failed(mock_pro_config_handling, fake_process):
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2789,22 +2793,6 @@ def test_attach_pro_subscription_failed(mocker, fake_process):
         ],
         stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"enabled": [], "reboot_required": false}, "meta": {"environment_vars": []}, "type": "FullTokenAttach"}, "errors": ["Unknown"], "result": "failure", "version": "32.3.1~24.04", "warnings": []}""",
         returncode=1,
-    )
-
-    # patch loading Pro client configuration file
-    mocker.patch("yaml.safe_load", return_value={})
-
-    # fake push/pulling pulling pro configuration file
-    fake_process.register_subprocess(
-        [
-            "lxc",
-            "--project",
-            "test-project",
-            "file",
-            fake_process.any(),
-        ],
-        stdout="",
-        occurrences=2,
     )
 
     with pytest.raises(LXDError) as exc_info:
@@ -2824,7 +2812,9 @@ def test_attach_pro_subscription_failed(mocker, fake_process):
     assert len(fake_process.calls) == 3
 
 
-def test_attach_pro_subscription_already_attached(mocker, fake_process):
+def test_attach_pro_subscription_already_attached(
+    mock_pro_config_handling, fake_process
+):
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2843,22 +2833,6 @@ def test_attach_pro_subscription_already_attached(mocker, fake_process):
         returncode=2,
     )
 
-    # patch loading Pro client configuration file
-    mocker.patch("yaml.safe_load", return_value={})
-
-    # fake push/pulling pulling pro configuration file
-    fake_process.register_subprocess(
-        [
-            "lxc",
-            "--project",
-            "test-project",
-            "file",
-            fake_process.any(),
-        ],
-        stdout="",
-        occurrences=2,
-    )
-
     assert (
         LXC().attach_pro_subscription(
             instance_name="test-instance",
@@ -2872,7 +2846,7 @@ def test_attach_pro_subscription_already_attached(mocker, fake_process):
     assert len(fake_process.calls) == 3
 
 
-def test_attach_pro_subscription_process_error(mocker, fake_process):
+def test_attach_pro_subscription_process_error(mock_pro_config_handling, fake_process):
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2888,22 +2862,6 @@ def test_attach_pro_subscription_process_error(mocker, fake_process):
             "-",
         ],
         returncode=127,
-    )
-
-    # patch loading Pro client configuration file
-    mocker.patch("yaml.safe_load", return_value={})
-
-    # fake push/pulling pulling pro configuration file
-    fake_process.register_subprocess(
-        [
-            "lxc",
-            "--project",
-            "test-project",
-            "file",
-            fake_process.any(),
-        ],
-        stdout="",
-        occurrences=2,
     )
 
     with pytest.raises(LXDError) as exc_info:
