@@ -324,7 +324,7 @@ def test_attach_pro_subscription_success(instance, lxc, session_project):
 
 
 def test_attach_pro_subscription_failure(instance_alma, lxc, session_project):
-    """Test the attachment scenario with a fake Pro token."""
+    """Test the attachment scenario with a non Ubuntu instance."""
     with pytest.raises(LXDError) as raised:
         lxc.attach_pro_subscription(
             instance_name=instance_alma,
