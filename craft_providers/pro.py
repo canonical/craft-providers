@@ -79,7 +79,7 @@ def retrieve_pro_host_info() -> ProHostInfo:
 
 
 def request_pro_guest_token() -> tuple[str, str]:
-    """Request a guest token and from contracts API."""
+    """Request a guest token from contracts API."""
     info = retrieve_pro_host_info()
 
     try:
