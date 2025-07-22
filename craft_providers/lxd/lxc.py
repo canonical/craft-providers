@@ -1269,13 +1269,11 @@ class LXC:
                     project=project,
                 )
 
-                config = yaml.safe_load(tmp.read())
+                config = yaml.safe_load(tmp_path.read_text())
 
                 config["contract_url"] = contract_url
 
-                tmp.seek(0)
-                tmp.write(yaml.dump(config).encode())
-                tmp.flush()
+                tmp_path.write_text(yaml.dump(config))
 
                 self.file_push(
                     instance_name=instance_name,
