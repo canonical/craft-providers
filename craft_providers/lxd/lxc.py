@@ -1259,10 +1259,6 @@ class LXC:
         try:
             payload = json.dumps({"token": pro_token, "auto_enable_services": False})
 
-            # TODO: pull /etc/ubuntu-advantage/uaclient.conf load it as yaml
-            # and update the contract_url with the one provided.
-            # Then push it back to the instance.
-
             pro_client_config = pathlib.PurePath("/etc/ubuntu-advantage/uaclient.conf")
             with tempfile.NamedTemporaryFile() as tmp:
                 tmp_path = pathlib.Path(tmp.name)
