@@ -2744,7 +2744,8 @@ def test_is_pro_enabled_process_error(fake_process):
     assert len(fake_process.calls) == 1
 
 
-def test_attach_pro_subscription_success(mock_pro_config_handling, fake_process):
+@pytest.mark.usefixtures("mock_pro_config_handling")
+def test_attach_pro_subscription_success(fake_process):
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2776,7 +2777,8 @@ def test_attach_pro_subscription_success(mock_pro_config_handling, fake_process)
     assert len(fake_process.calls) == 3
 
 
-def test_attach_pro_subscription_failed(mock_pro_config_handling, fake_process):
+@pytest.mark.usefixtures("mock_pro_config_handling")
+def test_attach_pro_subscription_failed(fake_process):
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2812,9 +2814,8 @@ def test_attach_pro_subscription_failed(mock_pro_config_handling, fake_process):
     assert len(fake_process.calls) == 3
 
 
-def test_attach_pro_subscription_already_attached(
-    mock_pro_config_handling, fake_process
-):
+@pytest.mark.usefixtures("mock_pro_config_handling")
+def test_attach_pro_subscription_already_attached(fake_process):
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2846,7 +2847,8 @@ def test_attach_pro_subscription_already_attached(
     assert len(fake_process.calls) == 3
 
 
-def test_attach_pro_subscription_process_error(mock_pro_config_handling, fake_process):
+@pytest.mark.usefixtures("mock_pro_config_handling")
+def test_attach_pro_subscription_process_error(fake_process):
     fake_process.register_subprocess(
         [
             "lxc",
