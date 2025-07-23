@@ -606,10 +606,11 @@ def test_launch_all_opts(mock_lxc, instance):
     )
 
     uid = str(os.getuid())
+    gid = str(os.getgid())
     assert mock_lxc.mock_calls == [
         mock.call.info(project=instance.project, remote=instance.remote),
         mock.call.launch(
-            config_keys={"raw.idmap": f"both {uid} 0"},
+            config_keys={"raw.idmap": f"uid {uid} 0\ngid {gid} 0"},
             ephemeral=True,
             instance_name=instance.instance_name,
             image="22.04",
