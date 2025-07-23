@@ -31,6 +31,26 @@ def mock_getpid(mocker):
     return mocker.patch("os.getpid", return_value=123)
 
 
+@pytest.fixture
+def mock_pro_config_handling(mocker, fake_process):
+    """Mock Pro client configuration file handling."""
+    # load a mock empty configuration file
+    mocker.patch("yaml.safe_load", return_value={})
+
+    # mock push/pulling subprocess calls
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "file",
+            fake_process.any(),
+        ],
+        stdout="",
+        occurrences=2,
+    )
+
+
 def test_lxc_run_default(mocker, tmp_path):
     """Test _lxc_run with default arguments."""
     mock_run = mocker.patch("subprocess.run")
@@ -1171,9 +1191,9 @@ def test_launch_error(fake_process, mocker):
         occurrences=4,
     )
 
-    mocker.patch("craft_providers.lxd.lxc.LXC.check_instance_status").side_effect = (
-        LXDError("Failed to get instance status.")
-    )
+    mocker.patch(
+        "craft_providers.lxd.lxc.LXC.check_instance_status"
+    ).side_effect = LXDError("Failed to get instance status.")
 
     mocker.patch("time.sleep")
 
@@ -2724,6 +2744,7 @@ def test_is_pro_enabled_process_error(fake_process):
     assert len(fake_process.calls) == 1
 
 
+@pytest.mark.usefixtures("mock_pro_config_handling")
 def test_attach_pro_subscription_success(fake_process):
     fake_process.register_subprocess(
         [
@@ -2746,15 +2767,17 @@ def test_attach_pro_subscription_success(fake_process):
         LXC().attach_pro_subscription(
             instance_name="test-instance",
             pro_token="random",  # noqa: S106
+            contract_url="random",
             project="test-project",
             remote="test-remote",
         )
         is None
     )
 
-    assert len(fake_process.calls) == 1
+    assert len(fake_process.calls) == 3
 
 
+@pytest.mark.usefixtures("mock_pro_config_handling")
 def test_attach_pro_subscription_failed(fake_process):
     fake_process.register_subprocess(
         [
@@ -2778,6 +2801,7 @@ def test_attach_pro_subscription_failed(fake_process):
         LXC().attach_pro_subscription(
             instance_name="test-instance",
             pro_token="random",  # noqa: S106
+            contract_url="random",
             project="test-project",
             remote="test-remote",
         )
@@ -2787,9 +2811,10 @@ def test_attach_pro_subscription_failed(fake_process):
         == "Invalid token used to attach 'test-instance' to a Pro subscription."
     )
 
-    assert len(fake_process.calls) == 1
+    assert len(fake_process.calls) == 3
 
 
+@pytest.mark.usefixtures("mock_pro_config_handling")
 def test_attach_pro_subscription_already_attached(fake_process):
     fake_process.register_subprocess(
         [
@@ -2813,14 +2838,16 @@ def test_attach_pro_subscription_already_attached(fake_process):
         LXC().attach_pro_subscription(
             instance_name="test-instance",
             pro_token="random",  # noqa: S106
+            contract_url="random",
             project="test-project",
             remote="test-remote",
         )
     ) is None
 
-    assert len(fake_process.calls) == 1
+    assert len(fake_process.calls) == 3
 
 
+@pytest.mark.usefixtures("mock_pro_config_handling")
 def test_attach_pro_subscription_process_error(fake_process):
     fake_process.register_subprocess(
         [
@@ -2843,6 +2870,7 @@ def test_attach_pro_subscription_process_error(fake_process):
         LXC().attach_pro_subscription(
             instance_name="test-instance",
             pro_token="random",  # noqa: S106
+            contract_url="random",
             project="test-project",
             remote="test-remote",
         )
@@ -2851,7 +2879,7 @@ def test_attach_pro_subscription_process_error(fake_process):
         exc_info.value.brief == "Ubuntu Pro Client is not installed on 'test-instance'."
     )
 
-    assert len(fake_process.calls) == 1
+    assert len(fake_process.calls) == 3
 
 
 def test_enable_pro_service_success(fake_process):
