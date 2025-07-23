@@ -26,6 +26,7 @@ import os
 import pathlib
 import shlex
 import subprocess
+import tempfile
 import threading
 import time
 from collections import deque
@@ -1273,6 +1274,7 @@ class LXC:
         *,
         instance_name: str,
         pro_token: str,
+        contract_url: str,
         project: str = "default",
         remote: str = "local",
     ) -> None:
@@ -1297,6 +1299,39 @@ class LXC:
         ]
         try:
             payload = json.dumps({"token": pro_token, "auto_enable_services": False})
+
+            pro_client_config = pathlib.PurePath("/etc/ubuntu-advantage/uaclient.conf")
+            with tempfile.NamedTemporaryFile() as tmp:
+                tmp_path = pathlib.Path(tmp.name)
+
+                try:
+                    self.file_pull(
+                        instance_name=instance_name,
+                        source=pro_client_config,
+                        destination=tmp_path,
+                        project=project,
+                    )
+                except LXDError as exc:
+                    if exc.brief.startswith("Failed to pull file"):
+                        raise LXDError(
+                            brief=f"Ubuntu Pro Client is not installed on {instance_name!r}."
+                        ) from exc
+
+                    raise
+
+                config = yaml.safe_load(tmp_path.read_text())
+
+                config["contract_url"] = contract_url
+
+                tmp_path.write_text(yaml.dump(config))
+
+                self.file_push(
+                    instance_name=instance_name,
+                    source=tmp_path,
+                    destination=pro_client_config,
+                    create_dirs=True,
+                    project=project,
+                )
 
             proc = self._run_lxc(
                 command,
