@@ -547,6 +547,7 @@ def test_launch_map_user_uid_true(base_configuration, instance_name, tmp_path):
         image_remote="ubuntu",
         map_user_uid=True,
         uid=os.stat(tmp_path).st_uid,
+        gid=os.stat(tmp_path).st_gid,
     )
 
     try:

@@ -365,6 +365,7 @@ class LXDInstance(Executor):
         map_user_uid: bool = False,
         ephemeral: bool = False,
         uid: int | None = None,
+        gid: int | None = None,
     ) -> None:
         """Launch instance.
 
@@ -380,9 +381,9 @@ class LXDInstance(Executor):
         config_keys = {}
 
         if map_user_uid:
-            if not uid:
-                uid = os.getuid()
-            config_keys["raw.idmap"] = f"both {uid!s} 0"
+            uid = os.getuid() if uid is None else uid
+            gid = os.getgid() if gid is None else gid
+            config_keys["raw.idmap"] = f"uid {uid!s} 0\ngid {gid!s} 0"
 
         if self._intercept_mknod:
             if not self._host_supports_mknod():

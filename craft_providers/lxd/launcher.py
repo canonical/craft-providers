@@ -91,6 +91,7 @@ def _create_instance(
     ephemeral: bool,
     map_user_uid: bool,
     uid: int | None,
+    gid: int | None,
     project: str,
     remote: str,
     lxc: LXC,
@@ -111,6 +112,7 @@ def _create_instance(
     :param ephemeral: After the instance is stopped, delete it.
     :param map_user_uid: Map host uid/gid to instance's root uid/gid.
     :param uid: The uid to be mapped, if ``map_user_uid`` is enabled.
+    :param gid: The group id to be mapped, if ``map_user_uid`` is enabled.
     :param project: LXD project to create instance in.
     :param remote: LXD remote to create instance on.
     :param lxc: LXC client.
@@ -132,6 +134,7 @@ def _create_instance(
             ephemeral=False,  # base instance should not ephemeral
             map_user_uid=map_user_uid,
             uid=uid,
+            gid=gid,
         )
         base_instance_status = base_instance.config_get("user.craft_providers.status")
 
@@ -188,6 +191,7 @@ def _create_instance(
             ephemeral=ephemeral,
             map_user_uid=map_user_uid,
             uid=uid,
+            gid=gid,
         )
         instance_status = instance.config_get("user.craft_providers.status")
 
@@ -213,7 +217,12 @@ def _create_instance(
     # after creating the base instance, the id map can be set
     if map_user_uid:
         _set_id_map(
-            instance=instance, lxc=instance.lxc, project=project, remote=remote, uid=uid
+            instance=instance,
+            lxc=instance.lxc,
+            project=project,
+            remote=remote,
+            uid=uid,
+            gid=gid,
         )
 
     # now restart and wait for the instance to be ready
@@ -340,6 +349,7 @@ def _launch_existing_instance(
     ephemeral: bool,
     map_user_uid: bool,
     uid: int | None,
+    gid: int | None,
 ) -> bool:
     """Start and warmup an existing instance.
 
@@ -372,6 +382,7 @@ def _launch_existing_instance(
         remote=remote,
         map_user_uid=map_user_uid,
         uid=uid,
+        gid=gid,
     ):
         if auto_clean:
             logger.debug(
@@ -423,6 +434,7 @@ def _check_id_map(
     remote: str,
     map_user_uid: bool,
     uid: int | None,
+    gid: int | None,
 ) -> bool:
     """Check if the instance's id map matches the uid passed as an argument.
 
@@ -439,6 +451,8 @@ def _check_id_map(
     """
     if uid is None:
         uid = os.getuid()
+    if gid is None:
+        gid = os.getgid()
 
     configured_id_map = lxc.config_get(
         instance_name=instance.instance_name,
@@ -448,25 +462,35 @@ def _check_id_map(
     )
 
     # if the id map is not configured and should not be configured, then return True
-    if not configured_id_map and not map_user_uid:
+    if not configured_id_map.strip() and not map_user_uid:
         return True
 
-    match = re.fullmatch("both ([0-9]+) 0", configured_id_map)
+    uid_match = re.search("^uid ([0-9]+) 0$", configured_id_map, flags=re.MULTILINE)
+    gid_match = re.search("^gid ([0-9]+) 0$", configured_id_map, flags=re.MULTILINE)
 
     # if the id map is not exactly what craft-providers configured, then return False
-    if not match:
+    if not uid_match:
         logger.debug(
-            "Unexpected id map for %r (expected 'both %s 0', got %r).",
+            "Unexpected id map for %r (expected 'uid %s 0', got %r).",
             instance.instance_name,
             uid,
             configured_id_map,
         )
         return False
+    if not gid_match:
+        logger.debug(
+            "Unexpected id map for %r (expected 'gid %s 0', got %r).",
+            instance.instance_name,
+            gid,
+            configured_id_map,
+        )
+        return False
 
     # get the configured uid from the id map
-    configured_uid = int(match.group(1))
+    configured_uid = int(uid_match.group(1))
+    configured_gid = int(gid_match.group(1))
 
-    return configured_uid == uid
+    return configured_uid == uid and configured_gid == gid
 
 
 def _set_id_map(
@@ -476,6 +500,7 @@ def _set_id_map(
     project: str = "default",
     remote: str = "local",
     uid: int | None = None,
+    gid: int | None = None,
 ) -> None:
     """Configure the instance's id map.
 
@@ -491,15 +516,16 @@ def _set_id_map(
     :param project: LXD project to create instance in.
     :param remote: LXD remote to create instance on.
     :param uid: The uid to be mapped. If not supplied, the current user's uid is used.
+    :param gid: The gid to be mapped. If not supplied, the current process's gid is used.
     """
     configured_id_map = ""
-    if uid is None:
-        uid = os.getuid()
+    uid = uid or os.getuid()
+    gid = gid or os.getgid()
 
     lxc.config_set(
         instance_name=instance.instance_name,
         key="raw.idmap",
-        value=f"both {uid!s} 0",
+        value=f"uid {uid!s} 0\ngid {gid!s} 0",
         project=project,
         remote=remote,
     )
@@ -518,10 +544,15 @@ def _set_id_map(
         "Got LXD idmap for instance %r: %r", instance.instance_name, configured_id_map
     )
 
-    if ["both", str(uid), "0"] not in configured_id_map_list:
+    if ["uid", str(uid), "0"] not in configured_id_map_list:
         raise LXDError(
-            brief=f"Failed to set idmap for instance {instance.instance_name!r}",
-            details=f"Expected idmap: 'both {uid!s} 0', got {configured_id_map!r}",
+            brief=f"Failed to set uid map for instance {instance.instance_name!r}",
+            details=f"Expected idmap: 'uid {uid!s} 0', got {configured_id_map!r}",
+        )
+    if ["gid", str(gid), "0"] not in configured_id_map_list:
+        raise LXDError(
+            brief=f"Failed to set gid map for instance {instance.instance_name!r}",
+            details=f"Expected idmap: 'gid {gid!s} 0', got {configured_id_map!r}",
         )
 
 
@@ -649,6 +680,7 @@ def launch(
     ephemeral: bool = False,
     map_user_uid: bool = False,
     uid: int | None = None,
+    gid: int | None = None,
     use_base_instance: bool = False,
     project: str = "default",
     remote: str = "local",
@@ -684,6 +716,7 @@ def launch(
     will be deleted, then recreated as an ephemeral instance.
     :param map_user_uid: Map host uid/gid to instance's root uid/gid.
     :param uid: The uid to be mapped, if ``map_user_uid`` is enabled.
+    :param gid: The group id to be mapped, if ``map_user_uid`` is enabled.
     :param use_base_instance: Use the base instance mechanisms to reduce setup time.
     :param project: LXD project to create instance in.
     :param remote: LXD remote to create instance on.
@@ -728,6 +761,7 @@ def launch(
         ephemeral=ephemeral,
         map_user_uid=map_user_uid,
         uid=uid,
+        gid=gid,
     ):
         return instance
 
@@ -744,6 +778,7 @@ def launch(
             ephemeral=ephemeral,
             map_user_uid=map_user_uid,
             uid=uid,
+            gid=gid,
             project=project,
             remote=remote,
             lxc=lxc,
@@ -789,6 +824,7 @@ def launch(
             ephemeral=ephemeral,
             map_user_uid=map_user_uid,
             uid=uid,
+            gid=gid,
             project=project,
             remote=remote,
             lxc=lxc,
@@ -812,6 +848,7 @@ def launch(
             ephemeral=ephemeral,
             map_user_uid=map_user_uid,
             uid=uid,
+            gid=gid,
             project=project,
             remote=remote,
             lxc=lxc,
@@ -843,7 +880,9 @@ def launch(
 
     # set the id map while the instance is not running
     if map_user_uid:
-        _set_id_map(instance=instance, lxc=lxc, project=project, remote=remote, uid=uid)
+        _set_id_map(
+            instance=instance, lxc=lxc, project=project, remote=remote, uid=uid, gid=gid
+        )
 
     # instance is now ready to be started and warmed up
     instance.start()
