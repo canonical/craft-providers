@@ -20,6 +20,7 @@
 import enum
 import io
 import logging
+import os
 import pathlib
 import subprocess
 from functools import total_ordering
@@ -217,6 +218,23 @@ class BuilddBase(Base):
             file_mode="0644",
         )
 
+        # use_fetch = os.getenv("CRAFT_USE_EXTERNAL_FETCH_SERVICE") == "1"
+        # if use_fetch:
+        #     http_proxy = os.getenv("http_proxy")
+        #     apt_config = f'Acquire::http::Proxy "{http_proxy}";\n'
+        #     apt_config += f'Acquire::https::Proxy "{http_proxy}";\n'
+        #
+        #     executor.push_file_io(
+        #         destination=pathlib.Path("/etc/apt/apt.conf.d/99proxy"),
+        #         content=io.BytesIO(apt_config.encode("utf-8")),
+        #         file_mode="0644",
+        #     )
+        #     self._execute_run(
+        #         ["/bin/rm", "-Rf", "/var/lib/apt/lists"],
+        #         executor=executor,
+        #         verify_network=False,
+        #         timeout=self._timeout_simple,
+        #     )
         try:
             self._execute_run(
                 ["apt-get", "update"],

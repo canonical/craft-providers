@@ -445,6 +445,24 @@ class Base(ABC):
                 details=details_from_called_process_error(error),
             ) from error
 
+    def _setup_certificates(self, executor: Executor) -> None:
+        proxy_cert = os.getenv("CRAFT_PROXY_CERT")
+        if proxy_cert is None:
+            return  # no-op
+
+        executor.push_file(
+            source=pathlib.Path(proxy_cert),
+            destination=pathlib.Path("/usr/local/share/ca-certificates/local-ca.crt"),
+        )
+
+        # Update the certificates db
+        self._execute_run(
+            ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"],
+            executor=executor,
+            verify_network=False,
+            timeout=self._timeout_simple,
+        )
+
     def _setup_wait_for_network(self, executor: Executor) -> None:
         """Wait until networking is ready."""
         logger.debug("Waiting for networking to be ready...")
@@ -1039,6 +1057,7 @@ class Base(ABC):
         self._setup_network(executor=executor)
         self._post_setup_network(executor=executor)
 
+        self._setup_certificates(executor=executor)
         self._setup_wait_for_network(executor=executor)
 
         self._pre_setup_packages(executor=executor)
@@ -1097,6 +1116,7 @@ class Base(ABC):
         self._mount_shared_cache_dirs(executor=executor)
 
         self._setup_wait_for_system_ready(executor=executor)
+        self._setup_certificates(executor=executor)
         self._setup_wait_for_network(executor=executor)
 
         self._warmup_snapd(executor=executor)
