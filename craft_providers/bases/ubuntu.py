@@ -20,7 +20,6 @@
 import enum
 import io
 import logging
-import os
 import pathlib
 import subprocess
 from functools import total_ordering
@@ -236,6 +235,12 @@ class BuilddBase(Base):
         #         timeout=self._timeout_simple,
         #     )
         try:
+            self._execute_run(
+                ["/bin/rm", "-Rf", "/var/lib/apt/lists"],
+                executor=executor,
+                verify_network=False,
+                timeout=self._timeout_simple,
+            )
             self._execute_run(
                 ["apt-get", "update"],
                 executor=executor,
