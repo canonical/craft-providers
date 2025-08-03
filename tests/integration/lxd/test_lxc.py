@@ -299,7 +299,8 @@ def test_is_pro_enabled_ubuntu_success(instance, lxc, session_project):
 
 
 def test_is_pro_enabled_alma_failure(instance_alma, lxc, session_project):
-    """Test the scenario where Pro client is not installed."""
+    """Test the scenario where Pro client is not installed because the
+    instance does not have an Ubuntu base image."""
     with pytest.raises(LXDError) as raised:
         lxc.is_pro_enabled(
             instance_name=instance_alma,
@@ -311,8 +312,8 @@ def test_is_pro_enabled_alma_failure(instance_alma, lxc, session_project):
     )
 
 
-def test_attach_pro_subscription_success(instance, lxc, session_project):
-    """Test the attachment scenario with a fake Pro token."""
+def test_attach_pro_subscription_failure_invalid_token(instance, lxc, session_project):
+    """Test the attachment scenario with a invalid Pro token."""
     with pytest.raises(LXDError) as raised:
         lxc.attach_pro_subscription(
             instance_name=instance,
@@ -326,8 +327,9 @@ def test_attach_pro_subscription_success(instance, lxc, session_project):
     )
 
 
-def test_attach_pro_subscription_failure(instance_alma, lxc, session_project):
-    """Test the attachment scenario with a non Ubuntu instance."""
+def test_attach_pro_subscription_alma_failure(instance_alma, lxc, session_project):
+    """Test the scenario where Pro client is not installed because the
+    instance does not have an Ubuntu base image."""
     with pytest.raises(LXDError) as raised:
         lxc.attach_pro_subscription(
             instance_name=instance_alma,
@@ -341,8 +343,8 @@ def test_attach_pro_subscription_failure(instance_alma, lxc, session_project):
     )
 
 
-def test_enable_pro_service_success(instance, lxc, session_project):
-    """Test the scenario to enable a Pro service."""
+def test_enable_pro_service_failure_unattached_instance(instance, lxc, session_project):
+    """Test enabling a Pro service on an unattached instance."""
     with pytest.raises(LXDError) as raised:
         lxc.enable_pro_service(
             instance_name=instance,
@@ -355,7 +357,7 @@ def test_enable_pro_service_success(instance, lxc, session_project):
     )
 
 
-def test_enable_pro_service_failure(instance_alma, lxc, session_project):
+def test_enable_pro_service_alma_failure(instance_alma, lxc, session_project):
     """Test the scenario to enable a Pro service."""
     with pytest.raises(LXDError) as raised:
         lxc.enable_pro_service(

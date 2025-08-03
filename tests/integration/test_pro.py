@@ -29,6 +29,7 @@ from tests.unit.test_pro import (
 
 
 def test_retrieve_pro_host_info(tmp_path, monkeypatch):
+    """Test that the Pro host information is retrieved correctly from the mock files."""
     machine_token_file = tmp_path / "machine-token.json"
     pro_config_file = tmp_path / "uaclient.conf"
 

@@ -1209,6 +1209,7 @@ def test_set_instance_name_invalid(mock_lxc):
 
 
 def test_is_pro_enabled(mock_lxc, instance):
+    """Verify that is_pro_enabled calls the correct LXC method."""
     instance.is_pro_enabled()
 
     assert mock_lxc.mock_calls == [
@@ -1221,6 +1222,7 @@ def test_is_pro_enabled(mock_lxc, instance):
 
 
 def test_enable_pro_service(mock_lxc, instance):
+    """Verify that enable_pro_service calls the correct LXC method."""
     instance.enable_pro_service(["esm-apps"])
 
     assert mock_lxc.mock_calls == [
@@ -1234,6 +1236,7 @@ def test_enable_pro_service(mock_lxc, instance):
 
 
 def test_install_pro_client(mock_lxc, instance):
+    """Verify that install_pro_client calls the correct LXC method."""
     instance.install_pro_client()
 
     assert mock_lxc.mock_calls == [
