@@ -44,7 +44,7 @@ def mock_pro_config_handling(mocker, fake_process):
             "--project",
             "test-project",
             "file",
-            fake_process.any(),
+            fake_process.any(),  # test for push and pull
         ],
         stdout="",
         occurrences=2,
@@ -2629,6 +2629,7 @@ def test_is_pro_enabled_success_true(fake_process):
 
 
 def test_is_pro_enabled_success_false(fake_process):
+    """Verify that the method returns False when the Pro status is not attached."""
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2656,6 +2657,8 @@ def test_is_pro_enabled_success_false(fake_process):
 
 
 def test_is_pro_enabled_failed(fake_process):
+    """Verify that the method raises an error when the Pro status command fails.
+    In this case, the command returns a 'failure' result."""
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2687,6 +2690,8 @@ def test_is_pro_enabled_failed(fake_process):
 
 
 def test_is_pro_enabled_json_error(fake_process):
+    """Verify that the is_pro_enabled method raises an error when the Pro status command returns
+    an invalid JSON response."""
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2716,6 +2721,8 @@ def test_is_pro_enabled_json_error(fake_process):
 
 
 def test_is_pro_enabled_process_error(fake_process):
+    """Verify that the is_pro_enabled method raises an error when the pro command returns
+    a non-zero exit code."""
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2746,6 +2753,7 @@ def test_is_pro_enabled_process_error(fake_process):
 
 @pytest.mark.usefixtures("mock_pro_config_handling")
 def test_attach_pro_subscription_success(fake_process):
+    """Verify that the attach_pro_subscription method correctly handles a successful attachment"""
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2779,6 +2787,8 @@ def test_attach_pro_subscription_success(fake_process):
 
 @pytest.mark.usefixtures("mock_pro_config_handling")
 def test_attach_pro_subscription_failed(fake_process):
+    """Verify that the attach_pro_subscription method correctly handles a failed attachment.
+    In this case, the command returns a 'failure' result with an 'Unknown' error."""
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2816,6 +2826,8 @@ def test_attach_pro_subscription_failed(fake_process):
 
 @pytest.mark.usefixtures("mock_pro_config_handling")
 def test_attach_pro_subscription_already_attached(fake_process):
+    """Verify that the attach_pro_subscription method correctly handles an already attached instance.
+    In this case, the command returns a 'failure' result with an 'Already attached' error."""
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2849,6 +2861,8 @@ def test_attach_pro_subscription_already_attached(fake_process):
 
 @pytest.mark.usefixtures("mock_pro_config_handling")
 def test_attach_pro_subscription_process_error(fake_process):
+    """Verify that the attach_pro_subscription method raises an error when the pro command
+    returns a non-zero exit code."""
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2883,6 +2897,8 @@ def test_attach_pro_subscription_process_error(fake_process):
 
 
 def test_enable_pro_service_success(fake_process):
+    """Verify that the enable_pro_service method correctly enables a Pro service
+    on an attached instance."""
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2930,6 +2946,8 @@ def test_enable_pro_service_success(fake_process):
 
 
 def test_enable_pro_service_failed(fake_process):
+    """Verify that the enable_pro_service method raises an error when the Pro service
+    command returns a 'failure' resulting from an invalid service name."""
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2965,6 +2983,8 @@ def test_enable_pro_service_failed(fake_process):
 
 
 def test_enable_pro_service_process_error(fake_process):
+    """Verify that the enable_pro_service method raises an error when the Pro service
+    command returns a non-zero exit code."""
     fake_process.register_subprocess(
         [
             "lxc",
@@ -2998,6 +3018,7 @@ def test_enable_pro_service_process_error(fake_process):
 
 
 def test_is_pro_installed_success(fake_process):
+    """Verify that the is_pro_installed method returns True when the Pro client is installed."""
     fake_process.register_subprocess(
         [
             "lxc",
@@ -3024,6 +3045,7 @@ def test_is_pro_installed_success(fake_process):
 
 
 def test_is_pro_installed_failure(fake_process):
+    """Verify that the is_pro_installed method returns False when the Pro client is not installed."""
     fake_process.register_subprocess(
         [
             "lxc",
@@ -3050,6 +3072,7 @@ def test_is_pro_installed_failure(fake_process):
 
 
 def test_install_pro_client_success1(fake_process):
+    """Verify that the install_pro_client method handles the successful installation of the Pro client."""
     fake_process.register_subprocess(
         [
             "lxc",
@@ -3092,6 +3115,8 @@ def test_install_pro_client_success1(fake_process):
 
 
 def test_install_pro_client_success2(fake_process):
+    """Similar to the prior test, but this time if the pro client is not found,
+    it installs a specific version of the pro client."""
     fake_process.register_subprocess(
         [
             "lxc",
@@ -3150,6 +3175,7 @@ def test_install_pro_client_success2(fake_process):
 
 
 def test_install_pro_client_process_error(fake_process):
+    """Verify that the install_pro_client method raises an error when the Pro client installation fails."""
     fake_process.register_subprocess(
         [
             "lxc",

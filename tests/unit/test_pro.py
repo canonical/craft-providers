@@ -247,36 +247,43 @@ def test_retrieve_pro_host_info_success(mock_machinetoken_open_success):
 
 
 def test_retrieve_pro_host_info_no_machinetoken(mock_machinetoken_open_no_machinetoken):
+    """Test that an error is raised when the machine token is not present."""
     with pytest.raises(MachineTokenError) as raised:
         pro.retrieve_pro_host_info()
     assert raised.value.brief == "No machineToken in machine token file."
 
 
 def test_retrieve_pro_host_info_no_machineid(mock_machinetoken_open_no_machineid):
+    """Test that an error is raised when the machine ID is not present."""
     with pytest.raises(MachineTokenError) as raised:
         pro.retrieve_pro_host_info()
     assert raised.value.brief == "No machineId in machine token file."
 
 
 def test_retrieve_pro_host_info_no_contractid(mock_machinetoken_open_no_contractid):
+    """Test that an error is raised when the contract ID is not present."""
     with pytest.raises(MachineTokenError) as raised:
         pro.retrieve_pro_host_info()
     assert raised.value.brief == "No contractID in machine token file."
 
 
 def test_retrieve_pro_host_info_no_contracturl(mock_machinetoken_open_no_contracturl):
+    """Test that an error is raised when the contract URL is not present."""
     with pytest.raises(MachineTokenError) as raised:
         pro.retrieve_pro_host_info()
     assert raised.value.brief == "No contractURL in Pro client config."
 
 
 def test_retrieve_pro_host_info_filenotfound(mock_pro_config_open_filenotfound):
+    """Test that an error is raised when any Pro client configuration files are not found."""
     with pytest.raises(MachineTokenError) as raised:
         pro.retrieve_pro_host_info()
     assert "Missing file on host: " in raised.value.brief
 
 
 def test_retrieve_pro_host_info_nopermission(mock_machinetoken_open_nopermission):
+    """Test that an error is raised when the Pro client configuration files cannot be
+    accessed due to permission issues."""
     with pytest.raises(MachineTokenError) as raised:
         pro.retrieve_pro_host_info()
     assert "Invalid permissions to access file: " in raised.value.brief
@@ -296,6 +303,7 @@ def mock_retrieve_pro_host_info(mocker):
 
 @assert_requests
 def test_request_pro_guest_token_success(mock_retrieve_pro_host_info):
+    """Test that a guest token is successfully requested from the Pro API."""
     responses.add(
         responses.GET,
         CONTRACTS_API_URL + _CONTRACTS_API_ENDPOINT,
@@ -309,6 +317,7 @@ def test_request_pro_guest_token_success(mock_retrieve_pro_host_info):
 
 @assert_requests
 def test_request_pro_guest_token_emptytoken(mock_retrieve_pro_host_info):
+    """Test that an error is raised when the API response does not contain a guest token."""
     responses.add(
         responses.GET,
         CONTRACTS_API_URL + _CONTRACTS_API_ENDPOINT,
@@ -323,6 +332,7 @@ def test_request_pro_guest_token_emptytoken(mock_retrieve_pro_host_info):
 
 @assert_requests
 def test_request_pro_guest_token_http400(mock_retrieve_pro_host_info):
+    """Test that an error is raised when the API request fails with a 400 status code."""
     responses.add(
         responses.GET,
         CONTRACTS_API_URL + _CONTRACTS_API_ENDPOINT,
@@ -338,6 +348,7 @@ def test_request_pro_guest_token_http400(mock_retrieve_pro_host_info):
 
 @assert_requests
 def test_request_pro_guest_token_jsonerror(mock_retrieve_pro_host_info):
+    """Test that an error is raised when the API response is not valid JSON."""
     responses.add(
         responses.GET,
         CONTRACTS_API_URL + _CONTRACTS_API_ENDPOINT,
