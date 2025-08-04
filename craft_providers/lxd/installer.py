@@ -156,7 +156,10 @@ def is_user_permitted() -> bool:
 
 
 def ensure_lxd_is_ready(
-    *, remote: str = "local", lxc: LXC = LXC(), lxd: LXD = LXD()  # noqa: B008
+    *,
+    remote: str = "local",
+    lxc: LXC = LXC(),  # noqa: B008
+    lxd: LXD = LXD(),  # noqa: B008
 ) -> None:
     """Ensure LXD is ready for use.
 

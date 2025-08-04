@@ -269,7 +269,8 @@ class BuilddBase(Base):
             "craft_providers.util", "sources.sh"
         ) as sources_script:
             executor.push_file(
-                source=sources_script, destination=pathlib.Path("/tmp/craft-sources.sh")  # noqa: S108
+                source=sources_script,
+                destination=pathlib.Path("/tmp/craft-sources.sh"),  # noqa: S108
             )
 
         # use a bash script because there isn't an easy way to modify files in an instance (#132)

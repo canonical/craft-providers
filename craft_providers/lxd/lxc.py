@@ -506,7 +506,11 @@ class LXC:
             ) from error
 
     def has_image(
-        self, image_name, *, project: str = "default", remote: str = "local"  # noqa: ANN001
+        self,
+        image_name,  # noqa: ANN001
+        *,
+        project: str = "default",
+        remote: str = "local",
     ) -> bool:
         """Check if image with given alias name is present.
 

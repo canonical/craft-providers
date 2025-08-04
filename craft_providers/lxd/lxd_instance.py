@@ -389,7 +389,8 @@ class LXDInstance(Executor):
             if not self._host_supports_mknod():
                 warnings.warn(
                     "Application configured to intercept guest mknod calls, "
-                    "but the host OS does not support intercepting mknod.", stacklevel=2
+                    "but the host OS does not support intercepting mknod.",
+                    stacklevel=2,
                 )
             else:
                 config_keys["security.syscalls.intercept.mknod"] = "true"
