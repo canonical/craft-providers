@@ -1,9 +1,5 @@
 # Craft providers
 
-![Documentation Status](https://readthedocs.com/projects/canonical-craft-providers/badge/?version=latest)
-![weekly-test-status-badge](https://github.com/canonical/craft-providers/actions/workflows/tests-weekly.yaml/badge.svg?branch=main)
-![code-coverage-badge](https://codecov.io/gh/canonical/craft-providers/graph/badge.svg?token=CTEPNPXrn5)
-
 [![Documentation Status][rtd-badge]][rtd-latest]
 [![Codecov Status][codecov-badge]][codecov-status]
 [![Ruff status][ruff-badge]][ruff-site]
