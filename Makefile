@@ -34,13 +34,6 @@ lint: lint-ruff lint-codespell lint-mypy lint-prettier lint-pyright lint-shellch
 .PHONY: pack
 pack: pack-pip  ## Build all packages
 
-.PHONY: pack-snap
-pack-snap: snap/snapcraft.yaml  ##- Build snap package
-ifeq ($(shell which snapcraft),)
-	sudo snap install --classic snapcraft
-endif
-	snapcraft pack
-
 # Find dependencies that need installing
 APT_PACKAGES :=
 ifeq ($(wildcard /usr/include/libxml2/libxml/xpath.h),)
