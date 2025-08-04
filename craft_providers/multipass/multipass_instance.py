@@ -25,9 +25,9 @@ from typing import Any
 
 from craft_providers import errors
 from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE
+from craft_providers.executor import Executor, get_instance_name
 from craft_providers.util import env_cmd
 
-from ..executor import Executor, get_instance_name
 from .errors import MultipassError
 from .multipass import Multipass
 

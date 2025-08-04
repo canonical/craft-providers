@@ -276,7 +276,7 @@ def _formulate_base_instance_name(
 
     :returns: Name of (compatible) base instance.
     """
-    return "-".join(["base-instance", compatibility_tag, image_remote, image_name])
+    return f"base-instance-{compatibility_tag}-{image_remote}-{image_name}"
 
 
 def _is_valid(*, instance: LXDInstance, expiration: timedelta) -> bool:

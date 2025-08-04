@@ -50,8 +50,7 @@ def get_base_instance():
             image_remote=image_remote,
             compatibility_tag=compatibility_tag,
         )
-        instance = lxd.LXDInstance(name=base_instance_name, project=project)
-        return instance
+        return lxd.LXDInstance(name=base_instance_name, project=project)
 
     return _base_instance
 

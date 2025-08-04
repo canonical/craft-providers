@@ -389,7 +389,7 @@ class LXDInstance(Executor):
             if not self._host_supports_mknod():
                 warnings.warn(
                     "Application configured to intercept guest mknod calls, "
-                    "but the host OS does not support intercepting mknod."
+                    "but the host OS does not support intercepting mknod.", stacklevel=2
                 )
             else:
                 config_keys["security.syscalls.intercept.mknod"] = "true"
@@ -684,7 +684,7 @@ class LXDInstance(Executor):
         """
         disks = self._get_disk_devices()
 
-        for name, _ in disks.items():
+        for name in disks:
             self.lxc.config_device_remove(
                 instance_name=self.instance_name,
                 device=name,
