@@ -20,7 +20,7 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
-readme = { file = "README.rst", content-type = "text/x-rst" }
+readme = { file = "README.md", content-type = "text/markdown" }
 
 [project.scripts]
 craft-providers = "craft_providers.cli:main"
