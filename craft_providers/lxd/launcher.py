@@ -81,7 +81,7 @@ class InstanceTimer(threading.Thread):
         self.__active = False
 
 
-def _create_instance(
+def _create_instance(  # noqa: PLR0913
     *,
     instance: LXDInstance,
     base_instance: LXDInstance | None,
@@ -338,7 +338,7 @@ def _is_valid(*, instance: LXDInstance, expiration: timedelta) -> bool:
     return True
 
 
-def _launch_existing_instance(
+def _launch_existing_instance(  # noqa: PLR0913
     *,
     instance: LXDInstance,
     lxc: LXC,
@@ -496,7 +496,7 @@ def _check_id_map(
 def _set_id_map(
     *,
     instance: LXDInstance,
-    lxc: LXC = LXC(),
+    lxc: LXC = LXC(),  # noqa: B008
     project: str = "default",
     remote: str = "local",
     uid: int | None = None,
@@ -669,7 +669,7 @@ def _wait_for_instance_ready(instance: LXDInstance) -> None:
     )
 
 
-def launch(
+def launch(  # noqa: PLR0913
     name: str,
     *,
     base_configuration: Base,
@@ -684,7 +684,7 @@ def launch(
     use_base_instance: bool = False,
     project: str = "default",
     remote: str = "local",
-    lxc: LXC = LXC(),
+    lxc: LXC = LXC(),  # noqa: B008
     expiration: timedelta = timedelta(days=90),
 ) -> LXDInstance:
     """Create, start, and configure an instance.
@@ -730,7 +730,7 @@ def launch(
     :raises LXDError: on unexpected LXD error.
     :raises ProviderError: if name of instance collides with base instance name.
     """
-    # TODO: create a private class to reduce the parameters passed between methods
+    # TODO: create a private class to reduce the parameters passed between methods  # noqa: FIX002
 
     _ensure_project_exists(
         create=auto_create_project, project=project, remote=remote, lxc=lxc
@@ -888,7 +888,7 @@ def launch(
     instance.start()
 
     # change the hostname from the base instance's hostname
-    base_configuration._setup_hostname(executor=instance)
+    base_configuration._setup_hostname(executor=instance)  # noqa: SLF001
 
     base_configuration.warmup(executor=instance)
 

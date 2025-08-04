@@ -37,7 +37,7 @@ def formulate_known_command(query: list[str]) -> list[str]:
 
 
 def formulate_local_install_command(
-    classic: bool, dangerous: bool, snap_path: pathlib.PurePosixPath
+    classic: bool, dangerous: bool, snap_path: pathlib.PurePosixPath  # noqa: FBT001
 ) -> list[str]:
     """Formulate snap install command.
 
@@ -77,7 +77,7 @@ def formulate_pack_command(
 
 
 def formulate_remote_install_command(
-    snap_name: str, channel: str, classic: bool
+    snap_name: str, channel: str, classic: bool  # noqa: FBT001
 ) -> list[str]:
     """Formulate the command to snap install from Store.
 

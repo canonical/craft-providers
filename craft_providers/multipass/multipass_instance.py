@@ -203,7 +203,7 @@ class MultipassInstance(Executor):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        **kwargs,
+        **kwargs,  # noqa: ANN003
     ) -> subprocess.Popen:
         """Execute a process in the instance using subprocess.Popen().
 
@@ -240,7 +240,7 @@ class MultipassInstance(Executor):
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
         check: bool = False,
-        **kwargs,
+        **kwargs,  # noqa: ANN003
     ) -> subprocess.CompletedProcess:
         """Execute a command in the instance using subprocess.run().
 

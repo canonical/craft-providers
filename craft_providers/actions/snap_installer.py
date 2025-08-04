@@ -29,7 +29,7 @@ from typing import Any
 
 import pydantic
 import requests
-import requests_unixsocket  # type: ignore
+import requests_unixsocket  # type: ignore  # noqa: PGH003
 
 from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE
 from craft_providers.errors import (
@@ -69,7 +69,7 @@ class Snap(pydantic.BaseModel, extra="forbid"):
     classic: bool = False
 
     @pydantic.field_validator("channel")
-    def validate_channel(self, channel):
+    def validate_channel(self, channel):  # noqa: ANN001, ANN201
         """Validate that channel is not an empty string.
 
         :raises BaseConfigurationError: if channel is empty
@@ -130,7 +130,7 @@ def get_host_snap_info(snap_name: str) -> dict[str, Any]:
             brief="Unable to connect to snapd service."
         ) from error
     snap_info.raise_for_status()
-    # TODO: represent snap info in a dataclass
+    # TODO: represent snap info in a dataclass  # noqa: FIX002
     return snap_info.json()["result"]
 
 
@@ -152,10 +152,10 @@ def _get_target_snap_revision_from_snapd(
         ) from error
 
     result = json.loads(proc.stdout)
-    if result["status-code"] == 404:
+    if result["status-code"] == 404:  # noqa: PLR2004
         # snap not found
         return None
-    if result["status-code"] == 200:
+    if result["status-code"] == 200:  # noqa: PLR2004
         return result["result"]["revision"]
     raise SnapInstallationError(f"Unknown response from snapd: {result!r}")
 
@@ -266,7 +266,7 @@ def _get_assertions_file(
     ]
 
     with temp_paths.home_temporary_file() as assert_file_path:
-        with open(assert_file_path, "wb") as assert_file:
+        with open(assert_file_path, "wb") as assert_file:  # noqa: PTH123
             for query in assertion_queries:
                 assert_file.write(_get_assertion(query))
                 assert_file.write(b"\n")
@@ -281,7 +281,7 @@ def _add_assertions_from_host(executor: Executor, snap_name: str) -> None:
     :param snap_name: Name of snap to inject
     """
     # trim the `_name` suffix, if present
-    target_assert_path = pathlib.PurePosixPath(f"/tmp/{snap_name.split('_')[0]}.assert")
+    target_assert_path = pathlib.PurePosixPath(f"/tmp/{snap_name.split('_')[0]}.assert")  # noqa: S108
     snap_info = get_host_snap_info(snap_name)
 
     try:
@@ -364,7 +364,7 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
         )
         return
 
-    target_snap_path = pathlib.PurePosixPath(f"/tmp/{snap_store_name}.snap")
+    target_snap_path = pathlib.PurePosixPath(f"/tmp/{snap_store_name}.snap")  # noqa: S108
     is_dangerous = host_revision.startswith("x")
 
     if not is_dangerous:

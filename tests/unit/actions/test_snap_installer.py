@@ -32,7 +32,7 @@ from craft_providers.errors import (
     details_from_called_process_error,
 )
 from craft_providers.instance_config import InstanceConfiguration
-from logassert import Exact  # type: ignore
+from logassert import Exact  # type: ignore  # noqa: PGH003
 
 
 @pytest.fixture
@@ -752,7 +752,7 @@ def test_inject_from_host_install_failure(
     assert exc_info.value == snap_installer.SnapInstallationError(
         brief="failed to install snap 'test-name'",
         details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -931,7 +931,7 @@ def test_install_from_store_failure(
     assert exc_info.value == snap_installer.SnapInstallationError(
         brief="Failed to install/refresh snap 'test-name'.",
         details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -1086,7 +1086,7 @@ def test_add_assertions_from_host_error_on_ack(
     assert exc_info.value == snap_installer.SnapInstallationError(
         brief="failed to add assertions for snap 'test-name'",
         details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -1246,7 +1246,7 @@ def test_get_snap_revision_ensuring_source_different_source_error(
     assert exc_info.value == snap_installer.SnapInstallationError(
         brief="Failed to remove snap 'test-name'.",
         details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
     assert exc_info.value.__cause__ is not None

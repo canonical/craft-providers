@@ -58,7 +58,7 @@ def parse_os_release(content: str | None = None) -> dict[str, str]:
     mappings: dict[str, str] = {}
 
     for line in content.splitlines():
-        line = line.strip()
+        line = line.strip()  # noqa: PLW2901
 
         # Ignore commented lines.
         if line.startswith("#"):

@@ -66,7 +66,7 @@ def test_init_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to init LXD.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -145,7 +145,7 @@ def test_version_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to query LXD version.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -196,6 +196,6 @@ def test_wait_ready_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to wait for LXD to get ready.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )

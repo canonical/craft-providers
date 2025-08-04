@@ -32,7 +32,7 @@ def retry_until_timeout(
     retry_wait: float,
     func: Callable[[float], T],
     *,
-    error: Exception | None = TimeoutError(),
+    error: Exception | None = TimeoutError(),  # noqa: B008
 ) -> T:
     """Re-run a function until it either succeeds or it times out.
 
@@ -50,7 +50,7 @@ def retry_until_timeout(
     while (now := time.monotonic()) < soft_deadline:
         try:
             return func(deadline - now)
-        except Exception:
+        except Exception:  # noqa: BLE001, PERF203
             if time.monotonic() < soft_deadline:
                 time.sleep(retry_wait)
     try:

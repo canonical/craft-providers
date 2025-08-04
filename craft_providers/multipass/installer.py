@@ -51,7 +51,7 @@ def install() -> str:
             f"unsupported platform {sys.platform!r}"
         )
 
-    # TODO: Multipass needs time after being installed for `multipassd` to start.
+    # TODO: Multipass needs time after being installed for `multipassd` to start.  # noqa: FIX002
     # Without a delay, errors could happen on launch, i.e.: "Remote "" is unknown or
     # unreachable." Current guidance is to sleep 20 seconds after install, but we
     # should have a more reliable and timely approach.

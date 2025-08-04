@@ -145,7 +145,7 @@ class MultipassProvider(Provider):
     :param multipass: Optional Multipass client to use.
     """
 
-    def __init__(self, instance: Multipass = Multipass()) -> None:
+    def __init__(self, instance: Multipass = Multipass()) -> None:  # noqa: B008
         self.multipass = instance
 
     @property
@@ -191,8 +191,8 @@ class MultipassProvider(Provider):
     def launched_environment(
         self,
         *,
-        project_name: str,
-        project_path: pathlib.Path,
+        project_name: str,  # noqa: ARG002
+        project_path: pathlib.Path,  # noqa: ARG002
         base_configuration: base.Base,
         instance_name: str,
         allow_unstable: bool = False,

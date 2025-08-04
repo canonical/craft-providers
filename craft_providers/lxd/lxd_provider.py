@@ -51,7 +51,7 @@ class LXDProvider(Provider):
     def __init__(
         self,
         *,
-        lxc: LXC = LXC(),
+        lxc: LXC = LXC(),  # noqa: B008
         lxd_project: str = "default",
         lxd_remote: str = "local",
         intercept_mknod: bool = True,
@@ -108,7 +108,7 @@ class LXDProvider(Provider):
     def launched_environment(
         self,
         *,
-        project_name: str,
+        project_name: str,  # noqa: ARG002
         project_path: pathlib.Path,
         base_configuration: Base,
         instance_name: str,

@@ -142,7 +142,7 @@ class LXDInstance(Executor):
         :raises LXDError: On unexpected error.
         """
         with tempfile.NamedTemporaryFile() as temp_file:
-            shutil.copyfileobj(content, temp_file)  # type: ignore # mypy #15031
+            shutil.copyfileobj(content, temp_file)  # type: ignore # mypy #15031  # noqa: PGH003
             # Ensure the file is written to disk.
             temp_file.flush()
 
@@ -174,7 +174,7 @@ class LXDInstance(Executor):
                     details=details_from_called_process_error(error),
                 ) from error
 
-    def delete(self, force: bool = True) -> None:
+    def delete(self, force: bool = True) -> None:  # noqa: FBT001, FBT002
         """Delete instance.
 
         :param force: Delete even if running.
@@ -195,7 +195,7 @@ class LXDInstance(Executor):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        **kwargs,
+        **kwargs,  # noqa: ANN003
     ) -> subprocess.Popen:
         """Execute a command in instance, using subprocess.Popen().
 
@@ -232,7 +232,7 @@ class LXDInstance(Executor):
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
         check: bool = False,
-        **kwargs,
+        **kwargs,  # noqa: ANN003
     ) -> subprocess.CompletedProcess:
         """Execute a command using subprocess.run().
 
@@ -558,7 +558,7 @@ class LXDInstance(Executor):
             instance_name=self.instance_name, project=self.project, remote=self.remote
         )
 
-        def _is_running(timeout: float) -> None:
+        def _is_running(timeout: float) -> None:  # noqa: ARG001
             """Raise an error if the instance isn't running."""
             if self.is_running():
                 return
@@ -585,7 +585,7 @@ class LXDInstance(Executor):
             instance_name=self.instance_name, project=self.project, remote=self.remote
         )
 
-        def _is_running(timeout: float) -> None:
+        def _is_running(timeout: float) -> None:  # noqa: ARG001
             """Raise an error if the instance isn't running."""
             if self.is_running():
                 return
@@ -621,7 +621,7 @@ class LXDInstance(Executor):
             instance_name=self.instance_name, project=self.project, remote=self.remote
         )
 
-        def _is_stopped(timeout: float) -> None:
+        def _is_stopped(timeout: float) -> None:  # noqa: ARG001
             """Raise an error if the instance exists or isn't stopped."""
             # ephemeral instances are deleted when 'stop' completes
             if not self.exists() or self._get_state() == LXDInstanceState.STOPPED:

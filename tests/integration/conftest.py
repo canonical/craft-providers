@@ -49,12 +49,12 @@ def pytest_runtest_setup(item: pytest.Item):
 
 def generate_instance_name():
     """Generate a random instance name."""
-    return "itest-" + "".join(random.choices(string.ascii_uppercase, k=8))
+    return "itest-" + "".join(random.choices(string.ascii_uppercase, k=8))  # noqa: S311
 
 
 def snap_exists(snap_name: str) -> bool:
     """Returns true if a snap exists."""
-    return os.path.exists(f"/snap/{snap_name}/current")
+    return os.path.exists(f"/snap/{snap_name}/current")  # noqa: PTH110
 
 
 def is_installed_dangerously(snap_name: str) -> bool:
@@ -294,7 +294,7 @@ def dangerously_installed_snap(tmpdir):
             # collect the file name
             match = re.search(f"{snap_name}_\\d+.snap", str(output))
             if not match:
-                raise Exception(
+                raise Exception(  # noqa: TRY002
                     "could not parse snap file name from output of "
                     f"'snap download {snap_name}' (output = {output!r})"
                 )

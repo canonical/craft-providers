@@ -183,7 +183,7 @@ def test_config_device_add_disk_error(fake_process, tmp_path):
     assert exc_info.value == LXDError(
         brief="Failed to add disk to instance 'test-instance'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -238,7 +238,7 @@ def test_config_device_remove_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to remove device from instance 'test-instance'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -291,7 +291,7 @@ def test_config_device_show_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to show devices for instance 'test-instance'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -347,7 +347,7 @@ def test_config_get_error(fake_process):
             "for instance 'test-instance'."
         ),
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -407,7 +407,7 @@ def test_config_set_error(fake_process):
             " for instance 'test-instance'."
         ),
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -486,7 +486,7 @@ def test_copy_error(fake_process):
             "to 'test-destination-remote:test-destination-instance-name'."
         ),
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -555,7 +555,7 @@ def test_delete_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to delete instance 'test-instance'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -723,7 +723,7 @@ def test_file_pull_error(fake_process, tmp_path):
     assert exc_info.value == LXDError(
         brief="Failed to pull file '/root/foo' from instance 'test-instance'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -816,7 +816,7 @@ def test_file_push_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to push file '/somefile' to instance 'test-instance'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -885,7 +885,7 @@ def test_info_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to get info for remote 'test-remote'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -1595,7 +1595,7 @@ def test_has_image(fake_process):
         stdout="- aliases:\n  - name: image1\n- aliases:\n  - name: image2\n",
         occurrences=3,
     )
-    fake_process.keep_last_process(True)
+    fake_process.keep_last_process(True)  # noqa: FBT003
 
     assert lxc.has_image("image1", project="test-project", remote="test-remote") is True
     assert lxc.has_image("image2", project="test-project", remote="test-remote") is True
@@ -1677,7 +1677,7 @@ def test_image_copy_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to copy image 'test-image'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -1726,7 +1726,7 @@ def test_image_delete_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to delete image 'test-image'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -1777,7 +1777,7 @@ def test_image_list_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to list images for project 'test-project'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -1856,7 +1856,7 @@ def test_list_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to list instances for project 'test-project'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -1987,7 +1987,7 @@ def test_profile_edit_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to set profile 'test-profile'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -2038,7 +2038,7 @@ def test_profile_show_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to show profile 'test-profile'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -2096,7 +2096,7 @@ def test_project_create_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to create project 'test-project'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -2174,7 +2174,7 @@ def test_project_delete_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to delete project 'test-project'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -2219,7 +2219,7 @@ def test_project_list_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to list projects on remote 'test-remote'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -2322,7 +2322,7 @@ def test_publish_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to publish image from 'test-instance'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -2397,7 +2397,7 @@ def test_remote_add_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to add remote 'test-remote'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -2436,7 +2436,7 @@ def test_remote_list_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to list remotes.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -2506,7 +2506,7 @@ def test_start_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to start 'test-instance'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -2553,7 +2553,7 @@ def test_restart_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to restart 'test-instance'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -2624,7 +2624,7 @@ def test_stop_error(fake_process):
     assert exc_info.value == LXDError(
         brief="Failed to stop 'test-instance'.",
         details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 

@@ -58,7 +58,7 @@ class BuilddBaseAlias(enum.Enum):
     QUESTING = "25.10"
     DEVEL = "devel"
 
-    def __lt__(self, other) -> bool:
+    def __lt__(self, other) -> bool:  # noqa: ANN001
         # Devels are the greatest, luckily 'd' > [0-9]
         return self.value < other.value
 
@@ -106,7 +106,7 @@ class BuilddBase(Base):
         cache_path: pathlib.Path | None = None,
     ) -> None:
         # ignore enum subclass (see https://github.com/microsoft/pyright/issues/6750)
-        self.alias: BuilddBaseAlias = alias  # pyright: ignore
+        self.alias: BuilddBaseAlias = alias  # pyright: ignore  # noqa: PGH003
 
         self._cache_path = cache_path
 
@@ -269,13 +269,13 @@ class BuilddBase(Base):
             "craft_providers.util", "sources.sh"
         ) as sources_script:
             executor.push_file(
-                source=sources_script, destination=pathlib.Path("/tmp/craft-sources.sh")
+                source=sources_script, destination=pathlib.Path("/tmp/craft-sources.sh")  # noqa: S108
             )
 
         # use a bash script because there isn't an easy way to modify files in an instance (#132)
         try:
             self._execute_run(
-                ["bash", "/tmp/craft-sources.sh"],
+                ["bash", "/tmp/craft-sources.sh"],  # noqa: S108
                 executor=executor,
                 timeout=self._timeout_simple,
             )
@@ -313,7 +313,7 @@ class BuilddBase(Base):
         url = "https://old-releases.ubuntu.com"
         slug = f"/ubuntu/dists/{codename}/"
 
-        def _request(timeout: float) -> requests.Response:
+        def _request(timeout: float) -> requests.Response:  # noqa: ARG001
             return requests.head(url + slug, allow_redirects=True, timeout=5)
 
         logger.debug(f"Checking for {self.alias.value} ({codename}) on {url}.")
@@ -324,7 +324,7 @@ class BuilddBase(Base):
             error=BaseConfigurationError(brief=f"Failed to get {url + slug}."),
         )
 
-        if response.status_code == 200:
+        if response.status_code == 200:  # noqa: PLR2004
             logger.debug(f"{self.alias.value} is available on {url}.")
             return True
 

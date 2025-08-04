@@ -52,14 +52,14 @@ class StdinType(enum.Enum):
     NULL = None
 
 
-def load_yaml(data):
+def load_yaml(data):  # noqa: ANN001, ANN201
     """Load yaml without additional resolvers.
 
     LXD may return YAML that has datetimes that are not valid when parsed to
     datetime.datetime().  Instead just use the base loader and avoid resolving
     this type (and others).
     """
-    return yaml.load(data, Loader=yaml.BaseLoader)
+    return yaml.load(data, Loader=yaml.BaseLoader)  # noqa: S506
 
 
 class LXC:
@@ -80,7 +80,7 @@ class LXC:
         check: bool = True,
         project: str | None = None,
         stdin: StdinType = StdinType.INTERACTIVE,
-        **kwargs,
+        **kwargs,  # noqa: ANN003
     ) -> subprocess.CompletedProcess:
         """Execute lxc command on host, allowing output to console.
 
@@ -337,7 +337,7 @@ class LXC:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    def exec(
+    def exec(  # noqa: ANN201, PLR0913
         self,
         *,
         command: list[str],
@@ -349,7 +349,7 @@ class LXC:
         runner: Callable = subprocess.run,
         timeout: float | None = None,
         check: bool = False,
-        **kwargs,
+        **kwargs,  # noqa: ANN003
     ):
         """Execute command in instance_name with specified runner.
 
@@ -392,7 +392,7 @@ class LXC:
         if runner is subprocess.run:
             return runner(final_cmd, timeout=timeout, check=check, **kwargs)
 
-        # XXX: warn that timeout and check are ignored for Popen??
+        # XXX: warn that timeout and check are ignored for Popen??  # noqa: FIX003
 
         return runner(final_cmd, **kwargs)
 
@@ -443,7 +443,7 @@ class LXC:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    def file_push(
+    def file_push(  # noqa: PLR0913
         self,
         *,
         instance_name: str,
@@ -506,7 +506,7 @@ class LXC:
             ) from error
 
     def has_image(
-        self, image_name, *, project: str = "default", remote: str = "local"
+        self, image_name, *, project: str = "default", remote: str = "local"  # noqa: ANN001
     ) -> bool:
         """Check if image with given alias name is present.
 
@@ -611,7 +611,7 @@ class LXC:
         # or any other craft-providers, and the lock will be released.
         # However, the new instance lock could be held by any craft-providers.
         # This is used to avoid lock holder dead and all others are blocked.
-        while retry_count < 3:
+        while retry_count < 3:  # noqa: PLR2004
             try:
                 # Try to launch instance
                 self._run_lxc(
@@ -630,7 +630,7 @@ class LXC:
                 # Ignore first 3 failed "create" or "start" attempts that other craft-providers
                 # are creating the same instance.
                 # LXD: Instance is busy running a "create" or "start" operation
-                if retry_count >= 2 or (
+                if retry_count >= 2 or (  # noqa: PLR2004
                     error.stderr
                     and all(
                         state not in error.stderr.decode()
@@ -1168,7 +1168,7 @@ class LXC:
             except LXDError:
                 # Keep retrying since the instance might not be ready yet
                 # Max retry time is 10 minutes
-                if time.time() - start_time > 600:
+                if time.time() - start_time > 600:  # noqa: PLR2004
                     logger.debug("Instance %s max waiting time reached.", instance_name)
                     raise
                 time.sleep(3)
