@@ -283,7 +283,7 @@ specifications. For example, if you implement a new CLI command, describe its us
 one of the how-to guides and create a new reference for its options and flags.
 
 Ensure that feature changes and fixes are also documented in the relevant [release
-notes](docs/changelog.rst).
+notes](docs/reference/changelog.rst).
 
 Once you've updated the documentation, build the site locally with:
 
