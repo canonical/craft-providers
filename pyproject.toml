@@ -43,18 +43,14 @@ dev = [
     "types-setuptools==75.2.0.20241019",
     "types-pyyaml==6.0.12.20250516",
 ]
-lint = [
-    "codespell[toml]==2.3.0",
-]
-types = [
-    "mypy[reports]~=1.15",
-]
+lint = ["codespell[toml]==2.3.0"]
+types = ["mypy[reports]~=1.15"]
 docs = [
     "pyspelling==2.10",
     "sphinx-autobuild==2024.10.3",
     "sphinx-lint==1.0.0",
     "sphinx-tabs==3.4.7",
-    "canonical-sphinx~=0.2.0"
+    "canonical-sphinx~=0.2.0",
 ]
 tics = ["flake8", "pylint"]
 
@@ -65,14 +61,11 @@ docs = [
     "sphinx-autobuild==2024.10.3",
     "sphinx-lint==1.0.0",
     "sphinx-tabs==3.4.7",
-    "canonical-sphinx~=0.2.0"
+    "canonical-sphinx~=0.2.0",
 ]
 
 [build-system]
-requires = [
-    "setuptools==75.9.1",
-    "setuptools_scm[toml]>=7.1"
-]
+requires = ["setuptools==75.9.1", "setuptools_scm[toml]>=7.1"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
@@ -102,10 +95,7 @@ git_describe_command = [
 ]
 
 [tool.setuptools]
-packages = [
-    "craft_providers",
-    "craft_providers_docs"
-]
+packages = ["craft_providers", "craft_providers_docs"]
 
 [tool.setuptools.package-dir]
 craft_providers = "craft_providers"
@@ -163,9 +153,9 @@ exclude = [
 ]
 # Typing in craft-providers is incomplete (see #326)
 # These should be deleted once fixed
-reportMissingTypeArgument = "warning"
-reportUnknownParameterType = "warning"
-reportMissingParameterType = "warning"
+reportMissingTypeArgument = "none"
+reportUnknownParameterType = "none"
+reportMissingParameterType = "none"
 
 [tool.mypy]
 python_version = "3.10"
