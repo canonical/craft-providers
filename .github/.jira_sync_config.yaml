@@ -1,6 +1,6 @@
 settings:
   components:
-    - Starbase
+    - Craft Providers
   labels:
     - "Status: Triaged"
   # Adds a comment with the JIRA ID
