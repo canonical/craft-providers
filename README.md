@@ -4,24 +4,15 @@
 [![Codecov Status][codecov-badge]][codecov-status]
 [![Ruff status][ruff-badge]][ruff-site]
 
-This project provides Python interfaces for instantiating and executing
-builds for a variety of target environments.
-
-Initial providers include:
-
-- [LXD containers](https://ubuntu.com/lxd/)
-- [Multipass VMs](https://multipass.run/)
-
-Host support is targeted for:
-
-- Linux
-- Mac OS X
-- Windows
+Craft Providers supplies a collection of Python interfaces for instantiating and
+executing containerized builds with [LXD](https://ubuntu.com/lxd) or
+[Multipass](https://multipass.run). This allows dependent apps to build software
+without knowing the specifics of the target environment or system.
 
 ## Documentation
 
-The [Craft Providers documentation][rtd-latest] provides guidance about understanding
-and using the library.
+The [Craft Providers documentation][rtd-latest] describes the library's key components
+and provides guidance on its usage.
 
 ## Community and support
 
