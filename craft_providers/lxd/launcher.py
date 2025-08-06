@@ -26,6 +26,7 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from craft_providers import Base, ProviderError, bases
 from craft_providers.errors import details_from_called_process_error
@@ -35,6 +36,11 @@ from .lxc import LXC
 from .lxd_instance import LXDInstance
 from .lxd_instance_status import LXDInstanceState, ProviderInstanceStatus
 from .project import create_with_default_profile
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from craft_providers import Executor
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +101,7 @@ def _create_instance(  # noqa: PLR0913
     project: str,
     remote: str,
     lxc: LXC,
+    prepare_instance: "Callable[[Executor], None] | None" = None,
 ) -> None:
     """Launch and setup an instance from an image.
 
@@ -146,6 +153,9 @@ def _create_instance(  # noqa: PLR0913
             )
             config_timer = InstanceTimer(base_instance)
             config_timer.start()
+
+            if prepare_instance:
+                prepare_instance(instance)
 
             # The base configuration shouldn't mount cache directories because if
             # they get deleted, copying the base instance will fail.
@@ -204,6 +214,10 @@ def _create_instance(  # noqa: PLR0913
             )
             config_timer = InstanceTimer(instance)
             config_timer.start()
+
+            if prepare_instance:
+                prepare_instance(instance)
+
             base_configuration.setup(executor=instance)
             _set_timezone(instance, project, remote, instance.lxc)
             instance.config_set(
@@ -686,6 +700,7 @@ def launch(  # noqa: PLR0913
     remote: str = "local",
     lxc: LXC = LXC(),  # noqa: B008
     expiration: timedelta = timedelta(days=90),
+    prepare_instance: "Callable[[Executor], None] | None" = None,
 ) -> LXDInstance:
     """Create, start, and configure an instance.
 
@@ -782,6 +797,7 @@ def launch(  # noqa: PLR0913
             project=project,
             remote=remote,
             lxc=lxc,
+            prepare_instance=prepare_instance,
         )
         return instance
 
@@ -828,6 +844,7 @@ def launch(  # noqa: PLR0913
             project=project,
             remote=remote,
             lxc=lxc,
+            prepare_instance=prepare_instance,
         )
         return instance
 
@@ -852,6 +869,7 @@ def launch(  # noqa: PLR0913
             project=project,
             remote=remote,
             lxc=lxc,
+            prepare_instance=prepare_instance,
         )
         return instance
 

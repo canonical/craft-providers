@@ -23,7 +23,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, call
 
 import pytest
-from craft_providers import Base, ProviderError, bases, lxd
+from craft_providers import Base, Executor, ProviderError, bases, lxd
 from craft_providers.lxd import LXDError, lxd_instance_status
 from freezegun import freeze_time
 from logassert import Exact  # type: ignore  # noqa: PGH003
@@ -532,6 +532,37 @@ def test_launch_existing_base_instance_invalid(
     ]
 
 
+@pytest.mark.parametrize("use_base_instance", [True, False])
+def test_launch_prepare_instance(
+    use_base_instance,
+    fake_instance,
+    mock_base_configuration,
+    mock_lxc,
+    mock_lxd_instance,
+    mock_platform,
+    mock_timezone,
+):
+    """Create an instance from an image and do not save a copy as the base instance."""
+    fake_instance.config_get.return_value = "STARTING"
+    instance_prepared = [False]
+
+    def _prepare_instance(instance: Executor) -> None:
+        instance_prepared[0] = True
+
+    with freeze_time("2023-01-01"):
+        lxd.launch(
+            name=fake_instance.name,
+            base_configuration=mock_base_configuration,
+            image_name="image-name",
+            image_remote="image-remote",
+            use_base_instance=use_base_instance,
+            prepare_instance=_prepare_instance,
+            lxc=mock_lxc,
+        )
+
+    assert instance_prepared[0] is True
+
+
 def test_launch_all_opts(
     fake_instance,
     mock_base_configuration,
@@ -545,6 +576,9 @@ def test_launch_all_opts(
     fake_instance.config_get.return_value = "STARTING"
     fake_instance.lxc.config_get.return_value = "uid 1234 0\ngid 5678 0"
 
+    def _prepare_instance(instance: Executor) -> None:
+        pass
+
     with freeze_time("2023-01-01"):
         lxd.launch(
             name=fake_instance.name,
@@ -553,6 +587,7 @@ def test_launch_all_opts(
             image_remote="image-remote",
             auto_clean=True,
             auto_create_project=True,
+            prepare_instance=_prepare_instance,
             ephemeral=True,
             map_user_uid=True,
             uid=1234,
