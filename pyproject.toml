@@ -27,6 +27,7 @@ craft-providers = "craft_providers.cli:main"
 
 [dependency-groups]
 dev = [
+    "build>=0.7.0",
     "coverage[toml]==7.6.4",
     "freezegun==1.5.2",
     "logassert==7",
