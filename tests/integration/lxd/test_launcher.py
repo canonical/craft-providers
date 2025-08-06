@@ -50,8 +50,7 @@ def get_base_instance():
             image_remote=image_remote,
             compatibility_tag=compatibility_tag,
         )
-        instance = lxd.LXDInstance(name=base_instance_name, project=project)
-        return instance
+        return lxd.LXDInstance(name=base_instance_name, project=project)
 
     return _base_instance
 
@@ -546,8 +545,8 @@ def test_launch_map_user_uid_true(base_configuration, instance_name, tmp_path):
         image_name="22.04",
         image_remote="ubuntu",
         map_user_uid=True,
-        uid=os.stat(tmp_path).st_uid,
-        gid=os.stat(tmp_path).st_gid,
+        uid=os.stat(tmp_path).st_uid,  # noqa: PTH116
+        gid=os.stat(tmp_path).st_gid,  # noqa: PTH116
     )
 
     try:

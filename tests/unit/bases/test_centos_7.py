@@ -30,7 +30,7 @@ from craft_providers.errors import (
     details_from_called_process_error,
 )
 from craft_providers.instance_config import InstanceConfiguration
-from logassert import Exact  # type: ignore
+from logassert import Exact  # type: ignore  # noqa: PGH003
 
 from tests.unit.conftest import DEFAULT_FAKE_CMD
 
@@ -683,7 +683,7 @@ def test_setup_hostname_failure(fake_process, fake_executor):
     assert exc_info.value == BaseConfigurationError(
         brief="Failed to set hostname.",
         details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -696,9 +696,9 @@ def test_setup_snapd_proxy(fake_executor, fake_process):
     }
     base_config = centos.CentOSBase(
         alias=centos.CentOSBaseAlias.SEVEN,
-        environment=environment,  # type: ignore
+        environment=environment,  # type: ignore  # noqa: PGH003
     )
-    fake_process.keep_last_process(True)
+    fake_process.keep_last_process(True)  # noqa: FBT003
     fake_process.register([fake_process.any()])
 
     base_config._setup_snapd_proxy(executor=fake_executor)
@@ -740,7 +740,7 @@ def test_setup_snapd_proxy_failures(fake_process, fake_executor, fail_index):
     assert exc_info.value == BaseConfigurationError(
         brief="Failed to set the snapd proxy.",
         details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -772,7 +772,7 @@ def test_pre_setup_snapd_failures(fake_process, fake_executor, fail_index):
     assert exc_info.value == BaseConfigurationError(
         brief="Failed to enable systemd-udevd service.",
         details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -791,7 +791,7 @@ def test_setup_snapd_failures(fake_process, fake_executor):
     assert exc_info.value == BaseConfigurationError(
         brief="Failed to setup snapd.",
         details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -858,7 +858,7 @@ def test_post_warmup_snapd_failures(fake_process, fake_executor, fail_index):
     assert raised.value == BaseConfigurationError(
         brief="Failed to set the snapd proxy.",
         details=details_from_called_process_error(
-            raised.value.__cause__  # type: ignore
+            raised.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -1572,7 +1572,7 @@ def test_disable_and_wait_for_snap_refresh_hold_error(fake_process, fake_executo
     assert exc_info.value == BaseConfigurationError(
         brief="Failed to hold snap refreshes.",
         details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )
 
@@ -1592,6 +1592,6 @@ def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executo
     assert exc_info.value == BaseConfigurationError(
         brief="Failed to wait for snap refreshes to complete.",
         details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
+            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
         ),
     )

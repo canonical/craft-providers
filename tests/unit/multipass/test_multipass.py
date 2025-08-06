@@ -703,7 +703,7 @@ def test_wait_until_ready_timeout_error(
     )
 
     with mock.patch("time.time", side_effect=time_values):
-        with pytest.raises(MultipassError) as exc_info:
+        with pytest.raises(MultipassError) as exc_info:  # noqa: PT012
             multipass = Multipass()
             multipass.wait_until_ready(timeout=timeout)
 

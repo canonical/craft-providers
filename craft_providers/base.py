@@ -180,7 +180,7 @@ class Base(ABC):
                 brief="Failed to parse instance configuration file.",
             ) from error
         # if no config exists, assume base is compatible (likely unfinished setup)
-        # XXX: checking the compatibility_tag should be much more strict when called
+        # XXX: checking the compatibility_tag should be much more strict when called  # noqa: FIX003
         # by warmup (warmup will continue if the compatibility tag is missing or none!)
         except FileNotFoundError:
             return
@@ -289,7 +289,7 @@ class Base(ABC):
         """
         return self._environment.copy()
 
-    def _update_setup_status(self, executor: Executor, status: bool) -> None:
+    def _update_setup_status(self, executor: Executor, status: bool) -> None:  # noqa: FBT001
         """Update the instance config to indicate the status of the setup.
 
         :param status: True if the setup is complete, False otherwise.
@@ -712,7 +712,7 @@ class Base(ABC):
         self._setup_wait_for_system_ready(executor=executor)
         self._setup_wait_for_network(executor=executor)
 
-    def _pre_image_check(self, executor: Executor) -> None:
+    def _pre_image_check(self, executor: Executor) -> None:  # noqa: ARG002
         """Start the setup process and update the status.
 
         This step usually does not need to be overridden.
@@ -727,14 +727,14 @@ class Base(ABC):
         self._ensure_os_compatible(executor=executor)
         self._ensure_instance_config_compatible(executor=executor)
 
-    def _post_image_check(self, executor: Executor) -> None:
+    def _post_image_check(self, executor: Executor) -> None:  # noqa: ARG002
         """Do anything extra image checking.
 
         This step should be overridden when needed.
         """
         return
 
-    def _pre_setup_os(self, executor: Executor) -> None:
+    def _pre_setup_os(self, executor: Executor) -> None:  # noqa: ARG002
         """Do anything before setting up the OS.
 
         e.g.
@@ -752,7 +752,7 @@ class Base(ABC):
         """
         self._setup_environment(executor=executor)
 
-    def _post_setup_os(self, executor: Executor) -> None:
+    def _post_setup_os(self, executor: Executor) -> None:  # noqa: ARG002
         """Do anything after setting up the OS.
 
         e.g.
@@ -762,7 +762,7 @@ class Base(ABC):
         """
         return
 
-    def _pre_setup_network(self, executor: Executor) -> None:
+    def _pre_setup_network(self, executor: Executor) -> None:  # noqa: ARG002
         """Do anything before setting up the basic network.
 
         e.g.
@@ -785,7 +785,7 @@ class Base(ABC):
         """
         self._setup_hostname(executor=executor)
 
-    def _post_setup_network(self, executor: Executor) -> None:
+    def _post_setup_network(self, executor: Executor) -> None:  # noqa: ARG002
         """Do anything after setting up the basic network.
 
         e.g.
@@ -846,7 +846,7 @@ class Base(ABC):
             )
             logger.debug(exc)
 
-    def _pre_setup_packages(self, executor: Executor) -> None:
+    def _pre_setup_packages(self, executor: Executor) -> None:  # noqa: ARG002
         """Do anything before setting up the packages.
 
         e.g.
@@ -863,7 +863,7 @@ class Base(ABC):
         This step must be overridden.
         """
 
-    def _post_setup_packages(self, executor: Executor) -> None:
+    def _post_setup_packages(self, executor: Executor) -> None:  # noqa: ARG002
         """Configure the new installed packages.
 
         This step should be overridden when needed.
@@ -905,7 +905,7 @@ class Base(ABC):
         """
         self._setup_snapd_proxy(executor=executor)
 
-    def _pre_setup_snaps(self, executor: Executor) -> None:
+    def _pre_setup_snaps(self, executor: Executor) -> None:  # noqa: ARG002
         """Do anything before setting up the snaps.
 
         e.g.
@@ -925,14 +925,14 @@ class Base(ABC):
         """
         self._install_snaps(executor=executor)
 
-    def _post_setup_snaps(self, executor: Executor) -> None:
+    def _post_setup_snaps(self, executor: Executor) -> None:  # noqa: ARG002
         """Configure the new installed snaps.
 
         This step should be overridden when needed.
         """
         return
 
-    def _pre_clean_up(self, executor: Executor) -> None:
+    def _pre_clean_up(self, executor: Executor) -> None:  # noqa: ARG002
         """Do anything before cleaning up.
 
         e.g.
@@ -942,7 +942,7 @@ class Base(ABC):
         """
         return
 
-    def _clean_up(self, executor: Executor) -> None:
+    def _clean_up(self, executor: Executor) -> None:  # noqa: ARG002
         """Cleanup the OS environment.
 
         e.g.
@@ -953,7 +953,7 @@ class Base(ABC):
         """
         return
 
-    def _post_clean_up(self, executor: Executor) -> None:
+    def _post_clean_up(self, executor: Executor) -> None:  # noqa: ARG002
         """Do anything needed after cleaning up.
 
         e.g.
@@ -964,7 +964,7 @@ class Base(ABC):
         """
         return
 
-    def _pre_finish(self, executor: Executor) -> None:
+    def _pre_finish(self, executor: Executor) -> None:  # noqa: ARG002
         """Do anything needed before finishing the setup process.
 
         e.g.
@@ -1139,7 +1139,7 @@ class Base(ABC):
         capture_output: bool = True,
         text: bool = False,
         timeout: float | None = None,
-        verify_network=False,
+        verify_network=False,  # noqa: ANN001
     ) -> subprocess.CompletedProcess:
         """Run a command through the executor.
 

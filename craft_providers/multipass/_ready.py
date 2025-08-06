@@ -26,7 +26,7 @@ from .multipass import Multipass
 logger = logging.getLogger(__name__)
 
 
-def ensure_multipass_is_ready(*, multipass: Multipass = Multipass()) -> None:
+def ensure_multipass_is_ready(*, multipass: Multipass = Multipass()) -> None:  # noqa: B008
     """Ensure Multipass is ready for use.
 
     :raises MultipassError: on error.

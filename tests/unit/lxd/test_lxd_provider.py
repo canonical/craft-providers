@@ -33,11 +33,10 @@ def mock_remote_image(mocker):
 
 @pytest.fixture
 def mock_get_remote_image(mock_remote_image, mocker):
-    _mock_get_remote_image = mocker.patch(
+    return mocker.patch(
         "craft_providers.lxd.lxd_provider.get_remote_image",
         return_value=mock_remote_image,
     )
-    return _mock_get_remote_image
 
 
 @pytest.fixture

@@ -56,7 +56,7 @@ class Multipass:
     ) -> None:
         self.multipass_path = multipass_path
 
-    def _run(self, command: list[str], **kwargs) -> subprocess.CompletedProcess:
+    def _run(self, command: list[str], **kwargs) -> subprocess.CompletedProcess:  # noqa: ANN003
         """Execute a multipass command.
 
         It always checks the result (as no errors should pass silently) and captures the
@@ -67,7 +67,7 @@ class Multipass:
         logger.debug("Executing on host: %s", shlex.join(command))
         return subprocess.run(command, check=True, capture_output=True, **kwargs)
 
-    def delete(self, *, instance_name: str, purge=True) -> None:
+    def delete(self, *, instance_name: str, purge=True) -> None:  # noqa: ANN001
         """Passthrough for running multipass delete.
 
         :param instance_name: The name of the instance_name to delete.
@@ -88,7 +88,7 @@ class Multipass:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    def exec(
+    def exec(  # noqa: ANN201
         self,
         *,
         command: list[str],
@@ -96,7 +96,7 @@ class Multipass:
         runner: Callable = subprocess.run,
         timeout: float | None = None,
         check: bool = False,
-        **kwargs,
+        **kwargs,  # noqa: ANN003
     ):
         """Execute command in instance_name with specified runner.
 
@@ -163,7 +163,7 @@ class Multipass:
         while parsed_version is None:
             try:
                 parsed_version = packaging.version.parse(version)
-            except packaging.version.InvalidVersion:
+            except packaging.version.InvalidVersion:  # noqa: PERF203
                 # This catches versions such as: 1.15.0-dev.2929.pr661, which are
                 # compliant, but not pep440 compliant. We can lob off sections until
                 # we get a pep440 cempliant version.
@@ -354,8 +354,8 @@ class Multipass:
             stderr=subprocess.PIPE,
         ) as proc:
             # Should never happen, but mypy/pyright makes noise.
-            assert proc.stdout is not None
-            assert proc.stderr is not None
+            assert proc.stdout is not None  # noqa: S101
+            assert proc.stderr is not None  # noqa: S101
 
             while True:
                 data = proc.stdout.read(chunk_size)
@@ -396,8 +396,8 @@ class Multipass:
             command, stdin=subprocess.PIPE, stderr=subprocess.PIPE
         ) as proc:
             # Should never happen, but mypy/pyright makes noise.
-            assert proc.stdin is not None
-            assert proc.stderr is not None
+            assert proc.stdin is not None  # noqa: S101
+            assert proc.stderr is not None  # noqa: S101
 
             while True:
                 data = source.read(chunk_size)
@@ -528,14 +528,14 @@ class Multipass:
         #    - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win'] # noqa: ERA001
         #    - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win', ...] # noqa: ERA001
         output_split = output.strip().split()
-        if len(output_split) < 2 or output_split[0] != "multipass":
+        if len(output_split) < 2 or output_split[0] != "multipass":  # noqa: PLR2004
             raise MultipassError(
                 brief=f"Unable to parse version output: {proc.stdout!r}",
             )
 
         multipass_version = output_split[1].split("+")[0]
 
-        if len(output_split) >= 4 and output_split[2] == "multipassd":
+        if len(output_split) >= 4 and output_split[2] == "multipassd":  # noqa: PLR2004
             multipassd_version = output_split[3].split("+")[0]
         else:
             multipassd_version = None

@@ -91,7 +91,7 @@ class RemoteImage:
 
         :param lxc: LXC client.
         """
-        # TODO verify both the remote name and address
+        # TODO verify both the remote name and address  # noqa: FIX002
         if self.remote_name in lxc.remote_list():
             logger.debug("Remote %r already exists.", self.remote_name)
         else:

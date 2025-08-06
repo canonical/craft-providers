@@ -44,7 +44,7 @@ class Executor(ABC):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        **kwargs,
+        **kwargs,  # noqa: ANN003
     ) -> subprocess.Popen:
         """Execute a command in instance, using subprocess.Popen().
 
@@ -70,7 +70,7 @@ class Executor(ABC):
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
         check: bool = False,
-        **kwargs,
+        **kwargs,  # noqa: ANN003
     ) -> subprocess.CompletedProcess:
         """Execute a command using subprocess.run().
 
@@ -235,7 +235,7 @@ def get_instance_name(name: str, error_class: type[ProviderError]) -> str:
     valid_name = trimmed_name.group("valid_name")
 
     # if the original name satisfies the naming convention, then use the original name
-    if name == valid_name and len(name) <= 63:
+    if name == valid_name and len(name) <= 63:  # noqa: PLR2004
         instance_name = name
 
     # else, continue converting the name
@@ -243,7 +243,7 @@ def get_instance_name(name: str, error_class: type[ProviderError]) -> str:
         # truncate to 40 characters
         truncated_name = valid_name[:40]
         # hash the entire name, not the truncated name
-        hashed_name = hashlib.sha1(name.encode()).hexdigest()[:20]
+        hashed_name = hashlib.sha1(name.encode()).hexdigest()[:20]  # noqa: S324
         instance_name = f"{truncated_name}-{hashed_name}"
 
     logger.debug("Converted name %r to instance name %r", name, instance_name)

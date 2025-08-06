@@ -92,7 +92,7 @@ def ensure_guest_compatible(
 
     host_base_alias = BuilddBaseAlias(host_os_release.get("VERSION_ID"))
 
-    guest_os_release = base_configuration._get_os_release(executor=instance)
+    guest_os_release = base_configuration._get_os_release(executor=instance)  # noqa: SLF001
     guest_base_alias = BuilddBaseAlias(guest_os_release.get("VERSION_ID"))
 
     # Strip off anything after the first space - sometimes "LTS" is appended

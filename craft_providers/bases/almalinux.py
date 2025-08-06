@@ -85,7 +85,7 @@ class AlmaLinuxBase(Base):
         self._cache_path = cache_path
 
         # ignore enum subclass (see https://github.com/microsoft/pyright/issues/6750)
-        self.alias: AlmaLinuxBaseAlias = alias  # pyright: ignore
+        self.alias: AlmaLinuxBaseAlias = alias  # pyright: ignore  # noqa: PGH003
 
         if environment is None:
             self._environment = self.default_command_environment()

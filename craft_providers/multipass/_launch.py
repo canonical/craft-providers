@@ -56,7 +56,7 @@ def launch(
     instance = MultipassInstance(name=name)
 
     if instance.exists():
-        # TODO: Warn if existing instance doesn't match cpu/disk/mem specs.
+        # TODO: Warn if existing instance doesn't match cpu/disk/mem specs.  # noqa: FIX002
         instance.start()
         try:
             base_configuration.warmup(executor=instance)

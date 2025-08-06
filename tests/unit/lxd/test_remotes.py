@@ -134,7 +134,7 @@ def test_add_remote_race_condition_error(fake_remote_image, mock_lxc, logs):
     mock_lxc.remote_list.return_value = {}
     mock_lxc.remote_add.side_effect = ValueError()
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError):  # noqa: PT011
         fake_remote_image.add_remote(mock_lxc)
 
 
@@ -176,7 +176,7 @@ def test_get_image_remote_xenial_error():
 
 def test_get_image_remote_error():
     """Raise an error for an unknown provider base."""
-    base = ubuntu.BuilddBase(alias=-1)  # type: ignore
+    base = ubuntu.BuilddBase(alias=-1)  # type: ignore  # noqa: PGH003
     with pytest.raises(lxd.LXDError) as raised:
         lxd.remotes.get_remote_image(base)
 

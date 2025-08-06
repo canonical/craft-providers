@@ -29,21 +29,6 @@ def parse_os_release(content: str | None = None) -> dict[str, str]:
 
     https://www.freedesktop.org/software/systemd/man/os-release.html
 
-    Example os-release contents::
-
-        NAME="Ubuntu"
-        VERSION="22.04 (Jammy Jellyfish)"
-        ID=ubuntu
-        ID_LIKE=debian
-        PRETTY_NAME="Ubuntu 22.04"
-        VERSION_ID="22.04"
-        HOME_URL="https://www.ubuntu.com/"
-        SUPPORT_URL="https://help.ubuntu.com/"
-        BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
-        PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
-        VERSION_CODENAME=jammy
-        UBUNTU_CODENAME=jammy
-
     :param content: String contents of os-release file.  If None, will read contents of
     file from host.
 
@@ -58,7 +43,7 @@ def parse_os_release(content: str | None = None) -> dict[str, str]:
     mappings: dict[str, str] = {}
 
     for line in content.splitlines():
-        line = line.strip()
+        line = line.strip()  # noqa: PLW2901
 
         # Ignore commented lines.
         if line.startswith("#"):

@@ -83,7 +83,7 @@ def tmp_instance(
     image_remote: str = "ubuntu",
     project: str,
     remote: str = "local",
-    lxc: LXC = LXC(),
+    lxc: LXC = LXC(),  # noqa: B008
 ):
     if config_keys is None:
         config_keys = {}
@@ -142,7 +142,7 @@ def lxc():
 @pytest.fixture
 def project_name():
     """Create temporary LXD project and assert expected properties."""
-    return "ptest-" + "".join(random.choices(string.ascii_uppercase, k=4))
+    return "ptest-" + "".join(random.choices(string.ascii_uppercase, k=4))  # noqa: S311
 
 
 @pytest.fixture

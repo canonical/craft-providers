@@ -31,24 +31,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-          cache: "pip"
-      - name: Configure environment
-        run: |
-          echo "::group::pip install"
-          python -m pip install 'tox>=4.6'
-          echo "::endgroup::"
-          echo "::group::Configure Multipass"
-          while ! multipass version
-          do
-            sleep 1
-          done
-          echo "::endgroup::"
-      - name: Setup Tox environments
-        run: tox run --colored yes -e integration-py${{ matrix.python }} --notest
+      - name: Set up runner
+        uses: canonical/starflow/setup-python-runner@main
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
@@ -60,7 +44,8 @@ jobs:
           CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL: 1
           PYTEST_ADDOPTS: "--no-header -vv -rN"
         run: |
-          .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies --colored yes -e integration-py${{ matrix.python }}
+          make setup-tests
+          make test-fast
   integration-slow-macos:
     strategy:
       fail-fast: false
@@ -77,24 +62,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-          cache: "pip"
-      - name: Configure environment
-        run: |
-          echo "::group::pip install"
-          python -m pip install 'tox>=4.6'
-          echo "::endgroup::"
-          echo "::group::Configure Multipass"
-          while ! multipass version
-          do
-            sleep 1
-          done
-          echo "::endgroup::"
-      - name: Setup Tox environments
-        run: tox run --colored yes -e integration-slow-py${{ matrix.python }} --notest
+      - name: Set up runner
+        uses: canonical/starflow/setup-python-runner@main
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
@@ -106,4 +75,5 @@ jobs:
           CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL: 1
           PYTEST_ADDOPTS: "--no-header -vv -rN"
         run: |
-          .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies --colored yes -e integration-slow-py${{ matrix.python }}
+          make setup-tests
+          make test-slow
