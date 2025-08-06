@@ -27,6 +27,7 @@ craft-providers = "craft_providers.cli:main"
 
 [dependency-groups]
 dev = [
+    "build>=0.7.0",
     "coverage[toml]==7.6.4",
     "freezegun==1.5.2",
     "logassert==7",
@@ -51,18 +52,36 @@ docs = [
     "sphinx-lint==1.0.0",
     "sphinx-tabs==3.4.7",
     "canonical-sphinx~=0.2.0",
+    "sphinxext-rediraffe>=0.2.7",
 ]
 tics = ["flake8", "pylint"]
 
-[project.optional-dependencies]
-# Duplicated for the documentation checks workflow.
-docs = [
-    "pyspelling==2.10",
-    "sphinx-autobuild==2024.10.3",
-    "sphinx-lint==1.0.0",
-    "sphinx-tabs==3.4.7",
-    "canonical-sphinx~=0.2.0",
+[tool.uv]
+constraint-dependencies = [
+    # Basic constraints to allow --resolution=lowest
+    "cffi>=1.15",
+    "iniconfig>=1.1.0",
+    "httplib2>=0.20.0",
+    "libnacl>=2.0",
+    "lxml>=5.0",
+    "markdown>=3.0",
+    "markupsafe>=2.0",
+    "oauthlib>=3.0.0",
+    "protobuf>=5.0",
+    "pynacl>=1.5",
+    "pyparsing>=3.0.0",
+    "pyproject-hooks>=1.0.0",
+    "pytz>=2020",
+    "pyyaml>=5.0",
+    "regex>=2021.11.10",
+    "setuptools>=50",
+    "sphinx-basic-ng>=1.0.0b1",
+    "tornado>=4.0",
+    "urllib3>=2.0",
+    "webencodings>=0.4.0",
+    "wheel>=0.38",
 ]
+
 
 [build-system]
 requires = ["setuptools==75.9.1", "setuptools_scm[toml]>=7.1"]
