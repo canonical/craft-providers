@@ -26,6 +26,7 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from craft_providers import Base, ProviderError, bases
 from craft_providers.errors import details_from_called_process_error
@@ -35,6 +36,11 @@ from .lxc import LXC
 from .lxd_instance import LXDInstance
 from .lxd_instance_status import LXDInstanceState, ProviderInstanceStatus
 from .project import create_with_default_profile
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from craft_providers import Executor
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +101,7 @@ def _create_instance(
     project: str,
     remote: str,
     lxc: LXC,
+    prepare_instance: "Callable[[Executor], None] | None" = None,
 ) -> None:
     """Launch and setup an instance from an image.
 
@@ -147,6 +154,9 @@ def _create_instance(
             config_timer = InstanceTimer(base_instance)
             config_timer.start()
 
+            if prepare_instance:
+                prepare_instance(instance)
+
             # The base configuration shouldn't mount cache directories because if
             # they get deleted, copying the base instance will fail.
             base_configuration.setup(executor=base_instance, mount_cache=False)
@@ -193,6 +203,7 @@ def _create_instance(
             uid=uid,
             gid=gid,
         )
+
         instance_status = instance.config_get("user.craft_providers.status")
 
         # Skip the base configuration if the instance is already configured.
@@ -204,6 +215,10 @@ def _create_instance(
             )
             config_timer = InstanceTimer(instance)
             config_timer.start()
+
+            if prepare_instance:
+                prepare_instance(instance)
+
             base_configuration.setup(executor=instance)
             _set_timezone(instance, project, remote, instance.lxc)
             instance.config_set(
@@ -686,6 +701,7 @@ def launch(
     remote: str = "local",
     lxc: LXC = LXC(),
     expiration: timedelta = timedelta(days=90),
+    prepare_instance: "Callable[[Executor], None] | None" = None,
 ) -> LXDInstance:
     """Create, start, and configure an instance.
 
@@ -731,7 +747,6 @@ def launch(
     :raises ProviderError: if name of instance collides with base instance name.
     """
     # TODO: create a private class to reduce the parameters passed between methods
-
     _ensure_project_exists(
         create=auto_create_project, project=project, remote=remote, lxc=lxc
     )
@@ -782,6 +797,7 @@ def launch(
             project=project,
             remote=remote,
             lxc=lxc,
+            prepare_instance=prepare_instance,
         )
         return instance
 
@@ -828,6 +844,7 @@ def launch(
             project=project,
             remote=remote,
             lxc=lxc,
+            prepare_instance=prepare_instance,
         )
         return instance
 
@@ -852,6 +869,7 @@ def launch(
             project=project,
             remote=remote,
             lxc=lxc,
+            prepare_instance=prepare_instance,
         )
         return instance
 

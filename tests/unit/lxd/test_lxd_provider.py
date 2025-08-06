@@ -172,6 +172,7 @@ def test_launched_environment(
                 project="default",
                 remote="local",
                 expiration=expiration,
+                pre_configure_callback=None,
             ),
         ]
 

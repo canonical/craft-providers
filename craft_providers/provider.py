@@ -26,9 +26,14 @@ import logging
 import pathlib
 from abc import ABC, abstractmethod
 from collections.abc import Generator
+from typing import TYPE_CHECKING
 
 from .base import Base
-from .executor import Executor
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from craft_providers import Executor
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +84,7 @@ class Provider(ABC):
         """
 
     @abstractmethod
-    def create_environment(self, *, instance_name: str) -> Executor:
+    def create_environment(self, *, instance_name: str) -> "Executor":
         """Create a bare environment for specified base.
 
         No initializing, launching, or cleaning up of the environment occurs.
@@ -98,7 +103,8 @@ class Provider(ABC):
         instance_name: str,
         allow_unstable: bool = False,
         shutdown_delay_mins: int | None = None,
-    ) -> Generator[Executor, None, None]:
+        prepare_instance: "Callable[[Executor], None] | None" = None,
+    ) -> Generator["Executor", None, None]:
         """Configure and launch environment for specified base.
 
         When this method loses context, all directories are unmounted and the
