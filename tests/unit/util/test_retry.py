@@ -16,18 +16,11 @@
 #
 """Tests for craft_providers helper utilities."""
 
-import sys
 import time
 from unittest import mock
 
 import pytest
 from craft_providers.util import retry
-
-pytestmark = [
-    # These tests can be flaky on Windows, at least in GitHub CI. The flakiness
-    # comes from timing issues on Windows.
-    pytest.mark.flaky(condition=sys.platform == "win32", reruns=3, reruns_delay=1),
-]
 
 
 @pytest.fixture(params=range(1, 6), ids=[f"timeout_{i}s" for i in range(1, 6)])

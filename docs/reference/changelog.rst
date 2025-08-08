@@ -4,6 +4,13 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+3.0.0 (2025-Mon-DD)
+-------------------
+
+Breaking changes:
+
+- Removed support for Windows hosts
+
 2.4.0 (2025-Jul-11)
 -------------------
 

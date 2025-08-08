@@ -20,7 +20,6 @@ import enum
 import logging
 import pathlib
 import subprocess
-import sys
 from unittest import mock
 
 import pytest
@@ -159,23 +158,10 @@ def test_mount_shared_cache_dirs(fake_process, fake_base, fake_executor, cache_d
 
     fake_base._mount_shared_cache_dirs(fake_executor)
 
-    if sys.platform == "win32":
-        expected = {
-            "host_source": pathlib.WindowsPath("d:")
-            / cache_dir
-            / "base-v7"
-            / "FakeBaseAlias.TREBLE"
-            / "pip",
-            "target": user_cache_dir / "pip",
-        }
-    else:
-        expected = {
-            "host_source": cache_dir.resolve()
-            / "base-v7"
-            / "FakeBaseAlias.TREBLE"
-            / "pip",
-            "target": user_cache_dir / "pip",
-        }
+    expected = {
+        "host_source": cache_dir.resolve() / "base-v7" / "FakeBaseAlias.TREBLE" / "pip",
+        "target": user_cache_dir / "pip",
+    }
     assert fake_executor.records_of_mount == [expected]
 
 

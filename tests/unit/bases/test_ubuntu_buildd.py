@@ -21,7 +21,6 @@ import importlib.resources
 import pathlib
 import re
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 from textwrap import dedent
@@ -692,20 +691,12 @@ def test_mount_cache_dirs(fake_process, fake_executor, cache_path: pathlib.Path,
 
     base._mount_shared_cache_dirs(fake_executor)
 
-    if sys.platform == "win32":
-        expected_mounts = [
-            {
-                "host_source": pathlib.WindowsPath("D:") / host_cache_dir / "pip",
-                "target": user_cache_dir / "pip",
-            }
-        ]
-    else:
-        expected_mounts = [
-            {
-                "host_source": host_cache_dir / "pip",
-                "target": user_cache_dir / "pip",
-            },
-        ]
+    expected_mounts = [
+        {
+            "host_source": host_cache_dir / "pip",
+            "target": user_cache_dir / "pip",
+        },
+    ]
     assert fake_executor.records_of_mount == expected_mounts
 
 
