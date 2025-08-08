@@ -159,7 +159,7 @@ def test_mount_shared_cache_dirs(fake_process, fake_base, fake_executor, cache_d
     fake_base._mount_shared_cache_dirs(fake_executor)
 
     expected = {
-        "host_source": cache_dir / "base-v7" / "FakeBaseAlias.TREBLE" / "pip",
+        "host_source": cache_dir.resolve() / "base-v7" / "FakeBaseAlias.TREBLE" / "pip",
         "target": user_cache_dir / "pip",
     }
     assert fake_executor.records_of_mount == [expected]
