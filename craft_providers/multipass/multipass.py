@@ -30,7 +30,7 @@ import shlex
 import subprocess
 import time
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast, overload
 
 import packaging.version
 
@@ -56,7 +56,9 @@ class Multipass:
     ) -> None:
         self.multipass_path = multipass_path
 
-    def _run(self, command: list[str], **kwargs) -> subprocess.CompletedProcess:  # noqa: ANN003
+    def _run(
+        self, command: list[str], **kwargs: Any
+    ) -> subprocess.CompletedProcess[bytes]:
         """Execute a multipass command.
 
         It always checks the result (as no errors should pass silently) and captures the
@@ -67,7 +69,7 @@ class Multipass:
         logger.debug("Executing on host: %s", shlex.join(command))
         return subprocess.run(command, check=True, capture_output=True, **kwargs)
 
-    def delete(self, *, instance_name: str, purge=True) -> None:  # noqa: ANN001
+    def delete(self, *, instance_name: str, purge: bool = True) -> None:
         """Passthrough for running multipass delete.
 
         :param instance_name: The name of the instance_name to delete.
@@ -88,16 +90,65 @@ class Multipass:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    def exec(  # noqa: ANN201
+    @overload
+    def exec(
         self,
         *,
         command: list[str],
         instance_name: str,
-        runner: Callable = subprocess.run,
         timeout: float | None = None,
         check: bool = False,
-        **kwargs,  # noqa: ANN003
-    ):
+        runner: Callable[..., subprocess.Popen[str]],
+        encoding: str,
+        **kwargs: Any,
+    ) -> subprocess.Popen[str]: ...
+    @overload
+    def exec(
+        self,
+        *,
+        command: list[str],
+        instance_name: str,
+        timeout: float | None = None,
+        check: bool = False,
+        runner: Callable[..., subprocess.Popen[bytes]],
+        encoding: None = None,
+        **kwargs: Any,
+    ) -> subprocess.Popen[bytes]: ...
+    @overload
+    def exec(
+        self,
+        *,
+        command: list[str],
+        instance_name: str,
+        timeout: float | None = None,
+        check: bool = False,
+        runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+        encoding: str,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]: ...
+    @overload
+    def exec(
+        self,
+        *,
+        command: list[str],
+        instance_name: str,
+        timeout: float | None = None,
+        check: bool = False,
+        runner: Callable[..., subprocess.CompletedProcess[bytes]] = subprocess.run,
+        encoding: None = None,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[bytes]: ...
+    def exec(
+        self,
+        *,
+        command: list[str],
+        instance_name: str,
+        timeout: float | None = None,
+        check: bool = False,
+        runner: Callable[..., Any] = subprocess.run,
+        encoding: str | None = None,
+        **kwargs: Any,
+    ) -> Any:
         """Execute command in instance_name with specified runner.
 
         The working directory the command is executed from inside the instance depends
@@ -114,6 +165,8 @@ class Multipass:
             kwargs.
         :param timeout: Timeout (in seconds) for the command.
         :param check: Raise an exception if the command fails.
+        :param encoding: Optional encoding to use to decode the program
+            response.
         :param kwargs: Additional kwargs for runner.
 
         :returns: Runner's instance.
@@ -125,9 +178,11 @@ class Multipass:
 
         # Only subprocess.run supports timeout
         if runner is subprocess.run:
-            return runner(final_cmd, timeout=timeout, check=check, **kwargs)
+            return runner(
+                final_cmd, timeout=timeout, check=check, encoding=encoding, **kwargs
+            )
 
-        return runner(final_cmd, **kwargs)
+        return runner(final_cmd, encoding=encoding, **kwargs)
 
     def info(self, *, instance_name: str) -> dict[str, Any]:
         """Get information/state for instance.
@@ -146,7 +201,7 @@ class Multipass:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-        return json.loads(proc.stdout)
+        return cast("dict[str, Any]", json.loads(proc.stdout))
 
     def is_supported_version(self) -> bool:
         """Check if Multipass version is supported.

@@ -116,6 +116,7 @@ def tmp_instance(
             capture_output=True,
             check=False,
             text=True,
+            encoding="utf-8",
         )
 
         running_state = proc.stdout.strip()

@@ -19,7 +19,7 @@
 
 import logging
 import platform
-from typing import cast
+from typing import TypedDict
 
 from craft_providers.base import Base
 from craft_providers.bases.ubuntu import BuilddBase, BuilddBaseAlias
@@ -32,7 +32,16 @@ from craft_providers.util.os_release import parse_os_release
 logger = logging.getLogger(__name__)
 
 
-INVALID_VERSIONS = [
+class InvalidVersionSet(TypedDict):
+    """A set of invalid version combinations for runtime assertions."""
+
+    host_less_than_equal: BuilddBaseAlias
+    guest_greater_than_equal: BuilddBaseAlias
+    lxd_less_than: list[tuple[int, int, int]]
+    kernel_less_than: tuple[int, int]
+
+
+INVALID_VERSIONS: list[InvalidVersionSet] = [
     {
         "host_less_than_equal": BuilddBaseAlias.FOCAL,
         "guest_greater_than_equal": BuilddBaseAlias.ORACULAR,
@@ -121,10 +130,9 @@ def ensure_guest_compatible(
             and (
                 _lxd_version_match(
                     lxd_version_tup,
-                    cast("list[tuple[int, int, int]]", invalid["lxd_less_than"]),
+                    invalid["lxd_less_than"],
                 )
-                or kernel_version_tup
-                < cast("tuple[int, int]", invalid["kernel_less_than"])
+                or kernel_version_tup < invalid["kernel_less_than"]
             )
         ):
             raise ProviderError(

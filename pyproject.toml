@@ -186,18 +186,14 @@ warn_unused_configs = true
 warn_redundant_casts = true
 strict_equality = true
 extra_checks = true
-# Typing in craft-providers is incomplete (see #326)
-# These should be uncommented once fixed
-# warn_return_any = true
-# disallow_subclassing_any = true
-# disallow_untyped_decorators = true
-# disallow_any_generics = true
+warn_return_any = true
+disallow_subclassing_any = true
+disallow_untyped_decorators = true
+disallow_any_generics = true
 
 [[tool.mypy.overrides]]
 module = ["craft_providers.*"]
-# Typing in craft-providers is incomplete (see #326)
-# This should be uncommented once fixed
-# disallow_untyped_defs = true
+disallow_untyped_defs = true
 no_implicit_optional = true
 
 [[tool.mypy.overrides]]

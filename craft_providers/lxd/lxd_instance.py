@@ -25,7 +25,9 @@ import shutil
 import subprocess
 import tempfile
 import warnings
-from typing import Any
+from typing import Any, cast, overload
+
+from typing_extensions import override
 
 from craft_providers.const import RETRY_WAIT, TIMEOUT_SIMPLE
 from craft_providers.errors import details_from_called_process_error
@@ -122,6 +124,7 @@ class LXDInstance(Executor):
 
         return command
 
+    @override
     def push_file_io(
         self,
         *,
@@ -188,6 +191,7 @@ class LXDInstance(Executor):
             force=force,
         )
 
+    @overload
     def execute_popen(
         self,
         command: list[str],
@@ -195,8 +199,31 @@ class LXDInstance(Executor):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        **kwargs,  # noqa: ANN003
-    ) -> subprocess.Popen:
+        encoding: str,
+        **kwargs: Any,
+    ) -> subprocess.Popen[str]: ...
+    @overload
+    def execute_popen(
+        self,
+        command: list[str],
+        *,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        timeout: float | None = None,
+        encoding: None,
+        **kwargs: Any,
+    ) -> subprocess.Popen[bytes]: ...
+    @override
+    def execute_popen(
+        self,
+        command: list[str],
+        *,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        timeout: float | None = None,
+        encoding: str | None,
+        **kwargs: Any,
+    ) -> Any:
         """Execute a command in instance, using subprocess.Popen().
 
         The process' environment will inherit the execution environment's
@@ -207,6 +234,8 @@ class LXDInstance(Executor):
         :param cwd: Working directory for the process inside the instance.
         :param env: Additional environment to set for process.
         :param timeout: Timeout (in seconds) for the command.
+        :param encoding: Optional encoding to use to decode the program
+            response.
         :param kwargs: Additional keyword arguments to pass.
 
         :returns: Popen instance.
@@ -221,9 +250,11 @@ class LXDInstance(Executor):
             runner=subprocess.Popen,
             timeout=timeout,
             cwd=cwd_path,
+            encoding=encoding,
             **kwargs,
         )
 
+    @overload
     def execute_run(
         self,
         command: list[str],
@@ -232,8 +263,33 @@ class LXDInstance(Executor):
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
         check: bool = False,
-        **kwargs,  # noqa: ANN003
-    ) -> subprocess.CompletedProcess:
+        encoding: str,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]: ...
+    @overload
+    def execute_run(
+        self,
+        command: list[str],
+        *,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        timeout: float | None = None,
+        check: bool = False,
+        encoding: None = None,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[bytes]: ...
+    @override
+    def execute_run(
+        self,
+        command: list[str],
+        *,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        timeout: float | None = None,
+        check: bool = False,
+        encoding: str | None = None,
+        **kwargs: Any,
+    ) -> Any:
         """Execute a command using subprocess.run().
 
         The process' environment will inherit the execution environment's
@@ -245,6 +301,8 @@ class LXDInstance(Executor):
         :param env: Additional environment to set for process.
         :param timeout: Timeout (in seconds) for the command.
         :param check: Raise an exception if the command fails.
+        :param encoding: Optional encoding to use to decode the program
+            response.
         :param kwargs: Keyword args to pass to subprocess.run().
 
         :returns: Completed process.
@@ -262,6 +320,7 @@ class LXDInstance(Executor):
             runner=subprocess.run,
             timeout=timeout,
             cwd=cwd_path,
+            encoding=encoding,
             check=check,
             **kwargs,
         )
@@ -442,7 +501,7 @@ class LXDInstance(Executor):
         kernel_features = env.get("kernel_features", {})
         seccomp_listener = kernel_features.get("seccomp_listener", "false")
 
-        return seccomp_listener == "true"
+        return cast(str, seccomp_listener) == "true"
 
     def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:
         """Copy a file from the environment to host.

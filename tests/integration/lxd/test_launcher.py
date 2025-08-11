@@ -326,7 +326,7 @@ def test_launch_use_base_instance_expired(
         ["stat", "/base-instance"], capture_output=True, text=True
     )
     assert proc.returncode == 1
-    assert "'/base-instance': No such file or directory" in proc.stderr
+    assert b"'/base-instance': No such file or directory" in proc.stderr
 
     # confirm new base instance does not have the expired base instance's fingerprint
     base_instance.start()

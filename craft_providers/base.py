@@ -107,7 +107,7 @@ class Base(ABC):
         compatibility_tag: str | None = None,
         environment: dict[str, str | None] | None = None,
         hostname: str = "craft-instance",
-        snaps: list | None = None,
+        snaps: list[Snap] | None = None,
         packages: list[str] | None = None,
         use_default_packages: bool = True,
         cache_path: pathlib.Path | None = None,
@@ -559,17 +559,21 @@ class Base(ABC):
         """Configure the snapd proxy."""
         try:
             http_proxy = self._environment.get("http_proxy")
-            if http_proxy:
-                command = ["snap", "set", "system", f"proxy.http={http_proxy}"]
-            else:
-                command = ["snap", "unset", "system", "proxy.http"]
+            command = [
+                "snap",
+                "set",
+                "system",
+                f"proxy.http={http_proxy}" if http_proxy else "proxy.http",
+            ]
             self._execute_run(command, executor=executor, timeout=self._timeout_simple)
 
             https_proxy = self._environment.get("https_proxy")
-            if https_proxy:
-                command = ["snap", "set", "system", f"proxy.https={https_proxy}"]
-            else:
-                command = ["snap", "unset", "system", "proxy.https"]
+            command = [
+                "snap",
+                "set",
+                "system",
+                f"proxy.https={https_proxy}" if https_proxy else "proxy.https",
+            ]
             self._execute_run(command, executor=executor, timeout=self._timeout_simple)
 
         except subprocess.CalledProcessError as error:
@@ -826,6 +830,8 @@ class Base(ABC):
             ["bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
         )
         guest_base_cache_path = pathlib.Path(guest_cache_proc.stdout)
 
@@ -1139,8 +1145,8 @@ class Base(ABC):
         capture_output: bool = True,
         text: bool = False,
         timeout: float | None = None,
-        verify_network=False,  # noqa: ANN001
-    ) -> subprocess.CompletedProcess:
+        verify_network: bool = False,
+    ) -> subprocess.CompletedProcess[str]:
         """Run a command through the executor.
 
         This is a helper to simplify most common calls and provide extra network
@@ -1163,6 +1169,8 @@ class Base(ABC):
                 capture_output=capture_output,
                 text=text,
                 timeout=timeout,
+                encoding="utf-8",
+                replace="errors",
             )
         except subprocess.CalledProcessError as exc:
             if verify_network and not cls._network_connected(executor=executor):

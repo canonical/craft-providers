@@ -27,8 +27,10 @@ import pathlib
 import subprocess
 from functools import total_ordering
 from textwrap import dedent
+from typing import cast
 
 import requests
+from typing_extensions import Self
 
 from craft_providers import const
 from craft_providers.actions.snap_installer import Snap
@@ -58,9 +60,12 @@ class BuilddBaseAlias(enum.Enum):
     QUESTING = "25.10"
     DEVEL = "devel"
 
-    def __lt__(self, other) -> bool:  # noqa: ANN001
+    def __lt__(self, other: Self) -> bool:
         # Devels are the greatest, luckily 'd' > [0-9]
-        return self.value < other.value
+        return cast(str, self.value) < cast(str, other.value)
+
+    def __le__(self, other: Self) -> bool:
+        return cast(str, self.value) <= cast(str, other.value)
 
 
 class BuilddBase(Base):
