@@ -21,7 +21,9 @@ import io
 import logging
 import pathlib
 import subprocess
-from typing import Any
+from typing import Any, cast, overload
+
+from typing_extensions import override
 
 from craft_providers import errors
 from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE
@@ -101,6 +103,8 @@ class MultipassInstance(Executor):
             capture_output=True,
             check=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=TIMEOUT_SIMPLE,
         ).stdout.strip()
 
@@ -196,6 +200,7 @@ class MultipassInstance(Executor):
             purge=True,
         )
 
+    @overload
     def execute_popen(
         self,
         command: list[str],
@@ -203,8 +208,31 @@ class MultipassInstance(Executor):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        **kwargs,  # noqa: ANN003
-    ) -> subprocess.Popen:
+        encoding: str,
+        **kwargs: Any,
+    ) -> subprocess.Popen[str]: ...
+    @overload
+    def execute_popen(
+        self,
+        command: list[str],
+        *,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        timeout: float | None = None,
+        encoding: None,
+        **kwargs: Any,
+    ) -> subprocess.Popen[bytes]: ...
+    @override
+    def execute_popen(
+        self,
+        command: list[str],
+        *,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        timeout: float | None = None,
+        encoding: str | None,
+        **kwargs: Any,
+    ) -> Any:
         """Execute a process in the instance using subprocess.Popen().
 
         The process' environment will inherit the execution environment's
@@ -220,6 +248,8 @@ class MultipassInstance(Executor):
         :param cwd: working directory to execute the command
         :param env: Additional environment to set for process.
         :param timeout: Timeout (in seconds) for the command.
+        :param encoding: Optional encoding to use to decode the program
+            response.
         :param kwargs: Additional keyword arguments for subprocess.Popen().
 
         :returns: Popen instance.
@@ -229,9 +259,11 @@ class MultipassInstance(Executor):
             command=_rootify_multipass_command(command, cwd=cwd, env=env),
             runner=subprocess.Popen,
             timeout=timeout,
+            encoding=encoding,
             **kwargs,
         )
 
+    @overload
     def execute_run(
         self,
         command: list[str],
@@ -240,8 +272,33 @@ class MultipassInstance(Executor):
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
         check: bool = False,
-        **kwargs,  # noqa: ANN003
-    ) -> subprocess.CompletedProcess:
+        encoding: str,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]: ...
+    @overload
+    def execute_run(
+        self,
+        command: list[str],
+        *,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        timeout: float | None = None,
+        check: bool = False,
+        encoding: None = None,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[bytes]: ...
+    @override
+    def execute_run(
+        self,
+        command: list[str],
+        *,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        timeout: float | None = None,
+        check: bool = False,
+        encoding: str | None = None,
+        **kwargs: Any,
+    ) -> Any:
         """Execute a command in the instance using subprocess.run().
 
         The process' environment will inherit the execution environment's
@@ -258,6 +315,8 @@ class MultipassInstance(Executor):
         :param env: Additional environment to set for process.
         :param timeout: Timeout (in seconds) for the command.
         :param check: Raise an exception if the command fails.
+        :param encoding: Optional encoding to use to decode the program
+            response.
         :param kwargs: Keyword args to pass to subprocess.run().
 
         :returns: Completed process.
@@ -270,6 +329,7 @@ class MultipassInstance(Executor):
             runner=subprocess.run,
             timeout=timeout,
             check=check,
+            encoding=encoding,
             **kwargs,
         )
 
@@ -300,7 +360,7 @@ class MultipassInstance(Executor):
                 details=f"Returned data: {info_data!r}",
             )
 
-        return info_data[self.instance_name]
+        return cast("dict[str, Any]", info_data[self.instance_name])
 
     def is_mounted(
         self, *, host_source: pathlib.Path, target: pathlib.PurePath

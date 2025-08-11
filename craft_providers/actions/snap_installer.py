@@ -25,7 +25,7 @@ import shlex
 import subprocess
 import urllib.parse
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, cast
 
 import pydantic
 import requests
@@ -70,7 +70,7 @@ class Snap(pydantic.BaseModel, extra="forbid"):
 
     @pydantic.field_validator("channel")
     @classmethod
-    def validate_channel(cls, channel) -> str | None:  # noqa: ANN001
+    def validate_channel(cls, channel: str | None) -> str | None:
         """Validate that channel is not an empty string.
 
         :raises BaseConfigurationError: if channel is empty
@@ -131,8 +131,7 @@ def get_host_snap_info(snap_name: str) -> dict[str, Any]:
             brief="Unable to connect to snapd service."
         ) from error
     snap_info.raise_for_status()
-    # TODO: represent snap info in a dataclass  # noqa: FIX002
-    return snap_info.json()["result"]
+    return cast("dict[str, Any]", snap_info.json()["result"])
 
 
 def _get_target_snap_revision_from_snapd(
@@ -157,7 +156,8 @@ def _get_target_snap_revision_from_snapd(
         # snap not found
         return None
     if result["status-code"] == 200:  # noqa: PLR2004
-        return result["result"]["revision"]
+        # Note: cast can be removed if Pydantic model is made for this response
+        return cast("str", result["result"]["revision"])
     raise SnapInstallationError(f"Unknown response from snapd: {result!r}")
 
 
@@ -178,7 +178,8 @@ def _get_snap_revision_ensuring_source(
     # saved by previous versions of the lib
     if config.get("source") == source:
         # previously installed from specified source: ok
-        return config["revision"]
+        # Note: cast can be removed if the Pydantic model is improved
+        return cast("str", config["revision"])
 
     # installed from other source: remove it
     logger.debug(

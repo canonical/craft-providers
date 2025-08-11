@@ -2634,7 +2634,7 @@ def test_yaml_loader_invalid_timestamp():
     # resolving timestamps.
     data = "last_used_at: 0000-01-01T00:00:00Z"
 
-    obj = lxc.load_yaml(data)
+    obj = lxc.load_yaml_flat(data)
 
     assert "last_used_at" in obj
     assert isinstance(obj["last_used_at"], str)

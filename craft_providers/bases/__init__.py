@@ -84,7 +84,7 @@ def get_base_alias(
 ) -> almalinux.AlmaLinuxBaseAlias: ...
 @overload
 def get_base_alias(base_name: BaseName) -> BaseAlias: ...
-def get_base_alias(base_name):
+def get_base_alias(base_name: tuple[str, str]) -> BaseAlias:
     """Return a Base alias from a base (name, version) tuple."""
     base_name = BaseName(*base_name)
     if base_name.name == "ubuntu" and base_name in BASE_NAME_TO_BASE_ALIAS:

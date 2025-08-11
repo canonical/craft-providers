@@ -30,7 +30,7 @@ import time
 from collections import deque
 from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, overload
 
 import yaml
 
@@ -52,14 +52,39 @@ class StdinType(enum.Enum):
     NULL = None
 
 
-def load_yaml(data):  # noqa: ANN001, ANN201
+def load_yaml_flat(data: str) -> dict[str, Any]:
     """Load yaml without additional resolvers.
 
     LXD may return YAML that has datetimes that are not valid when parsed to
     datetime.datetime().  Instead just use the base loader and avoid resolving
     this type (and others).
     """
-    return yaml.load(data, Loader=yaml.BaseLoader)  # noqa: S506
+    result = yaml.load(data, Loader=yaml.BaseLoader)  # noqa: S506
+    if isinstance(result, dict):
+        return result
+
+    logger.debug(
+        "Expected to receive a flat mapping of values from YAML deserialization, instead received:"
+    )
+    logger.debug(f"{result}")
+    raise ValueError("Internal error: Malformed YAML input")
+
+
+def load_yaml_list(data: str) -> list[dict[str, Any]]:
+    """Load yaml without additional resolvers.
+
+    LXD may return YAML that has datetimes that are not valid when parsed to
+    datetime.datetime().  Instead just use the base loader and avoid resolving
+    this type (and others).
+    """
+    result = yaml.load(data, Loader=yaml.BaseLoader)  # noqa: S506
+    if isinstance(result, list):
+        return result
+    logger.debug(
+        "Expected to receive a list of values from YAML deserialization, instead received:"
+    )
+    logger.debug(f"{result}")
+    raise ValueError("Internal error: Malformed YAML input")
 
 
 class LXC:
@@ -80,8 +105,8 @@ class LXC:
         check: bool = True,
         project: str | None = None,
         stdin: StdinType = StdinType.INTERACTIVE,
-        **kwargs,  # noqa: ANN003
-    ) -> subprocess.CompletedProcess:
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]:
         """Execute lxc command on host, allowing output to console.
 
         Handles the --project=project options if project is specified.
@@ -197,7 +222,7 @@ class LXC:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-        return load_yaml(proc.stdout)
+        return load_yaml_flat(proc.stdout)
 
     def config_get(
         self,
@@ -337,20 +362,85 @@ class LXC:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    def exec(  # noqa: ANN201, PLR0913
+    @overload
+    def exec(
         self,
         *,
         command: list[str],
         instance_name: str,
+        runner: Callable[..., subprocess.Popen[str]],
         cwd: str | None = None,
         mode: str | None = None,
         project: str = "default",
         remote: str = "local",
-        runner: Callable = subprocess.run,
         timeout: float | None = None,
         check: bool = False,
-        **kwargs,  # noqa: ANN003
-    ):
+        encoding: str,
+        **kwargs: Any,
+    ) -> subprocess.Popen[str]: ...
+    @overload
+    def exec(
+        self,
+        *,
+        command: list[str],
+        instance_name: str,
+        runner: Callable[..., subprocess.Popen[bytes]],
+        cwd: str | None = None,
+        mode: str | None = None,
+        project: str = "default",
+        remote: str = "local",
+        timeout: float | None = None,
+        check: bool = False,
+        encoding: None = None,
+        **kwargs: Any,
+    ) -> subprocess.Popen[bytes]: ...
+    @overload
+    def exec(
+        self,
+        *,
+        command: list[str],
+        instance_name: str,
+        runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+        cwd: str | None = None,
+        mode: str | None = None,
+        project: str = "default",
+        remote: str = "local",
+        timeout: float | None = None,
+        check: bool = False,
+        encoding: str,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]: ...
+    @overload
+    def exec(
+        self,
+        *,
+        command: list[str],
+        instance_name: str,
+        runner: Callable[..., subprocess.CompletedProcess[bytes]] = subprocess.run,
+        cwd: str | None = None,
+        mode: str | None = None,
+        project: str = "default",
+        remote: str = "local",
+        timeout: float | None = None,
+        check: bool = False,
+        encoding: None = None,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[bytes]: ...
+    def exec(  # noqa: PLR0913, too many arguments
+        self,
+        *,
+        command: list[str],
+        instance_name: str,
+        runner: Callable[..., Any] = subprocess.run,
+        cwd: str | None = None,
+        mode: str | None = None,
+        project: str = "default",
+        remote: str = "local",
+        timeout: float | None = None,
+        check: bool = False,
+        encoding: str | None = None,
+        **kwargs: Any,
+    ) -> Any:
         """Execute command in instance_name with specified runner.
 
         :param command: Command to execute in the instance.
@@ -365,6 +455,8 @@ class LXC:
             kwargs.
         :param timeout: Timeout (in seconds) for the command.
         :param check: Raise an exception if the command fails.
+        :param encoding: Optional encoding to use to decode the program
+            response.
         :param kwargs: Additional kwargs for runner.
 
         :returns: Runner's instance.
@@ -390,11 +482,13 @@ class LXC:
         logger.debug("Executing in container: %s", shlex.join(final_cmd))
 
         if runner is subprocess.run:
-            return runner(final_cmd, timeout=timeout, check=check, **kwargs)
+            return runner(
+                final_cmd, timeout=timeout, check=check, encoding=encoding, **kwargs
+            )
 
         # XXX: warn that timeout and check are ignored for Popen??  # noqa: FIX003
 
-        return runner(final_cmd, **kwargs)
+        return runner(final_cmd, encoding=encoding, **kwargs)
 
     def file_pull(
         self,
@@ -507,7 +601,7 @@ class LXC:
 
     def has_image(
         self,
-        image_name,  # noqa: ANN001
+        image_name: str,
         *,
         project: str = "default",
         remote: str = "local",
@@ -556,7 +650,7 @@ class LXC:
             ) from error
 
         try:
-            return load_yaml(proc.stdout)
+            return load_yaml_flat(proc.stdout)
         except yaml.YAMLError as error:
             raise LXDError(
                 brief="Failed to parse lxc info.",
@@ -750,7 +844,7 @@ class LXC:
             ) from error
 
         try:
-            return load_yaml(proc.stdout)
+            return load_yaml_list(proc.stdout)
         except yaml.YAMLError as error:
             raise LXDError(
                 brief="Failed to parse lxc image list.",
@@ -786,7 +880,7 @@ class LXC:
             ) from error
 
         try:
-            return load_yaml(proc.stdout)
+            return load_yaml_list(proc.stdout)
         except yaml.YAMLError as error:
             raise LXDError(
                 brief="Failed to parse lxc list.",
@@ -870,7 +964,7 @@ class LXC:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-        return load_yaml(proc.stdout)
+        return load_yaml_flat(proc.stdout)
 
     def project_create(self, *, project: str, remote: str = "local") -> None:
         """Create project.
@@ -937,7 +1031,7 @@ class LXC:
             ) from error
 
         try:
-            projects = load_yaml(proc.stdout)
+            projects = load_yaml_list(proc.stdout)
             return sorted([p["name"] for p in projects])
         except (KeyError, yaml.YAMLError) as error:
             raise LXDError(
@@ -1022,7 +1116,7 @@ class LXC:
             ) from error
 
         try:
-            return load_yaml(proc.stdout)
+            return load_yaml_flat(proc.stdout)
         except yaml.YAMLError as error:
             raise LXDError(
                 brief="Failed to parse lxc remote list.",
@@ -1140,7 +1234,7 @@ class LXC:
         start_time = time.time()
 
         # 20 * 3 seconds = 1 minute no change in timer
-        timer_queue: deque = deque([-2, -1], maxlen=20)
+        timer_queue: deque[str] = deque(["-2", "-1"], maxlen=20)
 
         # retry until the instance's timer hasn't changed for the last 20 iterations
         while len(set(timer_queue)) > 1:
