@@ -58,7 +58,7 @@ class Multipass:
 
     def _run(
         self, command: list[str], **kwargs: Any
-    ) -> subprocess.CompletedProcess[bytes]:
+    ) -> subprocess.CompletedProcess[str]:
         """Execute a multipass command.
 
         It always checks the result (as no errors should pass silently) and captures the
@@ -67,7 +67,14 @@ class Multipass:
         command = [str(self.multipass_path), *command]
 
         logger.debug("Executing on host: %s", shlex.join(command))
-        return subprocess.run(command, check=True, capture_output=True, **kwargs)
+        return subprocess.run(
+            command,
+            check=True,
+            encoding=locale.getpreferredencoding(),
+            errors="replace",
+            capture_output=True,
+            **kwargs,
+        )
 
     def delete(self, *, instance_name: str, purge: bool = True) -> None:
         """Passthrough for running multipass delete.
@@ -541,7 +548,7 @@ class Multipass:
             ) from error
 
         try:
-            output = proc.stdout.decode(encoding=locale.getpreferredencoding())
+            output = proc.stdout
         except UnicodeDecodeError as error:
             raise MultipassError(
                 brief="Failed to check version.",

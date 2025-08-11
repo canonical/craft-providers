@@ -43,7 +43,8 @@ def update_nested_dictionaries(
     for key, value in new_data.items():
         if isinstance(value, dict):
             config_data[key] = update_nested_dictionaries(
-                config_data.get(key, {}), value
+                config_data.get(key, {}),
+                value,  # type: ignore[reportUnknownArgumentType] # the precise dict contents don't matter here
             )
         else:
             config_data[key] = value

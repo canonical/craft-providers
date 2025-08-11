@@ -17,6 +17,7 @@
 
 """Fixtures for LXD integration tests."""
 
+import locale
 import os
 import random
 import string
@@ -116,7 +117,7 @@ def tmp_instance(
             capture_output=True,
             check=False,
             text=True,
-            encoding="utf-8",
+            encoding=locale.getpreferredencoding(),
         )
 
         running_state = proc.stdout.strip()

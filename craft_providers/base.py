@@ -19,6 +19,7 @@
 
 import enum
 import io
+import locale
 import logging
 import math
 import os
@@ -231,7 +232,7 @@ class Base(ABC):
 
         logger.debug("Instance has already been setup.")
 
-    def _get_os_release(self, executor: Executor) -> dict[str, str]:
+    def get_os_release(self, executor: Executor) -> dict[str, str]:
         """Get the OS release information from an instance's /etc/os-release.
 
         :returns: Dictionary of key-mappings found in os-release.
@@ -354,7 +355,7 @@ class Base(ABC):
             error=error,
         )
 
-    def _setup_hostname(self, executor: Executor) -> None:
+    def setup_hostname(self, executor: Executor) -> None:
         """Configure hostname, installing /etc/hostname."""
         executor.push_file_io(
             destination=pathlib.PurePosixPath("/etc/hostname"),
@@ -787,7 +788,7 @@ class Base(ABC):
 
         This step usually does not need to be overridden.
         """
-        self._setup_hostname(executor=executor)
+        self.setup_hostname(executor=executor)
 
     def _post_setup_network(self, executor: Executor) -> None:  # noqa: ARG002
         """Do anything after setting up the basic network.
@@ -830,7 +831,7 @@ class Base(ABC):
             ["bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
             capture_output=True,
             text=True,
-            encoding="utf-8",
+            encoding=locale.getpreferredencoding(),
             errors="replace",
         )
         guest_base_cache_path = pathlib.Path(guest_cache_proc.stdout)
@@ -1169,7 +1170,7 @@ class Base(ABC):
                 capture_output=capture_output,
                 text=text,
                 timeout=timeout,
-                encoding="utf-8",
+                encoding=locale.getpreferredencoding(),
                 replace="errors",
             )
         except subprocess.CalledProcessError as exc:

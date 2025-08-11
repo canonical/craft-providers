@@ -108,13 +108,12 @@ def get_base_from_alias(
 ) -> type[almalinux.AlmaLinuxBase]: ...
 def get_base_from_alias(alias: BaseAlias) -> type[Base]:
     """Return a Base class from a known base alias."""
-    if isinstance(alias, ubuntu.BuilddBaseAlias):
-        return ubuntu.BuilddBase
-
-    if isinstance(alias, centos.CentOSBaseAlias):
-        return centos.CentOSBase
-
-    if isinstance(alias, almalinux.AlmaLinuxBaseAlias):
-        return almalinux.AlmaLinuxBase
-
-    raise BaseConfigurationError(f"Base not found for alias {alias}")
+    match alias:
+        case ubuntu.BuilddBaseAlias():
+            return ubuntu.BuilddBase
+        case centos.CentOSBaseAlias():
+            return centos.CentOSBase
+        case almalinux.AlmaLinuxBaseAlias():
+            return almalinux.AlmaLinuxBase
+        case _:
+            raise BaseConfigurationError(f"Base not found for alias {alias}")

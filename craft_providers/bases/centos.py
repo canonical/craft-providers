@@ -143,7 +143,7 @@ class CentOSBase(Base):
         :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.
         """
-        os_release = self._get_os_release(executor=executor)
+        os_release = self.get_os_release(executor=executor)
 
         os_id = os_release.get("ID")
         if os_id not in ("centos", "rhel"):
