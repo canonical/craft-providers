@@ -179,7 +179,7 @@ class BuilddBase(Base):
 
     def _ensure_os_compatible(self, executor: Executor) -> None:
         """Ensure OS is compatible with Base."""
-        os_release = self._get_os_release(executor=executor)
+        os_release = self.get_os_release(executor=executor)
 
         os_name = os_release.get("NAME")
         if os_name != "Ubuntu":
@@ -211,7 +211,7 @@ class BuilddBase(Base):
 
     def _setup_network(self, executor: Executor) -> None:
         """Set up the basic network with systemd-networkd and systemd-resolved."""
-        self._setup_hostname(executor=executor)
+        self.setup_hostname(executor=executor)
         self._setup_resolved(executor=executor)
         self._setup_networkd(executor=executor)
 
@@ -300,7 +300,7 @@ class BuilddBase(Base):
 
         :raises BaseConfigurationError: If the codename can't be determined.
         """
-        os_release = self._get_os_release(executor=executor)
+        os_release = self.get_os_release(executor=executor)
         codename = os_release.get("UBUNTU_CODENAME")
         if not codename:
             raise BaseConfigurationError(

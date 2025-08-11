@@ -18,6 +18,7 @@
 """Multipass Instance."""
 
 import io
+import locale
 import logging
 import pathlib
 import subprocess
@@ -103,7 +104,7 @@ class MultipassInstance(Executor):
             capture_output=True,
             check=True,
             text=True,
-            encoding="utf-8",
+            encoding=locale.getpreferredencoding(),
             errors="replace",
             timeout=TIMEOUT_SIMPLE,
         ).stdout.strip()

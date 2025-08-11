@@ -20,6 +20,7 @@
 import builtins
 import contextlib
 import enum
+import locale
 import logging
 import os
 import pathlib
@@ -61,7 +62,7 @@ def load_yaml_flat(data: str) -> dict[str, Any]:
     """
     result = yaml.load(data, Loader=yaml.BaseLoader)  # noqa: S506
     if isinstance(result, dict):
-        return result
+        return result  # type: ignore[reportUnknownVariableType]
 
     logger.debug(
         "Expected to receive a flat mapping of values from YAML deserialization, instead received:"
@@ -79,7 +80,7 @@ def load_yaml_list(data: str) -> list[dict[str, Any]]:
     """
     result = yaml.load(data, Loader=yaml.BaseLoader)  # noqa: S506
     if isinstance(result, list):
-        return result
+        return result  # type: ignore[reportUnknownVariableType]
     logger.debug(
         "Expected to receive a list of values from YAML deserialization, instead received:"
     )
@@ -130,9 +131,22 @@ class LXC:
         with self.lxc_lock:
             # for subprocess, input takes priority over stdin
             if "input" in kwargs:
-                return subprocess.run(lxc_cmd, check=check, **kwargs)
+                return subprocess.run(
+                    lxc_cmd,
+                    check=check,
+                    encoding=locale.getpreferredencoding(),
+                    errors="replace",
+                    **kwargs,
+                )
 
-            return subprocess.run(lxc_cmd, check=check, stdin=stdin.value, **kwargs)
+            return subprocess.run(
+                lxc_cmd,
+                check=check,
+                encoding=locale.getpreferredencoding(),
+                errors="replace",
+                stdin=stdin.value,
+                **kwargs,
+            )
 
     def config_device_add_disk(
         self,
@@ -700,9 +714,8 @@ class LXC:
         if ephemeral:
             command.append("--ephemeral")
 
-        if config_keys is not None:
-            for config_key in [f"{k}={v}" for k, v in config_keys.items()]:
-                command.extend(["--config", config_key])
+        for config_key in [f"{k}={v}" for k, v in config_keys.items()]:
+            command.extend(["--config", config_key])
 
         # The total times of retrying to launch the same instance per craft-providers.
         # If parallel lxc failed, the bad instance will be deleted by the lock holder

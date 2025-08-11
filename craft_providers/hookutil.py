@@ -221,7 +221,7 @@ class HookHelper:
 
     def list_base_instances(self) -> list[LXDInstance]:
         """Return a list of all base instance objects for the project."""
-        base_instances = []
+        base_instances: list[LXDInstance] = []
         for instance in self.list_instances():
             if not instance.is_base_instance():
                 self.dprint(instance, "Not a base instance")
@@ -234,7 +234,7 @@ class HookHelper:
 def configure_hook(lxc: HookHelper) -> None:
     """Cleanup hook run on snap configure."""
     # Keep the newest base instance with the most recent compatibility tag.
-    delete_base_full_names = set()
+    delete_base_full_names: set[str] = set()
     for instance in lxc.list_base_instances():
         if instance.is_current_base_instance():
             lxc.dprint(instance, "Base instance is current")

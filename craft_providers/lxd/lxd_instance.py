@@ -340,7 +340,7 @@ class LXDInstance(Executor):
             instance_name=self.instance_name, project=self.project, remote=self.remote
         )
 
-        disks = {}
+        disks: dict[str, Any] = {}
         for name, config in devices.items():
             if config.get("type") == "disk":
                 disks[name] = config
@@ -437,7 +437,7 @@ class LXDInstance(Executor):
 
         :raises LXDError: On unexpected error.
         """
-        config_keys = {}
+        config_keys: dict[str, Any] = {}
 
         if map_user_uid:
             uid = os.getuid() if uid is None else uid

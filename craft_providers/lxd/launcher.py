@@ -910,7 +910,7 @@ def launch(  # noqa: PLR0913
     instance.start()
 
     # change the hostname from the base instance's hostname
-    base_configuration._setup_hostname(executor=instance)  # noqa: SLF001
+    base_configuration.setup_hostname(executor=instance)
 
     base_configuration.warmup(executor=instance)
 

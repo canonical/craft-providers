@@ -119,7 +119,7 @@ def is_installed() -> bool:
     # query snapd API
     url = "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/lxd"
     try:
-        snap_info = requests_unixsocket.get(url=url, params={"select": "enabled"})
+        snap_info = requests_unixsocket.get(url=url, params={"select": "enabled"})  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types
     except requests.exceptions.ConnectionError as error:
         raise errors.ProviderError(
             brief="Unable to connect to snapd service."

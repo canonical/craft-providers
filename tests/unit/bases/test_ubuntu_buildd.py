@@ -708,7 +708,7 @@ def test_get_os_release(fake_process, fake_executor):
         stdout="NAME=Ubuntu\nVERSION_ID=12.04\n",
     )
 
-    result = base_config._get_os_release(executor=fake_executor)
+    result = base_config.get_os_release(executor=fake_executor)
 
     assert result == {"NAME": "Ubuntu", "VERSION_ID": "12.04"}
 
@@ -780,7 +780,7 @@ def test_setup_hostname_failure(fake_process, fake_executor):
     )
 
     with pytest.raises(BaseConfigurationError) as exc_info:
-        base_config._setup_hostname(executor=fake_executor)
+        base_config.setup_hostname(executor=fake_executor)
 
     assert exc_info.value == BaseConfigurationError(
         brief="Failed to set hostname.",

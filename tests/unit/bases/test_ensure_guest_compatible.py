@@ -28,13 +28,13 @@ from tests.unit.conftest import DEFAULT_FAKE_CMD
 
 def test_ensure_guest_compatible_not_ubuntu(fake_executor, fake_process):
     base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
-    base._get_os_release = MagicMock(spec=base._get_os_release)
+    base.get_os_release = MagicMock(spec=base.get_os_release)
     ensure_guest_compatible(base, fake_executor, "")
 
     # The first thing that ensure_guest_compatible does is the base check.  The next
     # thing is to call _get_os_release on the base.  So if that isn't called then we
     # haven't progressed.
-    base._get_os_release.assert_not_called()
+    base.get_os_release.assert_not_called()
 
 
 def test_ensure_guest_compatible_non_ubuntu_host(
@@ -43,7 +43,7 @@ def test_ensure_guest_compatible_non_ubuntu_host(
 ):
     """Check for combinations of host and guest OS unaffected by the lxd issue."""
     guest_base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-    guest_base._get_os_release = MagicMock(spec=guest_base._get_os_release)
+    guest_base.get_os_release = MagicMock(spec=guest_base.get_os_release)
 
     # Mock the host os-release file
     fake_process.register_subprocess(
@@ -68,7 +68,7 @@ def test_ensure_guest_compatible_non_ubuntu_host(
     # The first thing that ensure_guest_compatible does is the base check.  The next
     # thing is to call _get_os_release on the base.  So if that isn't called then we
     # haven't progressed.
-    guest_base._get_os_release.assert_not_called()
+    guest_base.get_os_release.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -89,14 +89,14 @@ def test_ensure_guest_compatible_valid_ubuntu(
     guest_base._timeout_simple = 1
 
     # Set this up so we can be sure the guest _get_os_release was called once
-    real_get_os_release = guest_base._get_os_release
+    real_get_os_release = guest_base.get_os_release
 
     def fake_get_os_release(*args, **kwargs):
         fake_get_os_release.counter += 1  # type: ignore[reportFunctionMemberAccess]
         return real_get_os_release(*args, **kwargs)
 
     fake_get_os_release.counter = 0  # type: ignore[reportFunctionMemberAccess]
-    guest_base._get_os_release = fake_get_os_release
+    guest_base.get_os_release = fake_get_os_release
 
     lxd_version = "0.0.0"
 
