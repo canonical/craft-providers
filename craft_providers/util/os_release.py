@@ -57,7 +57,7 @@ def parse_os_release(content: str | None = None) -> dict[str, str]:
             key, value = line.split("=", maxsplit=1)
 
             # Strip encapsulating quotes, single or double.
-            if value[0] == value[-1] and value[0] in ("'", '"'):
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'): # noqa: PLR2004
                 value = value[1:-1]
 
             mappings[key] = value
