@@ -203,6 +203,7 @@ class MultipassProvider(Provider):
         instance_name: str,
         allow_unstable: bool = False,
         shutdown_delay_mins: int | None = None,
+        use_base_instance: bool = False,  # noqa: ARG002
         prepare_instance: "Callable[[Executor], None] | None" = None,
     ) -> Iterator["Executor"]:
         """Configure and launch environment for specified base.
@@ -218,6 +219,8 @@ class MultipassProvider(Provider):
         :param allow_unstable: If true, allow unstable images to be launched.
         :param shutdown_delay_mins: Minutes by which to delay shutdown when exiting
             the instance.
+        :param use_base_instance: Enable base instances for faster setup (not supported
+            by this provider).
 
         :raises MultipassError: If the instance cannot be launched or configured.
         """

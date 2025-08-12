@@ -134,6 +134,7 @@ class LXDProvider(Provider):
         :param base_configuration: Base configuration to apply to instance.
         :param instance_name: Name of the instance to launch.
         :param allow_unstable: If true, allow unstable images to be launched.
+        :param use_base_instance: Enable base instances to reduce setup time.
         :param shutdown_delay_mins: Minutes by which to delay shutdown when exiting
             the instance.
 
