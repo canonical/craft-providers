@@ -17,6 +17,7 @@
 
 """Parser for /etc/os-release."""
 
+import shlex
 from pathlib import Path
 
 OS_RELEASE_FILE = Path("/etc/os-release")
@@ -34,7 +35,6 @@ def parse_os_release(content: str | None = None) -> dict[str, str]:
 
     :returns: Dictionary of key-mappings found in os-release. Values are
     stripped of encapsulating quotes.
-
     """
     if content is None:
         with OS_RELEASE_FILE.open() as f:
@@ -42,24 +42,10 @@ def parse_os_release(content: str | None = None) -> dict[str, str]:
 
     mappings: dict[str, str] = {}
 
-    for line in content.splitlines():
-        line = line.strip()  # noqa: PLW2901
-
-        # Ignore commented lines.
-        if line.startswith("#"):
+    for line in shlex.split(content):
+        key, eq, value = line.partition("=")
+        if eq != "=":  # Not a variable getting set; ignore.
             continue
-
-        # Ignore empty lines.
-        if not line:
-            continue
-
-        if "=" in line:
-            key, value = line.split("=", maxsplit=1)
-
-            # Strip encapsulating quotes, single or double.
-            if value[0] == value[-1] and value[0] in ("'", '"'):
-                value = value[1:-1]
-
-            mappings[key] = value
+        mappings[key] = value
 
     return mappings
