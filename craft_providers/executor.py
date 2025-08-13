@@ -26,6 +26,7 @@ import re
 import subprocess
 from abc import ABC, abstractmethod
 from collections.abc import Generator
+from typing import Literal, overload
 
 import craft_providers.util.temp_paths
 from craft_providers.errors import ProviderError
@@ -103,6 +104,16 @@ class Executor(ABC):
         :raises ProviderError: On error copying file.
         """
 
+    @overload
+    @contextlib.contextmanager
+    def temporarily_pull_file(
+        self, *, source: pathlib.PurePath, missing_ok: Literal[False] = False
+    ) -> Generator[pathlib.Path, None, None]: ...
+    @overload
+    @contextlib.contextmanager
+    def temporarily_pull_file(
+        self, *, source: pathlib.PurePath, missing_ok: Literal[True]
+    ) -> Generator[pathlib.Path | None, None, None]: ...
     @contextlib.contextmanager
     def temporarily_pull_file(
         self, *, source: pathlib.PurePath, missing_ok: bool = False
