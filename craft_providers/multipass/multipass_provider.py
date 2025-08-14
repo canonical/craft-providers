@@ -221,6 +221,8 @@ class MultipassProvider(Provider):
             the instance.
         :param use_base_instance: Enable base instances for faster setup (not supported
             by this provider).
+        :param prepare_instance: A callback to perform early instance configuration
+            before the base image setup.
 
         :raises MultipassError: If the instance cannot be launched or configured.
         """

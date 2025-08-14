@@ -137,6 +137,8 @@ class LXDProvider(Provider):
         :param use_base_instance: Enable base instances to reduce setup time.
         :param shutdown_delay_mins: Minutes by which to delay shutdown when exiting
             the instance.
+        :param prepare_instance: A callback to perform early instance configuration
+            before the base image setup.
 
         :raises LXDError: if instance cannot be configured and launched.
         """

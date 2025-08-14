@@ -54,6 +54,8 @@ def launch(
     :param disk_gb: Disk allocation in gigabytes.
     :param mem_gb: Memory allocation in gigabytes.
     :param auto_clean: Automatically clean instance, if incompatible.
+    :param prepare_instance: A callback to perform early instance configuration
+        before the base image setup.
 
     :returns: Multipass instance.
 

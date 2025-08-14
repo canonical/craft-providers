@@ -122,6 +122,8 @@ def _create_instance(  # noqa: PLR0913
     :param gid: The group id to be mapped, if ``map_user_uid`` is enabled.
     :param project: LXD project to create instance in.
     :param remote: LXD remote to create instance on.
+    :param prepare_instance: A callback to perform early instance configuration
+    before the base image setup.
     :param lxc: LXC client.
     """
     logger.info("Creating new instance from remote")
@@ -737,6 +739,8 @@ def launch(  # noqa: PLR0913
     :param remote: LXD remote to create instance on.
     :param lxc: LXC client.
     :param expiration: How long a base instance will be valid from its creation date.
+    :param prepare_instance: A callback to perform early instance configuration
+    before the base image setup.
 
     :returns: LXD instance.
 

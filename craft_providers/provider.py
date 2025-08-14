@@ -120,4 +120,6 @@ class Provider(ABC):
         :param shutdown_delay_mins: Minutes by which to delay shutdown when exiting
             the instance.
         :param use_base_instance: Enable base instances if supported by the provider.
+        :param prepare_instance: A callback to perform early instance configuration
+            before the base image setup.
         """
