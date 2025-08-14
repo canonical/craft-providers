@@ -31,7 +31,7 @@ craft-providers = "craft_providers.cli:main"
 dev = [
     "build>=0.7.0",
     "coverage[toml]==7.6.4",
-    "freezegun==1.5.2",
+    "freezegun==1.5.5",
     "logassert==7",
     "pyfakefs==5.7.1",
     "pytest==8.3.3",
@@ -41,10 +41,10 @@ dev = [
     "pytest-subprocess==1.5.3",
     "pytest-xdist==3.6.1",
     "pytest-time==0.3.2",
-    "responses==0.25.7",
-    "types-requests==2.32.4.20250611",
+    "responses==0.25.8",
+    "types-requests==2.32.4.20250809",
     "types-setuptools==75.2.0.20241019",
-    "types-pyyaml==6.0.12.20250516",
+    "types-pyyaml==6.0.12.20250809",
 ]
 lint = ["codespell[toml]==2.3.0"]
 types = ["mypy[reports]~=1.15"]
@@ -86,7 +86,7 @@ constraint-dependencies = [
 
 
 [build-system]
-requires = ["setuptools==75.9.1", "setuptools_scm[toml]>=7.1"]
+requires = ["setuptools==80.9.0", "setuptools_scm[toml]>=7.1"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
