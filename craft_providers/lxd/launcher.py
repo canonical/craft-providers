@@ -155,7 +155,7 @@ def _create_instance(  # noqa: PLR0913
             config_timer.start()
 
             if prepare_instance:
-                prepare_instance(instance)
+                prepare_instance(base_instance)
 
             # The base configuration shouldn't mount cache directories because if
             # they get deleted, copying the base instance will fail.
