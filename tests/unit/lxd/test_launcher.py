@@ -26,7 +26,7 @@ import pytest
 from craft_providers import Base, Executor, ProviderError, bases, lxd
 from craft_providers.lxd import LXDError, lxd_instance_status
 from freezegun import freeze_time
-from logassert import Exact  # type: ignore  # noqa: PGH003
+from logassert import Exact  # type: ignore[import-untyped]
 
 C = 299792458  # m/s
 VCS = 9192631770  # Hz
@@ -1287,12 +1287,12 @@ def test_set_id_map_all_options(fake_base_instance, mock_lxc, mocker):
     ],
 )
 def test_check_id_map(
-    map_user_uid: bool,  # noqa: FBT001
+    map_user_uid: bool,
     expected_uid: int | None,
     actual_uid: int | None,
     expected_gid: int | None,
     actual_gid: int | None,
-    expected_result: bool,  # noqa: FBT001
+    expected_result: bool,
     fake_base_instance,
     mock_lxc,
     mocker,

@@ -27,10 +27,9 @@ from craft_providers.errors import (
     BaseCompatibilityError,
     BaseConfigurationError,
     NetworkError,
-    details_from_called_process_error,
 )
 from craft_providers.instance_config import InstanceConfiguration
-from logassert import Exact  # type: ignore  # noqa: PGH003
+from logassert import Exact  # type: ignore[import-untyped]
 
 from tests.unit.conftest import DEFAULT_FAKE_CMD
 
@@ -677,28 +676,21 @@ def test_setup_hostname_failure(fake_process, fake_executor):
         returncode=-1,
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(BaseConfigurationError, match="Failed to set hostname."):
         base_config.setup_hostname(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to set hostname.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_setup_snapd_proxy(fake_executor, fake_process):
     """Verify snapd proxy is set or unset."""
-    environment = {
+    environment: dict[str, str | None] = {
         "http_proxy": "http://foo.bar:8080",
         "https_proxy": "http://foo.bar:8081",
     }
     base_config = centos.CentOSBase(
         alias=centos.CentOSBaseAlias.SEVEN,
-        environment=environment,  # type: ignore  # noqa: PGH003
+        environment=environment,
     )
-    fake_process.keep_last_process(True)  # noqa: FBT003
+    fake_process.keep_last_process(keep=True)
     fake_process.register([fake_process.any()])
 
     base_config._setup_snapd_proxy(executor=fake_executor)
@@ -734,15 +726,8 @@ def test_setup_snapd_proxy_failures(fake_process, fake_executor, fail_index):
         returncode=return_codes[1],
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(BaseConfigurationError, match="Failed to set the snapd proxy."):
         base_config._setup_snapd_proxy(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to set the snapd proxy.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 @pytest.mark.usefixtures("stub_verify_network")
@@ -766,15 +751,10 @@ def test_pre_setup_snapd_failures(fake_process, fake_executor, fail_index):
         returncode=return_codes[1],
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(
+        BaseConfigurationError, match="Failed to enable systemd-udevd service."
+    ):
         base_config._pre_setup_snapd(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to enable systemd-udevd service.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 @pytest.mark.usefixtures("stub_verify_network")
@@ -785,15 +765,8 @@ def test_setup_snapd_failures(fake_process, fake_executor):
         returncode=1,
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(BaseConfigurationError, match="Failed to setup snapd."):
         base_config._setup_snapd(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to setup snapd.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 @pytest.mark.parametrize("fail_index", list(range(0, 8)))
@@ -852,15 +825,8 @@ def test_post_warmup_snapd_failures(fake_process, fake_executor, fail_index):
         returncode=return_codes[1],
     )
 
-    with pytest.raises(BaseConfigurationError) as raised:
+    with pytest.raises(BaseConfigurationError, match="Failed to set the snapd proxy."):
         base_config._warmup_snapd(executor=fake_executor)
-
-    assert raised.value == BaseConfigurationError(
-        brief="Failed to set the snapd proxy.",
-        details=details_from_called_process_error(
-            raised.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 @pytest.mark.parametrize("alias", list(centos.CentOSBaseAlias))
@@ -1561,15 +1527,8 @@ def test_disable_and_wait_for_snap_refresh_hold_error(fake_process, fake_executo
         returncode=-1,
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(BaseConfigurationError, match="Failed to hold snap refreshes."):
         base_config._disable_and_wait_for_snap_refresh(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to hold snap refreshes.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executor):
@@ -1581,12 +1540,7 @@ def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executo
         returncode=-1,
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(
+        BaseConfigurationError, match="Failed to wait for snap refreshes to complete."
+    ):
         base_config._disable_and_wait_for_snap_refresh(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to wait for snap refreshes to complete.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )

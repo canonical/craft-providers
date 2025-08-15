@@ -100,7 +100,7 @@ def test_temporarypull_temp_file_cleaned(
     source.write_text("test content")
 
     with (
-        pytest.raises(ValueError),  # noqa: PT011
+        pytest.raises(ValueError, match="boom"),
         fake_executor_local_pull.temporarily_pull_file(source=source) as localfilepath,
     ):
         # internal crash

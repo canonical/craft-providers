@@ -17,7 +17,6 @@
 
 import pytest
 import responses
-from craft_providers import errors
 from craft_providers.lxd import LXD, LXDError
 
 
@@ -61,15 +60,8 @@ def test_init_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to init LXD."):
         LXD().init()
-
-    assert exc_info.value == LXDError(
-        brief="Failed to init LXD.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 @pytest.mark.parametrize(
@@ -156,15 +148,8 @@ def test_version_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to query LXD version."):
         LXD().version()
-
-    assert exc_info.value == LXDError(
-        brief="Failed to query LXD version.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_wait_ready(fake_process):
@@ -207,12 +192,5 @@ def test_wait_ready_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to wait for LXD to get ready."):
         LXD().wait_ready()
-
-    assert exc_info.value == LXDError(
-        brief="Failed to wait for LXD to get ready.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )

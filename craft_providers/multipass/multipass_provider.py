@@ -206,7 +206,7 @@ class MultipassProvider(Provider):
         instance_name: str,
         allow_unstable: bool = False,
         shutdown_delay_mins: int | None = None,
-        use_base_instance: bool = False,  # noqa: ARG002
+        use_base_instance: bool = False,
         prepare_instance: "Callable[[Executor], None] | None" = None,
     ) -> Iterator["Executor"]:
         """Configure and launch environment for specified base.

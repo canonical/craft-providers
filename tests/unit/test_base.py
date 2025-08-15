@@ -108,7 +108,7 @@ def test_wait_for_system_ready_timeout(
     fake_process.register(
         [*DEFAULT_FAKE_CMD, *WAIT_FOR_SYSTEM_READY_CMD], callback=callback
     )
-    fake_process.keep_last_process(True)  # noqa: FBT003
+    fake_process.keep_last_process(keep=True)
 
     with pytest.raises(BaseConfigurationError):
         fake_base._setup_wait_for_system_ready(fake_executor)
@@ -135,7 +135,7 @@ def test_wait_for_network_success(
 )
 def test_wait_for_network_timeout(fake_base, fake_executor, fake_process, callback):
     fake_process.register([*DEFAULT_FAKE_CMD, *WAIT_FOR_NETWORK_CMD], callback=callback)
-    fake_process.keep_last_process(True)  # noqa: FBT003
+    fake_process.keep_last_process(keep=True)
 
     with pytest.raises(BaseConfigurationError):
         fake_base._setup_wait_for_system_ready(fake_executor)
@@ -308,7 +308,7 @@ def test_get_os_release_error_output(
         stdout=stdout,
         returncode=returncode,
     )
-    fake_process.keep_last_process(True)  # noqa: FBT003
+    fake_process.keep_last_process(keep=True)
 
     with pytest.raises(BaseConfigurationError):
         fake_base.get_os_release(executor=fake_executor)

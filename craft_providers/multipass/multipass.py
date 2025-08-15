@@ -29,7 +29,7 @@ import shlex
 import subprocess
 import time
 from collections.abc import Callable
-from typing import Any, cast, overload
+from typing import IO, Any, cast, overload
 
 import packaging.version
 
@@ -383,12 +383,8 @@ class Multipass:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         ) as proc:
-            # Should never happen, but mypy/pyright makes noise.
-            assert proc.stdout is not None  # noqa: S101
-            assert proc.stderr is not None  # noqa: S101
-
             while True:
-                data = proc.stdout.read(chunk_size)
+                data = cast("IO[bytes]", proc.stdout).read(chunk_size)
                 if not data:
                     break
 
@@ -396,7 +392,7 @@ class Multipass:
 
             # Take one read of stderr in case there is anything useful
             # for debugging an error.
-            stderr = proc.stderr.read()
+            stderr = cast("IO[bytes]", proc.stderr).read()
 
         if proc.returncode != 0:
             raise MultipassError(
@@ -425,24 +421,22 @@ class Multipass:
         with subprocess.Popen(
             command, stdin=subprocess.PIPE, stderr=subprocess.PIPE
         ) as proc:
-            # Should never happen, but mypy/pyright makes noise.
-            assert proc.stdin is not None  # noqa: S101
-            assert proc.stderr is not None  # noqa: S101
-
+            stdin_buf = cast("IO[bytes]", proc.stdin)
+            stderr_buf = cast("IO[bytes]", proc.stderr)
             while True:
                 data = source.read(chunk_size)
                 if not data:
                     break
 
-                proc.stdin.write(data)
+                stdin_buf.write(data)
 
             # Close stdin before reading stderr, otherwise read() will hang
             # because process is waiting for more data.
-            proc.stdin.close()
+            stdin_buf.close()
 
             # Take one read of stderr in case there is anything useful
             # for debugging an error.
-            stderr = proc.stderr.read()
+            stderr = stderr_buf.read()
 
         if proc.returncode != 0:
             raise MultipassError(

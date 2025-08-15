@@ -315,7 +315,7 @@ ignore = [
     "TRY003", # Avoid specifying long messages outside the exception class
 
     # Craft Providers
-    "S108",   # Hardcoded temp file - fine, because all of these are paths on the ephemeral remote instance
+    "S108", # Hardcoded temp file - fine, because all of these are paths on the ephemeral remote instance
 ]
 
 [tool.ruff.lint.flake8-annotations]
@@ -352,6 +352,10 @@ classmethod-decorators = ["pydantic.validator", "pydantic.root_validator"]
     "PLR0913", # Allow many arguments for test functions (useful if we need many fixtures)
     "PLR2004", # Allow magic values in tests
     "SLF",     # Allow accessing private members from tests.
+
+    # Boolean parameters are common in test functions
+    "FBT001",
+    "FBT002",
 ]
 "__init__.py" = [
     "I001", # isort leaves init files alone by default, this makes ruff ignore them too.
