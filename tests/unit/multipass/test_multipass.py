@@ -703,13 +703,11 @@ def test_wait_until_ready_timeout_error(
     )
 
     with mock.patch("time.time", side_effect=time_values):
-        with pytest.raises(MultipassError) as exc_info:  # noqa: PT012
-            multipass = Multipass()
+        multipass = Multipass()
+        with pytest.raises(
+            MultipassError, match="Timed out waiting for Multipass to become ready."
+        ):
             multipass.wait_until_ready(timeout=timeout)
-
-    assert exc_info.value == MultipassError(
-        "Timed out waiting for Multipass to become ready."
-    )
 
     assert len(fake_process.calls) == version_calls
 
