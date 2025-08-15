@@ -32,7 +32,7 @@ def test_ensure_guest_compatible_not_ubuntu(fake_executor, fake_process):
     ensure_guest_compatible(base, fake_executor, "")
 
     # The first thing that ensure_guest_compatible does is the base check.  The next
-    # thing is to call _get_os_release on the base.  So if that isn't called then we
+    # thing is to call get_os_release on the base.  So if that isn't called then we
     # haven't progressed.
     base.get_os_release.assert_not_called()
 
@@ -66,7 +66,7 @@ def test_ensure_guest_compatible_non_ubuntu_host(
         ensure_guest_compatible(guest_base, fake_executor, "4.0")
 
     # The first thing that ensure_guest_compatible does is the base check.  The next
-    # thing is to call _get_os_release on the base.  So if that isn't called then we
+    # thing is to call get_os_release on the base.  So if that isn't called then we
     # haven't progressed.
     guest_base.get_os_release.assert_not_called()
 
@@ -88,7 +88,7 @@ def test_ensure_guest_compatible_valid_ubuntu(
     guest_base._retry_wait = 0.01
     guest_base._timeout_simple = 1
 
-    # Set this up so we can be sure the guest _get_os_release was called once
+    # Set this up so we can be sure the guest get_os_release was called once
     real_get_os_release = guest_base.get_os_release
 
     def fake_get_os_release(*args, **kwargs):

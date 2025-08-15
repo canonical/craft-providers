@@ -157,7 +157,6 @@ class HookHelper:
             out = subprocess.run(
                 lxc_args,
                 check=True,
-                text=True,
                 capture_output=True,
             ).stdout
         except FileNotFoundError:

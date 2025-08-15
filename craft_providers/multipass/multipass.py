@@ -169,7 +169,7 @@ class Multipass:
         command = ["info", instance_name, "--format", "json"]
 
         try:
-            proc = self._run(command, text=True)
+            proc = self._run(command)
         except subprocess.CalledProcessError as error:
             raise MultipassError(
                 brief=f"Failed to query info for VM {instance_name!r}.",
@@ -246,7 +246,7 @@ class Multipass:
         command = ["list", "--format", "json"]
 
         try:
-            proc = self._run(command, text=True)
+            proc = self._run(command)
         except subprocess.CalledProcessError as error:
             raise MultipassError(
                 brief="Failed to query list of VMs.",

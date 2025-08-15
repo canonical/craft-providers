@@ -62,7 +62,7 @@ def load_yaml_flat(data: str) -> dict[str, Any]:
     datetime.datetime().  Instead just use the base loader and avoid resolving
     this type (and others).
     """
-    result = yaml.safe_load(data)
+    result = yaml.load(data, Loader=yaml.BaseLoader)  # noqa: S506, does not do any type coercion and thus is safe
     if isinstance(result, dict):
         return result  # type: ignore[reportUnknownVariableType]
 
@@ -80,7 +80,7 @@ def load_yaml_list(data: str) -> list[dict[str, Any]]:
     datetime.datetime().  Instead just use the base loader and avoid resolving
     this type (and others).
     """
-    result = yaml.safe_load(data)
+    result = yaml.load(data, Loader=yaml.BaseLoader)  # noqa: S506
     if isinstance(result, list):
         return result  # type: ignore[reportUnknownVariableType]
     logger.debug(
@@ -266,7 +266,7 @@ class LXC:
 
         try:
             return self._run_lxc(
-                command, capture_output=True, check=True, text=True, project=project
+                command, capture_output=True, check=True, project=project
             ).stdout.rstrip()
         except subprocess.CalledProcessError as error:
             raise LXDError(

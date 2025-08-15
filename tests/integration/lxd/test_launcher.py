@@ -175,7 +175,7 @@ def test_timezone(instance_name):
         ).stdout.strip()
 
         instance_timezone = instance.execute_run(
-            ["printenv", "TZ"], capture_output=True, check=True, text=True
+            ["printenv", "TZ"], capture_output=True, check=True
         ).stdout.strip()
 
         assert host_timezone == instance_timezone
@@ -240,11 +240,9 @@ def test_launch_use_base_instance(
     assert instance.is_running()
 
     # collect the hostname of the instance
-    instance_hostname = (
-        instance.execute_run(["hostname"], check=True, capture_output=True)
-        .stdout.decode()
-        .rstrip("\n")
-    )
+    instance_hostname = instance.execute_run(
+        ["hostname"], check=True, capture_output=True
+    ).stdout.rstrip("\n")
 
     assert instance_hostname == instance.instance_name
 
@@ -321,17 +319,13 @@ def test_launch_use_base_instance_expired(
     assert instance.is_running()
 
     # confirm instance does not have the expired base instance's fingerprint
-    proc = instance.execute_run(
-        ["stat", "/base-instance"], capture_output=True, text=True
-    )
+    proc = instance.execute_run(["stat", "/base-instance"], capture_output=True)
     assert proc.returncode == 1
-    assert b"'/base-instance': No such file or directory" in proc.stderr
+    assert "'/base-instance': No such file or directory" in proc.stderr
 
     # confirm new base instance does not have the expired base instance's fingerprint
     base_instance.start()
-    proc = base_instance.execute_run(
-        ["stat", "/base-instance"], capture_output=True, text=True
-    )
+    proc = base_instance.execute_run(["stat", "/base-instance"], capture_output=True)
     assert proc.returncode == 1
     assert "'/base-instance': No such file or directory" in proc.stderr
 

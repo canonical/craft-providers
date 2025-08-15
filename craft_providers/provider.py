@@ -26,11 +26,8 @@ import logging
 import pathlib
 from abc import ABC, abstractmethod
 from collections.abc import Generator
-<<<<<<< HEAD
 from typing import TYPE_CHECKING
-=======
 from enum import Enum
->>>>>>> fb909f9 (wip: some noqas fixed, reverting CompletedProcess/Popen str/bytes to only use str)
 
 from .base import Base
 
