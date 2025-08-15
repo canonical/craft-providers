@@ -380,7 +380,7 @@ def test_launch_use_existing_base_instance(
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.get_command_environment(),
-        call._setup_hostname(executor=fake_instance),
+        call.setup_hostname(executor=fake_instance),
         call.warmup(executor=fake_instance),
     ]
 

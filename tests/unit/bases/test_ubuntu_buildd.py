@@ -72,7 +72,7 @@ def mock_inject_from_host(mocker):
 def mock_get_os_release(mocker):
     return mocker.patch.object(
         ubuntu.BuilddBase,
-        "_get_os_release",
+        "get_os_release",
         return_value={
             "NAME": "Ubuntu",
             "VERSION_ID": "22.04",
@@ -701,7 +701,7 @@ def test_mount_cache_dirs(fake_process, fake_executor, cache_path: pathlib.Path,
 
 
 def test_get_os_release(fake_process, fake_executor):
-    """`_get_os_release` should parse data from `/etc/os-release` to a dict."""
+    """`get_os_release` should parse data from `/etc/os-release` to a dict."""
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
@@ -1611,9 +1611,7 @@ def test_execute_run_default(fake_executor):
     with patch.object(fake_executor, "execute_run") as mock:
         base_config._execute_run(command, executor=fake_executor)
 
-    mock.assert_called_with(
-        command, check=True, capture_output=True, text=False, timeout=None
-    )
+    mock.assert_called_with(command, check=True, capture_output=True, timeout=None)
 
 
 def test_execute_run_options_for_run(fake_executor):
@@ -1626,13 +1624,10 @@ def test_execute_run_options_for_run(fake_executor):
             executor=fake_executor,
             check=False,
             capture_output=False,
-            text=True,
             timeout=None,
         )
 
-    mock.assert_called_with(
-        command, check=False, capture_output=False, text=True, timeout=None
-    )
+    mock.assert_called_with(command, check=False, capture_output=False, timeout=None)
 
 
 def test_execute_run_command_failed_no_verify_network(fake_process, fake_executor):

@@ -241,7 +241,7 @@ def test_is_supported_version_error(fake_process, mock_details_from_process_erro
 
     assert len(fake_process.calls) == 1
     assert exc_info.value == MultipassError(
-        brief="Unable to parse version output: b'invalid output'"
+        brief="Unable to parse version output: 'invalid output'"
     )
 
 
@@ -748,22 +748,6 @@ def test_version(fake_process, output, expected):
     assert Multipass().version() == expected
 
 
-def test_version_decode_error(fake_process):
-    fake_process.register_subprocess(
-        ["multipass", "version"], stdout=b"multipass 1.6.2\xd0"
-    )
-
-    with mock.patch("locale.getpreferredencoding", return_value="ascii"):
-        with pytest.raises(MultipassError) as exc_info:
-            Multipass().version()
-
-    assert len(fake_process.calls) == 1
-    assert exc_info.value == MultipassError(
-        brief="Failed to check version.",
-        details="Failed to decode output: b'multipass 1.6.2\\xd0'",
-    )
-
-
 def test_version_error(fake_process, mock_details_from_process_error):
     fake_process.register_subprocess(["multipass", "version"], returncode=1)
 
@@ -782,7 +766,7 @@ def test_generic_run_base():
     with mock.patch("subprocess.run") as run_mock:
         Multipass()._run(["foo", "1"])
     run_mock.assert_called_with(
-        ["multipass", "foo", "1"], check=True, capture_output=True
+        ["multipass", "foo", "1"], check=True, capture_output=True, text=True
     )
 
 
@@ -791,5 +775,9 @@ def test_generic_run_extra_args():
     with mock.patch("subprocess.run") as run_mock:
         Multipass()._run(["foo", "1"], extra="whatever")
     run_mock.assert_called_with(
-        ["multipass", "foo", "1"], check=True, capture_output=True, extra="whatever"
+        ["multipass", "foo", "1"],
+        check=True,
+        capture_output=True,
+        text=True,
+        extra="whatever",
     )

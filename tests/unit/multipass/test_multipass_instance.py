@@ -135,7 +135,6 @@ def test_push_file_io(mock_multipass, instance):
             runner=subprocess.run,
             capture_output=True,
             check=True,
-            text=True,
             timeout=60,
         ),
         mock.call.exec(
@@ -588,7 +587,6 @@ def test_push_file(mock_multipass, instance, simple_file):
             runner=subprocess.run,
             capture_output=True,
             check=True,
-            text=True,
             timeout=60,
         ),
         mock.call.exec(
@@ -654,7 +652,6 @@ def test_push_file_to_directory(mock_multipass, instance, simple_file):
             timeout=60,
             capture_output=True,
             check=True,
-            text=True,
         ),
         mock.call.exec(
             instance_name="test-instance",

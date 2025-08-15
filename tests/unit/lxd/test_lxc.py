@@ -41,6 +41,7 @@ def test_lxc_run_default(mocker, tmp_path):
     mock_run.assert_called_once_with(
         ["lxc", "test-command"],
         check=True,
+        text=True,
         stdin=subprocess.DEVNULL,
     )
 
@@ -55,6 +56,7 @@ def test_lxc_run_with_check(check, mocker, tmp_path):
     mock_run.assert_called_once_with(
         ["lxc", "--project", "test-project", "test-command"],
         check=check,
+        text=True,
         stdin=subprocess.DEVNULL,
     )
 
@@ -68,6 +70,7 @@ def test_lxc_run_with_project(mocker, tmp_path):
     mock_run.assert_called_once_with(
         ["lxc", "--project", "test-project", "test-command"],
         check=True,
+        text=True,
         stdin=subprocess.DEVNULL,
     )
 
@@ -83,6 +86,7 @@ def test_lxc_run_with_stdin(mocker, tmp_path):
     mock_run.assert_called_once_with(
         ["lxc", "--project", "test-project", "test-command"],
         check=True,
+        text=True,
         stdin=None,
     )
 
@@ -102,6 +106,7 @@ def test_lxc_run_with_input(mocker, tmp_path):
         ["lxc", "--project", "test-project", "test-command"],
         check=True,
         input="test-input",
+        text=True,
     )
 
 
@@ -120,6 +125,7 @@ def test_lxc_run_with_input_and_stdin(mocker, tmp_path):
         ["lxc", "--project", "test-project", "test-command"],
         check=True,
         input="test-input",
+        text=True,
     )
 
 
@@ -912,7 +918,7 @@ def test_info_parse_error(fake_process):
         brief="Failed to parse lxc info.",
         details=(
             "* Command that failed: 'lxc --project test-project info test-remote:'\n"
-            "* Command output: b'fail:\\nthis\\n'"
+            "* Command output: 'fail:\\nthis\\n'"
         ),
     )
 
@@ -1807,7 +1813,7 @@ def test_image_list_parse_error(fake_process):
         details=(
             "* Command that failed:"
             " 'lxc --project test-project image list test-remote: --format=yaml'\n"
-            "* Command output: b'fail:\\nthis\\n'"
+            "* Command output: 'fail:\\nthis\\n'"
         ),
     )
 
@@ -1885,7 +1891,7 @@ def test_list_parse_error(fake_process):
         details=(
             "* Command that failed:"
             " 'lxc --project test-project list test-remote: --format=yaml'\n"
-            "* Command output: b'fail:\\nthis\\n'"
+            "* Command output: 'fail:\\nthis\\n'"
         ),
     )
 
@@ -2245,7 +2251,7 @@ def test_project_list_parse_error(fake_process):
         brief="Failed to parse lxc project list.",
         details=(
             "* Command that failed: 'lxc project list test-remote: --format=yaml'\n"
-            "* Command output: b'fail:\\nthis\\n'"
+            "* Command output: 'fail:\\nthis\\n'"
         ),
     )
 
@@ -2271,7 +2277,7 @@ def test_project_list_parse_error_missing_name(fake_process):
         brief="Failed to parse lxc project list.",
         details=(
             "* Command that failed: 'lxc project list test-remote: --format=yaml'\n"
-            "* Command output: b'- foo: bar'"
+            "* Command output: '- foo: bar'"
         ),
     )
 
@@ -2459,7 +2465,7 @@ def test_remote_list_parse_error(fake_process):
         brief="Failed to parse lxc remote list.",
         details=(
             "* Command that failed: 'lxc remote list --format=yaml'\n"
-            "* Command output: b'fail:\\nthis'"
+            "* Command output: 'fail:\\nthis'"
         ),
     )
 

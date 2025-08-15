@@ -280,14 +280,14 @@ def test_mount_shared_cache_dirs_mount_failed(
 def test_get_os_release_success(
     fake_process, fake_executor, fake_base, process_outputs, expected
 ):
-    """`_get_os_release` should parse data from `/etc/os-release` to a dict."""
+    """`get_os_release` should parse data from `/etc/os-release` to a dict."""
     for output in process_outputs:
         fake_process.register_subprocess(
             [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
             stdout=output,
         )
 
-    result = fake_base._get_os_release(executor=fake_executor)
+    result = fake_base.get_os_release(executor=fake_executor)
 
     assert result == expected
 
@@ -311,7 +311,7 @@ def test_get_os_release_error_output(
     fake_process.keep_last_process(True)  # noqa: FBT003
 
     with pytest.raises(BaseConfigurationError):
-        fake_base._get_os_release(executor=fake_executor)
+        fake_base.get_os_release(executor=fake_executor)
 
 
 def test_get_os_release_exception(fake_base, mock_executor):
@@ -320,7 +320,7 @@ def test_get_os_release_exception(fake_base, mock_executor):
     )
 
     with pytest.raises(BaseConfigurationError):
-        fake_base._get_os_release(executor=mock_executor)
+        fake_base.get_os_release(executor=mock_executor)
 
 
 def test_set_hostname(fake_base):

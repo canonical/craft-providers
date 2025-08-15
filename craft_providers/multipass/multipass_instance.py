@@ -102,7 +102,6 @@ class MultipassInstance(Executor):
             command=["mktemp"],
             capture_output=True,
             check=True,
-            text=True,
             timeout=TIMEOUT_SIMPLE,
         ).stdout.strip()
 
@@ -232,7 +231,6 @@ class MultipassInstance(Executor):
             command=_rootify_multipass_command(command, cwd=cwd, env=env),
             runner=subprocess.Popen,
             timeout=timeout,
-            text=True,
             **kwargs,
         )
 
@@ -275,7 +273,6 @@ class MultipassInstance(Executor):
             runner=subprocess.run,
             timeout=timeout,
             check=check,
-            text=True,
             **kwargs,
         )
 

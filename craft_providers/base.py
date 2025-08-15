@@ -247,11 +247,9 @@ class Base(ABC, Generic[_T_enum_co]):
                     command=["cat", OS_RELEASE_FILE.as_posix()],
                     capture_output=True,
                     check=True,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace",
                     timeout=timeout,
                 )
+                print(proc)
             except subprocess.CalledProcessError as error:
                 raise BaseConfigurationError(
                     brief=f"Failed to read {OS_RELEASE_FILE}.",
@@ -336,7 +334,6 @@ class Base(ABC, Generic[_T_enum_co]):
                 executor=executor,
                 capture_output=True,
                 check=False,
-                text=True,
                 timeout=timeout,
             )
             system_state = proc.stdout.strip()
@@ -473,7 +470,6 @@ class Base(ABC, Generic[_T_enum_co]):
                 executor=executor,
                 capture_output=True,
                 check=False,
-                text=True,
                 timeout=self._timeout_simple,
             )
 
@@ -561,7 +557,7 @@ class Base(ABC, Generic[_T_enum_co]):
             http_proxy = self._environment.get("http_proxy")
             command = [
                 "snap",
-                "set",
+                "set" if http_proxy else "unset",
                 "system",
                 f"proxy.http={http_proxy}" if http_proxy else "proxy.http",
             ]
@@ -570,7 +566,7 @@ class Base(ABC, Generic[_T_enum_co]):
             https_proxy = self._environment.get("https_proxy")
             command = [
                 "snap",
-                "set",
+                "set" if http_proxy else "unset",
                 "system",
                 f"proxy.https={https_proxy}" if https_proxy else "proxy.https",
             ]
@@ -829,7 +825,6 @@ class Base(ABC, Generic[_T_enum_co]):
         guest_cache_proc = executor.execute_run(
             ["bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
             capture_output=True,
-            text=True,
         )
         guest_base_cache_path = pathlib.Path(guest_cache_proc.stdout)
 
@@ -1141,7 +1136,6 @@ class Base(ABC, Generic[_T_enum_co]):
         executor: Executor,
         check: bool = True,
         capture_output: bool = True,
-        text: bool = False,
         timeout: float | None = None,
         verify_network: bool = False,
     ) -> subprocess.CompletedProcess[str]:
@@ -1165,7 +1159,6 @@ class Base(ABC, Generic[_T_enum_co]):
                 command,
                 check=check,
                 capture_output=capture_output,
-                text=text,
                 timeout=timeout,
             )
         except subprocess.CalledProcessError as exc:

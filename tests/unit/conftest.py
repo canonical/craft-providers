@@ -18,7 +18,7 @@ import contextlib
 import io
 import pathlib
 import subprocess
-from typing import Any, overload
+from typing import Any
 
 import pytest
 import responses as responses_module
@@ -70,28 +70,6 @@ class FakeExecutor(Executor):
             }
         )
 
-    @overload
-    def execute_popen(
-        self,
-        command: list[str],
-        *,
-        cwd: pathlib.PurePath | None = None,
-        env: dict[str, str | None] | None = None,
-        timeout: float | None = None,
-        encoding: str,
-        **kwargs: Any,
-    ) -> subprocess.Popen[str]: ...
-    @overload
-    def execute_popen(
-        self,
-        command: list[str],
-        *,
-        cwd: pathlib.PurePath | None = None,
-        env: dict[str, str | None] | None = None,
-        timeout: float | None = None,
-        encoding: None,
-        **kwargs: Any,
-    ) -> subprocess.Popen[bytes]: ...
     @override
     def execute_popen(
         self,
@@ -100,38 +78,13 @@ class FakeExecutor(Executor):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        encoding: str | None,
         **kwargs: Any,
-    ) -> Any:
+    ) -> subprocess.Popen[str]:
         env_args = [] if env is None else env_cmd.formulate_command(env, chdir=cwd)
 
         final_cmd = [*DEFAULT_FAKE_CMD, *env_args, *command]
-        return subprocess.Popen(final_cmd, encoding=encoding, **kwargs)
+        return subprocess.Popen(final_cmd, text=True, **kwargs)
 
-    @overload
-    def execute_run(
-        self,
-        command: list[str],
-        *,
-        cwd: pathlib.PurePath | None = None,
-        env: dict[str, str | None] | None = None,
-        timeout: float | None = None,
-        check: bool = False,
-        encoding: str,
-        **kwargs: Any,
-    ) -> subprocess.CompletedProcess[str]: ...
-    @overload
-    def execute_run(
-        self,
-        command: list[str],
-        *,
-        cwd: pathlib.PurePath | None = None,
-        env: dict[str, str | None] | None = None,
-        timeout: float | None = None,
-        check: bool = False,
-        encoding: None = None,
-        **kwargs: Any,
-    ) -> subprocess.CompletedProcess[bytes]: ...
     @override
     def execute_run(
         self,
@@ -141,15 +94,14 @@ class FakeExecutor(Executor):
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
         check: bool = False,
-        encoding: str | None = None,
         **kwargs: Any,
-    ) -> Any:
+    ) -> subprocess.CompletedProcess[str]:
         env_args = [] if env is None else env_cmd.formulate_command(env, chdir=cwd)
 
         final_cmd = [*DEFAULT_FAKE_CMD, *env_args, *command]
 
         return subprocess.run(
-            final_cmd, timeout=timeout, check=check, encoding=encoding, **kwargs
+            final_cmd, timeout=timeout, check=check, text=True, **kwargs
         )
 
     def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:
