@@ -35,7 +35,7 @@ WAIT_FOR_SYSTEM_READY_CMD = ["systemctl", "is-system-running"]
 WAIT_FOR_NETWORK_CMD = ["getent", "hosts", "snapcraft.io"]
 
 
-class FakeBase(base.Base):
+class FakeBase(base.Base[enum.Enum]):
     FakeBaseAlias = enum.Enum("FakeBaseAlias", ["TREBLE"])
     _environment = {}
 
@@ -63,7 +63,7 @@ class FakeBase(base.Base):
 
 
 @pytest.fixture
-def fake_base() -> base.Base:
+def fake_base() -> base.Base[enum.Enum]:
     return FakeBase()
 
 
