@@ -17,9 +17,14 @@
 
 """Craft provider errors."""
 
+from __future__ import annotations
+
 import dataclasses
 import shlex
-import subprocess
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import subprocess
 
 
 def details_from_command_error(

@@ -17,7 +17,8 @@
 
 """LXD Instance Executor."""
 
-import io
+from __future__ import annotations
+
 import logging
 import os
 import pathlib
@@ -25,7 +26,7 @@ import shutil
 import subprocess
 import tempfile
 import warnings
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from typing_extensions import override
 
@@ -39,6 +40,9 @@ from craft_providers.lxd.lxd_instance_status import (
     ProviderInstanceStatus,
 )
 from craft_providers.util import env_cmd, retry
+
+if TYPE_CHECKING:
+    import io
 
 logger = logging.getLogger(__name__)
 

@@ -16,10 +16,10 @@
 
 """Multipass Provider class."""
 
+from __future__ import annotations
+
 import contextlib
 import logging
-import pathlib
-from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -38,7 +38,8 @@ from .multipass import Multipass
 from .multipass_instance import MultipassInstance
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    import pathlib
+    from collections.abc import Callable, Iterator
 
     from craft_providers import Executor
 
@@ -178,7 +179,7 @@ class MultipassProvider(Provider):
             install()
         ensure_multipass_is_ready()
 
-    def create_environment(self, *, instance_name: str) -> "Executor":
+    def create_environment(self, *, instance_name: str) -> Executor:
         """Create a bare environment for specified base.
 
         No initializing, launching, or cleaning up of the environment occurs.
@@ -207,8 +208,8 @@ class MultipassProvider(Provider):
         allow_unstable: bool = False,
         shutdown_delay_mins: int | None = None,
         use_base_instance: bool = False,
-        prepare_instance: "Callable[[Executor], None] | None" = None,
-    ) -> Iterator["Executor"]:
+        prepare_instance: Callable[[Executor], None] | None = None,
+    ) -> Iterator[Executor]:
         """Configure and launch environment for specified base.
 
         When this method loses context, all directories are unmounted and the

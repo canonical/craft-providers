@@ -17,6 +17,8 @@
 
 """Multipass Provider."""
 
+from __future__ import annotations
+
 import logging
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -26,6 +28,7 @@ from craft_providers.multipass.multipass_instance import MultipassInstance
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from enum import Enum
 
     from craft_providers import Executor
 
@@ -41,7 +44,7 @@ def launch(
     disk_gb: int = 64,
     mem_gb: int = 2,
     auto_clean: bool = False,
-    prepare_instance: "Callable[[Executor], None] | None" = None,
+    prepare_instance: Callable[[Executor], None] | None = None,
 ) -> MultipassInstance:
     """Create, start, and configure instance.
 

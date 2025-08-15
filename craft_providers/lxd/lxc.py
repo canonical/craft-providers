@@ -17,7 +17,8 @@
 
 """LXC wrapper."""
 
-import builtins
+from __future__ import annotations
+
 import contextlib
 import enum
 import logging
@@ -28,9 +29,8 @@ import subprocess
 import threading
 import time
 from collections import deque
-from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Any, overload
+from typing import TYPE_CHECKING, Any, overload
 
 import yaml
 
@@ -41,6 +41,10 @@ from craft_providers.lxd.lxd_instance_status import (
 )
 
 from .errors import LXDError
+
+if TYPE_CHECKING:
+    import builtins
+    from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 

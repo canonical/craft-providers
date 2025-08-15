@@ -16,6 +16,8 @@
 #
 """LXD Errors."""
 
+from __future__ import annotations
+
 from craft_providers.errors import ProviderError
 
 LXD_INSTALL_HELP = (

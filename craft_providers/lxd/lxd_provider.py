@@ -16,17 +16,17 @@
 
 """LXD Provider class."""
 
+from __future__ import annotations
+
 import contextlib
 import logging
-import pathlib
-from collections.abc import Iterator
 from datetime import timedelta
 from enum import Enum
 from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
-from craft_providers import Provider, bases
+from craft_providers import Executor, Provider, bases
 from craft_providers.base import Base
 from craft_providers.errors import BaseConfigurationError
 
@@ -38,9 +38,12 @@ from .lxd_instance import LXDInstance
 from .remotes import get_remote_image
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    import pathlib
+    from collections.abc import Callable, Iterator
+    from enum import Enum
 
     from craft_providers import Executor
+    from craft_providers.base import Base
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +102,7 @@ class LXDProvider(Provider):
         """
         return is_installed()
 
-    def create_environment(self, *, instance_name: str) -> "Executor":
+    def create_environment(self, *, instance_name: str) -> Executor:
         """Create a bare environment for specified base.
 
         No initializing, launching, or cleaning up of the environment occurs.
@@ -125,8 +128,8 @@ class LXDProvider(Provider):
         allow_unstable: bool = False,
         shutdown_delay_mins: int | None = None,
         use_base_instance: bool = True,
-        prepare_instance: "Callable[[Executor], None] | None" = None,
-    ) -> Iterator["Executor"]:
+        prepare_instance: Callable[[Executor], None] | None = None,
+    ) -> Iterator[Executor]:
         """Configure and launch environment for specified base.
 
         When this method loses context, all directories are unmounted and the

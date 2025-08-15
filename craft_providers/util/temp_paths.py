@@ -17,10 +17,15 @@
 
 """Helpers for temporary files."""
 
+from __future__ import annotations
+
 import contextlib
 import pathlib
 import tempfile
-from collections.abc import Iterator
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 @contextlib.contextmanager

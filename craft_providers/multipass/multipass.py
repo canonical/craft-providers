@@ -21,15 +21,15 @@ This implementation interfaces with multipass using the `multipass` command-line
 utility.
 """
 
-import io
+from __future__ import annotations
+
 import json
 import logging
 import pathlib
 import shlex
 import subprocess
 import time
-from collections.abc import Callable
-from typing import IO, Any, cast, overload
+from typing import IO, TYPE_CHECKING, Any, cast, overload
 
 import packaging.version
 
@@ -37,6 +37,10 @@ from craft_providers import errors
 from craft_providers.const import RETRY_WAIT
 
 from .errors import MultipassError
+
+if TYPE_CHECKING:
+    import io
+    from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 

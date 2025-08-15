@@ -17,17 +17,21 @@
 
 """Persistent instance config / datastore resident in provided environment."""
 
+from __future__ import annotations
+
 import io
 import pathlib
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pydantic
 import yaml
 from typing_extensions import Self
 
 from craft_providers.errors import BaseConfigurationError, ProviderError
-from craft_providers.executor import Executor
 from craft_providers.util import temp_paths
+
+if TYPE_CHECKING:
+    from craft_providers.executor import Executor
 
 
 def update_nested_dictionaries(
@@ -159,7 +163,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
         executor: Executor,
         data: dict[str, Any],
         config_path: pathlib.PurePath | None = None,
-    ) -> "InstanceConfiguration":
+    ) -> InstanceConfiguration:
         """Update an instance config file in an environment.
 
         New values are added and existing values are updated. No data are removed.

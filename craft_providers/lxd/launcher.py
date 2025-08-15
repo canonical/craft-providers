@@ -17,6 +17,8 @@
 
 """LXD Instance Provider."""
 
+from __future__ import annotations
+
 import logging
 import os
 import re
@@ -25,7 +27,6 @@ import sys
 import threading
 import time
 from datetime import datetime, timedelta, timezone
-from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -40,6 +41,7 @@ from .project import create_with_default_profile
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from enum import Enum
 
     from craft_providers import Executor
 
@@ -102,7 +104,7 @@ def _create_instance(  # noqa: PLR0913, too many arguments
     project: str,
     remote: str,
     lxc: LXC,
-    prepare_instance: "Callable[[Executor], None] | None" = None,
+    prepare_instance: Callable[[Executor], None] | None = None,
 ) -> None:
     """Launch and setup an instance from an image.
 
@@ -706,7 +708,7 @@ def launch(  # noqa: PLR0913, too many arguments
     remote: str = "local",
     lxc: LXC | None = None,
     expiration: timedelta = timedelta(days=90),
-    prepare_instance: "Callable[[Executor], None] | None" = None,
+    prepare_instance: Callable[[Executor], None] | None = None,
 ) -> LXDInstance:
     """Create, start, and configure an instance.
 

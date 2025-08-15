@@ -17,18 +17,23 @@
 
 """Base compatibility checks."""
 
+from __future__ import annotations
+
 import logging
 import platform
-from enum import Enum
-from typing import TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
-from craft_providers.base import Base
 from craft_providers.bases.ubuntu import BuilddBase, BuilddBaseAlias
 from craft_providers.errors import (
     ProviderError,
 )
-from craft_providers.executor import Executor
 from craft_providers.util.os_release import parse_os_release
+
+if TYPE_CHECKING:
+    from enum import Enum
+
+    from craft_providers.base import Base
+    from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 

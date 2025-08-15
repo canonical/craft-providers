@@ -17,6 +17,8 @@
 
 """LXD command-line interface helpers."""
 
+from __future__ import annotations
+
 import logging
 import pathlib
 import subprocess

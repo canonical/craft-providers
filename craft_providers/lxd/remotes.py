@@ -18,15 +18,21 @@
 
 """Manages LXD remotes and provides access to remote images."""
 
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass
 from enum import Enum
+from typing import TYPE_CHECKING
 
-from craft_providers import Base
 from craft_providers.bases import almalinux, centos, ubuntu
 
 from .errors import LXDError
-from .lxc import LXC
+
+if TYPE_CHECKING:
+    from craft_providers import Base
+
+    from .lxc import LXC
 
 logger = logging.getLogger(__name__)
 
