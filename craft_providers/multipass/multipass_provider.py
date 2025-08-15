@@ -23,6 +23,8 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import Enum
 
+from typing_extensions import override
+
 from craft_providers import Base, Executor, Provider, base
 from craft_providers.bases import ubuntu
 from craft_providers.errors import BaseConfigurationError
@@ -115,7 +117,7 @@ _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: dict[Enum, RemoteImage] = {
 }
 
 
-def _get_remote_image(provider_base: Base) -> RemoteImage:
+def _get_remote_image(provider_base: Base[Enum]) -> RemoteImage:
     """Get a RemoteImage for a particular provider base.
 
     :param provider_base: String containing the provider base.
@@ -145,8 +147,8 @@ class MultipassProvider(Provider):
     :param multipass: Optional Multipass client to use.
     """
 
-    def __init__(self, instance: Multipass = Multipass()) -> None:  # noqa: B008
-        self.multipass = instance
+    def __init__(self, instance: Multipass | None = None) -> None:
+        self.multipass = instance or Multipass()
 
     @property
     def name(self) -> str:
@@ -187,13 +189,14 @@ class MultipassProvider(Provider):
         """
         return is_installed()
 
+    @override
     @contextlib.contextmanager
     def launched_environment(
         self,
         *,
-        project_name: str,  # noqa: ARG002
-        project_path: pathlib.Path,  # noqa: ARG002
-        base_configuration: base.Base,
+        project_name: str,
+        project_path: pathlib.Path,
+        base_configuration: base.Base[Enum],
         instance_name: str,
         allow_unstable: bool = False,
         shutdown_delay_mins: int | None = None,

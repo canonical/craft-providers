@@ -123,8 +123,6 @@ class NetworkError(ProviderError):
 
     def __init__(self) -> None:
         brief = "A network related operation failed in a context of no network access."
-        # XXX Facundo 2022-12-13: need to improve the URL here once  # noqa: FIX003
-        # we have the online docs updated
         url = "https://canonical-craft-providers.readthedocs-hosted.com/en/latest/explanation/"
         resolution = (
             "Verify that the environment has internet connectivity; "

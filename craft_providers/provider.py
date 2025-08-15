@@ -26,6 +26,7 @@ import logging
 import pathlib
 from abc import ABC, abstractmethod
 from collections.abc import Generator
+from enum import Enum
 
 from .base import Base
 from .executor import Executor
@@ -94,7 +95,7 @@ class Provider(ABC):
         *,
         project_name: str,
         project_path: pathlib.Path,
-        base_configuration: Base,
+        base_configuration: Base[Enum],
         instance_name: str,
         allow_unstable: bool = False,
         shutdown_delay_mins: int | None = None,

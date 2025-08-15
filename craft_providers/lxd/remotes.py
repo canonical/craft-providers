@@ -91,7 +91,6 @@ class RemoteImage:
 
         :param lxc: LXC client.
         """
-        # TODO verify both the remote name and address  # noqa: FIX002
         if self.remote_name in lxc.remote_list():
             logger.debug("Remote %r already exists.", self.remote_name)
         else:
@@ -184,7 +183,7 @@ _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: dict[Enum, RemoteImage] = {
 }
 
 
-def get_remote_image(provider_base: Base) -> RemoteImage:
+def get_remote_image(provider_base: Base[Enum]) -> RemoteImage:
     """Get a RemoteImage for a particular provider base.
 
     :param provider_base: string containing the provider base

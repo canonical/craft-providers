@@ -17,6 +17,7 @@
 
 """Collection of bases used to configure build environments."""
 
+from enum import Enum
 import sys
 from typing import Literal, NamedTuple, overload
 
@@ -106,7 +107,7 @@ def get_base_from_alias(alias: centos.CentOSBaseAlias) -> type[centos.CentOSBase
 def get_base_from_alias(
     alias: almalinux.AlmaLinuxBaseAlias,
 ) -> type[almalinux.AlmaLinuxBase]: ...
-def get_base_from_alias(alias: BaseAlias) -> type[Base]:
+def get_base_from_alias(alias: BaseAlias) -> type[Base[Enum]]:
     """Return a Base class from a known base alias."""
     match alias:
         case ubuntu.BuilddBaseAlias():

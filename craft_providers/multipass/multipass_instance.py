@@ -18,11 +18,10 @@
 """Multipass Instance."""
 
 import io
-import locale
 import logging
 import pathlib
 import subprocess
-from typing import Any, cast, overload
+from typing import Any, cast
 
 from typing_extensions import override
 
@@ -104,8 +103,6 @@ class MultipassInstance(Executor):
             capture_output=True,
             check=True,
             text=True,
-            encoding=locale.getpreferredencoding(),
-            errors="replace",
             timeout=TIMEOUT_SIMPLE,
         ).stdout.strip()
 
@@ -201,28 +198,6 @@ class MultipassInstance(Executor):
             purge=True,
         )
 
-    @overload
-    def execute_popen(
-        self,
-        command: list[str],
-        *,
-        cwd: pathlib.PurePath | None = None,
-        env: dict[str, str | None] | None = None,
-        timeout: float | None = None,
-        encoding: str,
-        **kwargs: Any,
-    ) -> subprocess.Popen[str]: ...
-    @overload
-    def execute_popen(
-        self,
-        command: list[str],
-        *,
-        cwd: pathlib.PurePath | None = None,
-        env: dict[str, str | None] | None = None,
-        timeout: float | None = None,
-        encoding: None,
-        **kwargs: Any,
-    ) -> subprocess.Popen[bytes]: ...
     @override
     def execute_popen(
         self,
@@ -231,9 +206,8 @@ class MultipassInstance(Executor):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        encoding: str | None,
         **kwargs: Any,
-    ) -> Any:
+    ) -> subprocess.Popen[str]:
         """Execute a process in the instance using subprocess.Popen().
 
         The process' environment will inherit the execution environment's
@@ -249,8 +223,6 @@ class MultipassInstance(Executor):
         :param cwd: working directory to execute the command
         :param env: Additional environment to set for process.
         :param timeout: Timeout (in seconds) for the command.
-        :param encoding: Optional encoding to use to decode the program
-            response.
         :param kwargs: Additional keyword arguments for subprocess.Popen().
 
         :returns: Popen instance.
@@ -260,34 +232,10 @@ class MultipassInstance(Executor):
             command=_rootify_multipass_command(command, cwd=cwd, env=env),
             runner=subprocess.Popen,
             timeout=timeout,
-            encoding=encoding,
+            text=True,
             **kwargs,
         )
 
-    @overload
-    def execute_run(
-        self,
-        command: list[str],
-        *,
-        cwd: pathlib.PurePath | None = None,
-        env: dict[str, str | None] | None = None,
-        timeout: float | None = None,
-        check: bool = False,
-        encoding: str,
-        **kwargs: Any,
-    ) -> subprocess.CompletedProcess[str]: ...
-    @overload
-    def execute_run(
-        self,
-        command: list[str],
-        *,
-        cwd: pathlib.PurePath | None = None,
-        env: dict[str, str | None] | None = None,
-        timeout: float | None = None,
-        check: bool = False,
-        encoding: None = None,
-        **kwargs: Any,
-    ) -> subprocess.CompletedProcess[bytes]: ...
     @override
     def execute_run(
         self,
@@ -297,9 +245,8 @@ class MultipassInstance(Executor):
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
         check: bool = False,
-        encoding: str | None = None,
         **kwargs: Any,
-    ) -> Any:
+    ) -> subprocess.CompletedProcess[str]:
         """Execute a command in the instance using subprocess.run().
 
         The process' environment will inherit the execution environment's
@@ -316,8 +263,6 @@ class MultipassInstance(Executor):
         :param env: Additional environment to set for process.
         :param timeout: Timeout (in seconds) for the command.
         :param check: Raise an exception if the command fails.
-        :param encoding: Optional encoding to use to decode the program
-            response.
         :param kwargs: Keyword args to pass to subprocess.run().
 
         :returns: Completed process.
@@ -330,7 +275,7 @@ class MultipassInstance(Executor):
             runner=subprocess.run,
             timeout=timeout,
             check=check,
-            encoding=encoding,
+            text=True,
             **kwargs,
         )
 
@@ -380,7 +325,7 @@ class MultipassInstance(Executor):
 
         for mount_point, mount_config in mounts.items():
             # Even on Windows, Multipass writes source_path as posix, e.g.:
-            # 'C:/Users/chris/tmpbat91bwz.tmp-pytest' # noqa: ERA001
+            # `C:/Users/chris/tmpbat91bwz.tmp-pytest`
             if (
                 mount_point == target.as_posix()
                 and mount_config.get("source_path") == host_source.as_posix()

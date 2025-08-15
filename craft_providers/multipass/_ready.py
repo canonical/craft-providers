@@ -26,11 +26,14 @@ from .multipass import Multipass
 logger = logging.getLogger(__name__)
 
 
-def ensure_multipass_is_ready(*, multipass: Multipass = Multipass()) -> None:  # noqa: B008
+def ensure_multipass_is_ready(*, multipass: Multipass | None = None) -> None:
     """Ensure Multipass is ready for use.
 
     :raises MultipassError: on error.
     """
+    if multipass is None:
+        multipass = Multipass()
+
     if not is_installed():
         raise errors.MultipassError(
             brief="Multipass is required, but not installed.",

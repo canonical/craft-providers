@@ -18,6 +18,7 @@
 """Multipass Provider."""
 
 import logging
+from enum import Enum
 
 from craft_providers import Base, bases
 from craft_providers.multipass.multipass_instance import MultipassInstance
@@ -28,7 +29,7 @@ logger = logging.getLogger(__name__)
 def launch(
     name: str,
     *,
-    base_configuration: Base,
+    base_configuration: Base[Enum],
     image_name: str,
     cpus: int = 2,
     disk_gb: int = 64,
@@ -56,7 +57,6 @@ def launch(
     instance = MultipassInstance(name=name)
 
     if instance.exists():
-        # TODO: Warn if existing instance doesn't match cpu/disk/mem specs.  # noqa: FIX002
         instance.start()
         try:
             base_configuration.warmup(executor=instance)

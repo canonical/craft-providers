@@ -20,7 +20,6 @@
 import builtins
 import contextlib
 import enum
-import locale
 import logging
 import os
 import pathlib
@@ -45,6 +44,9 @@ from .errors import LXDError
 
 logger = logging.getLogger(__name__)
 
+# Times to attempt launching an instance before failing.
+MAX_RETRIES = 3
+
 
 class StdinType(enum.Enum):
     """Mappings for input stream to pass to stdin for lxc commands."""
@@ -60,7 +62,7 @@ def load_yaml_flat(data: str) -> dict[str, Any]:
     datetime.datetime().  Instead just use the base loader and avoid resolving
     this type (and others).
     """
-    result = yaml.load(data, Loader=yaml.BaseLoader)  # noqa: S506
+    result = yaml.safe_load(data)
     if isinstance(result, dict):
         return result  # type: ignore[reportUnknownVariableType]
 
@@ -78,7 +80,7 @@ def load_yaml_list(data: str) -> list[dict[str, Any]]:
     datetime.datetime().  Instead just use the base loader and avoid resolving
     this type (and others).
     """
-    result = yaml.load(data, Loader=yaml.BaseLoader)  # noqa: S506
+    result = yaml.safe_load(data)
     if isinstance(result, list):
         return result  # type: ignore[reportUnknownVariableType]
     logger.debug(
@@ -134,16 +136,14 @@ class LXC:
                 return subprocess.run(
                     lxc_cmd,
                     check=check,
-                    encoding=locale.getpreferredencoding(),
-                    errors="replace",
+                    text=True,
                     **kwargs,
                 )
 
             return subprocess.run(
                 lxc_cmd,
                 check=check,
-                encoding=locale.getpreferredencoding(),
-                errors="replace",
+                text=True,
                 stdin=stdin.value,
                 **kwargs,
             )
@@ -389,25 +389,8 @@ class LXC:
         remote: str = "local",
         timeout: float | None = None,
         check: bool = False,
-        encoding: str,
         **kwargs: Any,
     ) -> subprocess.Popen[str]: ...
-    @overload
-    def exec(
-        self,
-        *,
-        command: list[str],
-        instance_name: str,
-        runner: Callable[..., subprocess.Popen[bytes]],
-        cwd: str | None = None,
-        mode: str | None = None,
-        project: str = "default",
-        remote: str = "local",
-        timeout: float | None = None,
-        check: bool = False,
-        encoding: None = None,
-        **kwargs: Any,
-    ) -> subprocess.Popen[bytes]: ...
     @overload
     def exec(
         self,
@@ -421,40 +404,23 @@ class LXC:
         remote: str = "local",
         timeout: float | None = None,
         check: bool = False,
-        encoding: str,
         **kwargs: Any,
     ) -> subprocess.CompletedProcess[str]: ...
-    @overload
-    def exec(
+    def exec(  # noqa: PLR0913
         self,
         *,
         command: list[str],
         instance_name: str,
-        runner: Callable[..., subprocess.CompletedProcess[bytes]] = subprocess.run,
+        runner: Callable[..., subprocess.Popen[str]]
+        | Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
         cwd: str | None = None,
         mode: str | None = None,
         project: str = "default",
         remote: str = "local",
         timeout: float | None = None,
         check: bool = False,
-        encoding: None = None,
         **kwargs: Any,
-    ) -> subprocess.CompletedProcess[bytes]: ...
-    def exec(  # noqa: PLR0913, too many arguments
-        self,
-        *,
-        command: list[str],
-        instance_name: str,
-        runner: Callable[..., Any] = subprocess.run,
-        cwd: str | None = None,
-        mode: str | None = None,
-        project: str = "default",
-        remote: str = "local",
-        timeout: float | None = None,
-        check: bool = False,
-        encoding: str | None = None,
-        **kwargs: Any,
-    ) -> Any:
+    ) -> subprocess.Popen[str] | subprocess.CompletedProcess[str]:
         """Execute command in instance_name with specified runner.
 
         :param command: Command to execute in the instance.
@@ -469,8 +435,6 @@ class LXC:
             kwargs.
         :param timeout: Timeout (in seconds) for the command.
         :param check: Raise an exception if the command fails.
-        :param encoding: Optional encoding to use to decode the program
-            response.
         :param kwargs: Additional kwargs for runner.
 
         :returns: Runner's instance.
@@ -496,13 +460,9 @@ class LXC:
         logger.debug("Executing in container: %s", shlex.join(final_cmd))
 
         if runner is subprocess.run:
-            return runner(
-                final_cmd, timeout=timeout, check=check, encoding=encoding, **kwargs
-            )
+            return runner(final_cmd, timeout=timeout, check=check, text=True, **kwargs)
 
-        # XXX: warn that timeout and check are ignored for Popen??  # noqa: FIX003
-
-        return runner(final_cmd, encoding=encoding, **kwargs)
+        return runner(final_cmd, text=True, **kwargs)
 
     def file_pull(
         self,
@@ -551,7 +511,7 @@ class LXC:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    def file_push(  # noqa: PLR0913
+    def file_push(  # noqa: PLR0913, too many arguments
         self,
         *,
         instance_name: str,
@@ -722,7 +682,7 @@ class LXC:
         # or any other craft-providers, and the lock will be released.
         # However, the new instance lock could be held by any craft-providers.
         # This is used to avoid lock holder dead and all others are blocked.
-        while retry_count < 3:  # noqa: PLR2004
+        while retry_count < MAX_RETRIES:
             try:
                 # Try to launch instance
                 self._run_lxc(
@@ -741,7 +701,7 @@ class LXC:
                 # Ignore first 3 failed "create" or "start" attempts that other craft-providers
                 # are creating the same instance.
                 # LXD: Instance is busy running a "create" or "start" operation
-                if retry_count >= 2 or (  # noqa: PLR2004
+                if retry_count >= MAX_RETRIES - 1 or (
                     error.stderr
                     and all(
                         state not in error.stderr.decode()
@@ -1279,7 +1239,7 @@ class LXC:
             except LXDError:
                 # Keep retrying since the instance might not be ready yet
                 # Max retry time is 10 minutes
-                if time.time() - start_time > 600:  # noqa: PLR2004
+                if time.time() - start_time > 600:  # noqa: PLR2004, this is ten minutes
                     logger.debug("Instance %s max waiting time reached.", instance_name)
                     raise
                 time.sleep(3)

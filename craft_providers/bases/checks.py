@@ -19,6 +19,7 @@
 
 import logging
 import platform
+from enum import Enum
 from typing import TypedDict
 
 from craft_providers.base import Base
@@ -79,7 +80,7 @@ def _lxd_version_match(
 
 
 def ensure_guest_compatible(
-    base_configuration: Base,
+    base_configuration: Base[Enum],
     instance: Executor,
     lxd_version: str,
 ) -> None:

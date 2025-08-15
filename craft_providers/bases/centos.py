@@ -40,7 +40,7 @@ class CentOSBaseAlias(enum.Enum):
     SEVEN = "7"
 
 
-class CentOSBase(Base):
+class CentOSBase(Base[CentOSBaseAlias]):
     """Support for CentOS images.
 
     :cvar compatibility_tag: Tag/Version for variant of build configuration and
@@ -84,8 +84,7 @@ class CentOSBase(Base):
     ) -> None:
         self._cache_dir = cache_path
 
-        # ignore enum subclass (see https://github.com/microsoft/pyright/issues/6750)
-        self.alias: CentOSBaseAlias = alias  # pyright: ignore  # noqa: PGH003
+        self.alias: CentOSBaseAlias = alias
 
         if environment is None:
             self._environment = self.default_command_environment()

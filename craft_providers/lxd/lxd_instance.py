@@ -25,7 +25,7 @@ import shutil
 import subprocess
 import tempfile
 import warnings
-from typing import Any, cast, overload
+from typing import Any, cast
 
 from typing_extensions import override
 
@@ -145,7 +145,7 @@ class LXDInstance(Executor):
         :raises LXDError: On unexpected error.
         """
         with tempfile.NamedTemporaryFile() as temp_file:
-            shutil.copyfileobj(content, temp_file)  # type: ignore # mypy #15031  # noqa: PGH003
+            shutil.copyfileobj(content, temp_file)
             # Ensure the file is written to disk.
             temp_file.flush()
 
@@ -177,7 +177,8 @@ class LXDInstance(Executor):
                     details=details_from_called_process_error(error),
                 ) from error
 
-    def delete(self, force: bool = True) -> None:  # noqa: FBT001, FBT002
+    @override
+    def delete(self, *, force: bool = True) -> None:
         """Delete instance.
 
         :param force: Delete even if running.
@@ -191,28 +192,6 @@ class LXDInstance(Executor):
             force=force,
         )
 
-    @overload
-    def execute_popen(
-        self,
-        command: list[str],
-        *,
-        cwd: pathlib.PurePath | None = None,
-        env: dict[str, str | None] | None = None,
-        timeout: float | None = None,
-        encoding: str,
-        **kwargs: Any,
-    ) -> subprocess.Popen[str]: ...
-    @overload
-    def execute_popen(
-        self,
-        command: list[str],
-        *,
-        cwd: pathlib.PurePath | None = None,
-        env: dict[str, str | None] | None = None,
-        timeout: float | None = None,
-        encoding: None,
-        **kwargs: Any,
-    ) -> subprocess.Popen[bytes]: ...
     @override
     def execute_popen(
         self,
@@ -221,9 +200,8 @@ class LXDInstance(Executor):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        encoding: str | None,
         **kwargs: Any,
-    ) -> Any:
+    ) -> subprocess.Popen[str]:
         """Execute a command in instance, using subprocess.Popen().
 
         The process' environment will inherit the execution environment's
@@ -234,8 +212,6 @@ class LXDInstance(Executor):
         :param cwd: Working directory for the process inside the instance.
         :param env: Additional environment to set for process.
         :param timeout: Timeout (in seconds) for the command.
-        :param encoding: Optional encoding to use to decode the program
-            response.
         :param kwargs: Additional keyword arguments to pass.
 
         :returns: Popen instance.
@@ -250,34 +226,9 @@ class LXDInstance(Executor):
             runner=subprocess.Popen,
             timeout=timeout,
             cwd=cwd_path,
-            encoding=encoding,
             **kwargs,
         )
 
-    @overload
-    def execute_run(
-        self,
-        command: list[str],
-        *,
-        cwd: pathlib.PurePath | None = None,
-        env: dict[str, str | None] | None = None,
-        timeout: float | None = None,
-        check: bool = False,
-        encoding: str,
-        **kwargs: Any,
-    ) -> subprocess.CompletedProcess[str]: ...
-    @overload
-    def execute_run(
-        self,
-        command: list[str],
-        *,
-        cwd: pathlib.PurePath | None = None,
-        env: dict[str, str | None] | None = None,
-        timeout: float | None = None,
-        check: bool = False,
-        encoding: None = None,
-        **kwargs: Any,
-    ) -> subprocess.CompletedProcess[bytes]: ...
     @override
     def execute_run(
         self,
@@ -287,9 +238,8 @@ class LXDInstance(Executor):
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
         check: bool = False,
-        encoding: str | None = None,
         **kwargs: Any,
-    ) -> Any:
+    ) -> subprocess.CompletedProcess[str]:
         """Execute a command using subprocess.run().
 
         The process' environment will inherit the execution environment's
@@ -301,8 +251,6 @@ class LXDInstance(Executor):
         :param env: Additional environment to set for process.
         :param timeout: Timeout (in seconds) for the command.
         :param check: Raise an exception if the command fails.
-        :param encoding: Optional encoding to use to decode the program
-            response.
         :param kwargs: Keyword args to pass to subprocess.run().
 
         :returns: Completed process.
@@ -320,7 +268,6 @@ class LXDInstance(Executor):
             runner=subprocess.run,
             timeout=timeout,
             cwd=cwd_path,
-            encoding=encoding,
             check=check,
             **kwargs,
         )
@@ -618,7 +565,7 @@ class LXDInstance(Executor):
             instance_name=self.instance_name, project=self.project, remote=self.remote
         )
 
-        def _is_running(timeout: float) -> None:  # noqa: ARG001
+        def _is_running(_timeout: float) -> None:
             """Raise an error if the instance isn't running."""
             if self.is_running():
                 return
@@ -645,7 +592,7 @@ class LXDInstance(Executor):
             instance_name=self.instance_name, project=self.project, remote=self.remote
         )
 
-        def _is_running(timeout: float) -> None:  # noqa: ARG001
+        def _is_running(_timeout: float) -> None:
             """Raise an error if the instance isn't running."""
             if self.is_running():
                 return
@@ -681,7 +628,7 @@ class LXDInstance(Executor):
             instance_name=self.instance_name, project=self.project, remote=self.remote
         )
 
-        def _is_stopped(timeout: float) -> None:  # noqa: ARG001
+        def _is_stopped(_timeout: float) -> None:
             """Raise an error if the instance exists or isn't stopped."""
             # ephemeral instances are deleted when 'stop' completes
             if not self.exists() or self._get_state() == LXDInstanceState.STOPPED:

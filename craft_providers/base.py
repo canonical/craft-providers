@@ -17,9 +17,7 @@
 
 """Base configuration module."""
 
-import enum
 import io
-import locale
 import logging
 import math
 import os
@@ -30,7 +28,7 @@ import sys
 from abc import ABC, abstractmethod
 from enum import Enum
 from textwrap import dedent
-from typing import final
+from typing import Generic, TypeVar, final
 
 from pydantic import ValidationError
 
@@ -56,8 +54,11 @@ from craft_providers.util.os_release import OS_RELEASE_FILE, parse_os_release
 
 logger = logging.getLogger(__name__)
 
+# Needed until on Python 3.12 - see https://github.com/microsoft/pyright/issues/6750.
+_T_enum_co = TypeVar("_T_enum_co", covariant=True, bound=Enum)
 
-class Base(ABC):
+
+class Base(ABC, Generic[_T_enum_co]):
     """Interface for providers to configure instantiated environments.
 
     Defines how to setup/configure an environment that has been instantiated by
@@ -97,14 +98,14 @@ class Base(ABC):
     _timeout_complex: float | None = TIMEOUT_COMPLEX
     _timeout_unpredictable: float | None = TIMEOUT_UNPREDICTABLE
     _cache_path: pathlib.Path | None = None
-    alias: Enum
+    alias: _T_enum_co
     compatibility_tag: str = "base-v7"
 
     @abstractmethod
     def __init__(
         self,
         *,
-        alias: enum.Enum,
+        alias: _T_enum_co,
         compatibility_tag: str | None = None,
         environment: dict[str, str | None] | None = None,
         hostname: str = "craft-instance",
@@ -181,8 +182,6 @@ class Base(ABC):
                 brief="Failed to parse instance configuration file.",
             ) from error
         # if no config exists, assume base is compatible (likely unfinished setup)
-        # XXX: checking the compatibility_tag should be much more strict when called  # noqa: FIX003
-        # by warmup (warmup will continue if the compatibility tag is missing or none!)
         except FileNotFoundError:
             return
 
@@ -290,7 +289,7 @@ class Base(ABC):
         """
         return self._environment.copy()
 
-    def _update_setup_status(self, executor: Executor, status: bool) -> None:  # noqa: FBT001
+    def _update_setup_status(self, executor: Executor, *, status: bool) -> None:
         """Update the instance config to indicate the status of the setup.
 
         :param status: True if the setup is complete, False otherwise.
@@ -831,8 +830,6 @@ class Base(ABC):
             ["bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
             capture_output=True,
             text=True,
-            encoding=locale.getpreferredencoding(),
-            errors="replace",
         )
         guest_base_cache_path = pathlib.Path(guest_cache_proc.stdout)
 
@@ -1170,8 +1167,6 @@ class Base(ABC):
                 capture_output=capture_output,
                 text=text,
                 timeout=timeout,
-                encoding=locale.getpreferredencoding(),
-                replace="errors",
             )
         except subprocess.CalledProcessError as exc:
             if verify_network and not cls._network_connected(executor=executor):
