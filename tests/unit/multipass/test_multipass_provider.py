@@ -17,6 +17,7 @@
 from unittest.mock import call
 
 import pytest
+from craft_providers import Executor
 from craft_providers.bases import ubuntu
 from craft_providers.errors import BaseConfigurationError
 from craft_providers.multipass import MultipassError, MultipassProvider
@@ -157,6 +158,7 @@ def test_launched_environment(
                 disk_gb=64,
                 mem_gb=2,
                 auto_clean=True,
+                prepare_instance=None,
             ),
         ]
         mock_launch.reset_mock()
@@ -211,6 +213,7 @@ def test_launched_environment_stable(
                 disk_gb=64,
                 mem_gb=2,
                 auto_clean=True,
+                prepare_instance=None,
             ),
         ]
         mock_launch.reset_mock()
@@ -275,6 +278,39 @@ def test_launched_environment_launch_base_configuration_error(mock_launch, tmp_p
             pass
 
     assert raised.value.__cause__ is error
+
+
+def test_launched_environment_prepare_instance(
+    mock_buildd_base_configuration,
+    mock_remote_image,
+    mocker,
+    tmp_path,
+):
+    """Verify allow_unstable parameter works as expected."""
+    mocker.patch("craft_providers.multipass.multipass.Multipass.launch")
+    mocker.patch("craft_providers.multipass.multipass.Multipass.umount")
+    mocker.patch("craft_providers.multipass.multipass.Multipass.stop")
+    mocker.patch(
+        "craft_providers.multipass.multipass_instance.MultipassInstance.exists",
+        return_value=False,
+    )
+
+    instance_prepared = [False]
+
+    def _prepare_instance(instance: Executor) -> None:
+        instance_prepared[0] = True
+
+    provider = MultipassProvider()
+    with provider.launched_environment(
+        project_name="test-project",
+        project_path=tmp_path,
+        base_configuration=mock_buildd_base_configuration,
+        instance_name="test-instance-name",
+        prepare_instance=_prepare_instance,
+    ) as instance:
+        assert instance is not None
+
+    assert instance_prepared[0] is True
 
 
 @pytest.mark.parametrize("remote", Remote)

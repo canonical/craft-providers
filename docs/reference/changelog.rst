@@ -7,6 +7,10 @@ included in each version.
 3.0.0 (2025-Mon-DD)
 -------------------
 
+New features:
+
+- Allow applications to prepare instances before the base image setup.
+
 Breaking changes:
 
 - Removed support for Windows hosts
