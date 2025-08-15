@@ -253,7 +253,6 @@ class Base(ABC, Generic[_T_enum_co]):
                     check=True,
                     timeout=timeout,
                 )
-                print(proc)
             except subprocess.CalledProcessError as error:
                 raise BaseConfigurationError(
                     brief=f"Failed to read {OS_RELEASE_FILE}.",
