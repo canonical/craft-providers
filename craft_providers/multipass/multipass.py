@@ -23,7 +23,6 @@ utility.
 
 import io
 import json
-import locale
 import logging
 import pathlib
 import shlex
@@ -70,8 +69,7 @@ class Multipass:
         return subprocess.run(
             command,
             check=True,
-            encoding=locale.getpreferredencoding(),
-            errors="replace",
+            text=True,
             capture_output=True,
             **kwargs,
         )
@@ -106,7 +104,6 @@ class Multipass:
         timeout: float | None = None,
         check: bool = False,
         runner: Callable[..., subprocess.Popen[str]],
-        encoding: str,
         **kwargs: Any,
     ) -> subprocess.Popen[str]: ...
     @overload
@@ -117,23 +114,9 @@ class Multipass:
         instance_name: str,
         timeout: float | None = None,
         check: bool = False,
-        runner: Callable[..., subprocess.Popen[bytes]],
-        encoding: None = None,
-        **kwargs: Any,
-    ) -> subprocess.Popen[bytes]: ...
-    @overload
-    def exec(
-        self,
-        *,
-        command: list[str],
-        instance_name: str,
-        timeout: float | None = None,
-        check: bool = False,
         runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
-        encoding: str,
         **kwargs: Any,
     ) -> subprocess.CompletedProcess[str]: ...
-    @overload
     def exec(
         self,
         *,
@@ -141,21 +124,10 @@ class Multipass:
         instance_name: str,
         timeout: float | None = None,
         check: bool = False,
-        runner: Callable[..., subprocess.CompletedProcess[bytes]] = subprocess.run,
-        encoding: None = None,
+        runner: Callable[..., subprocess.Popen[str]]
+        | Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
         **kwargs: Any,
-    ) -> subprocess.CompletedProcess[bytes]: ...
-    def exec(
-        self,
-        *,
-        command: list[str],
-        instance_name: str,
-        timeout: float | None = None,
-        check: bool = False,
-        runner: Callable[..., Any] = subprocess.run,
-        encoding: str | None = None,
-        **kwargs: Any,
-    ) -> Any:
+    ) -> subprocess.Popen[str] | subprocess.CompletedProcess[str]:
         """Execute command in instance_name with specified runner.
 
         The working directory the command is executed from inside the instance depends
@@ -172,8 +144,6 @@ class Multipass:
             kwargs.
         :param timeout: Timeout (in seconds) for the command.
         :param check: Raise an exception if the command fails.
-        :param encoding: Optional encoding to use to decode the program
-            response.
         :param kwargs: Additional kwargs for runner.
 
         :returns: Runner's instance.
@@ -185,11 +155,9 @@ class Multipass:
 
         # Only subprocess.run supports timeout
         if runner is subprocess.run:
-            return runner(
-                final_cmd, timeout=timeout, check=check, encoding=encoding, **kwargs
-            )
+            return runner(final_cmd, timeout=timeout, check=check, text=True, **kwargs)
 
-        return runner(final_cmd, encoding=encoding, **kwargs)
+        return runner(final_cmd, text=True, **kwargs)
 
     def info(self, *, instance_name: str) -> dict[str, Any]:
         """Get information/state for instance.
@@ -584,11 +552,11 @@ class Multipass:
         #   SOME NOTICE INFORMATION....
         #
         # After stripping and splitting:
-        #    - ['multipass', '1.5.0'] # noqa: ERA001
-        #    - ['multipass', '1.5.0', 'multipassd', '1.5.0'] # noqa: ERA001
-        #    - ['multipass', '1.5.0+mac', 'multipassd', '1.5.0+mac'] # noqa: ERA001
-        #    - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win'] # noqa: ERA001
-        #    - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win', ...] # noqa: ERA001
+        #    1: ['multipass', '1.5.0']
+        #    2: ['multipass', '1.5.0', 'multipassd', '1.5.0']
+        #    3: ['multipass', '1.5.0+mac', 'multipassd', '1.5.0+mac']
+        #    4: ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win']
+        #    5: ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win', ...]
         output_split = output.strip().split()
         if len(output_split) < 2 or output_split[0] != "multipass":  # noqa: PLR2004
             raise MultipassError(

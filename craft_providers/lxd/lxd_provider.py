@@ -21,7 +21,10 @@ import logging
 import pathlib
 from collections.abc import Iterator
 from datetime import timedelta
+from enum import Enum
 from typing import TYPE_CHECKING
+
+from typing_extensions import override
 
 from craft_providers import Provider, bases
 from craft_providers.base import Base
@@ -57,12 +60,12 @@ class LXDProvider(Provider):
     def __init__(
         self,
         *,
-        lxc: LXC = LXC(),  # noqa: B008
+        lxc: LXC | None = None,
         lxd_project: str = "default",
         lxd_remote: str = "local",
         intercept_mknod: bool = True,
     ) -> None:
-        self.lxc = lxc
+        self.lxc = lxc or LXC()
         self.lxd_project = lxd_project
         self.lxd_remote = lxd_remote
         self._intercept_mknod = intercept_mknod
@@ -110,13 +113,14 @@ class LXDProvider(Provider):
             intercept_mknod=self._intercept_mknod,
         )
 
+    @override
     @contextlib.contextmanager
     def launched_environment(
         self,
         *,
-        project_name: str,  # noqa: ARG002
+        project_name: str,
         project_path: pathlib.Path,
-        base_configuration: Base,
+        base_configuration: Base[Enum],
         instance_name: str,
         allow_unstable: bool = False,
         shutdown_delay_mins: int | None = None,

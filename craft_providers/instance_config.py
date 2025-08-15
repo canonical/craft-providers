@@ -94,7 +94,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
     def load(
         cls,
         executor: Executor,
-        config_path: pathlib.PurePath = pathlib.PurePath("/etc/craft-instance.conf"),  # noqa: B008
+        config_path: pathlib.PurePath | None = None,
     ) -> Self | None:
         """Load an instance config file from an environment.
 
@@ -108,6 +108,9 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
         :raise BaseConfigurationError: If the file cannot be loaded from
                                        the environment.
         """
+        if config_path is None:
+            config_path = pathlib.PurePath("/etc/craft-instance.conf")
+
         with temp_paths.home_temporary_file() as temp_config_file:
             try:
                 executor.pull_file(source=config_path, destination=temp_config_file)
@@ -120,7 +123,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
                 ) from error
             except FileNotFoundError:
                 return None
-            with open(temp_config_file, encoding="utf8") as file:  # noqa: PTH123
+            with temp_config_file.open(encoding="utf8") as file:
                 data = yaml.safe_load(file)
                 if data is None:
                     return None
@@ -130,7 +133,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
     def save(
         self,
         executor: Executor,
-        config_path: pathlib.PurePath = pathlib.PurePath("/etc/craft-instance.conf"),  # noqa: B008
+        config_path: pathlib.PurePath | None = None,
     ) -> None:
         """Save an instance config file to an environment.
 
@@ -139,6 +142,9 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
                             Default is `/etc/craft-instance.conf`.
 
         """
+        if config_path is None:
+            config_path = pathlib.PurePath("/etc/craft-instance.conf")
+
         data = self.marshal()
 
         executor.push_file_io(
@@ -152,7 +158,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
         cls,
         executor: Executor,
         data: dict[str, Any],
-        config_path: pathlib.PurePath = pathlib.PurePath("/etc/craft-instance.conf"),  # noqa: B008
+        config_path: pathlib.PurePath | None = None,
     ) -> "InstanceConfiguration":
         """Update an instance config file in an environment.
 
@@ -166,6 +172,8 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
 
         :return: The updated `InstanceConfiguration` object.
         """
+        if config_path is None:
+            config_path = pathlib.PurePath("/etc/craft-instance.conf")
         config_instance = cls.load(executor=executor, config_path=config_path)
         if config_instance is None:
             updated_config_instance = cls.unmarshal(data)

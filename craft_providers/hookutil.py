@@ -28,7 +28,7 @@ import json
 import re
 import subprocess
 import sys
-from typing import Any
+from typing import Any, cast
 
 from typing_extensions import Self
 
@@ -108,7 +108,7 @@ class HookHelper:
     def _check_project_exists(self) -> None:
         """Raise HookError if lxc doesn't know about this app."""
         for project in self.lxc("project", "list", proj=False):
-            if project["name"] == self._project_name:
+            if cast("dict[str, Any]", project)["name"] == self._project_name:
                 return
 
         # Didn't find our project name
@@ -139,7 +139,7 @@ class HookHelper:
         fail_msg: str | None = None,
         proj: bool = True,
         json_out: bool = True,
-    ) -> Any:  # noqa: ANN401
+    ) -> str | dict[str, Any]:
         """Run lxc commands specified in *args.
 
         :param fail_msg: Print this if the command returns nonzero.
@@ -170,7 +170,7 @@ class HookHelper:
             if not json_out:
                 return out
             try:
-                return json.loads(out)
+                return cast("dict[str, Any]", json.loads(out))
             except json.decoder.JSONDecodeError as e:
                 raise HookError(f"Didn't get back JSON: {out}") from e
 
@@ -213,11 +213,17 @@ class HookHelper:
 
     def _list_images(self) -> list[str]:
         """Return fingerprints of all images associated with the lxc project."""
-        return [image["fingerprint"] for image in self.lxc("image", "list")]
+        return [
+            cast("dict[str, Any]", image)["fingerprint"]
+            for image in self.lxc("image", "list")
+        ]
 
     def list_instances(self) -> list[LXDInstance]:
         """Return a list of all instance objects for the project."""
-        return [LXDInstance.unmarshal(instance) for instance in self.lxc("list")]
+        return [
+            LXDInstance.unmarshal(cast("dict[str, Any]", instance))
+            for instance in self.lxc("list")
+        ]
 
     def list_base_instances(self) -> list[LXDInstance]:
         """Return a list of all base instance objects for the project."""

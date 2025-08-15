@@ -1,0 +1,6 @@
+[MakeBuilder]
+Default Make Environment Profile=
+Default Target=test
+
+[Project]
+VersionControlSupport=kdevgit

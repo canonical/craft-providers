@@ -56,7 +56,7 @@ def generate_instance_name():
 
 def snap_exists(snap_name: str) -> bool:
     """Returns true if a snap exists."""
-    return os.path.exists(f"/snap/{snap_name}/current")  # noqa: PTH110
+    return pathlib.Path(f"/snap/{snap_name}/current").exists()
 
 
 def is_installed_dangerously(snap_name: str) -> bool:
@@ -298,7 +298,7 @@ def dangerously_installed_snap(tmpdir):
             # collect the file name
             match = re.search(f"{snap_name}_\\d+.snap", str(output))
             if not match:
-                raise Exception(  # noqa: TRY002
+                raise ValueError(
                     "could not parse snap file name from output of "
                     f"'snap download {snap_name}' (output = {output!r})"
                 )

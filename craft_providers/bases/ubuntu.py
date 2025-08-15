@@ -26,6 +26,7 @@ import logging
 import pathlib
 import subprocess
 from functools import total_ordering
+from http import HTTPStatus
 from textwrap import dedent
 from typing import cast
 
@@ -68,7 +69,7 @@ class BuilddBaseAlias(enum.Enum):
         return cast(str, self.value) <= cast(str, other.value)
 
 
-class BuilddBase(Base):
+class BuilddBase(Base[BuilddBaseAlias]):
     """Support for Ubuntu minimal buildd images.
 
     :cvar compatibility_tag: Tag/Version for variant of build configuration and
@@ -110,8 +111,7 @@ class BuilddBase(Base):
         use_default_packages: bool = True,
         cache_path: pathlib.Path | None = None,
     ) -> None:
-        # ignore enum subclass (see https://github.com/microsoft/pyright/issues/6750)
-        self.alias: BuilddBaseAlias = alias  # pyright: ignore  # noqa: PGH003
+        self.alias: BuilddBaseAlias = alias
 
         self._cache_path = cache_path
 
@@ -275,13 +275,13 @@ class BuilddBase(Base):
         ) as sources_script:
             executor.push_file(
                 source=sources_script,
-                destination=pathlib.Path("/tmp/craft-sources.sh"),  # noqa: S108
+                destination=pathlib.Path("/tmp/craft-sources.sh"),
             )
 
         # use a bash script because there isn't an easy way to modify files in an instance (#132)
         try:
             self._execute_run(
-                ["bash", "/tmp/craft-sources.sh"],  # noqa: S108
+                ["bash", "/tmp/craft-sources.sh"],
                 executor=executor,
                 timeout=self._timeout_simple,
             )
@@ -319,7 +319,7 @@ class BuilddBase(Base):
         url = "https://old-releases.ubuntu.com"
         slug = f"/ubuntu/dists/{codename}/"
 
-        def _request(timeout: float) -> requests.Response:  # noqa: ARG001
+        def _request(_timeout: float) -> requests.Response:
             return requests.head(url + slug, allow_redirects=True, timeout=5)
 
         logger.debug(f"Checking for {self.alias.value} ({codename}) on {url}.")
@@ -330,7 +330,7 @@ class BuilddBase(Base):
             error=BaseConfigurationError(brief=f"Failed to get {url + slug}."),
         )
 
-        if response.status_code == 200:  # noqa: PLR2004
+        if response.status_code == HTTPStatus.OK:
             logger.debug(f"{self.alias.value} is available on {url}.")
             return True
 

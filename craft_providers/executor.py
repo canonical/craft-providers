@@ -37,28 +37,6 @@ logger = logging.getLogger(__name__)
 class Executor(ABC):
     """Interfaces to execute commands and move data in/out of an environment."""
 
-    @overload
-    def execute_popen(
-        self,
-        command: list[str],
-        *,
-        cwd: pathlib.PurePath | None = None,
-        env: dict[str, str | None] | None = None,
-        timeout: float | None = None,
-        encoding: str,
-        **kwargs: Any,
-    ) -> subprocess.Popen[str]: ...
-    @overload
-    def execute_popen(
-        self,
-        command: list[str],
-        *,
-        cwd: pathlib.PurePath | None = None,
-        env: dict[str, str | None] | None = None,
-        timeout: float | None = None,
-        encoding: None,
-        **kwargs: Any,
-    ) -> subprocess.Popen[bytes]: ...
     @abstractmethod
     def execute_popen(
         self,
@@ -67,9 +45,8 @@ class Executor(ABC):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        encoding: str | None,
         **kwargs: Any,
-    ) -> Any:
+    ) -> subprocess.Popen[str]:
         """Execute a command in instance, using subprocess.Popen().
 
         The process' environment will inherit the execution environment's
@@ -80,36 +57,11 @@ class Executor(ABC):
         :param cwd: Working directory for the process inside the instance.
         :param env: Additional environment to set for process.
         :param timeout: Timeout (in seconds) for the command.
-        :param encoding: The encoding to use to decode the raw command output.
         :param kwargs: Additional keyword arguments to pass.
 
         :returns: Popen instance.
         """
 
-    @overload
-    def execute_run(
-        self,
-        command: list[str],
-        *,
-        cwd: pathlib.PurePath | None = None,
-        env: dict[str, str | None] | None = None,
-        timeout: float | None = None,
-        check: bool = False,
-        encoding: str,
-        **kwargs: Any,
-    ) -> subprocess.CompletedProcess[str]: ...
-    @overload
-    def execute_run(
-        self,
-        command: list[str],
-        *,
-        cwd: pathlib.PurePath | None = None,
-        env: dict[str, str | None] | None = None,
-        timeout: float | None = None,
-        check: bool = False,
-        encoding: None = None,
-        **kwargs: Any,
-    ) -> subprocess.CompletedProcess[bytes]: ...
     @abstractmethod
     def execute_run(
         self,
@@ -118,10 +70,8 @@ class Executor(ABC):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        check: bool = False,
-        encoding: str | None = None,
         **kwargs: Any,
-    ) -> Any:
+    ) -> subprocess.CompletedProcess[str]:
         """Execute a command using subprocess.run().
 
         The process' environment will inherit the execution environment's
@@ -133,8 +83,6 @@ class Executor(ABC):
         :param env: Additional environment to set for process.
         :param timeout: Timeout (in seconds) for the command.
         :param check: Raise an exception if the command fails.
-        :param encoding: Optional encoding to use to decode the program
-            response.
         :param kwargs: Keyword args to pass to subprocess.run().
 
         :returns: Completed process.
@@ -305,7 +253,7 @@ def get_instance_name(name: str, error_class: type[ProviderError]) -> str:
         # truncate to 40 characters
         truncated_name = valid_name[:40]
         # hash the entire name, not the truncated name
-        hashed_name = hashlib.sha1(name.encode()).hexdigest()[:20]  # noqa: S324
+        hashed_name = hashlib.sha1(name.encode()).hexdigest()[:20]  # noqa: S324, security of this does not matter
         instance_name = f"{truncated_name}-{hashed_name}"
 
     logger.debug("Converted name %r to instance name %r", name, instance_name)

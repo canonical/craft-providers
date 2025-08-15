@@ -25,6 +25,7 @@ import shlex
 import subprocess
 import urllib.parse
 from collections.abc import Iterator
+from http import HTTPStatus
 from typing import Any, cast
 
 import pydantic
@@ -152,10 +153,10 @@ def _get_target_snap_revision_from_snapd(
         ) from error
 
     result = json.loads(proc.stdout)
-    if result["status-code"] == 404:  # noqa: PLR2004
+    if result["status-code"] == HTTPStatus.NOT_FOUND:
         # snap not found
         return None
-    if result["status-code"] == 200:  # noqa: PLR2004
+    if result["status-code"] == HTTPStatus.OK:
         # Note: cast can be removed if Pydantic model is made for this response
         return cast("str", result["result"]["revision"])
     raise SnapInstallationError(f"Unknown response from snapd: {result!r}")
@@ -268,7 +269,7 @@ def _get_assertions_file(
     ]
 
     with temp_paths.home_temporary_file() as assert_file_path:
-        with open(assert_file_path, "wb") as assert_file:  # noqa: PTH123
+        with assert_file_path.open("wb") as assert_file:
             for query in assertion_queries:
                 assert_file.write(_get_assertion(query))
                 assert_file.write(b"\n")
@@ -283,7 +284,7 @@ def _add_assertions_from_host(executor: Executor, snap_name: str) -> None:
     :param snap_name: Name of snap to inject
     """
     # trim the `_name` suffix, if present
-    target_assert_path = pathlib.PurePosixPath(f"/tmp/{snap_name.split('_')[0]}.assert")  # noqa: S108
+    target_assert_path = pathlib.PurePosixPath(f"/tmp/{snap_name.split('_')[0]}.assert")
     snap_info = get_host_snap_info(snap_name)
 
     try:
@@ -366,7 +367,7 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
         )
         return
 
-    target_snap_path = pathlib.PurePosixPath(f"/tmp/{snap_store_name}.snap")  # noqa: S108
+    target_snap_path = pathlib.PurePosixPath(f"/tmp/{snap_store_name}.snap")
     is_dangerous = host_revision.startswith("x")
 
     if not is_dangerous:

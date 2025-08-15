@@ -313,6 +313,9 @@ ignore = [
 
     # Ignored due to common usage in current code
     "TRY003", # Avoid specifying long messages outside the exception class
+
+    # Craft Providers
+    "S108",   # Hardcoded temp file - fine, because all of these are paths on the ephemeral remote instance
 ]
 
 [tool.ruff.lint.flake8-annotations]

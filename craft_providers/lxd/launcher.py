@@ -25,6 +25,7 @@ import sys
 import threading
 import time
 from datetime import datetime, timedelta, timezone
+from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -87,11 +88,11 @@ class InstanceTimer(threading.Thread):
         self.__active = False
 
 
-def _create_instance(  # noqa: PLR0913
+def _create_instance(  # noqa: PLR0913, too many arguments
     *,
     instance: LXDInstance,
     base_instance: LXDInstance | None,
-    base_configuration: Base,
+    base_configuration: Base[Enum],
     image_name: str,
     image_remote: str,
     ephemeral: bool,
@@ -354,14 +355,14 @@ def _is_valid(*, instance: LXDInstance, expiration: timedelta) -> bool:
     return True
 
 
-def _launch_existing_instance(  # noqa: PLR0913
+def _launch_existing_instance(  # noqa: PLR0913, too many arguments
     *,
     instance: LXDInstance,
     lxc: LXC,
     project: str,
     remote: str,
     auto_clean: bool,
-    base_configuration: Base,
+    base_configuration: Base[Enum],
     ephemeral: bool,
     map_user_uid: bool,
     uid: int | None,
@@ -512,7 +513,7 @@ def _check_id_map(
 def _set_id_map(
     *,
     instance: LXDInstance,
-    lxc: LXC = LXC(),  # noqa: B008
+    lxc: LXC | None = None,
     project: str = "default",
     remote: str = "local",
     uid: int | None = None,
@@ -534,6 +535,9 @@ def _set_id_map(
     :param uid: The uid to be mapped. If not supplied, the current user's uid is used.
     :param gid: The gid to be mapped. If not supplied, the current process's gid is used.
     """
+    if lxc is None:
+        lxc = LXC()
+
     configured_id_map = ""
     uid = uid or os.getuid()
     gid = gid or os.getgid()
@@ -685,10 +689,10 @@ def _wait_for_instance_ready(instance: LXDInstance) -> None:
     )
 
 
-def launch(  # noqa: PLR0913
+def launch(  # noqa: PLR0913, too many arguments
     name: str,
     *,
-    base_configuration: Base,
+    base_configuration: Base[Enum],
     image_name: str,
     image_remote: str,
     auto_clean: bool = False,
@@ -700,7 +704,7 @@ def launch(  # noqa: PLR0913
     use_base_instance: bool = False,
     project: str = "default",
     remote: str = "local",
-    lxc: LXC = LXC(),  # noqa: B008
+    lxc: LXC | None = None,
     expiration: timedelta = timedelta(days=90),
     prepare_instance: "Callable[[Executor], None] | None" = None,
 ) -> LXDInstance:
@@ -749,7 +753,8 @@ def launch(  # noqa: PLR0913
     :raises LXDError: on unexpected LXD error.
     :raises ProviderError: if name of instance collides with base instance name.
     """
-    # TODO: create a private class to reduce the parameters passed between methods  # noqa: FIX002
+    if lxc is None:
+        lxc = LXC()
 
     _ensure_project_exists(
         create=auto_create_project, project=project, remote=remote, lxc=lxc
