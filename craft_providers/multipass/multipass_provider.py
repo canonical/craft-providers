@@ -16,12 +16,13 @@
 
 """Multipass Provider class."""
 
+from __future__ import annotations
+
 import contextlib
 import logging
-import pathlib
-from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
@@ -35,6 +36,10 @@ from .errors import MultipassError
 from .installer import install, is_installed
 from .multipass import Multipass
 from .multipass_instance import MultipassInstance
+
+if TYPE_CHECKING:
+    import pathlib
+    from collections.abc import Iterator
 
 logger = logging.getLogger(__name__)
 

@@ -17,6 +17,8 @@
 
 """Multipass Provider Readiness Checks."""
 
+from __future__ import annotations
+
 import logging
 
 from . import errors

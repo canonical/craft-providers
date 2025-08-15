@@ -17,6 +17,8 @@
 
 """Helpers for snap commands."""
 
+from __future__ import annotations
+
 import contextlib
 import json
 import logging
@@ -24,9 +26,8 @@ import pathlib
 import shlex
 import subprocess
 import urllib.parse
-from collections.abc import Iterator
 from http import HTTPStatus
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pydantic
 import requests
@@ -38,9 +39,13 @@ from craft_providers.errors import (
     ProviderError,
     details_from_called_process_error,
 )
-from craft_providers.executor import Executor
 from craft_providers.instance_config import InstanceConfiguration
 from craft_providers.util import snap_cmd, temp_paths
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 

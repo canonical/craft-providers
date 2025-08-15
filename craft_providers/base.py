@@ -17,6 +17,8 @@
 
 """Base configuration module."""
 
+from __future__ import annotations
+
 import io
 import logging
 import math
@@ -28,7 +30,7 @@ import sys
 from abc import ABC, abstractmethod
 from enum import Enum
 from textwrap import dedent
-from typing import Generic, TypeVar, final
+from typing import TYPE_CHECKING, Generic, TypeVar, final
 
 from pydantic import ValidationError
 
@@ -47,10 +49,12 @@ from craft_providers.errors import (
     ProviderError,
     details_from_called_process_error,
 )
-from craft_providers.executor import Executor
 from craft_providers.instance_config import InstanceConfiguration
 from craft_providers.util import retry
 from craft_providers.util.os_release import OS_RELEASE_FILE, parse_os_release
+
+if TYPE_CHECKING:
+    from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 

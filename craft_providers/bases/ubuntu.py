@@ -17,6 +17,8 @@
 
 """Ubuntu image(s)."""
 
+from __future__ import annotations
+
 import csv
 import datetime
 import enum
@@ -28,21 +30,23 @@ import subprocess
 from functools import total_ordering
 from http import HTTPStatus
 from textwrap import dedent
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import requests
 from typing_extensions import Self
 
 from craft_providers import const
-from craft_providers.actions.snap_installer import Snap
 from craft_providers.base import Base
 from craft_providers.errors import (
     BaseCompatibilityError,
     BaseConfigurationError,
     details_from_called_process_error,
 )
-from craft_providers.executor import Executor
 from craft_providers.util import retry
+
+if TYPE_CHECKING:
+    from craft_providers.actions.snap_installer import Snap
+    from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 

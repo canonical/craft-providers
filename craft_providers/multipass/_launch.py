@@ -17,11 +17,16 @@
 
 """Multipass Provider."""
 
+from __future__ import annotations
+
 import logging
-from enum import Enum
+from typing import TYPE_CHECKING
 
 from craft_providers import Base, bases
 from craft_providers.multipass.multipass_instance import MultipassInstance
+
+if TYPE_CHECKING:
+    from enum import Enum
 
 logger = logging.getLogger(__name__)
 

@@ -21,15 +21,20 @@ likely to change. These classes will be stable and recommended for use in the re
 of craft-providers 2.0.
 """
 
+from __future__ import annotations
+
 import contextlib
 import logging
-import pathlib
 from abc import ABC, abstractmethod
-from collections.abc import Generator
-from enum import Enum
+from typing import TYPE_CHECKING
 
-from .base import Base
-from .executor import Executor
+if TYPE_CHECKING:
+    import pathlib
+    from collections.abc import Generator
+    from enum import Enum
+
+    from .base import Base
+    from .executor import Executor
 
 logger = logging.getLogger(__name__)
 

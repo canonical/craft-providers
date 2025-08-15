@@ -17,6 +17,8 @@
 
 """Parser for /etc/os-release."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 OS_RELEASE_FILE = Path("/etc/os-release")

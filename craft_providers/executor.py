@@ -17,19 +17,24 @@
 
 """Executor module."""
 
+from __future__ import annotations
+
 import contextlib
 import hashlib
-import io
 import logging
-import pathlib
 import re
-import subprocess
 from abc import ABC, abstractmethod
-from collections.abc import Generator
-from typing import Any, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import craft_providers.util.temp_paths
-from craft_providers.errors import ProviderError
+
+if TYPE_CHECKING:
+    import io
+    import pathlib
+    import subprocess
+    from collections.abc import Generator
+
+    from craft_providers.errors import ProviderError
 
 logger = logging.getLogger(__name__)
 

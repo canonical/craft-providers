@@ -16,17 +16,16 @@
 
 """LXD Provider class."""
 
+from __future__ import annotations
+
 import contextlib
 import logging
-import pathlib
-from collections.abc import Iterator
 from datetime import timedelta
-from enum import Enum
+from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
 from craft_providers import Executor, Provider, bases
-from craft_providers.base import Base
 from craft_providers.errors import BaseConfigurationError
 
 from .errors import LXDError, LXDUnstableImageError
@@ -35,6 +34,13 @@ from .launcher import launch
 from .lxc import LXC
 from .lxd_instance import LXDInstance
 from .remotes import get_remote_image
+
+if TYPE_CHECKING:
+    import pathlib
+    from collections.abc import Iterator
+    from enum import Enum
+
+    from craft_providers.base import Base
 
 logger = logging.getLogger(__name__)
 

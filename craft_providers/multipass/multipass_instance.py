@@ -17,11 +17,11 @@
 
 """Multipass Instance."""
 
-import io
+from __future__ import annotations
+
 import logging
-import pathlib
 import subprocess
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from typing_extensions import override
 
@@ -32,6 +32,10 @@ from craft_providers.util import env_cmd
 
 from .errors import MultipassError
 from .multipass import Multipass
+
+if TYPE_CHECKING:
+    import io
+    import pathlib
 
 logger = logging.getLogger(__name__)
 

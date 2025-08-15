@@ -23,6 +23,8 @@ From that, the thing we care most about is the compatibility tag:
     whatevercraft-buildd-base-v7
 """
 
+from __future__ import annotations
+
 import dataclasses
 import json
 import re

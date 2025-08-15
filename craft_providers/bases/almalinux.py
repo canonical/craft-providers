@@ -17,19 +17,25 @@
 
 """Almalinux image(s)."""
 
+from __future__ import annotations
+
 import enum
 import logging
-import pathlib
 import subprocess
+from typing import TYPE_CHECKING
 
-from craft_providers.actions.snap_installer import Snap
 from craft_providers.base import Base
 from craft_providers.errors import (
     BaseCompatibilityError,
     BaseConfigurationError,
     details_from_called_process_error,
 )
-from craft_providers.executor import Executor
+
+if TYPE_CHECKING:
+    import pathlib
+
+    from craft_providers.actions.snap_installer import Snap
+    from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 

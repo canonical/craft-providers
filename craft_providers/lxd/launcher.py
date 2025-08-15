@@ -17,6 +17,8 @@
 
 """LXD Instance Provider."""
 
+from __future__ import annotations
+
 import logging
 import os
 import re
@@ -25,8 +27,8 @@ import sys
 import threading
 import time
 from datetime import datetime, timedelta, timezone
-from enum import Enum
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from craft_providers import Base, ProviderError, bases
 from craft_providers.errors import details_from_called_process_error
@@ -36,6 +38,9 @@ from .lxc import LXC
 from .lxd_instance import LXDInstance
 from .lxd_instance_status import LXDInstanceState, ProviderInstanceStatus
 from .project import create_with_default_profile
+
+if TYPE_CHECKING:
+    from enum import Enum
 
 logger = logging.getLogger(__name__)
 
