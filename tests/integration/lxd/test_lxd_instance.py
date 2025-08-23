@@ -52,16 +52,16 @@ def instance(instance_name, project):
         for version in ["18.04", "20.04", "22.04", "23.04"]
     ],
 )
-def reusable_instance(reusable_instance_name, request):
+def reusable_instance(reusable_instance_name, session_lxd_project, request):
     """Reusable instance for tests that don't require a fresh instance."""
     name = f"{reusable_instance_name}-reusable-{request.param}"
     with conftest.tmp_instance(
         name=name,
         image=request.param,
         ephemeral=False,
-        project="default",
+        project=session_lxd_project,
     ):
-        instance = LXDInstance(name=name, project="default")
+        instance = LXDInstance(name=name, project=session_lxd_project)
 
         yield instance
 

@@ -338,7 +338,7 @@ def empty_test_snap(installed_snap):
 @pytest.fixture(scope="session")
 def session_lxd_project(installed_lxd):
     lxc = lxd.LXC()
-    project_name = "craft-providers-test-session"
+    project_name = f"craft-providers-test-session-{os.getpid()}"
     # We could need to purge if previous tests were killed.
     lxc_project.purge(lxc=lxc, project=project_name)
     lxc_project.create_with_default_profile(lxc=lxc, project=project_name)

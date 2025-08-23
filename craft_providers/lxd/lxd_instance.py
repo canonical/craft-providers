@@ -107,6 +107,10 @@ class LXDInstance(Executor):
                 verify=self._config.get_remote_cert_path(remote)  # pyright: ignore[reportArgumentType]
             )
 
+    @property
+    def _instance(self) -> pylxd.models.Instance:
+        return self._client.instances.get(self.instance_name)
+
     def _finalize_lxc_command(
         self,
         command: list[str],
@@ -246,9 +250,10 @@ class LXDInstance(Executor):
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
         check: bool = False,
+        stdin: str | bytes | None = None,
         **kwargs,  # noqa: ANN003
     ) -> subprocess.CompletedProcess:
-        """Execute a command using subprocess.run().
+        """Execute a command in the instance.
 
         The process' environment will inherit the execution environment's
         default environment (PATH, etc.), but can be additionally configured via
@@ -268,17 +273,29 @@ class LXDInstance(Executor):
         """
         cwd_path = None if cwd is None else cwd.as_posix()
 
-        return self.lxc.exec(
-            instance_name=self.instance_name,
-            command=self._finalize_lxc_command(command=command, env=env),
-            project=self.project,
-            remote=self.remote,
-            runner=subprocess.run,
-            timeout=timeout,
+        result = self._instance.execute(
+            command,
             cwd=cwd_path,
-            check=check,
-            **kwargs,
+            environment=env,
+            stdin_payload=stdin,
+            decode=bool(kwargs.get("text"))
         )
+
+        if check and result.exit_code != 0:
+            raise subprocess.CalledProcessError(
+                returncode=result.exit_code,
+                cmd=command,
+                output=result.stdout,
+                stderr=result.stderr,
+            )
+
+        return subprocess.CompletedProcess(
+            args=command,
+            returncode=result.exit_code,
+            stdout=result.stdout,
+            stderr=result.stderr,
+        )
+
 
     def exists(self) -> bool:
         """Check if instance exists.
@@ -287,7 +304,7 @@ class LXDInstance(Executor):
 
         :raises LXDError: On unexpected error.
         """
-        return self._get_instance_information() is not None
+        return self._client.instances.exists(self.instance_name)
 
     def _get_disk_devices(self) -> dict[str, Any]:
         """Query instance and return dictionary of disk devices."""
