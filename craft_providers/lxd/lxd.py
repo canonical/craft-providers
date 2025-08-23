@@ -22,6 +22,8 @@ import pathlib
 import subprocess
 
 import packaging.version
+import pylxd
+from pylxd.exceptions import ClientConnectionFailed
 
 from craft_providers.errors import details_from_called_process_error
 
@@ -31,15 +33,20 @@ logger = logging.getLogger(__name__)
 
 
 class LXD:
-    """Interface to `lxd` command-line.
+    """Interface to the local LXD.
 
-    :param lxd_path: Path to lxd.
+    :param lxd_path: Path to the lxd command.
+    :param lxd_api: Path to the local lxd socket.
     :cvar minimum_required_version: Minimum lxd version required for compatibility.
     """
 
     minimum_required_version = "4.0"
 
-    def __init__(self, *, lxd_path: pathlib.Path = pathlib.Path("lxd")) -> None:
+    def __init__(
+        self,
+        *,
+        lxd_path: pathlib.Path = pathlib.Path("lxd"),
+    ) -> None:
         self.lxd_path = lxd_path
 
     def init(self, *, auto: bool = False, sudo: bool = False) -> None:
@@ -76,28 +83,49 @@ class LXD:
         minimum_version = packaging.version.parse(self.minimum_required_version)
         version = self.version()
 
-        if "." not in version:
-            raise LXDError(
-                "Failed to parse LXD version.",
-                details=f"Version data returned: {version!r}",
+        try:
+            parsed_version = packaging.version.parse(version)
+        except packaging.version.InvalidVersion:
+            logger.warning(
+                f"Unknown LXD version. Assuming supported. {version=}"
             )
+            return True
 
-        return packaging.version.parse(version) >= minimum_version
+        return parsed_version >= minimum_version
 
     def version(self) -> str:
         """Query LXD version.
 
         The version is of the format:
-        <major>.<minor>[.<micro>] [LTS]
+        <major>.<minor>[.<micro>]
 
         Version examples:
-        - 5.21.0 LTS
+        - 5.21.0
         - 4.13
         - 4.0.5
         - 2.0.12
 
         :returns: Version string.
         """
+        try:
+            client = pylxd.Client()
+        except ClientConnectionFailed as exc:
+            logger.warning(
+                "Could not connect to API using pylxd. Falling back to command."
+            )
+            logger.exception(exc)
+            return self._version_cmd()
+
+        try:
+            return client.host_info["environment"]["server_version"]
+        except KeyError:
+            logger.warning(
+                "LXD API returned invalid structure. Falling back to command."
+            )
+            return self._version_cmd()
+
+    def _version_cmd(self) -> str:
+        """Query LXD version using the lxd command."""
         cmd = [str(self.lxd_path), "version"]
 
         try:
