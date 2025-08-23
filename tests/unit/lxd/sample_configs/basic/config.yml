@@ -1,0 +1,8 @@
+# A very basic LXC configuration retrieved from an Ubuntu Focal machine.
+# This machine has the snap version of LXC 4.0.10.
+default-remote: local
+remotes:
+  local:
+    addr: unix://
+    public: false
+aliases: {}

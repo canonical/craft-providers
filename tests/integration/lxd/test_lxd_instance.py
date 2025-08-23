@@ -29,7 +29,7 @@ pytestmark = [
     # These tests are flaky on very busy systems.
     # https://github.com/lxc/lxd/issues/11422
     # https://github.com/lxc/lxd/issues/11890
-    pytest.mark.flaky(reruns=2, reruns_delay=1),
+    # pytest.mark.flaky(reruns=2, reruns_delay=1),
     pytest.mark.lxd_instance,
 ]
 
@@ -170,6 +170,7 @@ def test_launch(instance_name):
     instance.launch(
         image="20.04",
         image_remote="ubuntu",
+        ephemeral=True,
     )
 
     try:
@@ -198,6 +199,7 @@ def test_launch_with_name(instance_name, name):
     instance.launch(
         image="20.04",
         image_remote="ubuntu",
+        ephemeral=True,
     )
 
     try:

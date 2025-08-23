@@ -1,0 +1,20 @@
+# A configuration of a real machine that has itself setup as a remote.
+default-remote: local
+remotes:
+  craft-com.ubuntu.cloud-buildd:
+    addr: https://cloud-images.ubuntu.com/buildd/releases
+    protocol: simplestreams
+    public: true
+  craft-com.ubuntu.cloud-buildd-daily:
+    addr: https://cloud-images.ubuntu.com/buildd/daily
+    protocol: simplestreams
+    public: true
+  local:
+    addr: unix://
+    public: false
+  ratel:
+    addr: https://ratel:8443/
+    auth_type: tls
+    protocol: lxd
+    public: false
+aliases: {}

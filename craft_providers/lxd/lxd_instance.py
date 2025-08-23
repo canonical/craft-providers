@@ -21,15 +21,18 @@ import io
 import logging
 import os
 import pathlib
+import pylxd  # type: ignore[import-untyped]
+import pylxd.models
 import shutil
 import subprocess
 import tempfile
 import warnings
-from typing import Any
+from typing import Any, cast
 
 from craft_providers.const import RETRY_WAIT, TIMEOUT_SIMPLE
 from craft_providers.errors import details_from_called_process_error
 from craft_providers.executor import Executor, get_instance_name
+from craft_providers.lxd.config import DEFAULT_REMOTES, NetworkRemote, UserConfig
 from craft_providers.lxd.errors import LXDError
 from craft_providers.lxd.lxc import LXC
 from craft_providers.lxd.lxd_instance_status import (
@@ -92,6 +95,17 @@ class LXDInstance(Executor):
             self.lxc = LXC()
         else:
             self.lxc = lxc
+
+        self._config = UserConfig.load()
+        if remote == "local":
+            self._client = pylxd.Client(project=project)
+        else:
+            if remote not in self._config.remotes:
+                raise ValueError(f"Could not find remote {remote!r}")
+            self._client = pylxd.Client(
+                self._config.remotes[remote].addr,
+                verify=self._config.get_remote_cert_path(remote)  # pyright: ignore[reportArgumentType]
+            )
 
     def _finalize_lxc_command(
         self,
@@ -378,12 +392,31 @@ class LXDInstance(Executor):
 
         :raises LXDError: On unexpected error.
         """
-        config_keys = {}
+        try:
+            remote = cast(NetworkRemote, self._config.remotes[image_remote])
+        except KeyError:
+            remote = DEFAULT_REMOTES[image_remote]
 
+        config_keys = {}
         if map_user_uid:
             uid = os.getuid() if uid is None else uid
             gid = os.getgid() if gid is None else gid
             config_keys["raw.idmap"] = f"uid {uid!s} 0\ngid {gid!s} 0"
+
+        config = {
+            "name": self.instance_name,
+            "ephemeral": ephemeral,
+            "start": True,
+            "source": {
+                "server": str(remote.addr),
+                "protocol": remote.protocol,
+                "type": "image",
+                "alias": image,
+            },
+            "project": self.project,
+            "config": config_keys,
+        }
+
 
         if self._intercept_mknod:
             if not self._host_supports_mknod():
@@ -395,14 +428,9 @@ class LXDInstance(Executor):
             else:
                 config_keys["security.syscalls.intercept.mknod"] = "true"
 
-        self.lxc.launch(
-            config_keys=config_keys,
-            ephemeral=ephemeral,
-            instance_name=self.instance_name,
-            image=image,
-            image_remote=image_remote,
-            project=self.project,
-            remote=self.remote,
+        self._client.instances.create(  # pyright: ignore[reportAttributeAccessIssue]
+            config=config,
+            wait=True,
         )
 
     def mount(self, *, host_source: pathlib.Path, target: pathlib.PurePath) -> None:
