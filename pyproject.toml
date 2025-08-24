@@ -36,13 +36,13 @@ dev = [
     "pytest-cov==4.1.0",
     "pytest-mock==3.11.1",
     "pytest-rerunfailures==12.0",
-    "pytest-subprocess==1.5.2",
+    "pytest-subprocess==1.5.3",
     "pytest-xdist==3.3.1",
     "pytest-time==0.3.2",
     "responses==0.23.3",
     "types-requests==2.31.0.6",
     "types-setuptools==68.2.0.2",
-    "types-pyyaml==6.0.12.20240917",
+    "types-pyyaml==6.0.12.20250822",
 ]
 lint = [
     "black==23.12.1",
@@ -67,7 +67,7 @@ docs = [
     "sphinxext-opengraph==0.8.2",
     "sphinx-lint==0.8.1",
     "sphinx-notfound-page==1.0.4",
-    "sphinx-reredirects==0.1.5",
+    "sphinx-reredirects==0.1.6",
     "sphinx-tabs==3.4.7",
 ]
 
