@@ -1190,28 +1190,38 @@ class LXC:
 
         raise LXDError(brief="Timed out waiting for instance to be ready.")
 
-    def get_server_version(self) -> str:
+    def get_server_version(self, remote: str = "local") -> str:
         """Get the version of the lxd server.
 
         Use over LXD.version when you need to get the server version but aren't root.
 
+        :param remote: The LXD remote to get the version from.
         :raises LXDError: on unexpected error.
         """
         try:
             completed_process = self._run_lxc(
-                ["version"], capture_output=True, text=True
+                ["query", f"{remote}:/1.0?public"], capture_output=True, text=True
             )
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief="Could not determine lxd version.",
                 details=errors.details_from_called_process_error(error),
             ) from error
-        for line in completed_process.stdout.splitlines():
-            if not line.startswith("Server version"):
-                continue
-            # In case there are ever colons in the version string
-            return ":".join(line.split(":")[1:])
-        raise LXDError(
-            brief="Could not determine lxd version.",
-            details="Didn't find string 'Server version' in output",
-        )
+        import json  # noqa: PLC0415 (we seldom need this)
+
+        try:
+            result = json.loads(completed_process.stdout)
+        except json.JSONDecodeError:
+            raise LXDError(
+                brief="Could not determine lxd version.",
+                details="API did not return valid JSON",
+                resolution="Ensure LXD is installed and running.",
+            )
+        version = result.get("environment", {}).get("server_version")
+        if not version:
+            raise LXDError(
+                brief="Could not determine lxd version.",
+                details="'environment.server_version' field missing from LXD info.",
+                resolution="Ensure you have a new enough version of lxd installed.",
+            )
+        return version

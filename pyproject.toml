@@ -4,6 +4,7 @@ dynamic = ["version"]
 dependencies = [
     "packaging>=14.1",
     "pydantic~=2.4",
+    "pylxd>=2.3.5",
     "pyyaml",
     "requests>=2.31",
     "requests_unixsocket2>=0.4.0",
