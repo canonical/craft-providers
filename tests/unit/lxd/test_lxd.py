@@ -104,9 +104,20 @@ def test_is_supported_version_parse_error_assumes_true(mocker, version_data):
 
 @responses.activate
 def test_version_from_socket(fake_process):  # Error if using subprocess.
+    # Snap socket
     responses.add(
         responses.GET,
         "http+unix://%2Fvar%2Fsnap%2Flxd%2Fcommon%2Flxd%2Funix.socket/1.0",
+        json={
+            "type": "sync",
+            "metadata": {"environment": {"server_version": "test-version"}},
+        },
+        status=200,
+    )
+    # If installed from apt or similar.
+    responses.add(
+        responses.GET,
+        "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket/1.0",
         json={
             "type": "sync",
             "metadata": {"environment": {"server_version": "test-version"}},

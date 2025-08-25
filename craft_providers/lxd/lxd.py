@@ -22,8 +22,8 @@ import pathlib
 import subprocess
 
 import packaging.version
-import pylxd
-from pylxd.exceptions import ClientConnectionFailed
+import pylxd  # type: ignore[import-untyped]
+from pylxd.exceptions import ClientConnectionFailed  # type: ignore[import-untyped]
 
 from craft_providers.errors import details_from_called_process_error
 
@@ -86,9 +86,7 @@ class LXD:
         try:
             parsed_version = packaging.version.parse(version)
         except packaging.version.InvalidVersion:
-            logger.warning(
-                f"Unknown LXD version. Assuming supported. {version=}"
-            )
+            logger.warning(f"Unknown LXD version. Assuming supported. {version=}")
             return True
 
         return parsed_version >= minimum_version
@@ -101,6 +99,7 @@ class LXD:
 
         Version examples:
         - 5.21.0
+        - 5.21.0 LTS
         - 4.13
         - 4.0.5
         - 2.0.12
@@ -111,9 +110,9 @@ class LXD:
             client = pylxd.Client()
         except ClientConnectionFailed as exc:
             logger.warning(
-                "Could not connect to API using pylxd. Falling back to command."
+                "Could not connect to API using pylxd. Falling back to command.",
+                exc_info=exc,
             )
-            logger.exception(exc)
             return self._version_cmd()
 
         try:

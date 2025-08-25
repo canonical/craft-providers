@@ -1207,7 +1207,7 @@ class LXC:
                 brief="Could not determine lxd version.",
                 details=errors.details_from_called_process_error(error),
             ) from error
-        import json
+        import json  # noqa: PLC0415 (we seldom need this)
 
         try:
             result = json.loads(completed_process.stdout)
