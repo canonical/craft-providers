@@ -22,6 +22,7 @@ from unittest import mock
 from unittest.mock import call
 
 import pytest
+import responses
 from craft_providers.errors import ProviderError
 from craft_providers.lxd import (
     LXC,
@@ -106,6 +107,7 @@ def test_install_unsupported_platform(mocker, platform):
     )
 
 
+@responses.activate  # Force fallback to the lxd command.
 def test_install_without_sudo(
     fake_process, mocker, mock_is_user_permitted, mock_os_geteuid
 ):
@@ -145,6 +147,7 @@ def test_install_without_sudo(
     mock_is_user_permitted.assert_called_once()
 
 
+@responses.activate  # Force fallback to the lxd command.
 def test_install_with_sudo(
     fake_process, mocker, mock_is_user_permitted, mock_os_geteuid
 ):
