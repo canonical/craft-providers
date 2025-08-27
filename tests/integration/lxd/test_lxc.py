@@ -21,6 +21,7 @@ from datetime import datetime
 
 import pytest
 from craft_providers.lxd import LXDError, lxd_instance_status
+from craft_providers.lxd.lxc import LXC
 
 from . import conftest
 
@@ -285,3 +286,16 @@ def test_info(instance, lxc, session_project):
     data = lxc.info(instance_name=instance, project=session_project)
 
     assert data["Name"] == instance
+
+
+@pytest.mark.lxd_instance
+def test_root_perms(instance: str, lxc: LXC, session_project: str) -> None:
+    proc = lxc.exec(
+        command=["stat", "-c", "%a", "/root"],
+        project=session_project,
+        instance_name=instance,
+        capture_output=True,
+        check=True,
+    )
+
+    assert int(proc.stdout) & 0o011

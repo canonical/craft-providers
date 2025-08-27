@@ -215,6 +215,7 @@ def test_setup(
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "hostname", "-F", "/etc/hostname"]
     )
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "chmod", "go+x", "/root"])
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,

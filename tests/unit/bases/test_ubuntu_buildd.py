@@ -169,7 +169,7 @@ def mock_requests_head(mocker, request):
 @pytest.mark.parametrize(
     ("tag", "expected_tag"), [(None, "buildd-base-v7"), ("test-tag", "test-tag")]
 )
-def test_setup(
+def test_setup(  # noqa: PLR0915
     fake_process,
     fake_executor,
     fake_filesystem,
@@ -240,6 +240,7 @@ def test_setup(
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "hostname", "-F", "/etc/hostname"]
     )
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "chmod", "go+x", "/root"])
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
