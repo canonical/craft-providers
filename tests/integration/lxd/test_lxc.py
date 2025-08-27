@@ -35,7 +35,17 @@ def instance(instance_name, session_project):
         yield tmp_instance
 
 
-@pytest.mark.lxd_instance
+@pytest.fixture
+def instance_alma(instance_name, session_project):
+    with conftest.tmp_instance(
+        name=instance_name,
+        project=session_project,
+        image="almalinux/9",
+        image_remote="images",
+    ) as tmp_instance:
+        yield tmp_instance
+
+
 def test_launch_default_config(instance, lxc, session_project):
     """Verify default config values when launching."""
     status = lxc.config_get(
