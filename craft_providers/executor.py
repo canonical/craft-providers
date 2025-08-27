@@ -146,6 +146,43 @@ class Executor(ABC):
             else:
                 yield tmp_file
 
+    @contextlib.contextmanager
+    def edit_file(
+        self,
+        *,
+        source: pathlib.PurePath,
+        missing_ok: bool = False,
+        pull_file: bool = True,
+    ) -> Generator[pathlib.Path, None, None]:
+        """Edit a file from the environment for modification via context manager.
+
+        A file is pulled from an environment for editing via a context manager. Upon
+        exiting, the file is pushed back to the environment. If the environment file
+        does not exist, a new file will be created.
+
+        :param source: Environment file to copy.
+        :param missing_ok: Do not raise an error if the file does not exist in the
+            environment; in this case the target is created as a new file.
+
+        :raises FileNotFoundError: If source file or destination's parent
+            directory does not exist (and `missing_ok` is False).
+        :raises ProviderError: On error copying file content.
+        """
+        # Note: This is a convenience function to cache the pro services state in the
+        # environment. However, it may be better to use existing methods to reduce complexity.
+        with craft_providers.util.temp_paths.home_temporary_file() as tmp_file:
+            tmp_file.touch()  # ensure the file exists regardless
+            if pull_file:
+                try:
+                    self.pull_file(source=source, destination=tmp_file)
+                except FileNotFoundError:
+                    if not missing_ok:
+                        raise
+            try:
+                yield tmp_file
+            finally:
+                self.push_file(source=tmp_file, destination=source)
+
     @abstractmethod
     def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:
         """Copy a file from the host into the environment.

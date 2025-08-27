@@ -25,8 +25,10 @@ import shutil
 import subprocess
 import tempfile
 import warnings
-from typing import Any
+from typing import Any, Iterable
+import yaml
 
+from craft_providers import pro
 from craft_providers.const import RETRY_WAIT, TIMEOUT_SIMPLE
 from craft_providers.errors import details_from_called_process_error
 from craft_providers.executor import Executor, get_instance_name
@@ -39,6 +41,8 @@ from craft_providers.lxd.lxd_instance_status import (
 from craft_providers.util import env_cmd, retry
 
 logger = logging.getLogger(__name__)
+
+PRO_SERVICES_YAML = pathlib.Path("/root/pro-services.yaml")
 
 
 class LXDInstance(Executor):
@@ -730,6 +734,85 @@ class LXDInstance(Executor):
     def info(self) -> dict[str, Any]:
         """Get info for an instance."""
         return self.lxc.info(
+            instance_name=self.instance_name,
+            project=self.project,
+            remote=self.remote,
+        )
+
+    def is_pro_enabled(self) -> bool:
+        """Check whether the instance is Pro enabled.
+
+        :returns: True if the instance is Pro enabled.
+
+        :raises: LXDError: On unexpected error.
+        """
+        return self.lxc.is_pro_enabled(
+            instance_name=self.instance_name,
+            project=self.project,
+            remote=self.remote,
+        )
+
+    def attach_pro_subscription(self):
+        """Attach the instance to a Pro subscription."""
+        guest_token, contract_url = pro.request_pro_guest_token()
+
+        self.lxc.attach_pro_subscription(
+            instance_name=self.instance_name,
+            pro_token=guest_token,
+            contract_url=contract_url,
+            project=self.project,
+            remote=self.remote,
+        )
+
+    def enable_pro_service(self, services: Iterable[str]) -> None:
+        """Enable a Pro service on the instance.
+
+        :param services: Pro services to enable.
+
+        :raises: LXDError: On unexpected error.
+        """
+        self.lxc.enable_pro_service(
+            instance_name=self.instance_name,
+            services=services,
+            project=self.project,
+            remote=self.remote,
+        )
+
+    @property
+    def pro_services(self) -> set[str] | None:
+        """Get the Pro services enabled on the instance."""
+        # first check if the services are cached in memory
+        if hasattr(self, "_pro_services"):
+            return self._pro_services
+        # then check the instance state
+        try:
+            with self.edit_file(
+                source=PRO_SERVICES_YAML,
+            ) as temp_state_path:
+                with temp_state_path.open("r") as fh:
+                    return yaml.safe_load(fh)
+
+        except FileNotFoundError:
+            return None
+
+    @pro_services.setter
+    def pro_services(self, services: set[str]) -> None:
+        """Set the Pro services enabled on the instance."""
+        self._pro_services = services  # cache the services in memory ...
+        # ... and write them to the instance
+        with self.edit_file(
+            source=PRO_SERVICES_YAML,
+            pull_file=False,
+        ) as temp_state_path:
+            with temp_state_path.open("w") as fh:
+                yaml.safe_dump(set(services), fh)
+
+    def install_pro_client(self) -> None:
+        """Install Ubuntu Pro Client in the instance.
+
+        :raises: LXDError: On unexpected error.
+        """
+        self.lxc.install_pro_client(
             instance_name=self.instance_name,
             project=self.project,
             remote=self.remote,

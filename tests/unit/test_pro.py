@@ -1,0 +1,361 @@
+#
+# Copyright 2021-2024 Canonical Ltd.
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License version 3 as published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+import json
+
+import pytest
+import responses
+import yaml
+from craft_providers import pro
+from craft_providers.errors import GuestTokenError, MachineTokenError
+
+MACHINE_TOKEN = "machine_test_token"  # noqa: S105
+MACHINE_ID = "XYZ"
+CONTRACT_ID = "ABC"
+GUEST_TOKEN = "guest_test_token"  # noqa: S105
+CONTRACTS_API_URL = "https://contracts.canonical.com"
+_CONTRACTS_API_ENDPOINT = (
+    f"/v1/contracts/{CONTRACT_ID}/context/machines/{MACHINE_ID}/guest-token"
+)
+
+
+assert_requests = responses.activate(assert_all_requests_are_fired=True)
+
+
+@pytest.fixture
+def mock_machinetoken_open_success(mocker):
+    read_text_return_values = [
+        json.dumps(
+            {
+                "machineToken": MACHINE_TOKEN,
+                "machineTokenInfo": {
+                    "machineId": MACHINE_ID,
+                    "contractInfo": {
+                        "id": CONTRACT_ID,
+                    },
+                },
+            }
+        ),
+        yaml.safe_dump(
+            {
+                "contract_url": CONTRACTS_API_URL,
+                "log_level": "debug",
+            }
+        ),
+    ]
+
+    return mocker.patch(
+        "pathlib.Path.read_text",
+        side_effect=read_text_return_values,
+    )
+
+
+@pytest.fixture
+def mock_machinetoken_open_no_machinetoken(mocker):
+    read_text_return_values = [
+        json.dumps({"machineToken": ""}),
+        yaml.safe_dump(
+            {
+                "contract_url": CONTRACTS_API_URL,
+                "log_level": "debug",
+            }
+        ),
+    ]
+
+    return mocker.patch(
+        "pathlib.Path.read_text",
+        side_effect=read_text_return_values,
+    )
+
+
+@pytest.fixture
+def mock_machinetoken_open_no_machineid(mocker):
+    read_text_return_values = [
+        json.dumps(
+            {
+                "machineToken": MACHINE_TOKEN,
+                "machineTokenInfo": {
+                    "machineId": "",
+                    "contractInfo": {
+                        "id": CONTRACT_ID,
+                    },
+                },
+            }
+        ),
+        yaml.safe_dump(
+            {
+                "contract_url": CONTRACTS_API_URL,
+                "log_level": "debug",
+            }
+        ),
+    ]
+
+    return mocker.patch(
+        "pathlib.Path.read_text",
+        side_effect=read_text_return_values,
+    )
+
+
+@pytest.fixture
+def mock_machinetoken_open_no_contractid(mocker):
+    read_text_return_values = [
+        json.dumps(
+            {
+                "machineToken": MACHINE_TOKEN,
+                "machineTokenInfo": {
+                    "machineId": MACHINE_ID,
+                    "contractInfo": {
+                        "id": "",
+                    },
+                },
+            }
+        ),
+        yaml.safe_dump(
+            {
+                "contract_url": CONTRACTS_API_URL,
+                "log_level": "debug",
+            }
+        ),
+    ]
+
+    return mocker.patch(
+        "pathlib.Path.read_text",
+        side_effect=read_text_return_values,
+    )
+
+
+@pytest.fixture
+def mock_machinetoken_open_filenotfound(mocker):
+    read_text_return_values = [
+        FileNotFoundError,
+        yaml.safe_dump(
+            {
+                "contract_url": CONTRACTS_API_URL,
+                "log_level": "debug",
+            }
+        ),
+    ]
+
+    return mocker.patch(
+        "pathlib.Path.read_text",
+        side_effect=read_text_return_values,
+    )
+
+
+@pytest.fixture
+def mock_machinetoken_open_nopermission(mocker):
+    read_text_return_values = [
+        PermissionError,
+        yaml.safe_dump(
+            {
+                "contract_url": CONTRACTS_API_URL,
+                "log_level": "debug",
+            }
+        ),
+    ]
+
+    return mocker.patch(
+        "pathlib.Path.read_text",
+        side_effect=read_text_return_values,
+    )
+
+    read_text_return_values = [
+        PermissionError,
+        yaml.safe_dump(
+            {
+                "contract_url": CONTRACTS_API_URL,
+                "log_level": "debug",
+            }
+        ),
+    ]
+
+    return mocker.patch(
+        "pathlib.Path.read_text",
+        return_value=PermissionError,
+    )
+
+
+@pytest.fixture
+def mock_pro_config_open_filenotfound(mocker):
+    read_text_return_values = [
+        json.dumps(
+            {
+                "machineToken": MACHINE_TOKEN,
+                "machineTokenInfo": {
+                    "machineId": MACHINE_ID,
+                    "contractInfo": {
+                        "id": CONTRACT_ID,
+                    },
+                },
+            }
+        ),
+        FileNotFoundError,
+    ]
+
+    return mocker.patch(
+        "pathlib.Path.read_text",
+        side_effect=read_text_return_values,
+    )
+
+
+@pytest.fixture
+def mock_machinetoken_open_no_contracturl(mocker):
+    read_text_return_values = [
+        json.dumps(
+            {
+                "machineToken": MACHINE_TOKEN,
+                "machineTokenInfo": {
+                    "machineId": MACHINE_ID,
+                    "contractInfo": {
+                        "id": CONTRACT_ID,
+                    },
+                },
+            }
+        ),
+        yaml.safe_dump(
+            {
+                "log_level": "debug",
+            }
+        ),
+    ]
+
+    return mocker.patch(
+        "pathlib.Path.read_text",
+        side_effect=read_text_return_values,
+    )
+
+
+def test_retrieve_pro_host_info_success(mock_machinetoken_open_success):
+    output = pro.retrieve_pro_host_info()
+    assert output.machine_token == MACHINE_TOKEN
+    assert output.machine_id == MACHINE_ID
+    assert output.contract_id == CONTRACT_ID
+    assert output.contract_url == CONTRACTS_API_URL
+
+
+def test_retrieve_pro_host_info_no_machinetoken(mock_machinetoken_open_no_machinetoken):
+    """Test that an error is raised when the machine token is not present."""
+    with pytest.raises(MachineTokenError) as raised:
+        pro.retrieve_pro_host_info()
+    assert raised.value.brief == "No machineToken in machine token file."
+
+
+def test_retrieve_pro_host_info_no_machineid(mock_machinetoken_open_no_machineid):
+    """Test that an error is raised when the machine ID is not present."""
+    with pytest.raises(MachineTokenError) as raised:
+        pro.retrieve_pro_host_info()
+    assert raised.value.brief == "No machineId in machine token file."
+
+
+def test_retrieve_pro_host_info_no_contractid(mock_machinetoken_open_no_contractid):
+    """Test that an error is raised when the contract ID is not present."""
+    with pytest.raises(MachineTokenError) as raised:
+        pro.retrieve_pro_host_info()
+    assert raised.value.brief == "No contractID in machine token file."
+
+
+def test_retrieve_pro_host_info_no_contracturl(mock_machinetoken_open_no_contracturl):
+    """Test that an error is raised when the contract URL is not present."""
+    with pytest.raises(MachineTokenError) as raised:
+        pro.retrieve_pro_host_info()
+    assert raised.value.brief == "No contractURL in Pro client config."
+
+
+def test_retrieve_pro_host_info_filenotfound(mock_pro_config_open_filenotfound):
+    """Test that an error is raised when any Pro client configuration files are not found."""
+    with pytest.raises(MachineTokenError) as raised:
+        pro.retrieve_pro_host_info()
+    assert "Missing file on host: " in raised.value.brief
+
+
+def test_retrieve_pro_host_info_nopermission(mock_machinetoken_open_nopermission):
+    """Test that an error is raised when the Pro client configuration files cannot be
+    accessed due to permission issues."""
+    with pytest.raises(MachineTokenError) as raised:
+        pro.retrieve_pro_host_info()
+    assert "Invalid permissions to access file: " in raised.value.brief
+
+
+@pytest.fixture
+def mock_retrieve_pro_host_info(mocker):
+    """Mock retrieve_pro_host_info function."""
+    return mocker.patch.object(
+        pro,
+        "retrieve_pro_host_info",
+        return_value=pro.ProHostInfo(
+            MACHINE_TOKEN, MACHINE_ID, CONTRACT_ID, CONTRACTS_API_URL
+        ),
+    )
+
+
+@assert_requests
+def test_request_pro_guest_token_success(mock_retrieve_pro_host_info):
+    """Test that a guest token is successfully requested from the Pro API."""
+    responses.add(
+        responses.GET,
+        CONTRACTS_API_URL + _CONTRACTS_API_ENDPOINT,
+        json={"guestToken": GUEST_TOKEN},
+        status=200,
+    )
+    guest_token, contract_url = pro.request_pro_guest_token()
+    assert guest_token == GUEST_TOKEN
+    assert contract_url == CONTRACTS_API_URL
+
+
+@assert_requests
+def test_request_pro_guest_token_emptytoken(mock_retrieve_pro_host_info):
+    """Test that an error is raised when the API response does not contain a guest token."""
+    responses.add(
+        responses.GET,
+        CONTRACTS_API_URL + _CONTRACTS_API_ENDPOINT,
+        json={"guestToken": ""},
+        status=200,
+    )
+
+    with pytest.raises(GuestTokenError) as raised:
+        pro.request_pro_guest_token()
+    assert raised.value.brief == "API response does not contain a guest token."
+
+
+@assert_requests
+def test_request_pro_guest_token_http400(mock_retrieve_pro_host_info):
+    """Test that an error is raised when the API request fails with a 400 status code."""
+    responses.add(
+        responses.GET,
+        CONTRACTS_API_URL + _CONTRACTS_API_ENDPOINT,
+        status=400,
+    )
+
+    with pytest.raises(GuestTokenError) as raised:
+        pro.request_pro_guest_token()
+    assert (
+        raised.value.brief == "Request error when trying to retrieve the guest token."
+    )
+
+
+@assert_requests
+def test_request_pro_guest_token_jsonerror(mock_retrieve_pro_host_info):
+    """Test that an error is raised when the API response is not valid JSON."""
+    responses.add(
+        responses.GET,
+        CONTRACTS_API_URL + _CONTRACTS_API_ENDPOINT,
+        body="random",
+        status=200,
+    )
+
+    with pytest.raises(GuestTokenError) as raised:
+        pro.request_pro_guest_token()
+    assert raised.value.brief == "Error decoding JSON data when retrieving guest token."

@@ -1206,3 +1206,43 @@ def test_set_instance_name_invalid(mock_lxc):
         brief="failed to create an instance with name '-'.",
         details="name must contain at least one alphanumeric character",
     )
+
+
+def test_is_pro_enabled(mock_lxc, instance):
+    """Verify that is_pro_enabled calls the correct LXC method."""
+    instance.is_pro_enabled()
+
+    assert mock_lxc.mock_calls == [
+        mock.call.is_pro_enabled(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+        )
+    ]
+
+
+def test_enable_pro_service(mock_lxc, instance):
+    """Verify that enable_pro_service calls the correct LXC method."""
+    instance.enable_pro_service(["esm-apps"])
+
+    assert mock_lxc.mock_calls == [
+        mock.call.enable_pro_service(
+            instance_name=instance.instance_name,
+            services=["esm-apps"],
+            project=instance.project,
+            remote=instance.remote,
+        )
+    ]
+
+
+def test_install_pro_client(mock_lxc, instance):
+    """Verify that install_pro_client calls the correct LXC method."""
+    instance.install_pro_client()
+
+    assert mock_lxc.mock_calls == [
+        mock.call.install_pro_client(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+        )
+    ]

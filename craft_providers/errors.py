@@ -131,3 +131,11 @@ class NetworkError(ProviderError):
             f"see {url} for further reference."
         )
         super().__init__(brief=brief, resolution=resolution)
+
+
+class MachineTokenError(ProviderError):
+    """Exception occurring when machine-token.json isn't accessible."""
+
+
+class GuestTokenError(ProviderError):
+    """Exception occurring when guest token was not successfully obtained."""
