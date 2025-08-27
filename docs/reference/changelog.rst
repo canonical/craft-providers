@@ -4,6 +4,13 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+3.0.1 (2025-MM-DD)
+------------------
+
+Bug fixes:
+- Fix the permissions of the `/root` directory for non-root users to access project
+  directories.
+
 3.0.0 (2025-08-15)
 ------------------
 
