@@ -779,7 +779,7 @@ class LXDInstance(Executor):
         )
 
     @property
-    def pro_services(self) -> Optional[set[str]]:
+    def pro_services(self) -> set[str] | None:
         """Get the Pro services enabled on the instance."""
         # first check if the services are cached in memory
         if hasattr(self, "_pro_services"):
