@@ -8,7 +8,7 @@ included in each version.
 ------------------
 
 Bug fixes:
-- Fix the permissions of the `/root` directory for non-root users to access project
+- Fix the permissions of the ``/root`` directory for non-root users to access project
   directories.
 
 3.0.0 (2025-08-15)
