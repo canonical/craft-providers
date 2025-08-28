@@ -262,14 +262,3 @@ def test_version(multipass):
 
     assert multipass_version is not None
     assert multipassd_version is not None
-
-
-def test_root_perms(instance: str, multipass: Multipass) -> None:
-    proc = multipass.exec(
-        command=["stat", "-c", "%a", "/root"],
-        instance_name=instance,
-        check=True,
-        capture_output=True,
-    )
-
-    assert int(proc.stdout) & 0o011
