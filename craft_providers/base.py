@@ -985,7 +985,7 @@ class Base(ABC):
     def configure_root(self, executor: Executor) -> None:
         """Configure permissions on the root directory.
 
-        This step fixes an issue with service users, such as "_apt", end up unable to
+        This step fixes an issue where service users, such as "_apt", end up unable to
         make use of project cache directories because they live under a directory they
         cannot enter on the instance.
         """
