@@ -31,7 +31,7 @@ from craft_providers.errors import (
     ProviderError,
 )
 from craft_providers.instance_config import InstanceConfiguration
-from logassert import Exact  # type: ignore[import-untyped]
+from logassert import Exact
 
 
 @pytest.fixture
@@ -670,7 +670,7 @@ def test_inject_from_host_snapd_http_error_using_pack_fallback(
     tmpdir,
 ):
     mock_requests.get.return_value.raise_for_status.side_effect = (
-        requests.exceptions.HTTPError()  # type: ignore [reportGeneralTypeIssues]
+        requests.exceptions.HTTPError()
     )
     fake_process.register_subprocess(
         [

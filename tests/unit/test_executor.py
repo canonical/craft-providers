@@ -107,7 +107,7 @@ def test_temporarypull_temp_file_cleaned(
         raise ValueError("boom")
 
     # file is removed afterwards
-    assert not localfilepath.exists()  # pyright: ignore [reportUnboundVariable]
+    assert not localfilepath.exists()
 
 
 @pytest.mark.parametrize(

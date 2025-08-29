@@ -29,7 +29,7 @@ from craft_providers.errors import (
     NetworkError,
 )
 from craft_providers.instance_config import InstanceConfiguration
-from logassert import Exact  # type: ignore[import-untyped]
+from logassert import Exact
 
 from tests.unit.conftest import DEFAULT_FAKE_CMD
 

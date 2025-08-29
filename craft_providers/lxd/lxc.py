@@ -68,7 +68,7 @@ def load_yaml_flat(data: str) -> dict[str, Any]:
     """
     result = yaml.load(data, Loader=yaml.BaseLoader)  # noqa: S506, does not do any type coercion and thus is safe
     if isinstance(result, dict):
-        return result  # type: ignore[reportUnknownVariableType]
+        return cast(dict[str, Any], result)
 
     logger.debug(
         "Expected to receive a flat mapping of values from YAML deserialization, instead received:"
@@ -86,7 +86,7 @@ def load_yaml_list(data: str) -> list[dict[str, Any]]:
     """
     result = yaml.load(data, Loader=yaml.BaseLoader)  # noqa: S506
     if isinstance(result, list):
-        return result  # type: ignore[reportUnknownVariableType]
+        return cast(list[dict[str, Any]], result)
     logger.debug(
         "Expected to receive a list of values from YAML deserialization, instead received:"
     )

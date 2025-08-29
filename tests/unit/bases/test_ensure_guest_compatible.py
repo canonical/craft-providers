@@ -18,10 +18,10 @@ import contextlib
 import textwrap
 from unittest.mock import MagicMock, patch
 
-import craft_providers
 import pytest
 from craft_providers.bases import centos, ensure_guest_compatible, ubuntu
 from craft_providers.errors import ProviderError
+from craft_providers.util import os_release
 
 from tests.unit.conftest import DEFAULT_FAKE_CMD
 
@@ -60,9 +60,7 @@ def test_ensure_guest_compatible_non_ubuntu_host(
 
         yield Fake()
 
-    with (
-        patch.object(craft_providers.util.os_release.Path, "open", fake_open),  # type: ignore[reportAttributeAccessIssue]
-    ):
+    with patch.object(os_release.Path, "open", fake_open):
         ensure_guest_compatible(guest_base, fake_executor, "4.0")
 
     # The first thing that ensure_guest_compatible does is the base check.  The next
@@ -91,11 +89,13 @@ def test_ensure_guest_compatible_valid_ubuntu(
     # Set this up so we can be sure the guest get_os_release was called once
     real_get_os_release = guest_base.get_os_release
 
+    counter = 0
+
     def fake_get_os_release(*args, **kwargs):
-        fake_get_os_release.counter += 1  # type: ignore[reportFunctionMemberAccess]
+        nonlocal counter
+        counter += 1
         return real_get_os_release(*args, **kwargs)
 
-    fake_get_os_release.counter = 0  # type: ignore[reportFunctionMemberAccess]
     guest_base.get_os_release = fake_get_os_release
 
     lxd_version = "0.0.0"
@@ -131,11 +131,11 @@ def test_ensure_guest_compatible_valid_ubuntu(
     # pass on windows
     with (
         patch("platform.release", return_value="4.99"),
-        patch.object(craft_providers.util.os_release.Path, "open", fake_open),  # type: ignore[reportAttributeAccessIssue]
+        patch.object(os_release.Path, "open", fake_open),
     ):
         ensure_guest_compatible(guest_base, fake_executor, lxd_version)
 
-    assert fake_get_os_release.counter == 1  # type: ignore[reportFunctionMemberAccess]
+    assert counter == 1
 
 
 @pytest.mark.parametrize(
@@ -198,7 +198,7 @@ def test_ensure_guest_compatible_bad_kernel_versions(
 
     with (
         patch("platform.release", return_value=kernel_version),
-        patch.object(craft_providers.util.os_release.Path, "open", fake_open),  # type: ignore[reportAttributeAccessIssue]
+        patch.object(os_release.Path, "open", fake_open),
         pytest.raises(ProviderError) as e,
     ):
         ensure_guest_compatible(guest_base, fake_executor, lxd_version)
