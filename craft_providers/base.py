@@ -982,7 +982,7 @@ class Base(ABC):
         """
         self._update_setup_status(executor=executor, status=True)
 
-    def configure_root(self, executor: Executor) -> None:
+    def setup_permissions(self, executor: Executor) -> None:
         """Configure permissions on the root directory.
 
         This step fixes an issue where service users, such as "_apt", end up unable to
@@ -1044,7 +1044,7 @@ class Base(ABC):
 
         self._setup_wait_for_system_ready(executor=executor)
 
-        self.configure_root(executor=executor)
+        self.setup_permissions(executor=executor)
 
         self._pre_setup_network(executor=executor)
         self._setup_network(executor=executor)
@@ -1109,6 +1109,7 @@ class Base(ABC):
 
         self._setup_wait_for_system_ready(executor=executor)
         self._setup_wait_for_network(executor=executor)
+        self.setup_permissions(executor=executor)
 
         self._warmup_snapd(executor=executor)
 

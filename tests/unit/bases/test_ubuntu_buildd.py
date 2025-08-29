@@ -1343,6 +1343,7 @@ def test_warmup_overall(
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "is-system-running"], stdout="degraded"
     )
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "chmod", "go+x", "/root"])
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "getent", "hosts", "snapcraft.io"]
     )
