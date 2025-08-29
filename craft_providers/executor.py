@@ -17,21 +17,28 @@
 
 """Executor module."""
 
+from __future__ import annotations
+
 import contextlib
 import hashlib
-import io
 import logging
-import pathlib
 import re
-import subprocess
 from abc import ABC, abstractmethod
-from collections.abc import Generator
-from typing import Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import craft_providers.util.temp_paths
-from craft_providers.errors import ProviderError
+
+if TYPE_CHECKING:
+    import io
+    import pathlib
+    import subprocess
+    from collections.abc import Generator
+
+    from craft_providers.errors import ProviderError
 
 logger = logging.getLogger(__name__)
+
+MAX_INSTANCE_NAME_LENGTH = 63
 
 
 class Executor(ABC):
@@ -45,8 +52,8 @@ class Executor(ABC):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        **kwargs,  # noqa: ANN003
-    ) -> subprocess.Popen:
+        **kwargs: Any,
+    ) -> subprocess.Popen[str]:
         """Execute a command in instance, using subprocess.Popen().
 
         The process' environment will inherit the execution environment's
@@ -70,9 +77,8 @@ class Executor(ABC):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        check: bool = False,
-        **kwargs,  # noqa: ANN003
-    ) -> subprocess.CompletedProcess:
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]:
         """Execute a command using subprocess.run().
 
         The process' environment will inherit the execution environment's
@@ -246,7 +252,7 @@ def get_instance_name(name: str, error_class: type[ProviderError]) -> str:
     valid_name = trimmed_name.group("valid_name")
 
     # if the original name satisfies the naming convention, then use the original name
-    if name == valid_name and len(name) <= 63:  # noqa: PLR2004
+    if name == valid_name and len(name) <= MAX_INSTANCE_NAME_LENGTH:
         instance_name = name
 
     # else, continue converting the name
@@ -254,7 +260,7 @@ def get_instance_name(name: str, error_class: type[ProviderError]) -> str:
         # truncate to 40 characters
         truncated_name = valid_name[:40]
         # hash the entire name, not the truncated name
-        hashed_name = hashlib.sha1(name.encode()).hexdigest()[:20]  # noqa: S324
+        hashed_name = hashlib.sha1(name.encode()).hexdigest()[:20]  # noqa: S324, security of this does not matter
         instance_name = f"{truncated_name}-{hashed_name}"
 
     logger.debug("Converted name %r to instance name %r", name, instance_name)

@@ -17,6 +17,7 @@
 
 """Collection of bases used to configure build environments."""
 
+from enum import Enum
 import sys
 from typing import Literal, NamedTuple, overload
 
@@ -84,7 +85,7 @@ def get_base_alias(
 ) -> almalinux.AlmaLinuxBaseAlias: ...
 @overload
 def get_base_alias(base_name: BaseName) -> BaseAlias: ...
-def get_base_alias(base_name):
+def get_base_alias(base_name: tuple[str, str]) -> BaseAlias:
     """Return a Base alias from a base (name, version) tuple."""
     base_name = BaseName(*base_name)
     if base_name.name == "ubuntu" and base_name in BASE_NAME_TO_BASE_ALIAS:
@@ -106,15 +107,14 @@ def get_base_from_alias(alias: centos.CentOSBaseAlias) -> type[centos.CentOSBase
 def get_base_from_alias(
     alias: almalinux.AlmaLinuxBaseAlias,
 ) -> type[almalinux.AlmaLinuxBase]: ...
-def get_base_from_alias(alias: BaseAlias) -> type[Base]:
+def get_base_from_alias(alias: BaseAlias) -> type[Base[Enum]]:
     """Return a Base class from a known base alias."""
-    if isinstance(alias, ubuntu.BuilddBaseAlias):
-        return ubuntu.BuilddBase
-
-    if isinstance(alias, centos.CentOSBaseAlias):
-        return centos.CentOSBase
-
-    if isinstance(alias, almalinux.AlmaLinuxBaseAlias):
-        return almalinux.AlmaLinuxBase
-
-    raise BaseConfigurationError(f"Base not found for alias {alias}")
+    match alias:
+        case ubuntu.BuilddBaseAlias():
+            return ubuntu.BuilddBase
+        case centos.CentOSBaseAlias():
+            return centos.CentOSBase
+        case almalinux.AlmaLinuxBaseAlias():
+            return almalinux.AlmaLinuxBase
+        case _:
+            raise BaseConfigurationError(f"Base not found for alias {alias}")

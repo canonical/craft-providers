@@ -78,12 +78,11 @@ def test_smoketest(instance_name, base_alias, home_tmp_path, image_name):
         proc = instance.execute_run(
             command=["cat", str(destination)], capture_output=True
         )
-        assert proc.stdout.decode() == "this is a test"
+        assert proc.stdout == "this is a test"
 
         proc = instance.execute_run(
             command=["stat", "--format", "%a:%U:%G", str(destination)],
             capture_output=True,
-            text=True,
         )
         assert proc.stdout.strip() == "755:ubuntu:ubuntu"
 

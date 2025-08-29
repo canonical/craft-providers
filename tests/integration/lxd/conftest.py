@@ -83,8 +83,11 @@ def tmp_instance(
     image_remote: str = "ubuntu",
     project: str,
     remote: str = "local",
-    lxc: LXC = LXC(),  # noqa: B008
+    lxc: LXC | None = None,
 ):
+    if lxc is None:
+        lxc = LXC()
+
     if config_keys is None:
         config_keys = {}
 
@@ -115,7 +118,6 @@ def tmp_instance(
             remote=remote,
             capture_output=True,
             check=False,
-            text=True,
         )
 
         running_state = proc.stdout.strip()
