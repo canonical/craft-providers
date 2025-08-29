@@ -14,6 +14,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 """Integration tests to test the shutdown/relaunch workflow."""
 
+import io
 import pathlib
 import time
 
@@ -30,11 +31,11 @@ from craft_providers.multipass.multipass_provider import MultipassProvider
 @pytest.mark.parametrize(
     "base_alias",
     [
+        *bases.almalinux.AlmaLinuxBaseAlias,
         bases.BuilddBaseAlias.NOBLE,
         # https://github.com/canonical/craft-providers/issues/765
-        # We should enable all of these for weekly tests instead of just Noble.
+        # We should enable all of these for weekly tests.
         # *bases.ubuntu.BuilddBaseAlias,
-        # *bases.almalinux.AlmaLinuxBaseAlias,
     ],
 )
 def test_relaunch(
@@ -73,6 +74,18 @@ def test_relaunch(
         ) as instance:
             instance.execute_run(["touch", "/tmp/session-file"], check=True)
             instance.execute_run(["touch", "/root/permanent-file"], check=True)
+
+            # Alma Linux only clears tmp files after 10 days by default.
+            # This configures systemd-tmpfiles to clear them on every boot.
+            if isinstance(base_alias, AlmaLinuxBaseAlias):
+                content = io.BytesIO(b"r! /tmp/* 1777 root root 0")
+                instance.push_file_io(
+                    destination=pathlib.PurePosixPath(
+                        "/etc/tmpfiles.d/craft-tempfiles.conf"
+                    ),
+                    content=content,
+                    file_mode="644",
+                )
 
         assert instance.is_running()
 
