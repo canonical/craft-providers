@@ -40,8 +40,10 @@ def test_lxc_run_default(mocker, tmp_path):
     mock_run.assert_called_once_with(
         ["lxc", "test-command"],
         check=True,
-        text=True,
+        encoding=None,
+        errors=None,
         stdin=subprocess.DEVNULL,
+        text=None,
     )
 
 
@@ -55,8 +57,10 @@ def test_lxc_run_with_check(check, mocker, tmp_path):
     mock_run.assert_called_once_with(
         ["lxc", "--project", "test-project", "test-command"],
         check=check,
-        text=True,
+        encoding=None,
+        errors=None,
         stdin=subprocess.DEVNULL,
+        text=None,
     )
 
 
@@ -69,8 +73,10 @@ def test_lxc_run_with_project(mocker, tmp_path):
     mock_run.assert_called_once_with(
         ["lxc", "--project", "test-project", "test-command"],
         check=True,
-        text=True,
+        encoding=None,
+        errors=None,
         stdin=subprocess.DEVNULL,
+        text=None,
     )
 
 
@@ -85,7 +91,9 @@ def test_lxc_run_with_stdin(mocker, tmp_path):
     mock_run.assert_called_once_with(
         ["lxc", "--project", "test-project", "test-command"],
         check=True,
-        text=True,
+        encoding=None,
+        errors=None,
+        text=None,
         stdin=None,
     )
 
@@ -105,7 +113,9 @@ def test_lxc_run_with_input(mocker, tmp_path):
         ["lxc", "--project", "test-project", "test-command"],
         check=True,
         input="test-input",
-        text=True,
+        encoding=None,
+        errors=None,
+        text=None,
     )
 
 
@@ -124,7 +134,9 @@ def test_lxc_run_with_input_and_stdin(mocker, tmp_path):
         ["lxc", "--project", "test-project", "test-command"],
         check=True,
         input="test-input",
-        text=True,
+        text=None,
+        errors=None,
+        encoding=None,
     )
 
 
@@ -2316,7 +2328,7 @@ def test_remote_list_parse_error(fake_process):
             "list",
             "--format=yaml",
         ],
-        stdout=b"fail:\nthis",
+        stdout="fail:\nthis",
     )
 
     with pytest.raises(LXDError) as exc_info:

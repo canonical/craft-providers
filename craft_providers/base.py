@@ -30,7 +30,7 @@ import sys
 from abc import ABC, abstractmethod
 from enum import Enum
 from textwrap import dedent
-from typing import TYPE_CHECKING, Generic, TypeVar, final
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, final, overload
 
 from pydantic import ValidationError
 
@@ -251,6 +251,9 @@ class Base(ABC, Generic[_T_enum_co]):
                     command=["cat", OS_RELEASE_FILE.as_posix()],
                     capture_output=True,
                     check=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
                     timeout=timeout,
                 )
             except subprocess.CalledProcessError as error:
@@ -337,12 +340,13 @@ class Base(ABC, Generic[_T_enum_co]):
                 executor=executor,
                 capture_output=True,
                 check=False,
+                text=True,
                 timeout=timeout,
             )
             system_state = proc.stdout.strip()
             if system_state not in ("running", "degraded"):
                 logger.debug("systemctl is-system-running status: %s", system_state)
-                raise ValueError
+                raise ValueError(system_state)
 
         error = BaseConfigurationError(
             brief="Timed out waiting for environment to be ready."
@@ -473,6 +477,7 @@ class Base(ABC, Generic[_T_enum_co]):
                 executor=executor,
                 capture_output=True,
                 check=False,
+                text=True,
                 timeout=self._timeout_simple,
             )
 
@@ -828,6 +833,7 @@ class Base(ABC, Generic[_T_enum_co]):
         guest_cache_proc = executor.execute_run(
             ["bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
             capture_output=True,
+            text=True,
         )
         guest_base_cache_path = pathlib.Path(guest_cache_proc.stdout)
 
@@ -1131,6 +1137,7 @@ class Base(ABC, Generic[_T_enum_co]):
             return False
         return proc.returncode == 0
 
+    @overload
     @classmethod
     def _execute_run(
         cls,
@@ -1139,9 +1146,35 @@ class Base(ABC, Generic[_T_enum_co]):
         executor: Executor,
         check: bool = True,
         capture_output: bool = True,
+        text: Literal[False] = False,
         timeout: float | None = None,
         verify_network: bool = False,
-    ) -> subprocess.CompletedProcess[str]:
+    ) -> subprocess.CompletedProcess[bytes]: ...
+    @overload
+    @classmethod
+    def _execute_run(
+        cls,
+        command: list[str],
+        *,
+        executor: Executor,
+        check: bool = True,
+        capture_output: bool = True,
+        text: Literal[True],
+        timeout: float | None = None,
+        verify_network: bool = False,
+    ) -> subprocess.CompletedProcess[str]: ...
+    @classmethod
+    def _execute_run(
+        cls,
+        command: list[str],
+        *,
+        executor: Executor,
+        check: bool = True,
+        capture_output: bool = True,
+        text: bool = False,
+        timeout: float | None = None,
+        verify_network: bool = False,
+    ) -> subprocess.CompletedProcess[Any]:
         """Run a command through the executor.
 
         This is a helper to simplify most common calls and provide extra network
@@ -1162,6 +1195,7 @@ class Base(ABC, Generic[_T_enum_co]):
                 command,
                 check=check,
                 capture_output=capture_output,
+                text=text,
                 timeout=timeout,
             )
         except subprocess.CalledProcessError as exc:

@@ -30,7 +30,7 @@ import threading
 import time
 from collections import deque
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import yaml
 
@@ -105,6 +105,9 @@ class LXC:
         self.lxc_path = lxc_path
         self.lxc_lock = threading.Lock()
 
+    # Overloads are based on overloads on typeshed
+    # https://github.com/python/typeshed/blob/main/stdlib/subprocess.pyi#L89
+    @overload
     def _run_lxc(
         self,
         command: list[str],
@@ -112,8 +115,62 @@ class LXC:
         check: bool = True,
         project: str | None = None,
         stdin: StdinType = StdinType.INTERACTIVE,
+        text: Literal[False, None] = None,
+        encoding: None = None,
+        errors: None = None,
         **kwargs: Any,
-    ) -> subprocess.CompletedProcess[str]:
+    ) -> subprocess.CompletedProcess[bytes]: ...
+    @overload
+    def _run_lxc(
+        self,
+        command: list[str],
+        *,
+        check: bool = True,
+        project: str | None = None,
+        stdin: StdinType = StdinType.INTERACTIVE,
+        text: Literal[True],
+        encoding: str | None = None,
+        errors: str | None = None,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]: ...
+    @overload
+    def _run_lxc(
+        self,
+        command: list[str],
+        *,
+        check: bool = True,
+        project: str | None = None,
+        stdin: StdinType = StdinType.INTERACTIVE,
+        text: bool | None = None,
+        encoding: str,
+        errors: str | None = None,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]: ...
+    @overload
+    def _run_lxc(
+        self,
+        command: list[str],
+        *,
+        check: bool = True,
+        project: str | None = None,
+        stdin: StdinType = StdinType.INTERACTIVE,
+        text: bool | None = None,
+        encoding: str | None = None,
+        errors: str,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]: ...
+    def _run_lxc(
+        self,
+        command: list[str],
+        *,
+        check: bool = True,
+        project: str | None = None,
+        stdin: StdinType = StdinType.INTERACTIVE,
+        text: bool | None = None,
+        encoding: str | None = None,
+        errors: str | None = None,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[Any]:
         """Execute lxc command on host, allowing output to console.
 
         Handles the --project=project options if project is specified.
@@ -140,14 +197,18 @@ class LXC:
                 return subprocess.run(
                     lxc_cmd,
                     check=check,
-                    text=True,
+                    text=text,
+                    encoding=encoding,
+                    errors=errors,
                     **kwargs,
                 )
 
             return subprocess.run(
                 lxc_cmd,
                 check=check,
-                text=True,
+                text=text,
+                encoding=encoding,
+                errors=errors,
                 stdin=stdin.value,
                 **kwargs,
             )
@@ -240,7 +301,7 @@ class LXC:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-        return load_yaml_flat(proc.stdout)
+        return load_yaml_flat(proc.stdout.decode())
 
     def config_get(
         self,
@@ -270,7 +331,7 @@ class LXC:
 
         try:
             return self._run_lxc(
-                command, capture_output=True, check=True, project=project
+                command, project=project, check=True, text=True, capture_output=True
             ).stdout.rstrip()
         except subprocess.CalledProcessError as error:
             raise LXDError(
@@ -464,9 +525,9 @@ class LXC:
         logger.debug("Executing in container: %s", shlex.join(final_cmd))
 
         if runner is subprocess.run:
-            return runner(final_cmd, timeout=timeout, check=check, text=True, **kwargs)
+            return runner(final_cmd, timeout=timeout, check=check, **kwargs)
 
-        return runner(final_cmd, text=True, **kwargs)
+        return runner(final_cmd, **kwargs)
 
     def file_pull(
         self,
@@ -620,7 +681,9 @@ class LXC:
         command = ["info", remote + ":" + instance_name]
 
         try:
-            proc = self._run_lxc(command, capture_output=True, project=project)
+            proc = self._run_lxc(
+                command, capture_output=True, text=True, project=project
+            )
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to get info for remote {remote!r}.",
@@ -813,7 +876,9 @@ class LXC:
         command = ["image", "list", f"{remote}:", "--format=yaml"]
 
         try:
-            proc = self._run_lxc(command, capture_output=True, project=project)
+            proc = self._run_lxc(
+                command, capture_output=True, text=True, project=project
+            )
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to list images for project {project!r}.",
@@ -849,7 +914,9 @@ class LXC:
         command = ["list", f"{remote}:", "--format=yaml"]
 
         try:
-            proc = self._run_lxc(command, capture_output=True, project=project)
+            proc = self._run_lxc(
+                command, capture_output=True, text=True, project=project
+            )
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to list instances for project {project!r}.",
@@ -941,7 +1008,7 @@ class LXC:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-        return load_yaml_flat(proc.stdout)
+        return load_yaml_flat(proc.stdout.decode())
 
     def project_create(self, *, project: str, remote: str = "local") -> None:
         """Create project.
@@ -1000,7 +1067,7 @@ class LXC:
         command = ["project", "list", f"{remote}:", "--format=yaml"]
 
         try:
-            proc = self._run_lxc(command, capture_output=True)
+            proc = self._run_lxc(command, capture_output=True, text=True)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to list projects on remote {remote!r}.",
@@ -1085,7 +1152,7 @@ class LXC:
         command = ["remote", "list", "--format=yaml"]
 
         try:
-            proc = self._run_lxc(command, capture_output=True)
+            proc = self._run_lxc(command, capture_output=True, text=True)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief="Failed to list remotes.",

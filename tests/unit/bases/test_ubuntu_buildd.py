@@ -1549,7 +1549,9 @@ def test_execute_run_default(fake_executor):
     with patch.object(fake_executor, "execute_run") as mock:
         base_config._execute_run(command, executor=fake_executor)
 
-    mock.assert_called_with(command, check=True, capture_output=True, timeout=None)
+    mock.assert_called_with(
+        command, check=True, capture_output=True, text=False, timeout=None
+    )
 
 
 def test_execute_run_options_for_run(fake_executor):
@@ -1565,7 +1567,9 @@ def test_execute_run_options_for_run(fake_executor):
             timeout=None,
         )
 
-    mock.assert_called_with(command, check=False, capture_output=False, timeout=None)
+    mock.assert_called_with(
+        command, check=False, capture_output=False, text=False, timeout=None
+    )
 
 
 def test_execute_run_command_failed_no_verify_network(fake_process, fake_executor):

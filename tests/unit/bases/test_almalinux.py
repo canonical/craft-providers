@@ -33,6 +33,8 @@ from logassert import Exact
 
 from tests.unit.conftest import DEFAULT_FAKE_CMD
 
+pytestmark = [pytest.mark.usefixtures("fake_process")]
+
 
 @pytest.fixture
 def mock_load(mocker):
@@ -347,7 +349,9 @@ def test_setup(
         [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.https"]
     )
 
-    base_config.setup(executor=fake_executor)
+    base_config._timeout_simple = 0.01
+    base_config._timeout_complex = 0.01
+    base_config.setup(executor=fake_executor, timeout=0.01)
 
     expected_push_file_io = [
         {
@@ -890,6 +894,7 @@ def test_wait_for_system_ready(
     fake_executor, fake_process, alias, system_running_ready_stdout
 ):
     base_config = almalinux.AlmaLinuxBase(alias=alias)
+    base_config._timeout_simple = 1.0
     base_config._retry_wait = 0.01
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "is-system-running"],
@@ -1439,7 +1444,9 @@ def test_execute_run_default(fake_executor):
     with patch.object(fake_executor, "execute_run") as mock:
         base_config._execute_run(command, executor=fake_executor)
 
-    mock.assert_called_with(command, check=True, capture_output=True, timeout=None)
+    mock.assert_called_with(
+        command, check=True, capture_output=True, text=False, timeout=None
+    )
 
 
 def test_execute_run_options_for_run(fake_executor):
@@ -1455,7 +1462,9 @@ def test_execute_run_options_for_run(fake_executor):
             timeout=None,
         )
 
-    mock.assert_called_with(command, check=False, capture_output=False, timeout=None)
+    mock.assert_called_with(
+        command, check=False, capture_output=False, text=False, timeout=None
+    )
 
 
 def test_execute_run_command_failed_no_verify_network(fake_process, fake_executor):

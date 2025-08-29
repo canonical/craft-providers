@@ -149,7 +149,7 @@ def _get_target_snap_revision_from_snapd(
     cmd = ["curl", "--silent", "--unix-socket", "/run/snapd.socket", url]
     try:
         proc = executor.execute_run(
-            cmd, check=True, capture_output=True, timeout=TIMEOUT_SIMPLE
+            cmd, check=True, capture_output=True, text=True, timeout=TIMEOUT_SIMPLE
         )
     except subprocess.CalledProcessError as error:
         raise SnapInstallationError(
