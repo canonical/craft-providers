@@ -22,6 +22,7 @@ from __future__ import annotations
 import logging
 import pathlib
 import subprocess
+from typing import cast
 
 import packaging.version
 import pylxd  # type: ignore[import-untyped]
@@ -118,7 +119,7 @@ class LXD:
             return self._version_cmd()
 
         try:
-            return client.host_info["environment"]["server_version"]
+            return cast(str, client.host_info["environment"]["server_version"])  # pyright: ignore[reportUnknownMemberType]
         except KeyError:
             logger.warning(
                 "LXD API returned invalid structure. Falling back to command."

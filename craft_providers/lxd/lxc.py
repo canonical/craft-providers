@@ -30,7 +30,7 @@ import threading
 import time
 from collections import deque
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, cast, overload
 
 import yaml
 
@@ -1295,4 +1295,4 @@ class LXC:
                 details="'environment.server_version' field missing from LXD info.",
                 resolution="Ensure you have a new enough version of lxd installed.",
             )
-        return version
+        return cast(str, version)
