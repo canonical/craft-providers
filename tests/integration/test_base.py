@@ -12,9 +12,13 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import stat
+from pathlib import Path
+
 import pytest
 from craft_providers import errors, lxd
 from craft_providers.bases import ubuntu
+from craft_providers.provider import Provider
 
 
 @pytest.mark.slow
@@ -43,3 +47,20 @@ def test_ubuntu_eol_sources(installed_lxd, instance_name, session_lxd_project, m
 
     finally:
         instance.delete(force=True)
+
+
+@pytest.mark.slow
+def test_root_perms(session_provider: Provider, tmp_path: Path) -> None:
+    with session_provider.launched_environment(
+        project_name="test",
+        instance_name="test-instance",
+        project_path=tmp_path,
+        base_configuration=ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.NOBLE),
+    ) as prov:
+        proc = prov.execute_run(
+            command=["stat", "-c", "%a", "/root"],
+            capture_output=True,
+        )
+
+    expected_perms = stat.S_IXGRP | stat.S_IXOTH
+    assert int(proc.stdout, base=8) & expected_perms == expected_perms
