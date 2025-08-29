@@ -361,3 +361,7 @@ classmethod-decorators = ["pydantic.validator", "pydantic.root_validator"]
     "I001", # isort leaves init files alone by default, this makes ruff ignore them too.
     "F401", # Allows unused imports in __init__ files.
 ]
+
+"craft_providers/base.py" = [
+    "ARG002",  # This file has a lot of no-op default implementations where the child may need the arg.
+]

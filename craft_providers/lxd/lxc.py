@@ -1208,7 +1208,7 @@ class LXC:
         """
         instance_status: str | None = None
         instance_info: dict[str, Any] = {"Status": ""}
-        start_time = time.time()
+        start_time = time.monotonic()
 
         # 20 * 3 seconds = 1 minute no change in timer
         timer_queue: deque[str] = deque(["-2", "-1"], maxlen=20)
@@ -1243,7 +1243,7 @@ class LXC:
             except LXDError:
                 # Keep retrying since the instance might not be ready yet
                 # Max retry time is 10 minutes
-                if time.time() - start_time > 600:  # noqa: PLR2004, this is ten minutes
+                if time.monotonic() - 600 > start_time:
                     logger.debug("Instance %s max waiting time reached.", instance_name)
                     raise
                 time.sleep(3)

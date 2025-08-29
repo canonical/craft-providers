@@ -38,6 +38,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+MAX_INSTANCE_NAME_LENGTH = 63
+
 
 class Executor(ABC):
     """Interfaces to execute commands and move data in/out of an environment."""
@@ -250,7 +252,7 @@ def get_instance_name(name: str, error_class: type[ProviderError]) -> str:
     valid_name = trimmed_name.group("valid_name")
 
     # if the original name satisfies the naming convention, then use the original name
-    if name == valid_name and len(name) <= 63:  # noqa: PLR2004
+    if name == valid_name and len(name) <= MAX_INSTANCE_NAME_LENGTH:
         instance_name = name
 
     # else, continue converting the name

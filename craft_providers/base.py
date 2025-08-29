@@ -715,7 +715,7 @@ class Base(ABC, Generic[_T_enum_co]):
         self._setup_wait_for_system_ready(executor=executor)
         self._setup_wait_for_network(executor=executor)
 
-    def _pre_image_check(self, executor: Executor) -> None:  # noqa: ARG002
+    def _pre_image_check(self, executor: Executor) -> None:
         """Start the setup process and update the status.
 
         This step usually does not need to be overridden.
@@ -730,14 +730,14 @@ class Base(ABC, Generic[_T_enum_co]):
         self._ensure_os_compatible(executor=executor)
         self._ensure_instance_config_compatible(executor=executor)
 
-    def _post_image_check(self, executor: Executor) -> None:  # noqa: ARG002
+    def _post_image_check(self, executor: Executor) -> None:
         """Do anything extra image checking.
 
         This step should be overridden when needed.
         """
         return
 
-    def _pre_setup_os(self, executor: Executor) -> None:  # noqa: ARG002
+    def _pre_setup_os(self, executor: Executor) -> None:
         """Do anything before setting up the OS.
 
         e.g.
@@ -755,7 +755,7 @@ class Base(ABC, Generic[_T_enum_co]):
         """
         self._setup_environment(executor=executor)
 
-    def _post_setup_os(self, executor: Executor) -> None:  # noqa: ARG002
+    def _post_setup_os(self, executor: Executor) -> None:
         """Do anything after setting up the OS.
 
         e.g.
@@ -765,7 +765,7 @@ class Base(ABC, Generic[_T_enum_co]):
         """
         return
 
-    def _pre_setup_network(self, executor: Executor) -> None:  # noqa: ARG002
+    def _pre_setup_network(self, executor: Executor) -> None:
         """Do anything before setting up the basic network.
 
         e.g.
@@ -788,7 +788,7 @@ class Base(ABC, Generic[_T_enum_co]):
         """
         self.setup_hostname(executor=executor)
 
-    def _post_setup_network(self, executor: Executor) -> None:  # noqa: ARG002
+    def _post_setup_network(self, executor: Executor) -> None:
         """Do anything after setting up the basic network.
 
         e.g.
@@ -848,7 +848,7 @@ class Base(ABC, Generic[_T_enum_co]):
             )
             logger.debug(exc)
 
-    def _pre_setup_packages(self, executor: Executor) -> None:  # noqa: ARG002
+    def _pre_setup_packages(self, executor: Executor) -> None:
         """Do anything before setting up the packages.
 
         e.g.
@@ -865,7 +865,7 @@ class Base(ABC, Generic[_T_enum_co]):
         This step must be overridden.
         """
 
-    def _post_setup_packages(self, executor: Executor) -> None:  # noqa: ARG002
+    def _post_setup_packages(self, executor: Executor) -> None:
         """Configure the new installed packages.
 
         This step should be overridden when needed.
@@ -907,7 +907,7 @@ class Base(ABC, Generic[_T_enum_co]):
         """
         self._setup_snapd_proxy(executor=executor)
 
-    def _pre_setup_snaps(self, executor: Executor) -> None:  # noqa: ARG002
+    def _pre_setup_snaps(self, executor: Executor) -> None:
         """Do anything before setting up the snaps.
 
         e.g.
@@ -927,14 +927,14 @@ class Base(ABC, Generic[_T_enum_co]):
         """
         self._install_snaps(executor=executor)
 
-    def _post_setup_snaps(self, executor: Executor) -> None:  # noqa: ARG002
+    def _post_setup_snaps(self, executor: Executor) -> None:
         """Configure the new installed snaps.
 
         This step should be overridden when needed.
         """
         return
 
-    def _pre_clean_up(self, executor: Executor) -> None:  # noqa: ARG002
+    def _pre_clean_up(self, executor: Executor) -> None:
         """Do anything before cleaning up.
 
         e.g.
@@ -944,7 +944,7 @@ class Base(ABC, Generic[_T_enum_co]):
         """
         return
 
-    def _clean_up(self, executor: Executor) -> None:  # noqa: ARG002
+    def _clean_up(self, executor: Executor) -> None:
         """Cleanup the OS environment.
 
         e.g.
@@ -955,7 +955,7 @@ class Base(ABC, Generic[_T_enum_co]):
         """
         return
 
-    def _post_clean_up(self, executor: Executor) -> None:  # noqa: ARG002
+    def _post_clean_up(self, executor: Executor) -> None:
         """Do anything needed after cleaning up.
 
         e.g.
@@ -966,7 +966,7 @@ class Base(ABC, Generic[_T_enum_co]):
         """
         return
 
-    def _pre_finish(self, executor: Executor) -> None:  # noqa: ARG002
+    def _pre_finish(self, executor: Executor) -> None:
         """Do anything needed before finishing the setup process.
 
         e.g.

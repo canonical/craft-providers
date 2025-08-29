@@ -1330,8 +1330,8 @@ def test_check_instance_status_wait(fake_process, mocker):
 
 
 def test_check_instance_status_lxd_error(fake_process, mocker):
-    time_time = mocker.patch("time.time")
-    time_time.side_effect = [0, 1000, 2000]
+    time_monotonic = mocker.patch("time.monotonic")
+    time_monotonic.side_effect = [0, 1000, 2000]
     mocker.patch("time.sleep")
 
     fake_process.register_subprocess(
