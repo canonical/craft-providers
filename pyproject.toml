@@ -36,7 +36,7 @@ dev = [
     "pytest-rerunfailures==14.0",
     "pytest-subprocess==1.5.2",
     "pytest-xdist==3.6.1",
-    "pytest-time==0.3.2",
+    "pytest-time==0.4.1",
     "responses==0.25.3",
     "types-requests==2.32.0.20241016",
     "types-setuptools==75.2.0.20241019",
