@@ -82,6 +82,7 @@ def test_push_file_io(reusable_instance, content, mode, user, group):
         proc = reusable_instance.execute_run(
             command=["cat", "/tmp/file-test.txt"],
             capture_output=True,
+            text=True,
         )
 
         assert proc.stdout == content
@@ -89,6 +90,7 @@ def test_push_file_io(reusable_instance, content, mode, user, group):
         proc = reusable_instance.execute_run(
             command=["stat", "--format", "%a:%U:%G", "/tmp/file-test.txt"],
             capture_output=True,
+            text=True,
         )
 
         assert proc.stdout.strip() == f"{mode}:{user}:{group}"
@@ -96,6 +98,7 @@ def test_push_file_io(reusable_instance, content, mode, user, group):
         reusable_instance.execute_run(
             command=["rm", "-f", "/tmp/file-test.txt"],
             capture_output=True,
+            text=True,
         )
 
 
@@ -132,6 +135,7 @@ def test_execute_run(reusable_instance):
     proc = reusable_instance.execute_run(
         command=["pwd"],
         capture_output=True,
+        text=True,
     )
 
     assert proc.stdout.strip() == "/root"
@@ -142,6 +146,7 @@ def test_execute_run_cwd(reusable_instance):
         command=["pwd"],
         cwd=pathlib.PurePosixPath("/"),
         capture_output=True,
+        text=True,
     )
 
     assert proc.stdout.strip() == "/"
@@ -219,6 +224,7 @@ def test_mount_unmount(reusable_instance, tmp_path):
     proc = reusable_instance.execute_run(
         command=["cat", "/tmp/mnt/test.txt"],
         capture_output=True,
+        text=True,
     )
 
     assert proc.stdout == test_file.read_bytes()
