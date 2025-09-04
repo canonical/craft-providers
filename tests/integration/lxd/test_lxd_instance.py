@@ -82,7 +82,6 @@ def test_push_file_io(reusable_instance, content, mode, user, group):
         proc = reusable_instance.execute_run(
             command=["cat", "/tmp/file-test.txt"],
             capture_output=True,
-            text=True,
         )
 
         assert proc.stdout == content
@@ -98,7 +97,10 @@ def test_push_file_io(reusable_instance, content, mode, user, group):
         reusable_instance.execute_run(
             command=["rm", "-f", "/tmp/file-test.txt"],
             capture_output=True,
-            text=True,
+        )
+        reusable_instance.execute_run(
+            command=["test", "!", "-e", "/tmp/file-test.txt"],
+            capture_output=True,
         )
 
 
@@ -114,6 +116,7 @@ def test_execute_popen(reusable_instance):
     with reusable_instance.execute_popen(
         command=["pwd"],
         stdout=subprocess.PIPE,
+        text=True,
     ) as proc:
         stdout, _ = proc.communicate()
 
@@ -125,6 +128,7 @@ def test_execute_popen_cwd(reusable_instance):
         command=["pwd"],
         cwd=pathlib.PurePosixPath("/tmp"),
         stdout=subprocess.PIPE,
+        text=True,
     ) as proc:
         stdout, _ = proc.communicate()
 
@@ -224,7 +228,6 @@ def test_mount_unmount(reusable_instance, tmp_path):
     proc = reusable_instance.execute_run(
         command=["cat", "/tmp/mnt/test.txt"],
         capture_output=True,
-        text=True,
     )
 
     assert proc.stdout == test_file.read_bytes()
