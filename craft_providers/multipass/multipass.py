@@ -61,7 +61,7 @@ class Multipass:
 
     def _run(
         self, command: list[str], **kwargs: Any
-    ) -> subprocess.CompletedProcess[str]:
+    ) -> subprocess.CompletedProcess[Any]:
         """Execute a multipass command.
 
         It always checks the result (as no errors should pass silently) and captures the
@@ -70,7 +70,8 @@ class Multipass:
         command = [str(self.multipass_path), *command]
 
         logger.debug("Executing on host: %s", shlex.join(command))
-        return subprocess.run(
+        # Mypy detects this correctly, but pyright thinks the return type is unknown.
+        return subprocess.run(  # pyright: ignore[reportUnknownVariableType]
             command,
             check=True,
             capture_output=True,
