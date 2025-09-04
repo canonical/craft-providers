@@ -24,6 +24,9 @@ import logging
 import subprocess
 from typing import TYPE_CHECKING
 
+from typing_extensions import override
+
+from craft_providers.actions.snap_installer import Snap
 from craft_providers.base import Base
 from craft_providers.errors import (
     BaseCompatibilityError,
@@ -76,6 +79,7 @@ class AlmaLinuxBase(Base[AlmaLinuxBaseAlias]):
 
     compatibility_tag: str = f"almalinux-{Base.compatibility_tag}"
 
+    @override
     def __init__(
         self,
         *,
@@ -126,6 +130,7 @@ class AlmaLinuxBase(Base[AlmaLinuxBaseAlias]):
 
         self._snaps = snaps
 
+    @override
     def _ensure_os_compatible(self, executor: Executor) -> None:
         """Ensure OS is compatible with Base.
 
@@ -170,16 +175,18 @@ class AlmaLinuxBase(Base[AlmaLinuxBaseAlias]):
                 details=details_from_called_process_error(error),
             ) from error
 
+    @override
     def _pre_setup_packages(self, executor: Executor) -> None:
         """Configure dnf package manager."""
         self._enable_dnf_extra_repos(executor=executor)
 
+    @override
     def _setup_packages(self, executor: Executor) -> None:
         """Install needed packages using dnf."""
         # update system
         try:
             self._execute_run(
-                ["dnf", "update", "-y"],
+                ["dnf", "update", "--refresh", "-y"],
                 executor=executor,
                 verify_network=True,
                 timeout=self._timeout_unpredictable,
@@ -207,6 +214,7 @@ class AlmaLinuxBase(Base[AlmaLinuxBaseAlias]):
                 details=details_from_called_process_error(error),
             ) from error
 
+    @override
     def _setup_snapd(self, executor: Executor) -> None:
         """Set up snapd using dnf."""
         try:
@@ -222,6 +230,7 @@ class AlmaLinuxBase(Base[AlmaLinuxBaseAlias]):
                 details=details_from_called_process_error(error),
             ) from error
 
+    @override
     def _clean_up(self, executor: Executor) -> None:
         """Clean up unused packages and cached package files."""
         self._execute_run(

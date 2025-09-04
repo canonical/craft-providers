@@ -33,7 +33,7 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
 import requests
-from typing_extensions import Self
+from typing_extensions import Self, override
 
 from craft_providers import const
 from craft_providers.base import Base
@@ -103,6 +103,7 @@ class BuilddBase(Base[BuilddBaseAlias]):
 
     compatibility_tag: str = f"buildd-{Base.compatibility_tag}"
 
+    @override
     def __init__(
         self,
         *,
@@ -181,6 +182,7 @@ class BuilddBase(Base[BuilddBaseAlias]):
             file_mode="0644",
         )
 
+    @override
     def _ensure_os_compatible(self, executor: Executor) -> None:
         """Ensure OS is compatible with Base."""
         os_release = self.get_os_release(executor=executor)
@@ -209,16 +211,19 @@ class BuilddBase(Base[BuilddBaseAlias]):
                 )
             )
 
+    @override
     def _post_setup_os(self, executor: Executor) -> None:
         """Ubuntu specific post-setup OS tasks."""
         self._disable_automatic_apt(executor=executor)
 
+    @override
     def _setup_network(self, executor: Executor) -> None:
         """Set up the basic network with systemd-networkd and systemd-resolved."""
         self.setup_hostname(executor=executor)
         self._setup_resolved(executor=executor)
         self._setup_networkd(executor=executor)
 
+    @override
     def _pre_setup_packages(self, executor: Executor) -> None:
         """Configure apt, update database."""
         executor.push_file_io(
@@ -374,8 +379,21 @@ class BuilddBase(Base[BuilddBaseAlias]):
         logger.debug(f"{self.alias.value} isn't EOL.")
         return False
 
+    @override
     def _setup_packages(self, executor: Executor) -> None:
         """Use apt install required packages and user-defined packages."""
+        try:
+            self._execute_run(
+                ["apt-get", "-y", "dist-upgrade"],
+                executor=executor,
+                verify_network=True,
+                timeout=self._timeout_unpredictable,
+            )
+        except subprocess.CalledProcessError as error:
+            raise BaseConfigurationError(
+                brief="Failed to update packages.",
+                details=details_from_called_process_error(error),
+            ) from error
         if not self._packages:
             return
         try:
@@ -392,6 +410,7 @@ class BuilddBase(Base[BuilddBaseAlias]):
                 details=details_from_called_process_error(error),
             ) from error
 
+    @override
     def _setup_snapd(self, executor: Executor) -> None:
         """Install snapd and dependencies and wait until ready."""
         try:
@@ -407,6 +426,7 @@ class BuilddBase(Base[BuilddBaseAlias]):
                 details=details_from_called_process_error(error),
             ) from error
 
+    @override
     def _clean_up(self, executor: Executor) -> None:
         self._execute_run(
             ["apt-get", "autoremove", "-y"],
