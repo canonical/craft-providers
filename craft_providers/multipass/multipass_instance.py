@@ -106,6 +106,7 @@ class MultipassInstance(Executor):
             command=["mktemp"],
             capture_output=True,
             check=True,
+            text=True,
             timeout=TIMEOUT_SIMPLE,
         ).stdout.strip()
 

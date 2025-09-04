@@ -73,7 +73,6 @@ class Multipass:
         return subprocess.run(
             command,
             check=True,
-            text=True,
             capture_output=True,
             **kwargs,
         )
@@ -159,9 +158,9 @@ class Multipass:
 
         # Only subprocess.run supports timeout
         if runner is subprocess.run:
-            return runner(final_cmd, timeout=timeout, check=check, text=True, **kwargs)
+            return runner(final_cmd, timeout=timeout, check=check, **kwargs)
 
-        return runner(final_cmd, text=True, **kwargs)
+        return runner(final_cmd, **kwargs)
 
     def info(self, *, instance_name: str) -> dict[str, Any]:
         """Get information/state for instance.
