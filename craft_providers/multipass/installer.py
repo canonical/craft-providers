@@ -49,6 +49,8 @@ def install() -> str:
             f"unsupported platform {sys.platform!r}"
         )
 
+	# We need a better way to detect this:
+	# https://github.com/canonical/craft-providers/issues/796
     time.sleep(20)
 
     multipass_version, _ = Multipass().wait_until_ready()
