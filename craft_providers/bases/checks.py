@@ -17,22 +17,37 @@
 
 """Base compatibility checks."""
 
+from __future__ import annotations
+
 import logging
 import platform
-from typing import cast
+from typing import TYPE_CHECKING, TypedDict
 
-from craft_providers.base import Base
 from craft_providers.bases.ubuntu import BuilddBase, BuilddBaseAlias
 from craft_providers.errors import (
     ProviderError,
 )
-from craft_providers.executor import Executor
 from craft_providers.util.os_release import parse_os_release
+
+if TYPE_CHECKING:
+    from enum import Enum
+
+    from craft_providers.base import Base
+    from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 
 
-INVALID_VERSIONS = [
+class InvalidVersionSet(TypedDict):
+    """A set of invalid version combinations for runtime assertions."""
+
+    host_less_than_equal: BuilddBaseAlias
+    guest_greater_than_equal: BuilddBaseAlias
+    lxd_less_than: list[tuple[int, int, int]]
+    kernel_less_than: tuple[int, int]
+
+
+INVALID_VERSIONS: list[InvalidVersionSet] = [
     {
         "host_less_than_equal": BuilddBaseAlias.FOCAL,
         "guest_greater_than_equal": BuilddBaseAlias.ORACULAR,
@@ -70,7 +85,7 @@ def _lxd_version_match(
 
 
 def ensure_guest_compatible(
-    base_configuration: Base,
+    base_configuration: Base[Enum],
     instance: Executor,
     lxd_version: str,
 ) -> None:
@@ -92,7 +107,7 @@ def ensure_guest_compatible(
 
     host_base_alias = BuilddBaseAlias(host_os_release.get("VERSION_ID"))
 
-    guest_os_release = base_configuration._get_os_release(executor=instance)  # noqa: SLF001
+    guest_os_release = base_configuration.get_os_release(executor=instance)
     guest_base_alias = BuilddBaseAlias(guest_os_release.get("VERSION_ID"))
 
     # Strip off anything after the first space - sometimes "LTS" is appended
@@ -121,10 +136,9 @@ def ensure_guest_compatible(
             and (
                 _lxd_version_match(
                     lxd_version_tup,
-                    cast("list[tuple[int, int, int]]", invalid["lxd_less_than"]),
+                    invalid["lxd_less_than"],
                 )
-                or kernel_version_tup
-                < cast("tuple[int, int]", invalid["kernel_less_than"])
+                or kernel_version_tup < invalid["kernel_less_than"]
             )
         ):
             raise ProviderError(

@@ -17,6 +17,8 @@
 
 """Helpers for snap commands."""
 
+from __future__ import annotations
+
 import contextlib
 import json
 import logging
@@ -24,12 +26,12 @@ import pathlib
 import shlex
 import subprocess
 import urllib.parse
-from collections.abc import Iterator
-from typing import Any
+from http import HTTPStatus
+from typing import TYPE_CHECKING, Any, cast
 
 import pydantic
 import requests
-import requests_unixsocket  # type: ignore  # noqa: PGH003
+import requests_unixsocket  # type: ignore[import]
 
 from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE
 from craft_providers.errors import (
@@ -37,9 +39,13 @@ from craft_providers.errors import (
     ProviderError,
     details_from_called_process_error,
 )
-from craft_providers.executor import Executor
 from craft_providers.instance_config import InstanceConfiguration
 from craft_providers.util import snap_cmd, temp_paths
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +76,7 @@ class Snap(pydantic.BaseModel, extra="forbid"):
 
     @pydantic.field_validator("channel")
     @classmethod
-    def validate_channel(cls, channel) -> str | None:  # noqa: ANN001
+    def validate_channel(cls, channel: str | None) -> str | None:
         """Validate that channel is not an empty string.
 
         :raises BaseConfigurationError: if channel is empty
@@ -90,15 +96,15 @@ def _download_host_snap(
     quoted_name = urllib.parse.quote(snap_name, safe="")
     url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}/file"
     try:
-        resp = requests_unixsocket.get(url)
-    except requests.exceptions.ConnectionError as error:
+        resp = requests_unixsocket.get(url)  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types
+    except requests.ConnectionError as error:
         raise SnapInstallationError(
             brief="Unable to connect to snapd service."
         ) from error
 
     try:
         resp.raise_for_status()
-    except requests.exceptions.HTTPError as error:
+    except requests.HTTPError as error:
         raise SnapInstallationError(
             brief=f"Unable to download snap {snap_name!r} from snapd."
         ) from error
@@ -125,14 +131,13 @@ def get_host_snap_info(snap_name: str) -> dict[str, Any]:
     quoted_name = urllib.parse.quote(snap_name, safe="")
     url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}"
     try:
-        snap_info = requests_unixsocket.get(url)
-    except requests.exceptions.ConnectionError as error:
+        snap_info = requests_unixsocket.get(url)  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types
+    except requests.ConnectionError as error:
         raise SnapInstallationError(
             brief="Unable to connect to snapd service."
         ) from error
     snap_info.raise_for_status()
-    # TODO: represent snap info in a dataclass  # noqa: FIX002
-    return snap_info.json()["result"]
+    return cast("dict[str, Any]", snap_info.json()["result"])
 
 
 def _get_target_snap_revision_from_snapd(
@@ -144,7 +149,7 @@ def _get_target_snap_revision_from_snapd(
     cmd = ["curl", "--silent", "--unix-socket", "/run/snapd.socket", url]
     try:
         proc = executor.execute_run(
-            cmd, check=True, capture_output=True, timeout=TIMEOUT_SIMPLE
+            cmd, check=True, capture_output=True, text=True, timeout=TIMEOUT_SIMPLE
         )
     except subprocess.CalledProcessError as error:
         raise SnapInstallationError(
@@ -153,11 +158,12 @@ def _get_target_snap_revision_from_snapd(
         ) from error
 
     result = json.loads(proc.stdout)
-    if result["status-code"] == 404:  # noqa: PLR2004
+    if result["status-code"] == HTTPStatus.NOT_FOUND:
         # snap not found
         return None
-    if result["status-code"] == 200:  # noqa: PLR2004
-        return result["result"]["revision"]
+    if result["status-code"] == HTTPStatus.OK:
+        # Note: cast can be removed if Pydantic model is made for this response
+        return cast("str", result["result"]["revision"])
     raise SnapInstallationError(f"Unknown response from snapd: {result!r}")
 
 
@@ -178,7 +184,8 @@ def _get_snap_revision_ensuring_source(
     # saved by previous versions of the lib
     if config.get("source") == source:
         # previously installed from specified source: ok
-        return config["revision"]
+        # Note: cast can be removed if the Pydantic model is improved
+        return cast("str", config["revision"])
 
     # installed from other source: remove it
     logger.debug(
@@ -267,7 +274,7 @@ def _get_assertions_file(
     ]
 
     with temp_paths.home_temporary_file() as assert_file_path:
-        with open(assert_file_path, "wb") as assert_file:  # noqa: PTH123
+        with assert_file_path.open("wb") as assert_file:
             for query in assertion_queries:
                 assert_file.write(_get_assertion(query))
                 assert_file.write(b"\n")
@@ -282,7 +289,7 @@ def _add_assertions_from_host(executor: Executor, snap_name: str) -> None:
     :param snap_name: Name of snap to inject
     """
     # trim the `_name` suffix, if present
-    target_assert_path = pathlib.PurePosixPath(f"/tmp/{snap_name.split('_')[0]}.assert")  # noqa: S108
+    target_assert_path = pathlib.PurePosixPath(f"/tmp/{snap_name.split('_')[0]}.assert")
     snap_info = get_host_snap_info(snap_name)
 
     try:
@@ -365,7 +372,7 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
         )
         return
 
-    target_snap_path = pathlib.PurePosixPath(f"/tmp/{snap_store_name}.snap")  # noqa: S108
+    target_snap_path = pathlib.PurePosixPath(f"/tmp/{snap_store_name}.snap")
     is_dangerous = host_revision.startswith("x")
 
     if not is_dangerous:

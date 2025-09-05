@@ -17,7 +17,8 @@
 
 """LXC wrapper."""
 
-import builtins
+from __future__ import annotations
+
 import contextlib
 import enum
 import logging
@@ -28,9 +29,8 @@ import subprocess
 import threading
 import time
 from collections import deque
-from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import yaml
 
@@ -42,7 +42,14 @@ from craft_providers.lxd.lxd_instance_status import (
 
 from .errors import LXDError
 
+if TYPE_CHECKING:
+    import builtins
+    from collections.abc import Callable
+
 logger = logging.getLogger(__name__)
+
+# Times to attempt launching an instance before failing.
+MAX_RETRIES = 3
 
 
 class StdinType(enum.Enum):
@@ -52,14 +59,39 @@ class StdinType(enum.Enum):
     NULL = None
 
 
-def load_yaml(data):  # noqa: ANN001, ANN201
+def load_yaml_flat(data: str) -> dict[str, Any]:
     """Load yaml without additional resolvers.
 
     LXD may return YAML that has datetimes that are not valid when parsed to
     datetime.datetime().  Instead just use the base loader and avoid resolving
     this type (and others).
     """
-    return yaml.load(data, Loader=yaml.BaseLoader)  # noqa: S506
+    result = yaml.load(data, Loader=yaml.BaseLoader)  # noqa: S506, does not do any type coercion and thus is safe
+    if isinstance(result, dict):
+        return cast(dict[str, Any], result)
+
+    logger.debug(
+        "Expected to receive a flat mapping of values from YAML deserialization, instead received:"
+    )
+    logger.debug(f"{result}")
+    raise ValueError("Internal error: Malformed YAML input")
+
+
+def load_yaml_list(data: str) -> list[dict[str, Any]]:
+    """Load yaml without additional resolvers.
+
+    LXD may return YAML that has datetimes that are not valid when parsed to
+    datetime.datetime().  Instead just use the base loader and avoid resolving
+    this type (and others).
+    """
+    result = yaml.load(data, Loader=yaml.BaseLoader)  # noqa: S506
+    if isinstance(result, list):
+        return cast(list[dict[str, Any]], result)
+    logger.debug(
+        "Expected to receive a list of values from YAML deserialization, instead received:"
+    )
+    logger.debug(f"{result}")
+    raise ValueError("Internal error: Malformed YAML input")
 
 
 class LXC:
@@ -73,6 +105,9 @@ class LXC:
         self.lxc_path = lxc_path
         self.lxc_lock = threading.Lock()
 
+    # Overloads are based on overloads on typeshed
+    # https://github.com/python/typeshed/blob/main/stdlib/subprocess.pyi#L89
+    @overload
     def _run_lxc(
         self,
         command: list[str],
@@ -80,8 +115,62 @@ class LXC:
         check: bool = True,
         project: str | None = None,
         stdin: StdinType = StdinType.INTERACTIVE,
-        **kwargs,  # noqa: ANN003
-    ) -> subprocess.CompletedProcess:
+        text: Literal[False, None] = None,
+        encoding: None = None,
+        errors: None = None,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[bytes]: ...
+    @overload
+    def _run_lxc(
+        self,
+        command: list[str],
+        *,
+        check: bool = True,
+        project: str | None = None,
+        stdin: StdinType = StdinType.INTERACTIVE,
+        text: Literal[True],
+        encoding: str | None = None,
+        errors: str | None = None,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]: ...
+    @overload
+    def _run_lxc(
+        self,
+        command: list[str],
+        *,
+        check: bool = True,
+        project: str | None = None,
+        stdin: StdinType = StdinType.INTERACTIVE,
+        text: bool | None = None,
+        encoding: str,
+        errors: str | None = None,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]: ...
+    @overload
+    def _run_lxc(
+        self,
+        command: list[str],
+        *,
+        check: bool = True,
+        project: str | None = None,
+        stdin: StdinType = StdinType.INTERACTIVE,
+        text: bool | None = None,
+        encoding: str | None = None,
+        errors: str,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]: ...
+    def _run_lxc(
+        self,
+        command: list[str],
+        *,
+        check: bool = True,
+        project: str | None = None,
+        stdin: StdinType = StdinType.INTERACTIVE,
+        text: bool | None = None,
+        encoding: str | None = None,
+        errors: str | None = None,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[Any]:
         """Execute lxc command on host, allowing output to console.
 
         Handles the --project=project options if project is specified.
@@ -105,9 +194,24 @@ class LXC:
         with self.lxc_lock:
             # for subprocess, input takes priority over stdin
             if "input" in kwargs:
-                return subprocess.run(lxc_cmd, check=check, **kwargs)
+                return subprocess.run(
+                    lxc_cmd,
+                    check=check,
+                    text=text,
+                    encoding=encoding,
+                    errors=errors,
+                    **kwargs,
+                )
 
-            return subprocess.run(lxc_cmd, check=check, stdin=stdin.value, **kwargs)
+            return subprocess.run(
+                lxc_cmd,
+                check=check,
+                text=text,
+                encoding=encoding,
+                errors=errors,
+                stdin=stdin.value,
+                **kwargs,
+            )
 
     def config_device_add_disk(
         self,
@@ -197,7 +301,7 @@ class LXC:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-        return load_yaml(proc.stdout)
+        return load_yaml_flat(proc.stdout.decode())
 
     def config_get(
         self,
@@ -227,7 +331,7 @@ class LXC:
 
         try:
             return self._run_lxc(
-                command, capture_output=True, check=True, text=True, project=project
+                command, project=project, check=True, text=True, capture_output=True
             ).stdout.rstrip()
         except subprocess.CalledProcessError as error:
             raise LXDError(
@@ -337,20 +441,51 @@ class LXC:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    def exec(  # noqa: ANN201, PLR0913
+    @overload
+    def exec(
         self,
         *,
         command: list[str],
         instance_name: str,
+        runner: Callable[..., subprocess.Popen[str]],
         cwd: str | None = None,
         mode: str | None = None,
         project: str = "default",
         remote: str = "local",
-        runner: Callable = subprocess.run,
         timeout: float | None = None,
         check: bool = False,
-        **kwargs,  # noqa: ANN003
-    ):
+        **kwargs: Any,
+    ) -> subprocess.Popen[str]: ...
+    @overload
+    def exec(
+        self,
+        *,
+        command: list[str],
+        instance_name: str,
+        runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+        cwd: str | None = None,
+        mode: str | None = None,
+        project: str = "default",
+        remote: str = "local",
+        timeout: float | None = None,
+        check: bool = False,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]: ...
+    def exec(  # noqa: PLR0913
+        self,
+        *,
+        command: list[str],
+        instance_name: str,
+        runner: Callable[..., subprocess.Popen[str]]
+        | Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+        cwd: str | None = None,
+        mode: str | None = None,
+        project: str = "default",
+        remote: str = "local",
+        timeout: float | None = None,
+        check: bool = False,
+        **kwargs: Any,
+    ) -> subprocess.Popen[Any] | subprocess.CompletedProcess[Any]:
         """Execute command in instance_name with specified runner.
 
         :param command: Command to execute in the instance.
@@ -391,8 +526,6 @@ class LXC:
 
         if runner is subprocess.run:
             return runner(final_cmd, timeout=timeout, check=check, **kwargs)
-
-        # XXX: warn that timeout and check are ignored for Popen??  # noqa: FIX003
 
         return runner(final_cmd, **kwargs)
 
@@ -443,7 +576,7 @@ class LXC:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    def file_push(  # noqa: PLR0913
+    def file_push(  # noqa: PLR0913, too many arguments
         self,
         *,
         instance_name: str,
@@ -507,7 +640,7 @@ class LXC:
 
     def has_image(
         self,
-        image_name,  # noqa: ANN001
+        image_name: str,
         *,
         project: str = "default",
         remote: str = "local",
@@ -548,7 +681,9 @@ class LXC:
         command = ["info", remote + ":" + instance_name]
 
         try:
-            proc = self._run_lxc(command, capture_output=True, project=project)
+            proc = self._run_lxc(
+                command, capture_output=True, text=True, project=project
+            )
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to get info for remote {remote!r}.",
@@ -556,7 +691,7 @@ class LXC:
             ) from error
 
         try:
-            return load_yaml(proc.stdout)
+            return load_yaml_flat(proc.stdout)
         except yaml.YAMLError as error:
             raise LXDError(
                 brief="Failed to parse lxc info.",
@@ -606,16 +741,15 @@ class LXC:
         if ephemeral:
             command.append("--ephemeral")
 
-        if config_keys is not None:
-            for config_key in [f"{k}={v}" for k, v in config_keys.items()]:
-                command.extend(["--config", config_key])
+        for config_key in [f"{k}={v}" for k, v in config_keys.items()]:
+            command.extend(["--config", config_key])
 
         # The total times of retrying to launch the same instance per craft-providers.
         # If parallel lxc failed, the bad instance will be deleted by the lock holder
         # or any other craft-providers, and the lock will be released.
         # However, the new instance lock could be held by any craft-providers.
         # This is used to avoid lock holder dead and all others are blocked.
-        while retry_count < 3:  # noqa: PLR2004
+        while retry_count < MAX_RETRIES:
             try:
                 # Try to launch instance
                 self._run_lxc(
@@ -634,7 +768,7 @@ class LXC:
                 # Ignore first 3 failed "create" or "start" attempts that other craft-providers
                 # are creating the same instance.
                 # LXD: Instance is busy running a "create" or "start" operation
-                if retry_count >= 2 or (  # noqa: PLR2004
+                if retry_count >= MAX_RETRIES - 1 or (
                     error.stderr
                     and all(
                         state not in error.stderr.decode()
@@ -742,7 +876,9 @@ class LXC:
         command = ["image", "list", f"{remote}:", "--format=yaml"]
 
         try:
-            proc = self._run_lxc(command, capture_output=True, project=project)
+            proc = self._run_lxc(
+                command, capture_output=True, text=True, project=project
+            )
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to list images for project {project!r}.",
@@ -750,7 +886,7 @@ class LXC:
             ) from error
 
         try:
-            return load_yaml(proc.stdout)
+            return load_yaml_list(proc.stdout)
         except yaml.YAMLError as error:
             raise LXDError(
                 brief="Failed to parse lxc image list.",
@@ -778,7 +914,9 @@ class LXC:
         command = ["list", f"{remote}:", "--format=yaml"]
 
         try:
-            proc = self._run_lxc(command, capture_output=True, project=project)
+            proc = self._run_lxc(
+                command, capture_output=True, text=True, project=project
+            )
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to list instances for project {project!r}.",
@@ -786,7 +924,7 @@ class LXC:
             ) from error
 
         try:
-            return load_yaml(proc.stdout)
+            return load_yaml_list(proc.stdout)
         except yaml.YAMLError as error:
             raise LXDError(
                 brief="Failed to parse lxc list.",
@@ -870,7 +1008,7 @@ class LXC:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-        return load_yaml(proc.stdout)
+        return load_yaml_flat(proc.stdout.decode())
 
     def project_create(self, *, project: str, remote: str = "local") -> None:
         """Create project.
@@ -929,7 +1067,7 @@ class LXC:
         command = ["project", "list", f"{remote}:", "--format=yaml"]
 
         try:
-            proc = self._run_lxc(command, capture_output=True)
+            proc = self._run_lxc(command, capture_output=True, text=True)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief=f"Failed to list projects on remote {remote!r}.",
@@ -937,7 +1075,7 @@ class LXC:
             ) from error
 
         try:
-            projects = load_yaml(proc.stdout)
+            projects = load_yaml_list(proc.stdout)
             return sorted([p["name"] for p in projects])
         except (KeyError, yaml.YAMLError) as error:
             raise LXDError(
@@ -1014,7 +1152,7 @@ class LXC:
         command = ["remote", "list", "--format=yaml"]
 
         try:
-            proc = self._run_lxc(command, capture_output=True)
+            proc = self._run_lxc(command, capture_output=True, text=True)
         except subprocess.CalledProcessError as error:
             raise LXDError(
                 brief="Failed to list remotes.",
@@ -1022,7 +1160,7 @@ class LXC:
             ) from error
 
         try:
-            return load_yaml(proc.stdout)
+            return load_yaml_flat(proc.stdout)
         except yaml.YAMLError as error:
             raise LXDError(
                 brief="Failed to parse lxc remote list.",
@@ -1137,10 +1275,10 @@ class LXC:
         """
         instance_status: str | None = None
         instance_info: dict[str, Any] = {"Status": ""}
-        start_time = time.time()
+        start_time = time.monotonic()
 
         # 20 * 3 seconds = 1 minute no change in timer
-        timer_queue: deque = deque([-2, -1], maxlen=20)
+        timer_queue: deque[str] = deque(["-2", "-1"], maxlen=20)
 
         # retry until the instance's timer hasn't changed for the last 20 iterations
         while len(set(timer_queue)) > 1:
@@ -1172,7 +1310,7 @@ class LXC:
             except LXDError:
                 # Keep retrying since the instance might not be ready yet
                 # Max retry time is 10 minutes
-                if time.time() - start_time > 600:  # noqa: PLR2004
+                if time.monotonic() - 600 > start_time:
                     logger.debug("Instance %s max waiting time reached.", instance_name)
                     raise
                 time.sleep(3)
@@ -1224,4 +1362,4 @@ class LXC:
                 details="'environment.server_version' field missing from LXD info.",
                 resolution="Ensure you have a new enough version of lxd installed.",
             )
-        return version
+        return cast(str, version)

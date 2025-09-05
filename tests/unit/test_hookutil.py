@@ -40,7 +40,7 @@ def test_no_projects():
             return []
         return original_lxc_func(*args, **kwargs)
 
-    HookHelper.lxc = fake_lxc
+    HookHelper.lxc = fake_lxc  # type: ignore[reportAttributeAccessIssue]
 
     with pytest.raises(HookError) as e:
         HookHelper(project_name=PROJECT_NAME, simulate=False, debug=True)

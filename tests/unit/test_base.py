@@ -35,7 +35,7 @@ WAIT_FOR_SYSTEM_READY_CMD = ["systemctl", "is-system-running"]
 WAIT_FOR_NETWORK_CMD = ["getent", "hosts", "snapcraft.io"]
 
 
-class FakeBase(base.Base):
+class FakeBase(base.Base[enum.Enum]):
     FakeBaseAlias = enum.Enum("FakeBaseAlias", ["TREBLE"])
     _environment = {}
 
@@ -63,7 +63,7 @@ class FakeBase(base.Base):
 
 
 @pytest.fixture
-def fake_base() -> base.Base:
+def fake_base() -> base.Base[enum.Enum]:
     return FakeBase()
 
 
@@ -108,7 +108,7 @@ def test_wait_for_system_ready_timeout(
     fake_process.register(
         [*DEFAULT_FAKE_CMD, *WAIT_FOR_SYSTEM_READY_CMD], callback=callback
     )
-    fake_process.keep_last_process(True)  # noqa: FBT003
+    fake_process.keep_last_process(keep=True)
 
     with pytest.raises(BaseConfigurationError):
         fake_base._setup_wait_for_system_ready(fake_executor)
@@ -135,7 +135,7 @@ def test_wait_for_network_success(
 )
 def test_wait_for_network_timeout(fake_base, fake_executor, fake_process, callback):
     fake_process.register([*DEFAULT_FAKE_CMD, *WAIT_FOR_NETWORK_CMD], callback=callback)
-    fake_process.keep_last_process(True)  # noqa: FBT003
+    fake_process.keep_last_process(keep=True)
 
     with pytest.raises(BaseConfigurationError):
         fake_base._setup_wait_for_system_ready(fake_executor)
@@ -280,14 +280,14 @@ def test_mount_shared_cache_dirs_mount_failed(
 def test_get_os_release_success(
     fake_process, fake_executor, fake_base, process_outputs, expected
 ):
-    """`_get_os_release` should parse data from `/etc/os-release` to a dict."""
+    """`get_os_release` should parse data from `/etc/os-release` to a dict."""
     for output in process_outputs:
         fake_process.register_subprocess(
             [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
             stdout=output,
         )
 
-    result = fake_base._get_os_release(executor=fake_executor)
+    result = fake_base.get_os_release(executor=fake_executor)
 
     assert result == expected
 
@@ -308,10 +308,10 @@ def test_get_os_release_error_output(
         stdout=stdout,
         returncode=returncode,
     )
-    fake_process.keep_last_process(True)  # noqa: FBT003
+    fake_process.keep_last_process(keep=True)
 
     with pytest.raises(BaseConfigurationError):
-        fake_base._get_os_release(executor=fake_executor)
+        fake_base.get_os_release(executor=fake_executor)
 
 
 def test_get_os_release_exception(fake_base, mock_executor):
@@ -320,7 +320,7 @@ def test_get_os_release_exception(fake_base, mock_executor):
     )
 
     with pytest.raises(BaseConfigurationError):
-        fake_base._get_os_release(executor=mock_executor)
+        fake_base.get_os_release(executor=mock_executor)
 
 
 def test_set_hostname(fake_base):
