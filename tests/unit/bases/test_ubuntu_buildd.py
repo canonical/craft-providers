@@ -179,7 +179,7 @@ def fake_update_commands(fake_process):
 @pytest.mark.parametrize(
     ("tag", "expected_tag"), [(None, "buildd-base-v7"), ("test-tag", "test-tag")]
 )
-def test_setup(  # noqa: PLR0915
+def test_setup(
     fake_process,
     fake_executor,
     fake_filesystem,
