@@ -563,12 +563,11 @@ class Base(ABC, Generic[_T_enum_co]):
         """Configure the snapd proxy."""
         try:
             http_proxy = self._environment.get("http_proxy")
-            command = [
-                "snap",
-                "set" if http_proxy else "unset",
-                "system",
-                f"proxy.http={http_proxy}" if http_proxy else "proxy.http",
-            ]
+            command = (
+                ["snap", "set", "system", f"proxy.http={http_proxy}"]
+                if http_proxy
+                else ["snap", "unset", "system", "proxy.http"]
+            )
             self._execute_run(command, executor=executor, timeout=self._timeout_simple)
 
             https_proxy = self._environment.get("https_proxy")
