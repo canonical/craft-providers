@@ -243,7 +243,9 @@ def test_setup(
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "test", "-s", "/etc/cloud/cloud.cfg"]
     )
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "dnf", "update", "-y"])
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "dnf", "update", "--refresh", "-y"]
+    )
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
@@ -543,6 +545,7 @@ def test_setup_dnf(fake_executor, fake_process):
             *DEFAULT_FAKE_CMD,
             "dnf",
             "update",
+            "--refresh",
             "-y",
         ]
     )
@@ -576,7 +579,9 @@ def test_setup_dnf(fake_executor, fake_process):
 def test_setup_dnf_install_default(fake_executor, fake_process):
     """Verify only default packages are installed."""
     base = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "dnf", "update", "-y"])
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "dnf", "update", "--refresh", "-y"]
+    )
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
@@ -608,7 +613,9 @@ def test_setup_dnf_install_override_system(fake_executor, fake_process):
         packages=["clang"],
         use_default_packages=False,
     )
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "dnf", "update", "-y"])
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "dnf", "update", "--refresh", "-y"]
+    )
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,

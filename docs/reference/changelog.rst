@@ -4,8 +4,12 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
-3.0.1 (2025-MM-DD)
+3.1.0 (unreleased)
 ------------------
+
+New features:
+
+- Updates are run on the first start of each instance.
 
 Bug fixes:
 
