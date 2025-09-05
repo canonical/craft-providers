@@ -485,7 +485,7 @@ class LXC:
         timeout: float | None = None,
         check: bool = False,
         **kwargs: Any,
-    ) -> subprocess.Popen[str] | subprocess.CompletedProcess[str]:
+    ) -> subprocess.Popen[Any] | subprocess.CompletedProcess[Any]:
         """Execute command in instance_name with specified runner.
 
         :param command: Command to execute in the instance.

@@ -122,14 +122,14 @@ def is_installed() -> bool:
     url = "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/lxd"
     try:
         snap_info = requests_unixsocket.get(url=url, params={"select": "enabled"})  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types
-    except requests.exceptions.ConnectionError as error:
+    except requests.ConnectionError as error:
         raise errors.ProviderError(
             brief="Unable to connect to snapd service."
         ) from error
 
     try:
         snap_info.raise_for_status()
-    except requests.exceptions.HTTPError as error:
+    except requests.HTTPError as error:
         logger.debug(f"Could not get snap info for LXD: {error}")
         return False
 

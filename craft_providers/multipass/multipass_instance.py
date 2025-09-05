@@ -21,7 +21,11 @@ from __future__ import annotations
 
 import logging
 import subprocess
-from typing import TYPE_CHECKING, Any, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    cast,
+)
 
 from typing_extensions import override
 
@@ -102,13 +106,18 @@ class MultipassInstance(Executor):
 
         :raises subprocess.CalledProcessError: If the file cannot be created.
         """
-        tmp_file_path = self.execute_run(
-            command=["mktemp"],
-            capture_output=True,
-            check=True,
-            text=True,
-            timeout=TIMEOUT_SIMPLE,
-        ).stdout.strip()
+        # This cast allows us to use executor's type handling
+        tmp_file_path = (
+            cast(Executor, self)
+            .execute_run(
+                command=["mktemp"],
+                capture_output=True,
+                check=True,
+                text=True,
+                timeout=TIMEOUT_SIMPLE,
+            )
+            .stdout.strip()
+        )
 
         # mktemp is executed as root, so the ownership of the temp file needs to be
         # changed back to the default user `ubuntu` before transferring the file
@@ -247,9 +256,9 @@ class MultipassInstance(Executor):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        check: bool = False,
+        text: bool | None = None,
         **kwargs: Any,
-    ) -> subprocess.CompletedProcess[str]:
+    ) -> subprocess.CompletedProcess[Any]:
         """Execute a command in the instance using subprocess.run().
 
         The process' environment will inherit the execution environment's
@@ -272,12 +281,13 @@ class MultipassInstance(Executor):
 
         :raises subprocess.CalledProcessError: if command fails and check is True.
         """
+        if text is not None:
+            kwargs["text"] = text
         return self._multipass.exec(
             instance_name=self.instance_name,
             command=_rootify_multipass_command(command, cwd=cwd, env=env),
             runner=subprocess.run,
             timeout=timeout,
-            check=check,
             **kwargs,
         )
 

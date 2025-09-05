@@ -94,14 +94,15 @@ class FakeExecutor(Executor):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        check: bool = False,
         **kwargs: Any,
-    ) -> subprocess.CompletedProcess[str]:
+    ) -> subprocess.CompletedProcess[Any]:
         env_args = [] if env is None else env_cmd.formulate_command(env, chdir=cwd)
 
         final_cmd = [*DEFAULT_FAKE_CMD, *env_args, *command]
 
-        return subprocess.run(final_cmd, timeout=timeout, check=check, **kwargs)
+        # We're not using an explicit check here because we're getting check from the
+        # calling method.
+        return subprocess.run(final_cmd, timeout=timeout, **kwargs)  # noqa: PLW1510
 
     @override
     def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:

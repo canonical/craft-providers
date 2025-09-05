@@ -124,7 +124,7 @@ class LXDInstance(Executor):
             command_env.update(env)
 
         if command_env:
-            return env_cmd.formulate_command(command_env) + command
+            return [*env_cmd.formulate_command(command_env), *command]
 
         return command
 
@@ -243,7 +243,7 @@ class LXDInstance(Executor):
         timeout: float | None = None,
         check: bool = False,
         **kwargs: Any,
-    ) -> subprocess.CompletedProcess[str]:
+    ) -> subprocess.CompletedProcess[Any]:
         """Execute a command using subprocess.run().
 
         The process' environment will inherit the execution environment's

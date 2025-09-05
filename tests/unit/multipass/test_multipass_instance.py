@@ -289,7 +289,6 @@ def test_execute_run(mock_multipass, instance):
             runner=subprocess.run,
             input="foo",
             timeout=None,
-            check=False,
         )
     ]
 
@@ -327,7 +326,6 @@ def test_execute_run_with_cwd(mock_multipass, instance, tmp_path):
             ],
             runner=subprocess.run,
             timeout=None,
-            check=False,
         )
     ]
 
@@ -341,7 +339,6 @@ def test_execute_run_with_env(mock_multipass, instance):
             command=["sudo", "-H", "--", "env", "foo=bar", "test-command", "flags"],
             runner=subprocess.run,
             timeout=None,
-            check=False,
         )
     ]
 
@@ -367,7 +364,6 @@ def test_execute_run_with_env_unset(mock_multipass, instance):
             ],
             runner=subprocess.run,
             timeout=None,
-            check=False,
         )
     ]
 

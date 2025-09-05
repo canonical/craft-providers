@@ -30,7 +30,7 @@ import pathlib
 import shlex
 import subprocess
 import time
-from typing import IO, TYPE_CHECKING, Any, cast, overload
+from typing import IO, TYPE_CHECKING, Any, TypeVar, cast
 
 import packaging.version
 
@@ -44,6 +44,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
+
+
+T = TypeVar("T")
 
 
 class Multipass:
@@ -100,7 +103,6 @@ class Multipass:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    @overload
     def exec(
         self,
         *,
@@ -108,31 +110,12 @@ class Multipass:
         instance_name: str,
         timeout: float | None = None,
         check: bool = False,
-        runner: Callable[..., subprocess.Popen[str]],
+        # Mypy and ty don't have good answers here re: what to do about this:
+        # https://github.com/python/mypy/issues/3737
+        # https://github.com/astral-sh/ty/issues/592
+        runner: Callable[..., T] = subprocess.run,  # type: ignore[assignment]  # ty: ignore[invalid-parameter-default]
         **kwargs: Any,
-    ) -> subprocess.Popen[str]: ...
-    @overload
-    def exec(
-        self,
-        *,
-        command: list[str],
-        instance_name: str,
-        timeout: float | None = None,
-        check: bool = False,
-        runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
-        **kwargs: Any,
-    ) -> subprocess.CompletedProcess[str]: ...
-    def exec(
-        self,
-        *,
-        command: list[str],
-        instance_name: str,
-        timeout: float | None = None,
-        check: bool = False,
-        runner: Callable[..., subprocess.Popen[str]]
-        | Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
-        **kwargs: Any,
-    ) -> subprocess.Popen[str] | subprocess.CompletedProcess[str]:
+    ) -> T:
         """Execute command in instance_name with specified runner.
 
         The working directory the command is executed from inside the instance depends

@@ -97,14 +97,14 @@ def _download_host_snap(
     url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}/file"
     try:
         resp = requests_unixsocket.get(url)  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types
-    except requests.exceptions.ConnectionError as error:
+    except requests.ConnectionError as error:
         raise SnapInstallationError(
             brief="Unable to connect to snapd service."
         ) from error
 
     try:
         resp.raise_for_status()
-    except requests.exceptions.HTTPError as error:
+    except requests.HTTPError as error:
         raise SnapInstallationError(
             brief=f"Unable to download snap {snap_name!r} from snapd."
         ) from error
@@ -132,7 +132,7 @@ def get_host_snap_info(snap_name: str) -> dict[str, Any]:
     url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}"
     try:
         snap_info = requests_unixsocket.get(url)  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types
-    except requests.exceptions.ConnectionError as error:
+    except requests.ConnectionError as error:
         raise SnapInstallationError(
             brief="Unable to connect to snapd service."
         ) from error

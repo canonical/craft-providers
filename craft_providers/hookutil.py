@@ -173,7 +173,7 @@ class HookHelper:
                 return out
             try:
                 return cast("dict[str, Any]", json.loads(out))
-            except json.decoder.JSONDecodeError as e:
+            except json.JSONDecodeError as e:
                 raise HookError(f"Didn't get back JSON: {out}") from e
 
     def delete_instance(self, instance: LXDInstance) -> None:

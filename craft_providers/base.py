@@ -1145,10 +1145,10 @@ class Base(ABC, Generic[_T_enum_co]):
         executor: Executor,
         check: bool = True,
         capture_output: bool = True,
-        text: Literal[False] = False,
+        text: Literal[True],
         timeout: float | None = None,
         verify_network: bool = False,
-    ) -> subprocess.CompletedProcess[bytes]: ...
+    ) -> subprocess.CompletedProcess[str]: ...
     @overload
     @classmethod
     def _execute_run(
@@ -1158,10 +1158,10 @@ class Base(ABC, Generic[_T_enum_co]):
         executor: Executor,
         check: bool = True,
         capture_output: bool = True,
-        text: Literal[True],
+        text: Literal[False] = False,
         timeout: float | None = None,
         verify_network: bool = False,
-    ) -> subprocess.CompletedProcess[str]: ...
+    ) -> subprocess.CompletedProcess[bytes]: ...
     @classmethod
     def _execute_run(
         cls,
@@ -1192,10 +1192,10 @@ class Base(ABC, Generic[_T_enum_co]):
         try:
             proc = executor.execute_run(
                 command,
-                check=check,
                 capture_output=capture_output,
                 text=text,
                 timeout=timeout,
+                check=check,
             )
         except subprocess.CalledProcessError as exc:
             if verify_network and not cls._network_connected(executor=executor):
