@@ -136,6 +136,7 @@ def test_push_file_io(mock_multipass, instance):
             capture_output=True,
             check=True,
             timeout=60,
+            text=True,
         ),
         mock.call.exec(
             instance_name="test-instance",
@@ -578,8 +579,8 @@ def test_push_file(mock_multipass, instance, simple_file):
             instance_name="test-instance",
             command=["sudo", "-H", "--", "test", "-d", "/tmp"],
             runner=subprocess.run,
-            check=False,
             timeout=60,
+            check=False,
         ),
         mock.call.exec(
             instance_name="test-instance",
@@ -588,6 +589,7 @@ def test_push_file(mock_multipass, instance, simple_file):
             capture_output=True,
             check=True,
             timeout=60,
+            text=True,
         ),
         mock.call.exec(
             instance_name="test-instance",
@@ -650,8 +652,9 @@ def test_push_file_to_directory(mock_multipass, instance, simple_file):
             command=["sudo", "-H", "--", "mktemp"],
             runner=subprocess.run,
             timeout=60,
-            capture_output=True,
             check=True,
+            capture_output=True,
+            text=True,
         ),
         mock.call.exec(
             instance_name="test-instance",

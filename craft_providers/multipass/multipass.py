@@ -24,6 +24,7 @@ utility.
 from __future__ import annotations
 
 import json
+import locale
 import logging
 import pathlib
 import shlex
@@ -514,7 +515,7 @@ class Multipass:
             ) from error
 
         try:
-            output = proc.stdout
+            output = proc.stdout.decode(encoding=locale.getpreferredencoding())
         except UnicodeDecodeError as error:
             raise MultipassError(
                 brief="Failed to check version.",
