@@ -215,6 +215,7 @@ def test_setup(
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "hostname", "-F", "/etc/hostname"]
     )
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "chmod", "go+x", "/root"])
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
@@ -1203,6 +1204,7 @@ def test_warmup_overall(
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "is-system-running"], stdout="degraded"
     )
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "chmod", "go+x", "/root"])
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
         stdout="/root/.cache",

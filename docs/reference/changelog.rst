@@ -11,6 +11,11 @@ New features:
 
 - Updates are run on the first start of each instance.
 
+Bug fixes:
+
+- Fix the permissions of the ``/root`` directory so that non-root users can access
+  project directories.
+
 3.0.0 (2025-08-15)
 ------------------
 
