@@ -473,7 +473,7 @@ dev = [
     { name = "coverage", extras = ["toml"], specifier = "~=7.6" },
     { name = "freezegun", specifier = "~=1.5" },
     { name = "logassert", specifier = "~=8.1" },
-    { name = "pyfakefs", specifier = "~=5.7.1" },
+    { name = "pyfakefs", specifier = "~=5.9.3" },
     { name = "pytest", specifier = "~=8.3" },
     { name = "pytest-cov", specifier = "~=5.0" },
     { name = "pytest-mock", specifier = "~=3.14" },
@@ -1160,11 +1160,11 @@ wheels = [
 
 [[package]]
 name = "pyfakefs"
-version = "5.7.4"
+version = "5.9.3"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/8e/f9/3a2f10b1b3e251cec47ab7581d15bc39553cd5a23893cbe0efe633856c4e/pyfakefs-5.7.4.tar.gz", hash = "sha256:4971e65cc80a93a1e6f1e3a4654909c0c493186539084dc9301da3d68c8878fe", size = 213382, upload-time = "2025-01-14T19:24:54.538Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9b/66/a90124bc9f0d2335897a7d077941f12eaa06c851c8d1b1f37967424d7aa8/pyfakefs-5.9.3.tar.gz", hash = "sha256:b458b11abc8862d4d8500816170a9b25e10d07437332b9dffd651069f3d4c40c", size = 229964, upload-time = "2025-08-29T18:34:21.032Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b9/52/eb08c795d9159da167334a7fa8a23bd04112b4c8b63030a2600711a94143/pyfakefs-5.7.4-py3-none-any.whl", hash = "sha256:3e763d700b91c54ade6388be2cfa4e521abc00e34f7defb84ee511c73031f45f", size = 228706, upload-time = "2025-01-14T19:24:51.436Z" },
+    { url = "https://files.pythonhosted.org/packages/e7/61/d2b795a4d19713a2312d54b0c001002441f71188d6a3e11e43ddfa03bb1b/pyfakefs-5.9.3-py3-none-any.whl", hash = "sha256:14a0514e94ff156543208c0b4832facc68bdf19de993799b67d58dd5ca05ef30", size = 245197, upload-time = "2025-08-29T18:34:19.112Z" },
 ]
 
 [[package]]
