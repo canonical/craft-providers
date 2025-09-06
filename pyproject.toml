@@ -47,7 +47,7 @@ dev = [
     "types-setuptools~=75.2",
     "types-pyyaml~=6.0",
 ]
-lint = ["codespell[toml]~=2.3.0"]
+lint = ["codespell[toml]~=2.4.1"]
 types = ["mypy[reports]~=1.15"]
 docs = [
     "pyspelling~=2.10",
