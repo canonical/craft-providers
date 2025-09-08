@@ -88,6 +88,16 @@ def mock_requests_head(mocker, request):
     return mocker.patch("requests.head", return_value=mock_response)
 
 
+@pytest.fixture
+def fake_update_commands(fake_process):
+    """Allow running update commands with a fake process."""
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "apt-get", "-y", "dist-upgrade"]
+    )
+
+
+@pytest.mark.usefixtures("fake_update_commands")
 @pytest.mark.parametrize("alias", list(ubuntu.BuilddBaseAlias))
 @pytest.mark.parametrize(
     ("environment", "etc_environment_content"),
@@ -240,6 +250,7 @@ def test_setup(
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "hostname", "-F", "/etc/hostname"]
     )
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "chmod", "go+x", "/root"])
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
@@ -277,7 +288,6 @@ def test_setup(
             """
         ),
     )
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", *expected_packages]
     )
@@ -529,11 +539,11 @@ def test_install_snaps_inject_from_host_error(fake_executor, mocker):
     )
 
 
+@pytest.mark.usefixtures("fake_update_commands")
 def test_setup_apt(fake_executor, fake_process):
     """Verify packages are installed as expected."""
     packages = ["grep", "git"]
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, packages=packages)
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
@@ -558,10 +568,11 @@ def test_setup_apt(fake_executor, fake_process):
     base._setup_packages(executor=fake_executor)
 
 
+@pytest.mark.usefixtures("fake_update_commands")
 def test_setup_apt_install_default(fake_executor, fake_process):
     """Verify only default packages are installed."""
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
+
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
@@ -584,6 +595,7 @@ def test_setup_apt_install_default(fake_executor, fake_process):
     base._setup_packages(executor=fake_executor)
 
 
+@pytest.mark.usefixtures("fake_update_commands")
 def test_setup_apt_install_override_system(fake_executor, fake_process):
     """Verify override default packages."""
     base = ubuntu.BuilddBase(
@@ -591,7 +603,6 @@ def test_setup_apt_install_override_system(fake_executor, fake_process):
         packages=["clang"],
         use_default_packages=False,
     )
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
@@ -635,24 +646,32 @@ def test_setup_apt_install_packages_update_error(
     )
 
 
-def test_setup_apt_install_packages_install_error(mocker, fake_executor):
+def test_setup_apt_install_packages_install_error(mocker, fake_executor, fake_process):
     """Verify error is caught from `apt-get install` call."""
-    error = subprocess.CalledProcessError(100, ["error"])
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
-    side_effects = [
-        error,  # make apt-get install fail
-        subprocess.CompletedProcess("args", returncode=0),  # network connectivity check
-    ]
-    mocker.patch.object(fake_executor, "execute_run", side_effect=side_effects)
-
-    with pytest.raises(BaseConfigurationError) as exc_info:
-        base._setup_packages(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to install packages.",
-        details="* Command that failed: 'error'\n* Command exit code: 100",
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "apt-get", "-y", "dist-upgrade"]
     )
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "apt-get",
+            "install",
+            "-y",
+            fake_process.any(min=1, max=100),
+        ],
+        returncode=43,
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"]
+    )
+
+    with pytest.raises(
+        BaseConfigurationError,
+        match=r"Failed to install packages.\n.+\n\* Command exit code: 43",
+    ):
+        base._setup_packages(executor=fake_executor)
 
 
 def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
@@ -1342,6 +1361,7 @@ def test_warmup_overall(
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "is-system-running"], stdout="degraded"
     )
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "chmod", "go+x", "/root"])
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "getent", "hosts", "snapcraft.io"]
     )
