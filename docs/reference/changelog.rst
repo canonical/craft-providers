@@ -5,7 +5,7 @@ See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
 3.1.0 (2025-Sep-08)
-------------------
+-------------------
 
 New features:
 
@@ -17,7 +17,7 @@ Bug fixes:
   project directories.
 
 3.0.0 (2025-Aug-15)
-------------------
+-------------------
 
 New features:
 
