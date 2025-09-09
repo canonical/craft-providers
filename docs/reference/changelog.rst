@@ -172,7 +172,7 @@ Removal of deprecated features:
 - Add Ubuntu 24.04 (Noble) support
 - Remove Ubuntu 23.04 (Lunar) support
 
-1.19.3 (2023-10-01)
+1.19.3 (2023-12-01)
 -------------------
 - Update base compatibility tag to ``base-v5``.
 - Do not mount cache directories in LXD base instances.
@@ -355,7 +355,7 @@ Removal of deprecated features:
 - Update ``MultipassInstance.push_file_io()`` to work regardless of the
   host's working directory
 
-1.6.2 (2022-10-08)
+1.6.2 (2022-12-08)
 ------------------
 - Disable automatic snap refreshes inside instances.
 
