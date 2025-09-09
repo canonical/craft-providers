@@ -571,12 +571,11 @@ class Base(ABC, Generic[_T_enum_co]):
             self._execute_run(command, executor=executor, timeout=self._timeout_simple)
 
             https_proxy = self._environment.get("https_proxy")
-            command = [
-                "snap",
-                "set" if http_proxy else "unset",
-                "system",
-                f"proxy.https={https_proxy}" if https_proxy else "proxy.https",
-            ]
+            command = (
+                ["snap", "set", "system", f"proxy.https={https_proxy}"]
+                if https_proxy
+                else ["snap", "unset", "system", "proxy.https"]
+            )
             self._execute_run(command, executor=executor, timeout=self._timeout_simple)
 
         except subprocess.CalledProcessError as error:
