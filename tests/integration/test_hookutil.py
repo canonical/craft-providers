@@ -92,6 +92,7 @@ def test_remove_hook(spawn_lxd_instance):
         "Outdated base instance should not exist"
     )
 
-    with pytest.raises(HookError) as e:  # noqa: PT012
+    with pytest.raises(
+        HookError, match=rf"Project {FAKE_PROJECT} does not exist in LXD\."
+    ):
         helper._check_project_exists()
-        assert e == HookError(f"Project {FAKE_PROJECT} does not exist in LXD.")

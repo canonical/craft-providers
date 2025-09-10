@@ -17,6 +17,7 @@
 import io
 import pathlib
 import time
+from typing import TYPE_CHECKING, cast
 
 import craft_providers
 import pytest
@@ -25,6 +26,9 @@ from craft_providers.bases.almalinux import AlmaLinuxBaseAlias
 from craft_providers.bases.centos import CentOSBaseAlias
 from craft_providers.bases.ubuntu import BuilddBaseAlias
 from craft_providers.multipass.multipass_provider import MultipassProvider
+
+if TYPE_CHECKING:
+    from craft_providers.executor import Executor
 
 
 @pytest.mark.slow
@@ -58,7 +62,7 @@ def test_relaunch(
         )
 
     base_cls = bases.get_base_from_alias(base_alias)
-    base = base_cls(alias=base_alias)  # pyright: ignore[reportArgumentType]
+    base = base_cls(alias=base_alias)  # type: ignore[reportArgumentType, arg-type]
     project_name = f"relaunch-{base_alias.name}"
 
     try:
@@ -126,6 +130,6 @@ def test_relaunch(
             instance.execute_run(["ls", "/root/permanent-file"], check=True)
 
     finally:
-        instance = locals().get("instance")
+        instance = cast("Executor", locals().get("instance"))
         if instance is not None:
             instance.delete()

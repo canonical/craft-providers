@@ -17,7 +17,10 @@
 
 """Multipass Provider."""
 
+from __future__ import annotations
+
 import logging
+from enum import Enum
 from typing import TYPE_CHECKING
 
 from craft_providers import Base, bases
@@ -25,6 +28,7 @@ from craft_providers.multipass.multipass_instance import MultipassInstance
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from enum import Enum
 
     from craft_providers import Executor
 
@@ -34,13 +38,13 @@ logger = logging.getLogger(__name__)
 def launch(
     name: str,
     *,
-    base_configuration: Base,
+    base_configuration: Base[Enum],
     image_name: str,
     cpus: int = 2,
     disk_gb: int = 64,
     mem_gb: int = 2,
     auto_clean: bool = False,
-    prepare_instance: "Callable[[Executor], None] | None" = None,
+    prepare_instance: Callable[[Executor], None] | None = None,
 ) -> MultipassInstance:
     """Create, start, and configure instance.
 
@@ -65,7 +69,6 @@ def launch(
     instance = MultipassInstance(name=name)
 
     if instance.exists():
-        # TODO: Warn if existing instance doesn't match cpu/disk/mem specs.  # noqa: FIX002
         instance.start()
         try:
             base_configuration.warmup(executor=instance)

@@ -17,6 +17,8 @@
 
 """LXD Provider."""
 
+from __future__ import annotations
+
 import logging
 import os
 import pathlib
@@ -25,7 +27,7 @@ import subprocess
 import sys
 
 import requests
-import requests_unixsocket  # type: ignore  # noqa: PGH003
+import requests_unixsocket
 
 from craft_providers.errors import details_from_called_process_error
 
@@ -36,7 +38,7 @@ from .lxd import LXD
 logger = logging.getLogger(__name__)
 
 
-def install(sudo: bool = True) -> str:  # noqa: FBT001, FBT002
+def install(*, sudo: bool = True) -> str:
     """Install LXD.
 
     Install application, using sudo if specified.
@@ -119,15 +121,15 @@ def is_installed() -> bool:
     # query snapd API
     url = "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/lxd"
     try:
-        snap_info = requests_unixsocket.get(url=url, params={"select": "enabled"})
-    except requests.exceptions.ConnectionError as error:
+        snap_info = requests_unixsocket.get(url=url, params={"select": "enabled"})  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types
+    except requests.ConnectionError as error:
         raise errors.ProviderError(
             brief="Unable to connect to snapd service."
         ) from error
 
     try:
         snap_info.raise_for_status()
-    except requests.exceptions.HTTPError as error:
+    except requests.HTTPError as error:
         logger.debug(f"Could not get snap info for LXD: {error}")
         return False
 
@@ -158,13 +160,18 @@ def is_user_permitted() -> bool:
 def ensure_lxd_is_ready(
     *,
     remote: str = "local",
-    lxc: LXC = LXC(),  # noqa: B008
-    lxd: LXD = LXD(),  # noqa: B008
+    lxc: LXC | None = None,
+    lxd: LXD | None = None,
 ) -> None:
     """Ensure LXD is ready for use.
 
     :raises LXDError: on error.
     """
+    if lxc is None:
+        lxc = LXC()
+    if lxd is None:
+        lxd = LXD()
+
     if not is_installed():
         raise errors.LXDError(
             brief="LXD is required, but not installed.",

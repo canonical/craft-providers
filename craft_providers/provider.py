@@ -21,11 +21,13 @@ likely to change. These classes will be stable and recommended for use in the re
 of craft-providers 2.0.
 """
 
+from __future__ import annotations
+
 import contextlib
 import logging
-import pathlib
 from abc import ABC, abstractmethod
 from collections.abc import Generator
+from enum import Enum
 from typing import TYPE_CHECKING
 
 from .base import Base
@@ -34,6 +36,15 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from craft_providers import Executor
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pathlib
+    from collections.abc import Generator
+    from enum import Enum
+
+    from .base import Base
+    from .executor import Executor
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +95,7 @@ class Provider(ABC):
         """
 
     @abstractmethod
-    def create_environment(self, *, instance_name: str) -> "Executor":
+    def create_environment(self, *, instance_name: str) -> Executor:
         """Create a bare environment for specified base.
 
         No initializing, launching, or cleaning up of the environment occurs.
@@ -99,13 +110,13 @@ class Provider(ABC):
         *,
         project_name: str,
         project_path: pathlib.Path,
-        base_configuration: Base,
+        base_configuration: Base[Enum],
         instance_name: str,
         allow_unstable: bool = False,
         shutdown_delay_mins: int | None = None,
         use_base_instance: bool = True,
-        prepare_instance: "Callable[[Executor], None] | None" = None,
-    ) -> Generator["Executor", None, None]:
+        prepare_instance: Callable[[Executor], None] | None = None,
+    ) -> Generator[Executor, None, None]:
         """Configure and launch environment for specified base.
 
         When this method loses context, all directories are unmounted and the

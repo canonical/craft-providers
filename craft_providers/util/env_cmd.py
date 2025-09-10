@@ -17,7 +17,12 @@
 
 """Helper(s) for env command."""
 
-import pathlib
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pathlib
 
 
 def formulate_command(

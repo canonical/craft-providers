@@ -17,7 +17,7 @@
 
 import os
 import sys
-from typing import Any
+from typing import Any, cast
 from unittest import mock
 from unittest.mock import call
 
@@ -325,7 +325,7 @@ def test_is_installed(
             pass
 
         def json(self) -> dict[str, Any]:
-            return status
+            return cast("dict[str, Any]", status)
 
     mock_get = mocker.patch("requests_unixsocket.get", return_value=FakeSnapInfo())
     mocker.patch("pathlib.Path.is_socket", return_value=has_nonsnap_socket)

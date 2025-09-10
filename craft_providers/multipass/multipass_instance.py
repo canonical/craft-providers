@@ -17,11 +17,17 @@
 
 """Multipass Instance."""
 
-import io
+from __future__ import annotations
+
 import logging
-import pathlib
 import subprocess
-from typing import Any
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    cast,
+)
+
+from typing_extensions import override
 
 from craft_providers import errors
 from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE
@@ -30,6 +36,10 @@ from craft_providers.util import env_cmd
 
 from .errors import MultipassError
 from .multipass import Multipass
+
+if TYPE_CHECKING:
+    import io
+    import pathlib
 
 logger = logging.getLogger(__name__)
 
@@ -96,13 +106,18 @@ class MultipassInstance(Executor):
 
         :raises subprocess.CalledProcessError: If the file cannot be created.
         """
-        tmp_file_path = self.execute_run(
-            command=["mktemp"],
-            capture_output=True,
-            check=True,
-            text=True,
-            timeout=TIMEOUT_SIMPLE,
-        ).stdout.strip()
+        # This cast allows us to use executor's type handling
+        tmp_file_path = (
+            cast(Executor, self)
+            .execute_run(
+                command=["mktemp"],
+                capture_output=True,
+                check=True,
+                text=True,
+                timeout=TIMEOUT_SIMPLE,
+            )
+            .stdout.strip()
+        )
 
         # mktemp is executed as root, so the ownership of the temp file needs to be
         # changed back to the default user `ubuntu` before transferring the file
@@ -196,6 +211,7 @@ class MultipassInstance(Executor):
             purge=True,
         )
 
+    @override
     def execute_popen(
         self,
         command: list[str],
@@ -203,8 +219,8 @@ class MultipassInstance(Executor):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        **kwargs,  # noqa: ANN003
-    ) -> subprocess.Popen:
+        **kwargs: Any,
+    ) -> subprocess.Popen[str]:
         """Execute a process in the instance using subprocess.Popen().
 
         The process' environment will inherit the execution environment's
@@ -232,6 +248,7 @@ class MultipassInstance(Executor):
             **kwargs,
         )
 
+    @override
     def execute_run(
         self,
         command: list[str],
@@ -239,9 +256,9 @@ class MultipassInstance(Executor):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        check: bool = False,
-        **kwargs,  # noqa: ANN003
-    ) -> subprocess.CompletedProcess:
+        text: bool | None = None,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[Any]:
         """Execute a command in the instance using subprocess.run().
 
         The process' environment will inherit the execution environment's
@@ -264,12 +281,13 @@ class MultipassInstance(Executor):
 
         :raises subprocess.CalledProcessError: if command fails and check is True.
         """
+        if text is not None:
+            kwargs["text"] = text
         return self._multipass.exec(
             instance_name=self.instance_name,
             command=_rootify_multipass_command(command, cwd=cwd, env=env),
             runner=subprocess.run,
             timeout=timeout,
-            check=check,
             **kwargs,
         )
 
@@ -300,7 +318,7 @@ class MultipassInstance(Executor):
                 details=f"Returned data: {info_data!r}",
             )
 
-        return info_data[self.instance_name]
+        return cast("dict[str, Any]", info_data[self.instance_name])
 
     def is_mounted(
         self, *, host_source: pathlib.Path, target: pathlib.PurePath
@@ -319,7 +337,7 @@ class MultipassInstance(Executor):
 
         for mount_point, mount_config in mounts.items():
             # Even on Windows, Multipass writes source_path as posix, e.g.:
-            # 'C:/Users/chris/tmpbat91bwz.tmp-pytest' # noqa: ERA001
+            # `C:/Users/chris/tmpbat91bwz.tmp-pytest`
             if (
                 mount_point == target.as_posix()
                 and mount_config.get("source_path") == host_source.as_posix()

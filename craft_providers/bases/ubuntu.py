@@ -17,6 +17,8 @@
 
 """Ubuntu image(s)."""
 
+from __future__ import annotations
+
 import csv
 import datetime
 import enum
@@ -26,21 +28,25 @@ import logging
 import pathlib
 import subprocess
 from functools import total_ordering
+from http import HTTPStatus
 from textwrap import dedent
+from typing import TYPE_CHECKING, cast
 
 import requests
-from typing_extensions import override
+from typing_extensions import Self, override
 
 from craft_providers import const
-from craft_providers.actions.snap_installer import Snap
 from craft_providers.base import Base
 from craft_providers.errors import (
     BaseCompatibilityError,
     BaseConfigurationError,
     details_from_called_process_error,
 )
-from craft_providers.executor import Executor
 from craft_providers.util import retry
+
+if TYPE_CHECKING:
+    from craft_providers.actions.snap_installer import Snap
+    from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 
@@ -59,12 +65,15 @@ class BuilddBaseAlias(enum.Enum):
     QUESTING = "25.10"
     DEVEL = "devel"
 
-    def __lt__(self, other) -> bool:  # noqa: ANN001
+    def __lt__(self, other: Self) -> bool:
         # Devels are the greatest, luckily 'd' > [0-9]
-        return self.value < other.value
+        return cast(str, self.value) < cast(str, other.value)
+
+    def __le__(self, other: Self) -> bool:
+        return cast(str, self.value) <= cast(str, other.value)
 
 
-class BuilddBase(Base):
+class BuilddBase(Base[BuilddBaseAlias]):
     """Support for Ubuntu minimal buildd images.
 
     :cvar compatibility_tag: Tag/Version for variant of build configuration and
@@ -107,8 +116,7 @@ class BuilddBase(Base):
         use_default_packages: bool = True,
         cache_path: pathlib.Path | None = None,
     ) -> None:
-        # ignore enum subclass (see https://github.com/microsoft/pyright/issues/6750)
-        self.alias: BuilddBaseAlias = alias  # pyright: ignore  # noqa: PGH003
+        self.alias: BuilddBaseAlias = alias
 
         self._cache_path = cache_path
 
@@ -177,7 +185,7 @@ class BuilddBase(Base):
     @override
     def _ensure_os_compatible(self, executor: Executor) -> None:
         """Ensure OS is compatible with Base."""
-        os_release = self._get_os_release(executor=executor)
+        os_release = self.get_os_release(executor=executor)
 
         os_name = os_release.get("NAME")
         if os_name != "Ubuntu":
@@ -211,7 +219,7 @@ class BuilddBase(Base):
     @override
     def _setup_network(self, executor: Executor) -> None:
         """Set up the basic network with systemd-networkd and systemd-resolved."""
-        self._setup_hostname(executor=executor)
+        self.setup_hostname(executor=executor)
         self._setup_resolved(executor=executor)
         self._setup_networkd(executor=executor)
 
@@ -276,13 +284,13 @@ class BuilddBase(Base):
         ) as sources_script:
             executor.push_file(
                 source=sources_script,
-                destination=pathlib.Path("/tmp/craft-sources.sh"),  # noqa: S108
+                destination=pathlib.Path("/tmp/craft-sources.sh"),
             )
 
         # use a bash script because there isn't an easy way to modify files in an instance (#132)
         try:
             self._execute_run(
-                ["bash", "/tmp/craft-sources.sh"],  # noqa: S108
+                ["bash", "/tmp/craft-sources.sh"],
                 executor=executor,
                 timeout=self._timeout_simple,
             )
@@ -301,7 +309,7 @@ class BuilddBase(Base):
 
         :raises BaseConfigurationError: If the codename can't be determined.
         """
-        os_release = self._get_os_release(executor=executor)
+        os_release = self.get_os_release(executor=executor)
         codename = os_release.get("UBUNTU_CODENAME")
         if not codename:
             raise BaseConfigurationError(
@@ -320,7 +328,7 @@ class BuilddBase(Base):
         url = "https://old-releases.ubuntu.com"
         slug = f"/ubuntu/dists/{codename}/"
 
-        def _request(timeout: float) -> requests.Response:  # noqa: ARG001
+        def _request(_timeout: float) -> requests.Response:
             return requests.head(url + slug, allow_redirects=True, timeout=5)
 
         logger.debug(f"Checking for {self.alias.value} ({codename}) on {url}.")
@@ -331,7 +339,7 @@ class BuilddBase(Base):
             error=BaseConfigurationError(brief=f"Failed to get {url + slug}."),
         )
 
-        if response.status_code == 200:  # noqa: PLR2004
+        if response.status_code == HTTPStatus.OK:
             logger.debug(f"{self.alias.value} is available on {url}.")
             return True
 

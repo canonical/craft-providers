@@ -17,19 +17,25 @@
 
 """CentOS image(s)."""
 
+from __future__ import annotations
+
 import enum
 import logging
-import pathlib
 import subprocess
+from typing import TYPE_CHECKING
 
-from craft_providers.actions.snap_installer import Snap
 from craft_providers.base import Base
 from craft_providers.errors import (
     BaseCompatibilityError,
     BaseConfigurationError,
     details_from_called_process_error,
 )
-from craft_providers.executor import Executor
+
+if TYPE_CHECKING:
+    import pathlib
+
+    from craft_providers.actions.snap_installer import Snap
+    from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +46,7 @@ class CentOSBaseAlias(enum.Enum):
     SEVEN = "7"
 
 
-class CentOSBase(Base):
+class CentOSBase(Base[CentOSBaseAlias]):
     """Support for CentOS images.
 
     :cvar compatibility_tag: Tag/Version for variant of build configuration and
@@ -84,8 +90,7 @@ class CentOSBase(Base):
     ) -> None:
         self._cache_dir = cache_path
 
-        # ignore enum subclass (see https://github.com/microsoft/pyright/issues/6750)
-        self.alias: CentOSBaseAlias = alias  # pyright: ignore  # noqa: PGH003
+        self.alias: CentOSBaseAlias = alias
 
         if environment is None:
             self._environment = self.default_command_environment()
@@ -143,7 +148,7 @@ class CentOSBase(Base):
         :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.
         """
-        os_release = self._get_os_release(executor=executor)
+        os_release = self.get_os_release(executor=executor)
 
         os_id = os_release.get("ID")
         if os_id not in ("centos", "rhel"):

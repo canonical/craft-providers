@@ -27,6 +27,8 @@ import string
 import subprocess
 import sys
 import tempfile
+from collections.abc import Callable, Generator
+from typing import cast
 
 import pytest
 from craft_providers import lxd, multipass
@@ -54,12 +56,12 @@ def generate_instance_name():
 
 def snap_exists(snap_name: str) -> bool:
     """Returns true if a snap exists."""
-    return os.path.exists(f"/snap/{snap_name}/current")  # noqa: PTH110
+    return pathlib.Path(f"/snap/{snap_name}/current").exists()
 
 
 def is_installed_dangerously(snap_name: str) -> bool:
     """Returns true if a snap is installed dangerously."""
-    return get_host_snap_info(snap_name)["revision"].startswith("x")
+    return cast(str, get_host_snap_info(snap_name)["revision"]).startswith("x")
 
 
 @pytest.fixture
@@ -220,7 +222,7 @@ def core22_lxd_instance(installed_lxd, instance_name):
 
 
 @pytest.fixture(scope="session")
-def installed_snap():
+def installed_snap() -> Callable[..., contextlib.AbstractContextManager[None]]:
     """Fixture to provide contextmanager to install a specified snap.
 
     If a snap is not installed, it would be installed automatically with:
@@ -231,7 +233,9 @@ def installed_snap():
         pytest.skip("requires linux and snapd")
 
     @contextlib.contextmanager
-    def _installed_snap(snap_name, *, try_path: pathlib.Path | None = None):
+    def _installed_snap(
+        snap_name: str, *, try_path: pathlib.Path | None = None
+    ) -> Generator[None]:
         """Ensure snap is installed or skip test."""
         # do nothing if already installed and not dangerous
         if snap_exists(snap_name) and not is_installed_dangerously(snap_name):
@@ -294,7 +298,7 @@ def dangerously_installed_snap(tmpdir):
             # collect the file name
             match = re.search(f"{snap_name}_\\d+.snap", str(output))
             if not match:
-                raise Exception(  # noqa: TRY002
+                raise ValueError(
                     "could not parse snap file name from output of "
                     f"'snap download {snap_name}' (output = {output!r})"
                 )

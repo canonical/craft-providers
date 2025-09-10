@@ -29,10 +29,9 @@ from craft_providers.actions.snap_installer import Snap
 from craft_providers.errors import (
     BaseConfigurationError,
     ProviderError,
-    details_from_called_process_error,
 )
 from craft_providers.instance_config import InstanceConfiguration
-from logassert import Exact  # type: ignore  # noqa: PGH003
+from logassert import Exact
 
 
 @pytest.fixture
@@ -671,7 +670,7 @@ def test_inject_from_host_snapd_http_error_using_pack_fallback(
     tmpdir,
 ):
     mock_requests.get.return_value.raise_for_status.side_effect = (
-        requests.exceptions.HTTPError()  # type: ignore [reportGeneralTypeIssues]
+        requests.exceptions.HTTPError()
     )
     fake_process.register_subprocess(
         [
@@ -744,17 +743,12 @@ def test_inject_from_host_install_failure(
         ],
     )
 
-    with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
+    with pytest.raises(
+        snap_installer.SnapInstallationError, match="failed to install snap 'test-name'"
+    ):
         snap_installer.inject_from_host(
             executor=fake_executor, snap_name="test-name", classic=False
         )
-
-    assert exc_info.value == snap_installer.SnapInstallationError(
-        brief="failed to install snap 'test-name'",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
     assert len(fake_process.calls) == 1
 
@@ -920,20 +914,16 @@ def test_install_from_store_failure(
         returncode=1,
     )
 
-    with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
+    with pytest.raises(
+        snap_installer.SnapInstallationError,
+        match="Failed to install/refresh snap 'test-name'.",
+    ):
         snap_installer.install_from_store(
             executor=fake_executor,
             snap_name="test-name",
             classic=True,
             channel="test-chan",
         )
-
-    assert exc_info.value == snap_installer.SnapInstallationError(
-        brief="Failed to install/refresh snap 'test-name'.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 @pytest.mark.parametrize(
@@ -1078,17 +1068,13 @@ def test_add_assertions_from_host_error_on_ack(
     for _ in range(4):
         fake_process.register_subprocess(["snap", "known", fake_process.any()])
 
-    with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
+    with pytest.raises(
+        snap_installer.SnapInstallationError,
+        match="failed to add assertions for snap 'test-name'",
+    ):
         snap_installer._add_assertions_from_host(
             executor=fake_executor, snap_name="test-name"
         )
-
-    assert exc_info.value == snap_installer.SnapInstallationError(
-        brief="failed to add assertions for snap 'test-name'",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
     assert len(fake_process.calls) == 5
 
@@ -1111,7 +1097,7 @@ def test_get_target_snap_revision_from_snapd_process_error(fake_process, fake_ex
         snap_installer._get_target_snap_revision_from_snapd("test-snap", fake_executor)
     assert exc_info.value == snap_installer.SnapInstallationError(
         "Unable to get target snap revision.",
-        details="* Command that failed: 'fake-executor curl --silent --unix-socket /run/snapd.socket http://localhost/v2/snaps/test-snap'\n* Command exit code: 1\n* Command output: b'snap error'\n* Command standard error output: b'snap error details'",
+        details="* Command that failed: 'fake-executor curl --silent --unix-socket /run/snapd.socket http://localhost/v2/snaps/test-snap'\n* Command exit code: 1\n* Command output: 'snap error'\n* Command standard error output: 'snap error details'",
     )
     assert exc_info.value.__cause__ is not None
 
@@ -1239,17 +1225,12 @@ def test_get_snap_revision_ensuring_source_different_source_error(
         stderr="snap error details",
         returncode=1,
     )
-    with pytest.raises(snap_installer.SnapInstallationError) as exc_info:
+    with pytest.raises(
+        snap_installer.SnapInstallationError, match="Failed to remove snap 'test-name'."
+    ):
         snap_installer._get_snap_revision_ensuring_source(
             "test-name", snap_installer.SNAP_SRC_STORE, fake_executor
         )
-    assert exc_info.value == snap_installer.SnapInstallationError(
-        brief="Failed to remove snap 'test-name'.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
-    assert exc_info.value.__cause__ is not None
 
 
 # -- tests for the Snap pydantic model

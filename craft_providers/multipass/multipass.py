@@ -21,7 +21,8 @@ This implementation interfaces with multipass using the `multipass` command-line
 utility.
 """
 
-import io
+from __future__ import annotations
+
 import json
 import locale
 import logging
@@ -29,8 +30,7 @@ import pathlib
 import shlex
 import subprocess
 import time
-from collections.abc import Callable
-from typing import Any
+from typing import IO, TYPE_CHECKING, Any, TypeVar, cast
 
 import packaging.version
 
@@ -39,7 +39,14 @@ from craft_providers.const import RETRY_WAIT
 
 from .errors import MultipassError
 
+if TYPE_CHECKING:
+    import io
+    from collections.abc import Callable
+
 logger = logging.getLogger(__name__)
+
+
+T = TypeVar("T")
 
 
 class Multipass:
@@ -56,7 +63,9 @@ class Multipass:
     ) -> None:
         self.multipass_path = multipass_path
 
-    def _run(self, command: list[str], **kwargs) -> subprocess.CompletedProcess:  # noqa: ANN003
+    def _run(
+        self, command: list[str], **kwargs: Any
+    ) -> subprocess.CompletedProcess[Any]:
         """Execute a multipass command.
 
         It always checks the result (as no errors should pass silently) and captures the
@@ -65,9 +74,15 @@ class Multipass:
         command = [str(self.multipass_path), *command]
 
         logger.debug("Executing on host: %s", shlex.join(command))
-        return subprocess.run(command, check=True, capture_output=True, **kwargs)
+        # Mypy detects this correctly, but pyright thinks the return type is unknown.
+        return subprocess.run(  # pyright: ignore[reportUnknownVariableType]
+            command,
+            check=True,
+            capture_output=True,
+            **kwargs,
+        )
 
-    def delete(self, *, instance_name: str, purge=True) -> None:  # noqa: ANN001
+    def delete(self, *, instance_name: str, purge: bool = True) -> None:
         """Passthrough for running multipass delete.
 
         :param instance_name: The name of the instance_name to delete.
@@ -88,16 +103,19 @@ class Multipass:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    def exec(  # noqa: ANN201
+    def exec(
         self,
         *,
         command: list[str],
         instance_name: str,
-        runner: Callable = subprocess.run,
         timeout: float | None = None,
         check: bool = False,
-        **kwargs,  # noqa: ANN003
-    ):
+        # Mypy and ty don't have good answers here re: what to do about this:
+        # https://github.com/python/mypy/issues/3737
+        # https://github.com/astral-sh/ty/issues/592
+        runner: Callable[..., T] = subprocess.run,  # type: ignore[assignment]  # ty: ignore[invalid-parameter-default]
+        **kwargs: Any,
+    ) -> T:
         """Execute command in instance_name with specified runner.
 
         The working directory the command is executed from inside the instance depends
@@ -139,14 +157,14 @@ class Multipass:
         command = ["info", instance_name, "--format", "json"]
 
         try:
-            proc = self._run(command, text=True)
+            proc = self._run(command)
         except subprocess.CalledProcessError as error:
             raise MultipassError(
                 brief=f"Failed to query info for VM {instance_name!r}.",
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-        return json.loads(proc.stdout)
+        return cast("dict[str, Any]", json.loads(proc.stdout))
 
     def is_supported_version(self) -> bool:
         """Check if Multipass version is supported.
@@ -216,7 +234,7 @@ class Multipass:
         command = ["list", "--format", "json"]
 
         try:
-            proc = self._run(command, text=True)
+            proc = self._run(command)
         except subprocess.CalledProcessError as error:
             raise MultipassError(
                 brief="Failed to query list of VMs.",
@@ -353,12 +371,8 @@ class Multipass:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         ) as proc:
-            # Should never happen, but mypy/pyright makes noise.
-            assert proc.stdout is not None  # noqa: S101
-            assert proc.stderr is not None  # noqa: S101
-
             while True:
-                data = proc.stdout.read(chunk_size)
+                data = cast("IO[bytes]", proc.stdout).read(chunk_size)
                 if not data:
                     break
 
@@ -366,7 +380,7 @@ class Multipass:
 
             # Take one read of stderr in case there is anything useful
             # for debugging an error.
-            stderr = proc.stderr.read()
+            stderr = cast("IO[bytes]", proc.stderr).read()
 
         if proc.returncode != 0:
             raise MultipassError(
@@ -395,24 +409,22 @@ class Multipass:
         with subprocess.Popen(
             command, stdin=subprocess.PIPE, stderr=subprocess.PIPE
         ) as proc:
-            # Should never happen, but mypy/pyright makes noise.
-            assert proc.stdin is not None  # noqa: S101
-            assert proc.stderr is not None  # noqa: S101
-
+            stdin_buf = cast("IO[bytes]", proc.stdin)
+            stderr_buf = cast("IO[bytes]", proc.stderr)
             while True:
                 data = source.read(chunk_size)
                 if not data:
                     break
 
-                proc.stdin.write(data)
+                stdin_buf.write(data)
 
             # Close stdin before reading stderr, otherwise read() will hang
             # because process is waiting for more data.
-            proc.stdin.close()
+            stdin_buf.close()
 
             # Take one read of stderr in case there is anything useful
             # for debugging an error.
-            stderr = proc.stderr.read()
+            stderr = stderr_buf.read()
 
         if proc.returncode != 0:
             raise MultipassError(
@@ -522,11 +534,11 @@ class Multipass:
         #   SOME NOTICE INFORMATION....
         #
         # After stripping and splitting:
-        #    - ['multipass', '1.5.0'] # noqa: ERA001
-        #    - ['multipass', '1.5.0', 'multipassd', '1.5.0'] # noqa: ERA001
-        #    - ['multipass', '1.5.0+mac', 'multipassd', '1.5.0+mac'] # noqa: ERA001
-        #    - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win'] # noqa: ERA001
-        #    - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win', ...] # noqa: ERA001
+        #    1: ['multipass', '1.5.0']
+        #    2: ['multipass', '1.5.0', 'multipassd', '1.5.0']
+        #    3: ['multipass', '1.5.0+mac', 'multipassd', '1.5.0+mac']
+        #    4: ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win']
+        #    5: ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win', ...]
         output_split = output.strip().split()
         if len(output_split) < 2 or output_split[0] != "multipass":  # noqa: PLR2004
             raise MultipassError(

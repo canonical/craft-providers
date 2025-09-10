@@ -26,6 +26,7 @@ from craft_providers.executor import Executor
 from craft_providers.util import env_cmd
 from pydantic import ValidationError
 from pydantic_core import InitErrorDetails
+from typing_extensions import override
 
 # command used by the FakeExecutor
 DEFAULT_FAKE_CMD = ["fake-executor"]
@@ -35,7 +36,7 @@ class FakeExecutor(Executor):
     """Fake Executor.
 
     Provides a fake execution environment meant to be paired with the
-    fake_subprocess fixture for complete control over execution behaviors.
+    fake_process fixture for complete control over execution behaviors.
 
     Calls to each method are recorded in `records_of_<method_name>` for introspection,
     similar to mock_calls.
@@ -50,6 +51,7 @@ class FakeExecutor(Executor):
         self.records_of_mount: list[dict[str, Any]] = []
         self.records_of_is_running: list[dict[str, Any]] = []
 
+    @override
     def push_file_io(
         self,
         *,
@@ -69,19 +71,22 @@ class FakeExecutor(Executor):
             }
         )
 
+    @override
     def execute_popen(
         self,
         command: list[str],
         *,
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
-        **kwargs,
-    ) -> subprocess.Popen:
+        timeout: float | None = None,
+        **kwargs: Any,
+    ) -> subprocess.Popen[str]:
         env_args = [] if env is None else env_cmd.formulate_command(env, chdir=cwd)
 
         final_cmd = [*DEFAULT_FAKE_CMD, *env_args, *command]
         return subprocess.Popen(final_cmd, **kwargs)
 
+    @override
     def execute_run(
         self,
         command: list[str],
@@ -89,15 +94,17 @@ class FakeExecutor(Executor):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        check: bool = False,
-        **kwargs,
-    ) -> subprocess.CompletedProcess:
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[Any]:
         env_args = [] if env is None else env_cmd.formulate_command(env, chdir=cwd)
 
         final_cmd = [*DEFAULT_FAKE_CMD, *env_args, *command]
 
-        return subprocess.run(final_cmd, timeout=timeout, check=check, **kwargs)
+        # We're not using an explicit check here because we're getting check from the
+        # calling method.
+        return subprocess.run(final_cmd, timeout=timeout, **kwargs)  # noqa: PLW1510
 
+    @override
     def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:
         self.records_of_pull_file.append(
             {
@@ -106,6 +113,7 @@ class FakeExecutor(Executor):
             }
         )
 
+    @override
     def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:
         self.records_of_push_file.append(
             {
@@ -114,23 +122,27 @@ class FakeExecutor(Executor):
             }
         )
 
+    @override
     def delete(self) -> None:
         self.records_of_delete.append({})
 
+    @override
     def exists(self) -> bool:
         self.records_of_exists.append({})
         return True
 
+    @override
     def mount(self, *, host_source: pathlib.Path, target: pathlib.PurePath) -> None:
         self.records_of_mount.append({"host_source": host_source, "target": target})
 
+    @override
     def is_running(self) -> bool:
         self.records_of_is_running.append({})
         return True
 
 
 @pytest.fixture
-def fake_executor():
+def fake_executor(fake_process):
     return FakeExecutor()
 
 

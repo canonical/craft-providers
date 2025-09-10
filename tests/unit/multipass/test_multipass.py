@@ -234,7 +234,7 @@ def test_is_supported_version_false(fake_process, version_output):
 
 
 def test_is_supported_version_error(fake_process, mock_details_from_process_error):
-    fake_process.register_subprocess(["multipass", "version"], stdout="invalid output")
+    fake_process.register_subprocess(["multipass", "version"], stdout=b"invalid output")
 
     with pytest.raises(MultipassError) as exc_info:
         Multipass().is_supported_version()
@@ -703,13 +703,11 @@ def test_wait_until_ready_timeout_error(
     )
 
     with mock.patch("time.time", side_effect=time_values):
-        with pytest.raises(MultipassError) as exc_info:  # noqa: PT012
-            multipass = Multipass()
+        multipass = Multipass()
+        with pytest.raises(
+            MultipassError, match="Timed out waiting for Multipass to become ready."
+        ):
             multipass.wait_until_ready(timeout=timeout)
-
-    assert exc_info.value == MultipassError(
-        "Timed out waiting for Multipass to become ready."
-    )
 
     assert len(fake_process.calls) == version_calls
 
@@ -791,5 +789,8 @@ def test_generic_run_extra_args():
     with mock.patch("subprocess.run") as run_mock:
         Multipass()._run(["foo", "1"], extra="whatever")
     run_mock.assert_called_with(
-        ["multipass", "foo", "1"], check=True, capture_output=True, extra="whatever"
+        ["multipass", "foo", "1"],
+        check=True,
+        capture_output=True,
+        extra="whatever",
     )

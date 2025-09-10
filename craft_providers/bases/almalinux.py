@@ -17,10 +17,12 @@
 
 """Almalinux image(s)."""
 
+from __future__ import annotations
+
 import enum
 import logging
-import pathlib
 import subprocess
+from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
@@ -31,7 +33,12 @@ from craft_providers.errors import (
     BaseConfigurationError,
     details_from_called_process_error,
 )
-from craft_providers.executor import Executor
+
+if TYPE_CHECKING:
+    import pathlib
+
+    from craft_providers.actions.snap_installer import Snap
+    from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +49,7 @@ class AlmaLinuxBaseAlias(enum.Enum):
     NINE = "9"
 
 
-class AlmaLinuxBase(Base):
+class AlmaLinuxBase(Base[AlmaLinuxBaseAlias]):
     """Support for AlmaLinux images.
 
     :cvar compatibility_tag: Tag/Version for variant of build configuration and
@@ -87,8 +94,7 @@ class AlmaLinuxBase(Base):
     ) -> None:
         self._cache_path = cache_path
 
-        # ignore enum subclass (see https://github.com/microsoft/pyright/issues/6750)
-        self.alias: AlmaLinuxBaseAlias = alias  # pyright: ignore  # noqa: PGH003
+        self.alias: AlmaLinuxBaseAlias = alias
 
         if environment is None:
             self._environment = self.default_command_environment()
@@ -131,7 +137,7 @@ class AlmaLinuxBase(Base):
         :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.
         """
-        os_release = self._get_os_release(executor=executor)
+        os_release = self.get_os_release(executor=executor)
 
         os_id = os_release.get("ID")
         if os_id != "almalinux":

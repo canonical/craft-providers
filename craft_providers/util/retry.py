@@ -32,7 +32,7 @@ def retry_until_timeout(
     retry_wait: float,
     func: Callable[[float], T],
     *,
-    error: Exception | None = TimeoutError(),  # noqa: B008
+    error: Exception | None = None,
 ) -> T:
     """Re-run a function until it either succeeds or it times out.
 

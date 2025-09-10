@@ -17,7 +17,8 @@
 
 """Base configuration module."""
 
-import enum
+from __future__ import annotations
+
 import io
 import logging
 import math
@@ -29,7 +30,7 @@ import sys
 from abc import ABC, abstractmethod
 from enum import Enum
 from textwrap import dedent
-from typing import final
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, final, overload
 
 from pydantic import ValidationError
 
@@ -48,15 +49,20 @@ from craft_providers.errors import (
     ProviderError,
     details_from_called_process_error,
 )
-from craft_providers.executor import Executor
 from craft_providers.instance_config import InstanceConfiguration
 from craft_providers.util import retry
 from craft_providers.util.os_release import OS_RELEASE_FILE, parse_os_release
 
+if TYPE_CHECKING:
+    from craft_providers.executor import Executor
+
 logger = logging.getLogger(__name__)
 
+# Needed until on Python 3.12 - see https://github.com/microsoft/pyright/issues/6750.
+_T_enum_co = TypeVar("_T_enum_co", covariant=True, bound=Enum)
 
-class Base(ABC):
+
+class Base(ABC, Generic[_T_enum_co]):
     """Interface for providers to configure instantiated environments.
 
     Defines how to setup/configure an environment that has been instantiated by
@@ -96,18 +102,18 @@ class Base(ABC):
     _timeout_complex: float | None = TIMEOUT_COMPLEX
     _timeout_unpredictable: float | None = TIMEOUT_UNPREDICTABLE
     _cache_path: pathlib.Path | None = None
-    alias: Enum
+    alias: _T_enum_co
     compatibility_tag: str = "base-v7"
 
     @abstractmethod
     def __init__(
         self,
         *,
-        alias: enum.Enum,
+        alias: _T_enum_co,
         compatibility_tag: str | None = None,
         environment: dict[str, str | None] | None = None,
         hostname: str = "craft-instance",
-        snaps: list | None = None,
+        snaps: list[Snap] | None = None,
         packages: list[str] | None = None,
         use_default_packages: bool = True,
         cache_path: pathlib.Path | None = None,
@@ -180,8 +186,6 @@ class Base(ABC):
                 brief="Failed to parse instance configuration file.",
             ) from error
         # if no config exists, assume base is compatible (likely unfinished setup)
-        # XXX: checking the compatibility_tag should be much more strict when called  # noqa: FIX003
-        # by warmup (warmup will continue if the compatibility tag is missing or none!)
         except FileNotFoundError:
             return
 
@@ -231,7 +235,7 @@ class Base(ABC):
 
         logger.debug("Instance has already been setup.")
 
-    def _get_os_release(self, executor: Executor) -> dict[str, str]:
+    def get_os_release(self, executor: Executor) -> dict[str, str]:
         """Get the OS release information from an instance's /etc/os-release.
 
         :returns: Dictionary of key-mappings found in os-release.
@@ -289,7 +293,7 @@ class Base(ABC):
         """
         return self._environment.copy()
 
-    def _update_setup_status(self, executor: Executor, status: bool) -> None:  # noqa: FBT001
+    def _update_setup_status(self, executor: Executor, *, status: bool) -> None:
         """Update the instance config to indicate the status of the setup.
 
         :param status: True if the setup is complete, False otherwise.
@@ -342,7 +346,7 @@ class Base(ABC):
             system_state = proc.stdout.strip()
             if system_state not in ("running", "degraded"):
                 logger.debug("systemctl is-system-running status: %s", system_state)
-                raise ValueError
+                raise ValueError(system_state)
 
         error = BaseConfigurationError(
             brief="Timed out waiting for environment to be ready."
@@ -354,7 +358,7 @@ class Base(ABC):
             error=error,
         )
 
-    def _setup_hostname(self, executor: Executor) -> None:
+    def setup_hostname(self, executor: Executor) -> None:
         """Configure hostname, installing /etc/hostname."""
         executor.push_file_io(
             destination=pathlib.PurePosixPath("/etc/hostname"),
@@ -559,17 +563,19 @@ class Base(ABC):
         """Configure the snapd proxy."""
         try:
             http_proxy = self._environment.get("http_proxy")
-            if http_proxy:
-                command = ["snap", "set", "system", f"proxy.http={http_proxy}"]
-            else:
-                command = ["snap", "unset", "system", "proxy.http"]
+            command = (
+                ["snap", "set", "system", f"proxy.http={http_proxy}"]
+                if http_proxy
+                else ["snap", "unset", "system", "proxy.http"]
+            )
             self._execute_run(command, executor=executor, timeout=self._timeout_simple)
 
             https_proxy = self._environment.get("https_proxy")
-            if https_proxy:
-                command = ["snap", "set", "system", f"proxy.https={https_proxy}"]
-            else:
-                command = ["snap", "unset", "system", "proxy.https"]
+            command = (
+                ["snap", "set", "system", f"proxy.https={https_proxy}"]
+                if https_proxy
+                else ["snap", "unset", "system", "proxy.https"]
+            )
             self._execute_run(command, executor=executor, timeout=self._timeout_simple)
 
         except subprocess.CalledProcessError as error:
@@ -712,7 +718,7 @@ class Base(ABC):
         self._setup_wait_for_system_ready(executor=executor)
         self._setup_wait_for_network(executor=executor)
 
-    def _pre_image_check(self, executor: Executor) -> None:  # noqa: ARG002
+    def _pre_image_check(self, executor: Executor) -> None:
         """Start the setup process and update the status.
 
         This step usually does not need to be overridden.
@@ -727,14 +733,14 @@ class Base(ABC):
         self._ensure_os_compatible(executor=executor)
         self._ensure_instance_config_compatible(executor=executor)
 
-    def _post_image_check(self, executor: Executor) -> None:  # noqa: ARG002
+    def _post_image_check(self, executor: Executor) -> None:
         """Do anything extra image checking.
 
         This step should be overridden when needed.
         """
         return
 
-    def _pre_setup_os(self, executor: Executor) -> None:  # noqa: ARG002
+    def _pre_setup_os(self, executor: Executor) -> None:
         """Do anything before setting up the OS.
 
         e.g.
@@ -752,7 +758,7 @@ class Base(ABC):
         """
         self._setup_environment(executor=executor)
 
-    def _post_setup_os(self, executor: Executor) -> None:  # noqa: ARG002
+    def _post_setup_os(self, executor: Executor) -> None:
         """Do anything after setting up the OS.
 
         e.g.
@@ -762,7 +768,7 @@ class Base(ABC):
         """
         return
 
-    def _pre_setup_network(self, executor: Executor) -> None:  # noqa: ARG002
+    def _pre_setup_network(self, executor: Executor) -> None:
         """Do anything before setting up the basic network.
 
         e.g.
@@ -783,9 +789,9 @@ class Base(ABC):
 
         This step usually does not need to be overridden.
         """
-        self._setup_hostname(executor=executor)
+        self.setup_hostname(executor=executor)
 
-    def _post_setup_network(self, executor: Executor) -> None:  # noqa: ARG002
+    def _post_setup_network(self, executor: Executor) -> None:
         """Do anything after setting up the basic network.
 
         e.g.
@@ -846,7 +852,7 @@ class Base(ABC):
             )
             logger.debug(exc)
 
-    def _pre_setup_packages(self, executor: Executor) -> None:  # noqa: ARG002
+    def _pre_setup_packages(self, executor: Executor) -> None:
         """Do anything before setting up the packages.
 
         e.g.
@@ -863,7 +869,7 @@ class Base(ABC):
         This step must be overridden.
         """
 
-    def _post_setup_packages(self, executor: Executor) -> None:  # noqa: ARG002
+    def _post_setup_packages(self, executor: Executor) -> None:
         """Configure the new installed packages.
 
         This step should be overridden when needed.
@@ -905,7 +911,7 @@ class Base(ABC):
         """
         self._setup_snapd_proxy(executor=executor)
 
-    def _pre_setup_snaps(self, executor: Executor) -> None:  # noqa: ARG002
+    def _pre_setup_snaps(self, executor: Executor) -> None:
         """Do anything before setting up the snaps.
 
         e.g.
@@ -925,14 +931,14 @@ class Base(ABC):
         """
         self._install_snaps(executor=executor)
 
-    def _post_setup_snaps(self, executor: Executor) -> None:  # noqa: ARG002
+    def _post_setup_snaps(self, executor: Executor) -> None:
         """Configure the new installed snaps.
 
         This step should be overridden when needed.
         """
         return
 
-    def _pre_clean_up(self, executor: Executor) -> None:  # noqa: ARG002
+    def _pre_clean_up(self, executor: Executor) -> None:
         """Do anything before cleaning up.
 
         e.g.
@@ -942,7 +948,7 @@ class Base(ABC):
         """
         return
 
-    def _clean_up(self, executor: Executor) -> None:  # noqa: ARG002
+    def _clean_up(self, executor: Executor) -> None:
         """Cleanup the OS environment.
 
         e.g.
@@ -953,7 +959,7 @@ class Base(ABC):
         """
         return
 
-    def _post_clean_up(self, executor: Executor) -> None:  # noqa: ARG002
+    def _post_clean_up(self, executor: Executor) -> None:
         """Do anything needed after cleaning up.
 
         e.g.
@@ -964,7 +970,7 @@ class Base(ABC):
         """
         return
 
-    def _pre_finish(self, executor: Executor) -> None:  # noqa: ARG002
+    def _pre_finish(self, executor: Executor) -> None:
         """Do anything needed before finishing the setup process.
 
         e.g.
@@ -1141,6 +1147,32 @@ class Base(ABC):
             return False
         return proc.returncode == 0
 
+    @overload
+    @classmethod
+    def _execute_run(
+        cls,
+        command: list[str],
+        *,
+        executor: Executor,
+        check: bool = True,
+        capture_output: bool = True,
+        text: Literal[True],
+        timeout: float | None = None,
+        verify_network: bool = False,
+    ) -> subprocess.CompletedProcess[str]: ...
+    @overload
+    @classmethod
+    def _execute_run(
+        cls,
+        command: list[str],
+        *,
+        executor: Executor,
+        check: bool = True,
+        capture_output: bool = True,
+        text: Literal[False] = False,
+        timeout: float | None = None,
+        verify_network: bool = False,
+    ) -> subprocess.CompletedProcess[bytes]: ...
     @classmethod
     def _execute_run(
         cls,
@@ -1151,8 +1183,8 @@ class Base(ABC):
         capture_output: bool = True,
         text: bool = False,
         timeout: float | None = None,
-        verify_network=False,  # noqa: ANN001
-    ) -> subprocess.CompletedProcess:
+        verify_network: bool = False,
+    ) -> subprocess.CompletedProcess[Any]:
         """Run a command through the executor.
 
         This is a helper to simplify most common calls and provide extra network
@@ -1171,10 +1203,10 @@ class Base(ABC):
         try:
             proc = executor.execute_run(
                 command,
-                check=check,
                 capture_output=capture_output,
                 text=text,
                 timeout=timeout,
+                check=check,
             )
         except subprocess.CalledProcessError as exc:
             if verify_network and not cls._network_connected(executor=executor):
