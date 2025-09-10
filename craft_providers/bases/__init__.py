@@ -20,6 +20,7 @@
 from enum import Enum
 import sys
 from typing import Literal, NamedTuple, overload
+import warnings
 
 from craft_providers.errors import BaseCompatibilityError, BaseConfigurationError
 from craft_providers.base import Base
@@ -27,6 +28,7 @@ from craft_providers.base import Base
 from . import almalinux, centos
 from . import ubuntu
 from . import ubuntu as buildd
+from ._factory import get_base
 from .checks import ensure_guest_compatible
 from .ubuntu import BuilddBase, BuilddBaseAlias
 
@@ -46,6 +48,7 @@ __all__ = [
     "BuilddBaseAlias",
     "BaseCompatibilityError",
     "BaseConfigurationError",
+    "get_base",
 ]
 
 
@@ -88,6 +91,11 @@ def get_base_alias(
 def get_base_alias(base_name: BaseName) -> BaseAlias: ...
 def get_base_alias(base_name: tuple[str, str]) -> BaseAlias:
     """Return a Base alias from a base (name, version) tuple."""
+    warnings.warn(
+        "get_base_alias is deprecated. Use craft_providers.get_base instead.",
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
     base_name = BaseName(*base_name)
     if base_name.name == "ubuntu" and base_name in BASE_NAME_TO_BASE_ALIAS:
         return BASE_NAME_TO_BASE_ALIAS[base_name]
@@ -110,6 +118,11 @@ def get_base_from_alias(
 ) -> type[almalinux.AlmaLinuxBase]: ...
 def get_base_from_alias(alias: BaseAlias) -> type[Base[Enum]]:
     """Return a Base class from a known base alias."""
+    warnings.warn(
+        "get_base_from_alias is deprecated. Use craft_providers.get_base instead.",
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
     match alias:
         case ubuntu.BuilddBaseAlias():
             return ubuntu.BuilddBase

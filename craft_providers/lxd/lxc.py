@@ -115,7 +115,7 @@ class LXC:
         check: bool = True,
         project: str | None = None,
         stdin: StdinType = StdinType.INTERACTIVE,
-        text: Literal[False, None] = None,
+        text: Literal[False] | None = None,
         encoding: None = None,
         errors: None = None,
         **kwargs: Any,

@@ -44,8 +44,20 @@ exclude_patterns = [
 
     # These axes were empty, so hide their scaffolding for now
     "tutorials",
-    "how-to-guides",
 ]
+
+# Links to ignore when checking links
+linkcheck_ignore = [
+    # GNU's site is a bit unreliable
+    "https://www.gnu.org/.*",
+    # https://github.com/rust-lang/crates.io/issues/788
+    "https://crates.io/",
+    # Ignore releases, since we'll include the next release before it exists.
+    "https://github.com/canonical/[a-z]*craft[a-z-]*/releases/.*",
+    # returns a 403 from GitHub CI
+    "https://rsync.samba.org",
+]
+
 
 extensions.extend(
     [
