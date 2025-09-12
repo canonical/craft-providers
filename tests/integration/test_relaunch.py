@@ -21,10 +21,7 @@ from typing import TYPE_CHECKING, cast
 
 import craft_providers
 import pytest
-from craft_providers import bases
 from craft_providers.bases.almalinux import AlmaLinuxBaseAlias
-from craft_providers.bases.centos import CentOSBaseAlias
-from craft_providers.bases.ubuntu import BuilddBaseAlias
 from craft_providers.multipass.multipass_provider import MultipassProvider
 
 if TYPE_CHECKING:
@@ -33,37 +30,36 @@ if TYPE_CHECKING:
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
-    "base_alias",
+    ("distribution", "series"),
     [
-        *bases.almalinux.AlmaLinuxBaseAlias,
-        bases.BuilddBaseAlias.NOBLE,
+        ("almalinux", "9"),
+        ("ubuntu", "24.04"),
         # https://github.com/canonical/craft-providers/issues/765
         # We should enable all of these for weekly tests.
-        # *bases.ubuntu.BuilddBaseAlias,
+        # Uncomment: *(("ubuntu", alias.value) for alias in BuilddBaseAlias)
     ],
 )
 def test_relaunch(
     session_provider: craft_providers.Provider,
-    base_alias: BuilddBaseAlias | CentOSBaseAlias | AlmaLinuxBaseAlias,
+    distribution: str,
+    series: str,
     tmp_path: pathlib.Path,
 ):
-    if (
-        isinstance(session_provider, MultipassProvider)
-        and base_alias not in bases.ubuntu.BuilddBaseAlias
-    ):
+    if isinstance(session_provider, MultipassProvider) and distribution != "ubuntu":
         pytest.skip("Non-Ubuntu bases not supported with Multipass.")
-    if base_alias == bases.ubuntu.BuilddBaseAlias.XENIAL:
-        pytest.skip(
-            "Xenial not supported: https://github.com/canonical/craft-providers/issues/582"
-        )
-    if base_alias == bases.ubuntu.BuilddBaseAlias.ORACULAR:
-        pytest.skip(
-            "Oracular is unsupported: https://github.com/canonical/craft-providers/issues/598"
-        )
+    match (distribution, series):
+        case ("ubuntu", "16.04"):
+            pytest.skip(
+                "Xenial not supported: https://github.com/canonical/craft-providers/issues/582"
+            )
+        case ("ubuntu", "24.10"):
+            pytest.skip(
+                "Oracular is unsupported: https://github.com/canonical/craft-providers/issues/598"
+            )
 
-    base_cls = bases.get_base_from_alias(base_alias)
-    base = base_cls(alias=base_alias)  # type: ignore[reportArgumentType, arg-type]
-    project_name = f"relaunch-{base_alias.name}"
+    base = craft_providers.get_base(distribution=distribution, series=series)
+
+    project_name = f"relaunch-{base.alias.name}"
 
     try:
         # Set up both a file that should exist for the whole run and one that should
@@ -81,7 +77,7 @@ def test_relaunch(
 
             # Alma Linux only clears tmp files after 10 days by default.
             # This configures systemd-tmpfiles to clear them on every boot.
-            if isinstance(base_alias, AlmaLinuxBaseAlias):
+            if isinstance(base.alias, AlmaLinuxBaseAlias):
                 content = io.BytesIO(b"r! /tmp/* 1777 root root 0")
                 instance.push_file_io(
                     destination=pathlib.PurePosixPath(

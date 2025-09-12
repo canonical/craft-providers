@@ -4,6 +4,15 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+.. _release-3.2.0:
+
+3.2.0 (unreleased)
+------------------
+
+- Add a
+
+For a complete list of commits, check out the `3.2.0`_ release on GitHub.
+
 3.1.0 (2025-09-08)
 ------------------
 
@@ -467,3 +476,4 @@ Note: The provided name for a LXD executor object is converted to comply with
 - Update documentation
 
 .. _Releases page: https://github.com/canonical/craft-providers/releases
+.. _3.2.0: https://github.com/canonical/craft-providers/releases/tag/3.2.0
