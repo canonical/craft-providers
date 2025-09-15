@@ -479,7 +479,7 @@ dev = [
     { name = "pytest-mock", specifier = "~=3.14" },
     { name = "pytest-rerunfailures", specifier = "~=14.0" },
     { name = "pytest-subprocess", specifier = "~=1.5.3" },
-    { name = "pytest-time", specifier = "~=0.3.2" },
+    { name = "pytest-time", specifier = "~=0.4.1" },
     { name = "pytest-xdist", specifier = "~=3.6" },
     { name = "responses", specifier = "~=0.25.7" },
     { name = "types-pyyaml", specifier = "~=6.0" },
@@ -1317,14 +1317,14 @@ wheels = [
 
 [[package]]
 name = "pytest-time"
-version = "0.3.2"
+version = "0.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pytest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b0/5b/6abba0b15f134bd9e7c769dc938ac829b88007fdf9c7fa8cd21be0e8d012/pytest_time-0.3.2.tar.gz", hash = "sha256:71baf1a0e516c0aedcc870512592d3a19393a0e4834062a583103085320e0880", size = 77129, upload-time = "2024-08-28T23:53:46.339Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/44/fc/86d76c37b6847e3b08ba246fa8f20ab4eb8cfa4d060b5c69d2d87c75f4a5/pytest_time-0.4.1.tar.gz", hash = "sha256:862d1cdaeade3e79294b8a6999a33df69ebe94346211dbb5ad063eaad9bca977", size = 126241, upload-time = "2025-01-20T00:59:36.668Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e1/20/168a6a1ca715e6243dfaa39a5bc01a92c44a6a6300d1d4d28714b6c8fecd/pytest_time-0.3.2-py3-none-any.whl", hash = "sha256:fee4c01400bb8ffc76e1b5c654d20db7a662d78921f1587e309964286fdf5cf7", size = 9251, upload-time = "2024-08-28T23:53:44.812Z" },
+    { url = "https://files.pythonhosted.org/packages/47/6d/0ae43c302aa206f76d35d70c0660e3f4bf2f7f8e9711872177329122f244/pytest_time-0.4.1-py3-none-any.whl", hash = "sha256:dcd0962caf4d33781ddb07a857a9d05129e0c5199b4461899f24437d02f51571", size = 8058, upload-time = "2025-01-20T00:59:34.254Z" },
 ]
 
 [[package]]
