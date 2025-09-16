@@ -19,11 +19,15 @@ framework that need to provide support for additional build environments.
    :maxdepth: 1
    :hidden:
 
+   how-to-guides/index
    reference/index
    explanation/index
 
 .. list-table::
 
+    * - |
+      - | :ref:`How-to Guides <how-to-guides>`
+        | **Step-by-step guides** covering key operations and common tasks
     * - | :ref:`Reference <reference>`
         | **Technical information** about Craft Providers
       - | :ref:`Explanation <explanation>`

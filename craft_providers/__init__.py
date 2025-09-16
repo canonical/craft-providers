@@ -21,6 +21,7 @@ from .base import Base
 from .errors import ProviderError
 from .executor import Executor
 from .provider import Provider
+from .bases._factory import get_base
 
 try:
     from ._version import __version__
@@ -38,4 +39,5 @@ __all__ = [
     "Executor",
     "ProviderError",
     "Provider",
+    "get_base",
 ]
