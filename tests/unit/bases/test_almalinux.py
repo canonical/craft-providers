@@ -632,8 +632,11 @@ def test_setup_dnf_install_override_system(fake_executor, fake_process):
     base._setup_packages(executor=fake_executor)
 
 
-def test_setup_dnf_install_packages_install_error(mocker, fake_executor, fake_process):
+def test_setup_dnf_install_packages_install_error(
+    monkeypatch, mocker, fake_executor, fake_process
+):
     """Verify error is caught from `dnf install` call."""
+    monkeypatch.delenv("CRAFT_PROVIDERS_EXPERIMENTAL_SUPPRESS_UPGRADE_UNSUPPORTED")
     error = subprocess.CalledProcessError(100, ["error"])
     base = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
 

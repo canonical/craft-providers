@@ -25,6 +25,7 @@ import enum
 import importlib.resources
 import io
 import logging
+import os
 import pathlib
 import subprocess
 from functools import total_ordering
@@ -382,18 +383,22 @@ class BuilddBase(Base[BuilddBaseAlias]):
     @override
     def _setup_packages(self, executor: Executor) -> None:
         """Use apt install required packages and user-defined packages."""
-        try:
-            self._execute_run(
-                ["apt-get", "-y", "dist-upgrade"],
-                executor=executor,
-                verify_network=True,
-                timeout=self._timeout_unpredictable,
-            )
-        except subprocess.CalledProcessError as error:
-            raise BaseConfigurationError(
-                brief="Failed to update packages.",
-                details=details_from_called_process_error(error),
-            ) from error
+        suppress_upgrade = os.environ.get(
+            "CRAFT_PROVIDERS_EXPERIMENTAL_SUPPRESS_UPGRADE_UNSUPPORTED"
+        )
+        if not suppress_upgrade:
+            try:
+                self._execute_run(
+                    ["apt-get", "-y", "dist-upgrade"],
+                    executor=executor,
+                    verify_network=True,
+                    timeout=self._timeout_unpredictable,
+                )
+            except subprocess.CalledProcessError as error:
+                raise BaseConfigurationError(
+                    brief="Failed to update packages.",
+                    details=details_from_called_process_error(error),
+                ) from error
         if not self._packages:
             return
         try:
