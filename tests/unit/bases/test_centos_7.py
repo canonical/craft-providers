@@ -571,8 +571,11 @@ def test_setup_yum_install_override_system(fake_executor, fake_process):
     base._setup_packages(executor=fake_executor)
 
 
-def test_setup_yum_install_packages_install_error(mocker, fake_executor, fake_process):
+def test_setup_yum_install_packages_install_error(
+    monkeypatch, mocker, fake_executor, fake_process
+):
     """Verify error is caught from `yum install` call."""
+    monkeypatch.delenv("CRAFT_PROVIDERS_EXPERIMENTAL_SUPPRESS_UPGRADE_UNSUPPORTED")
     error = subprocess.CalledProcessError(100, ["error"])
     base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
 

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import enum
 import logging
+import os
 import subprocess
 from typing import TYPE_CHECKING
 
@@ -192,19 +193,22 @@ class CentOSBase(Base[CentOSBaseAlias]):
 
     def _setup_packages(self, executor: Executor) -> None:
         """Configure yum, update cache and install needed packages."""
-        # update system
-        try:
-            self._execute_run(
-                ["yum", "update", "-y"],
-                executor=executor,
-                verify_network=True,
-                timeout=self._timeout_unpredictable,
-            )
-        except subprocess.CalledProcessError as error:
-            raise BaseConfigurationError(
-                brief="Failed to update system using yum.",
-                details=details_from_called_process_error(error),
-            ) from error
+        suppress_upgrade = os.environ.get(
+            "CRAFT_PROVIDERS_EXPERIMENTAL_SUPPRESS_UPGRADE_UNSUPPORTED"
+        )
+        if not suppress_upgrade:
+            try:
+                self._execute_run(
+                    ["yum", "update", "-y"],
+                    executor=executor,
+                    verify_network=True,
+                    timeout=self._timeout_unpredictable,
+                )
+            except subprocess.CalledProcessError as error:
+                raise BaseConfigurationError(
+                    brief="Failed to update system using yum.",
+                    details=details_from_called_process_error(error),
+                ) from error
 
         # install required packages and user-defined packages
         if not self._packages:
