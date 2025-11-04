@@ -19,6 +19,11 @@ import pytest
 from craft_providers.bases import get_base_alias, get_base_from_alias, ubuntu
 from craft_providers.errors import BaseConfigurationError
 
+pytestmark = [
+    pytest.mark.filterwarnings("ignore:get_base_alias is deprecated"),
+    pytest.mark.filterwarnings("ignore:get_base_from_alias is deprecated"),
+]
+
 
 def test_get_base_alias():
     assert get_base_alias(("ubuntu", "22.04")) == ubuntu.BuilddBaseAlias.JAMMY
