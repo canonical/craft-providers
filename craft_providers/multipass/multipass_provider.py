@@ -115,7 +115,10 @@ _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: dict[Enum, RemoteImage] = {
         remote=Remote.DAILY, image_name="plucky"
     ),
     ubuntu.BuilddBaseAlias.QUESTING: RemoteImage(
-        remote=Remote.DAILY, image_name="questing"
+        remote=Remote.SNAPCRAFT, image_name="questing"
+    ),
+    ubuntu.BuilddBaseAlias.RESOLUTE: RemoteImage(
+        remote=Remote.DAILY, image_name="resolute"
     ),
     # devel images are not available on macos
     ubuntu.BuilddBaseAlias.DEVEL: RemoteImage(

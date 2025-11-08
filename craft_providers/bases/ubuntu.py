@@ -64,6 +64,7 @@ class BuilddBaseAlias(enum.Enum):
     ORACULAR = "24.10"
     PLUCKY = "25.04"
     QUESTING = "25.10"
+    RESOLUTE = "26.04"
     DEVEL = "devel"
 
     def __lt__(self, other: Self) -> bool:
