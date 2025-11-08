@@ -1734,7 +1734,7 @@ def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executo
 
 
 def test_devel_never_eol(fake_process, fake_executor, mock_requests_head, logs):
-    """Update the sources if the base is past its EOL date."""
+    """Verify that the devel base skips EOL checks."""
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.DEVEL)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
