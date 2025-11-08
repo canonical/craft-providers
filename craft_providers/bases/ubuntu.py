@@ -356,6 +356,9 @@ class BuilddBase(Base[BuilddBaseAlias]):
 
         :raises BaseConfigurationError: If the EOL data can't be determined.
         """
+        if self.alias is BuilddBaseAlias.DEVEL:
+            logger.debug("Skipping EOL check for base 'devel'.")
+            return False
         logger.debug(f"Getting EOL data for {self.alias.value} ({codename}).")
         with importlib.resources.path(
             "craft_providers.data", "ubuntu.csv"

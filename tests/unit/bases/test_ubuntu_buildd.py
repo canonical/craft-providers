@@ -1733,6 +1733,19 @@ def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executo
         base_config._disable_and_wait_for_snap_refresh(executor=fake_executor)
 
 
+def test_devel_never_eol(fake_process, fake_executor, mock_requests_head, logs):
+    """Update the sources if the base is past its EOL date."""
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.DEVEL)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout="UBUNTU_CODENAME=grumpy",
+    )
+
+    base_config._update_eol_sources(fake_executor)
+
+    assert re.escape("Skipping EOL check for base 'devel'.") in logs.debug
+
+
 @freeze_time("2027-01-01")
 @pytest.mark.parametrize("mock_requests_head", [200], indirect=True)
 def test_base_past_eol(fake_process, fake_executor, mock_requests_head, logs):
