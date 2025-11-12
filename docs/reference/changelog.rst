@@ -12,6 +12,10 @@ New features:
 - Mark Ubuntu 25.10 (Questing) as stable.
 - Add support for Ubuntu 26.04 (Resolute).
 
+Breaking changes:
+
+- Remove Ubuntu 24.10 (Oracular) support
+
 Bug fixes:
 
 - Do not check whether the "devel" base is end-of-life.
