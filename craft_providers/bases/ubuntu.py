@@ -61,7 +61,6 @@ class BuilddBaseAlias(enum.Enum):
     FOCAL = "20.04"
     JAMMY = "22.04"
     NOBLE = "24.04"
-    ORACULAR = "24.10"
     PLUCKY = "25.04"
     QUESTING = "25.10"
     RESOLUTE = "26.04"
