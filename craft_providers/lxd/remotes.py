@@ -164,6 +164,12 @@ _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: dict[Enum, RemoteImage] = {
     ),
     ubuntu.BuilddBaseAlias.QUESTING: RemoteImage(
         image_name="questing",
+        remote_name=BUILDD_RELEASES_REMOTE_NAME,
+        remote_address=BUILDD_RELEASES_REMOTE_ADDRESS,
+        remote_protocol=ProtocolType.SIMPLESTREAMS,
+    ),
+    ubuntu.BuilddBaseAlias.RESOLUTE: RemoteImage(
+        image_name="resolute",
         remote_name=BUILDD_DAILY_REMOTE_NAME,
         remote_address=BUILDD_DAILY_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,

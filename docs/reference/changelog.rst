@@ -4,6 +4,18 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+3.2.0 (2025-11-13)
+------------------
+
+New features:
+
+- Mark Ubuntu 25.10 (Questing) as stable.
+- Add support for Ubuntu 26.04 (Resolute).
+
+Bug fixes:
+
+- Do not check whether the "devel" base is end-of-life.
+
 3.1.0 (2025-09-08)
 ------------------
 
