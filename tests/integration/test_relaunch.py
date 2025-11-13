@@ -56,10 +56,6 @@ def test_relaunch(
         pytest.skip(
             "Xenial not supported: https://github.com/canonical/craft-providers/issues/582"
         )
-    if base_alias == bases.ubuntu.BuilddBaseAlias.ORACULAR:
-        pytest.skip(
-            "Oracular is unsupported: https://github.com/canonical/craft-providers/issues/598"
-        )
 
     base_cls = bases.get_base_from_alias(base_alias)
     base = base_cls(alias=base_alias)  # type: ignore[reportArgumentType, arg-type]
