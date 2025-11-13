@@ -9,7 +9,7 @@ included in each version.
 
 Breaking changes:
 
-- Remove Ubuntu 24.10 (Oracular) support
+- Remove support for Ubuntu 24.10 (Oracular).
 
 3.2.0 (2025-11-13)
 ------------------
