@@ -151,7 +151,7 @@ def test_ensure_guest_compatible_invalid_ubuntu(
     base_alias,
     monkeypatch: pytest.MonkeyPatch,
 ):
-    """Check for combinations of host and guest OS unaffected by the lxd issue."""
+    """Check that unknown Ubuntu versions are handled gracefully."""
     guest_base = ubuntu.BuilddBase(alias=base_alias)
     guest_base._retry_wait = 0.01
     guest_base._timeout_simple = 1
