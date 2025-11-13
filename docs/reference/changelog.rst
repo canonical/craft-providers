@@ -4,6 +4,13 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+3.3.0 (2025-MM-DD)
+------------------
+
+Breaking changes:
+
+- Remove Ubuntu 24.10 (Oracular) support
+
 3.2.0 (2025-11-13)
 ------------------
 
@@ -11,10 +18,6 @@ New features:
 
 - Mark Ubuntu 25.10 (Questing) as stable.
 - Add support for Ubuntu 26.04 (Resolute).
-
-Breaking changes:
-
-- Remove Ubuntu 24.10 (Oracular) support
 
 Bug fixes:
 
