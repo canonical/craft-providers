@@ -19,7 +19,7 @@ import textwrap
 from unittest.mock import MagicMock, patch
 
 import pytest
-from craft_providers.bases import centos, ensure_guest_compatible, ubuntu
+from craft_providers.bases import centos, checks, ensure_guest_compatible, ubuntu
 from craft_providers.errors import ProviderError
 from craft_providers.util import os_release
 
@@ -136,6 +136,38 @@ def test_ensure_guest_compatible_valid_ubuntu(
         ensure_guest_compatible(guest_base, fake_executor, lxd_version)
 
     assert counter == 1
+
+
+@pytest.mark.parametrize(
+    "base_alias",
+    [
+        ubuntu.BuilddBaseAlias.JAMMY,  # host greater than FOCAL
+        ubuntu.BuilddBaseAlias.FOCAL,  # guest less than ORACULAR
+    ],
+)
+def test_ensure_guest_compatible_invalid_ubuntu(
+    fake_executor,
+    fake_process,
+    base_alias,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Check for combinations of host and guest OS unaffected by the lxd issue."""
+    guest_base = ubuntu.BuilddBase(alias=base_alias)
+    guest_base._retry_wait = 0.01
+    guest_base._timeout_simple = 1
+
+    # Set this up so we can be sure the guest get_os_release was called once
+
+    fake_version_data = {"ID": "ubuntu", "VERSION_ID": "99999.10"}
+
+    monkeypatch.setattr(checks, "parse_os_release", lambda: fake_version_data)
+
+    lxd_version = "0.0.0"
+
+    # Kernel version doesn't matter for this test, but setting it allows the test to
+    # pass on windows
+    with patch("platform.release", return_value="4.99"):
+        ensure_guest_compatible(guest_base, fake_executor, lxd_version)
 
 
 @pytest.mark.parametrize(
