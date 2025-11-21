@@ -50,7 +50,7 @@ class InvalidVersionSet(TypedDict):
 INVALID_VERSIONS: list[InvalidVersionSet] = [
     {
         "host_less_than_equal": BuilddBaseAlias.FOCAL,
-        "guest_greater_than_equal": BuilddBaseAlias.ORACULAR,
+        "guest_greater_than_equal": BuilddBaseAlias.PLUCKY,
         # The system is affected by the cgroups bug if both of the above and either of the below
         "lxd_less_than": [
             (5, 0, 4),
@@ -127,7 +127,7 @@ def ensure_guest_compatible(
 
     kernel_version_tup = tuple([int(v) for v in platform.release().split(".")[0:2]])
 
-    # If the host OS is focal (20.04) or older, and the guest OS is oracular (24.10)
+    # If the host OS is focal (20.04) or older, and the guest OS is plucky (25.04)
     # or newer, then the host lxd must be >=5.0.4 or >=5.21.2, and kernel must be
     # 5.15 or newer.  Otherwise, weird systemd failures will occur due to a mismatch
     # between cgroupv1 and v2 support.

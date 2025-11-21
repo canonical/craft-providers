@@ -7,6 +7,10 @@ included in each version.
 3.3.0 (Unreleased)
 ------------------
 
+Breaking changes:
+
+- Remove support for Ubuntu 24.10 (Oracular).
+
 Bug fixes:
 
 - Do not fail if the build host is an unknown Ubuntu release.
