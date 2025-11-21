@@ -17,7 +17,8 @@
 
 """LXD Instance Executor."""
 
-import io
+from __future__ import annotations
+
 import logging
 import os
 import pathlib
@@ -25,7 +26,9 @@ import shutil
 import subprocess
 import tempfile
 import warnings
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
+
+from typing_extensions import override
 
 from craft_providers.const import RETRY_WAIT, TIMEOUT_SIMPLE
 from craft_providers.errors import details_from_called_process_error
@@ -37,6 +40,9 @@ from craft_providers.lxd.lxd_instance_status import (
     ProviderInstanceStatus,
 )
 from craft_providers.util import env_cmd, retry
+
+if TYPE_CHECKING:
+    import io
 
 logger = logging.getLogger(__name__)
 
@@ -118,10 +124,11 @@ class LXDInstance(Executor):
             command_env.update(env)
 
         if command_env:
-            return env_cmd.formulate_command(command_env) + command
+            return [*env_cmd.formulate_command(command_env), *command]
 
         return command
 
+    @override
     def push_file_io(
         self,
         *,
@@ -142,7 +149,7 @@ class LXDInstance(Executor):
         :raises LXDError: On unexpected error.
         """
         with tempfile.NamedTemporaryFile() as temp_file:
-            shutil.copyfileobj(content, temp_file)  # type: ignore # mypy #15031  # noqa: PGH003
+            shutil.copyfileobj(content, temp_file)
             # Ensure the file is written to disk.
             temp_file.flush()
 
@@ -174,7 +181,8 @@ class LXDInstance(Executor):
                     details=details_from_called_process_error(error),
                 ) from error
 
-    def delete(self, force: bool = True) -> None:  # noqa: FBT001, FBT002
+    @override
+    def delete(self, *, force: bool = True) -> None:
         """Delete instance.
 
         :param force: Delete even if running.
@@ -188,6 +196,7 @@ class LXDInstance(Executor):
             force=force,
         )
 
+    @override
     def execute_popen(
         self,
         command: list[str],
@@ -195,8 +204,8 @@ class LXDInstance(Executor):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        **kwargs,  # noqa: ANN003
-    ) -> subprocess.Popen:
+        **kwargs: Any,
+    ) -> subprocess.Popen[str]:
         """Execute a command in instance, using subprocess.Popen().
 
         The process' environment will inherit the execution environment's
@@ -224,6 +233,7 @@ class LXDInstance(Executor):
             **kwargs,
         )
 
+    @override
     def execute_run(
         self,
         command: list[str],
@@ -232,8 +242,8 @@ class LXDInstance(Executor):
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
         check: bool = False,
-        **kwargs,  # noqa: ANN003
-    ) -> subprocess.CompletedProcess:
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[Any]:
         """Execute a command using subprocess.run().
 
         The process' environment will inherit the execution environment's
@@ -281,7 +291,7 @@ class LXDInstance(Executor):
             instance_name=self.instance_name, project=self.project, remote=self.remote
         )
 
-        disks = {}
+        disks: dict[str, Any] = {}
         for name, config in devices.items():
             if config.get("type") == "disk":
                 disks[name] = config
@@ -378,7 +388,7 @@ class LXDInstance(Executor):
 
         :raises LXDError: On unexpected error.
         """
-        config_keys = {}
+        config_keys: dict[str, Any] = {}
 
         if map_user_uid:
             uid = os.getuid() if uid is None else uid
@@ -442,7 +452,7 @@ class LXDInstance(Executor):
         kernel_features = env.get("kernel_features", {})
         seccomp_listener = kernel_features.get("seccomp_listener", "false")
 
-        return seccomp_listener == "true"
+        return cast(str, seccomp_listener) == "true"
 
     def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:
         """Copy a file from the environment to host.
@@ -559,7 +569,7 @@ class LXDInstance(Executor):
             instance_name=self.instance_name, project=self.project, remote=self.remote
         )
 
-        def _is_running(timeout: float) -> None:  # noqa: ARG001
+        def _is_running(_timeout: float) -> None:
             """Raise an error if the instance isn't running."""
             if self.is_running():
                 return
@@ -586,7 +596,7 @@ class LXDInstance(Executor):
             instance_name=self.instance_name, project=self.project, remote=self.remote
         )
 
-        def _is_running(timeout: float) -> None:  # noqa: ARG001
+        def _is_running(_timeout: float) -> None:
             """Raise an error if the instance isn't running."""
             if self.is_running():
                 return
@@ -622,7 +632,7 @@ class LXDInstance(Executor):
             instance_name=self.instance_name, project=self.project, remote=self.remote
         )
 
-        def _is_stopped(timeout: float) -> None:  # noqa: ARG001
+        def _is_stopped(_timeout: float) -> None:
             """Raise an error if the instance exists or isn't stopped."""
             # ephemeral instances are deleted when 'stop' completes
             if not self.exists() or self._get_state() == LXDInstanceState.STOPPED:

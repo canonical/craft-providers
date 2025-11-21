@@ -17,6 +17,8 @@
 
 """Parser for /etc/os-release."""
 
+from __future__ import annotations
+
 import shlex
 from pathlib import Path
 
@@ -37,8 +39,7 @@ def parse_os_release(content: str | None = None) -> dict[str, str]:
     stripped of encapsulating quotes.
     """
     if content is None:
-        with OS_RELEASE_FILE.open() as f:
-            content = f.read()
+        content = OS_RELEASE_FILE.read_text()
 
     mappings: dict[str, str] = {}
 

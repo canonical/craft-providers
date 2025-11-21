@@ -17,21 +17,40 @@
 
 """Executor module."""
 
+from __future__ import annotations
+
 import contextlib
 import hashlib
-import io
 import logging
-import pathlib
 import re
-import subprocess
 from abc import ABC, abstractmethod
-from collections.abc import Generator
-from typing import Literal, overload
+from os import PathLike
+from typing import (
+    IO,
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    TypeAlias,
+    overload,
+)
+
+from typing_extensions import Buffer
 
 import craft_providers.util.temp_paths
-from craft_providers.errors import ProviderError
+
+if TYPE_CHECKING:
+    import io
+    import pathlib
+    import subprocess
+    from collections.abc import Callable, Collection, Generator, Iterable
+
+    from craft_providers.errors import ProviderError
 
 logger = logging.getLogger(__name__)
+
+MAX_INSTANCE_NAME_LENGTH = 63
+
+StrOrBytesPath: TypeAlias = str | bytes | PathLike[str] | PathLike[bytes]
 
 
 class Executor(ABC):
@@ -45,8 +64,8 @@ class Executor(ABC):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        **kwargs,  # noqa: ANN003
-    ) -> subprocess.Popen:
+        **kwargs: Any,
+    ) -> subprocess.Popen[str]:
         """Execute a command in instance, using subprocess.Popen().
 
         The process' environment will inherit the execution environment's
@@ -62,6 +81,213 @@ class Executor(ABC):
         :returns: Popen instance.
         """
 
+    # This is modified from typeshed. The actual implementation doesn't have all this,
+    # but that's just because it passes it through to subprocess.run.
+    # https://github.com/python/typeshed/blob/cb2c371676f8f4a6a85b0d65c672dae308f51ca6/stdlib/subprocess.pyi#L298
+    @overload
+    def execute_run(
+        self,
+        command: list[str],
+        *,
+        bufsize: int = -1,
+        executable: StrOrBytesPath | None = None,
+        stdin: None | int | IO[Any] = None,
+        stdout: None | int | IO[Any] = None,
+        stderr: None | int | IO[Any] = None,
+        preexec_fn: Callable[[], Any] | None = None,
+        close_fds: bool = True,
+        shell: bool = False,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        universal_newlines: bool | None = None,
+        creationflags: int = 0,
+        restore_signals: bool = True,
+        start_new_session: bool = False,
+        pass_fds: Collection[int] = (),
+        capture_output: bool = False,
+        check: bool = False,
+        encoding: str | None = None,
+        errors: str | None = None,
+        input: str | None = None,
+        text: Literal[True],
+        timeout: float | None = None,
+        user: str | int | None = None,
+        group: str | int | None = None,
+        extra_groups: Iterable[str | int] | None = None,
+        umask: int = -1,
+        pipesize: int = -1,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]: ...
+    @overload
+    def execute_run(
+        self,
+        command: list[str],
+        *,
+        bufsize: int = -1,
+        executable: StrOrBytesPath | None = None,
+        stdin: None | int | IO[Any] = None,
+        stdout: None | int | IO[Any] = None,
+        stderr: None | int | IO[Any] = None,
+        preexec_fn: Callable[[], Any] | None = None,
+        close_fds: bool = True,
+        shell: bool = False,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        universal_newlines: bool | None = None,
+        creationflags: int = 0,
+        restore_signals: bool = True,
+        start_new_session: bool = False,
+        pass_fds: Collection[int] = (),
+        capture_output: bool = False,
+        check: bool = False,
+        encoding: str,
+        errors: str | None = None,
+        input: str | None = None,
+        text: bool | None = None,
+        timeout: float | None = None,
+        user: str | int | None = None,
+        group: str | int | None = None,
+        extra_groups: Iterable[str | int] | None = None,
+        umask: int = -1,
+        pipesize: int = -1,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]: ...
+    @overload
+    def execute_run(
+        self,
+        command: list[str],
+        *,
+        bufsize: int = -1,
+        executable: StrOrBytesPath | None = None,
+        stdin: None | int | IO[Any] = None,
+        stdout: None | int | IO[Any] = None,
+        stderr: None | int | IO[Any] = None,
+        preexec_fn: Callable[[], Any] | None = None,
+        close_fds: bool = True,
+        shell: bool = False,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        universal_newlines: bool | None = None,
+        creationflags: int = 0,
+        restore_signals: bool = True,
+        start_new_session: bool = False,
+        pass_fds: Collection[int] = (),
+        capture_output: bool = False,
+        check: bool = False,
+        encoding: str | None = None,
+        errors: str,
+        input: str | None = None,
+        text: bool | None = None,
+        timeout: float | None = None,
+        user: str | int | None = None,
+        group: str | int | None = None,
+        extra_groups: Iterable[str | int] | None = None,
+        umask: int = -1,
+        pipesize: int = -1,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]: ...
+    @overload
+    def execute_run(
+        self,
+        command: list[str],
+        *,
+        bufsize: int = -1,
+        executable: StrOrBytesPath | None = None,
+        stdin: None | int | IO[Any] = None,
+        stdout: None | int | IO[Any] = None,
+        stderr: None | int | IO[Any] = None,
+        preexec_fn: Callable[[], Any] | None = None,
+        close_fds: bool = True,
+        shell: bool = False,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        universal_newlines: Literal[True],
+        creationflags: int = 0,
+        restore_signals: bool = True,
+        start_new_session: bool = False,
+        pass_fds: Collection[int] = (),
+        capture_output: bool = False,
+        check: bool = False,
+        encoding: str | None = None,
+        errors: str | None = None,
+        input: str | None = None,
+        text: bool | None = None,
+        timeout: float | None = None,
+        user: str | int | None = None,
+        group: str | int | None = None,
+        extra_groups: Iterable[str | int] | None = None,
+        umask: int = -1,
+        pipesize: int = -1,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]: ...
+    @overload
+    def execute_run(
+        self,
+        command: list[str],
+        *,
+        bufsize: int = -1,
+        executable: StrOrBytesPath | None = None,
+        stdin: None | int | IO[Any] = None,
+        stdout: None | int | IO[Any] = None,
+        stderr: None | int | IO[Any] = None,
+        preexec_fn: Callable[[], Any] | None = None,
+        close_fds: bool = True,
+        shell: bool = False,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        universal_newlines: Literal[False] | None = None,
+        creationflags: int = 0,
+        restore_signals: bool = True,
+        start_new_session: bool = False,
+        pass_fds: Collection[int] = (),
+        capture_output: bool = False,
+        check: bool = False,
+        encoding: None = None,
+        errors: None = None,
+        input: Buffer | None = None,
+        text: Literal[False] | None = None,
+        timeout: float | None = None,
+        user: str | int | None = None,
+        group: str | int | None = None,
+        extra_groups: Iterable[str | int] | None = None,
+        umask: int = -1,
+        pipesize: int = -1,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[bytes]: ...
+    @overload
+    def execute_run(
+        self,
+        command: list[str],
+        *,
+        bufsize: int = -1,
+        executable: StrOrBytesPath | None = None,
+        stdin: None | int | IO[Any] = None,
+        stdout: None | int | IO[Any] = None,
+        stderr: None | int | IO[Any] = None,
+        preexec_fn: Callable[[], Any] | None = None,
+        close_fds: bool = True,
+        shell: bool = False,
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        universal_newlines: bool | None = None,
+        creationflags: int = 0,
+        restore_signals: bool = True,
+        start_new_session: bool = False,
+        pass_fds: Collection[int] = (),
+        capture_output: bool = False,
+        check: bool = False,
+        encoding: str | None = None,
+        errors: str | None = None,
+        input: Buffer | str | None = None,
+        text: bool | None = None,
+        timeout: float | None = None,
+        user: str | int | None = None,
+        group: str | int | None = None,
+        extra_groups: Iterable[str | int] | None = None,
+        umask: int = -1,
+        pipesize: int = -1,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[Any]: ...
     @abstractmethod
     def execute_run(
         self,
@@ -70,9 +296,9 @@ class Executor(ABC):
         cwd: pathlib.PurePath | None = None,
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
-        check: bool = False,
-        **kwargs,  # noqa: ANN003
-    ) -> subprocess.CompletedProcess:
+        text: bool | None = None,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[Any]:
         """Execute a command using subprocess.run().
 
         The process' environment will inherit the execution environment's
@@ -246,7 +472,7 @@ def get_instance_name(name: str, error_class: type[ProviderError]) -> str:
     valid_name = trimmed_name.group("valid_name")
 
     # if the original name satisfies the naming convention, then use the original name
-    if name == valid_name and len(name) <= 63:  # noqa: PLR2004
+    if name == valid_name and len(name) <= MAX_INSTANCE_NAME_LENGTH:
         instance_name = name
 
     # else, continue converting the name
@@ -254,7 +480,7 @@ def get_instance_name(name: str, error_class: type[ProviderError]) -> str:
         # truncate to 40 characters
         truncated_name = valid_name[:40]
         # hash the entire name, not the truncated name
-        hashed_name = hashlib.sha1(name.encode()).hexdigest()[:20]  # noqa: S324
+        hashed_name = hashlib.sha1(name.encode()).hexdigest()[:20]  # noqa: S324, security of this does not matter
         instance_name = f"{truncated_name}-{hashed_name}"
 
     logger.debug("Converted name %r to instance name %r", name, instance_name)

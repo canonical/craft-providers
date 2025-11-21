@@ -11,6 +11,7 @@
 #
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
+import os
 import types
 
 import pytest
@@ -34,3 +35,12 @@ def project_main_module() -> types.ModuleType:
             "Failed to import the project's main module: check if it needs updating",
         )
     return main_module
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _suppress_upgrade() -> None:
+    """Suppress dist-upgrade when starting containers during tests.
+
+    This speeds up our tests since dist-upgrade can take a while.
+    """
+    os.environ["CRAFT_PROVIDERS_EXPERIMENTAL_SUPPRESS_UPGRADE_UNSUPPORTED"] = "1"

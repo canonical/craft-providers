@@ -98,6 +98,10 @@ def test_push_file_io(reusable_instance, content, mode, user, group):
             command=["rm", "-f", "/tmp/file-test.txt"],
             capture_output=True,
         )
+        reusable_instance.execute_run(
+            command=["test", "!", "-e", "/tmp/file-test.txt"],
+            capture_output=True,
+        )
 
 
 def test_delete(instance):

@@ -20,7 +20,6 @@ from textwrap import dedent
 from unittest.mock import call
 
 import pytest
-from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, lxc
 from craft_providers.lxd.lxc import StdinType
 from craft_providers.lxd.lxd_instance_status import LXDInstanceState
@@ -41,7 +40,10 @@ def test_lxc_run_default(mocker, tmp_path):
     mock_run.assert_called_once_with(
         ["lxc", "test-command"],
         check=True,
+        encoding=None,
+        errors=None,
         stdin=subprocess.DEVNULL,
+        text=None,
     )
 
 
@@ -55,7 +57,10 @@ def test_lxc_run_with_check(check, mocker, tmp_path):
     mock_run.assert_called_once_with(
         ["lxc", "--project", "test-project", "test-command"],
         check=check,
+        encoding=None,
+        errors=None,
         stdin=subprocess.DEVNULL,
+        text=None,
     )
 
 
@@ -68,7 +73,10 @@ def test_lxc_run_with_project(mocker, tmp_path):
     mock_run.assert_called_once_with(
         ["lxc", "--project", "test-project", "test-command"],
         check=True,
+        encoding=None,
+        errors=None,
         stdin=subprocess.DEVNULL,
+        text=None,
     )
 
 
@@ -83,6 +91,9 @@ def test_lxc_run_with_stdin(mocker, tmp_path):
     mock_run.assert_called_once_with(
         ["lxc", "--project", "test-project", "test-command"],
         check=True,
+        encoding=None,
+        errors=None,
+        text=None,
         stdin=None,
     )
 
@@ -102,6 +113,9 @@ def test_lxc_run_with_input(mocker, tmp_path):
         ["lxc", "--project", "test-project", "test-command"],
         check=True,
         input="test-input",
+        encoding=None,
+        errors=None,
+        text=None,
     )
 
 
@@ -120,6 +134,9 @@ def test_lxc_run_with_input_and_stdin(mocker, tmp_path):
         ["lxc", "--project", "test-project", "test-command"],
         check=True,
         input="test-input",
+        text=None,
+        errors=None,
+        encoding=None,
     )
 
 
@@ -170,7 +187,9 @@ def test_config_device_add_disk_error(fake_process, tmp_path):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(
+        LXDError, match="Failed to add disk to instance 'test-instance'"
+    ):
         LXC().config_device_add_disk(
             instance_name="test-instance",
             project="test-project",
@@ -179,13 +198,6 @@ def test_config_device_add_disk_error(fake_process, tmp_path):
             source=tmp_path,
             path=pathlib.PurePosixPath("/mnt"),
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to add disk to instance 'test-instance'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_config_device_remove(fake_process):
@@ -227,20 +239,15 @@ def test_config_device_remove_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(
+        LXDError, match="Failed to remove device from instance 'test-instance'."
+    ):
         LXC().config_device_remove(
             instance_name="test-instance",
             project="test-project",
             remote="test-remote",
             device="device_foo",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to remove device from instance 'test-instance'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_config_device_show(fake_process):
@@ -281,19 +288,14 @@ def test_config_device_show_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(
+        LXDError, match="Failed to show devices for instance 'test-instance'."
+    ):
         LXC().config_device_show(
             instance_name="test-instance",
             project="test-project",
             remote="test-remote",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to show devices for instance 'test-instance'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_config_get(fake_process):
@@ -333,23 +335,16 @@ def test_config_get_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(
+        LXDError,
+        match="Failed to get value for config key 'test-key' for instance 'test-instance'.",
+    ):
         LXC().config_get(
             instance_name="test-instance",
             key="test-key",
             project="test-project",
             remote="test-remote",
         )
-
-    assert exc_info.value == LXDError(
-        brief=(
-            "Failed to get value for config key 'test-key' "
-            "for instance 'test-instance'."
-        ),
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_config_set(fake_process):
@@ -392,7 +387,10 @@ def test_config_set_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(
+        LXDError,
+        match="Failed to set config key 'test-key' to 'test-value' for instance 'test-instance'.",
+    ):
         LXC().config_set(
             instance_name="test-instance",
             key="test-key",
@@ -400,16 +398,6 @@ def test_config_set_error(fake_process):
             project="test-project",
             remote="test-remote",
         )
-
-    assert exc_info.value == LXDError(
-        brief=(
-            "Failed to set config key 'test-key' to 'test-value'"
-            " for instance 'test-instance'."
-        ),
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_copy(fake_process):
@@ -471,7 +459,10 @@ def test_copy_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(
+        LXDError,
+        match="Failed to copy instance 'test-source-remote:test-source-instance-name' to 'test-destination-remote:test-destination-instance-name'.",
+    ):
         LXC().copy(
             source_remote="test-source-remote",
             source_instance_name="test-source-instance-name",
@@ -479,16 +470,6 @@ def test_copy_error(fake_process):
             destination_instance_name="test-destination-instance-name",
             project="test-project",
         )
-
-    assert exc_info.value == LXDError(
-        brief=(
-            "Failed to copy instance 'test-source-remote:test-source-instance-name' "
-            "to 'test-destination-remote:test-destination-instance-name'."
-        ),
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_delete(fake_process):
@@ -545,19 +526,12 @@ def test_delete_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to delete instance 'test-instance'."):
         LXC().delete(
             instance_name="test-instance",
             project="test-project",
             remote="test-remote",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to delete instance 'test-instance'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_exec(fake_process):
@@ -711,7 +685,9 @@ def test_file_pull_error(fake_process, tmp_path):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(
+        LXDError, match="Failed to pull file '/root/foo' from instance 'test-instance'."
+    ):
         LXC().file_pull(
             instance_name="test-instance",
             project="test-project",
@@ -719,13 +695,6 @@ def test_file_pull_error(fake_process, tmp_path):
             source=source,
             destination=tmp_path,
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to pull file '/root/foo' from instance 'test-instance'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_file_push(fake_process, tmp_path):
@@ -804,7 +773,9 @@ def test_file_push_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(
+        LXDError, match="Failed to push file '/somefile' to instance 'test-instance'."
+    ):
         LXC().file_push(
             instance_name="test-instance",
             project="test-project",
@@ -812,13 +783,6 @@ def test_file_push_error(fake_process):
             source=pathlib.Path("/somefile"),
             destination=pathlib.PurePosixPath("/root/foo"),
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to push file '/somefile' to instance 'test-instance'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_info(fake_process):
@@ -876,18 +840,11 @@ def test_info_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to get info for remote 'test-remote'."):
         LXC().info(
             project="test-project",
             remote="test-remote",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to get info for remote 'test-remote'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_info_parse_error(fake_process):
@@ -912,7 +869,7 @@ def test_info_parse_error(fake_process):
         brief="Failed to parse lxc info.",
         details=(
             "* Command that failed: 'lxc --project test-project info test-remote:'\n"
-            "* Command output: b'fail:\\nthis\\n'"
+            "* Command output: 'fail:\\nthis\\n'"
         ),
     )
 
@@ -1385,8 +1342,8 @@ def test_check_instance_status_wait(fake_process, mocker):
 
 
 def test_check_instance_status_lxd_error(fake_process, mocker):
-    time_time = mocker.patch("time.time")
-    time_time.side_effect = [0, 1000, 2000]
+    time_monotonic = mocker.patch("time.monotonic")
+    time_monotonic.side_effect = [0, 1000, 2000]
     mocker.patch("time.sleep")
 
     fake_process.register_subprocess(
@@ -1595,7 +1552,7 @@ def test_has_image(fake_process):
         stdout="- aliases:\n  - name: image1\n- aliases:\n  - name: image2\n",
         occurrences=3,
     )
-    fake_process.keep_last_process(True)  # noqa: FBT003
+    fake_process.keep_last_process(keep=True)
 
     assert lxc.has_image("image1", project="test-project", remote="test-remote") is True
     assert lxc.has_image("image2", project="test-project", remote="test-remote") is True
@@ -1666,20 +1623,13 @@ def test_image_copy_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to copy image 'test-image'."):
         LXC().image_copy(
             image="test-image",
             image_remote="test-image-remote",
             project="test-project",
             remote="test-remote",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to copy image 'test-image'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_image_delete(fake_process):
@@ -1716,19 +1666,12 @@ def test_image_delete_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to delete image 'test-image'."):
         LXC().image_delete(
             image="test-image",
             project="test-project",
             remote="test-remote",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to delete image 'test-image'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_image_list(fake_process):
@@ -1768,18 +1711,13 @@ def test_image_list_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(
+        LXDError, match="Failed to list images for project 'test-project'."
+    ):
         LXC().image_list(
             project="test-project",
             remote="test-remote",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to list images for project 'test-project'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_image_list_parse_error(fake_process):
@@ -1807,7 +1745,7 @@ def test_image_list_parse_error(fake_process):
         details=(
             "* Command that failed:"
             " 'lxc --project test-project image list test-remote: --format=yaml'\n"
-            "* Command output: b'fail:\\nthis\\n'"
+            "* Command output: 'fail:\\nthis\\n'"
         ),
     )
 
@@ -1847,18 +1785,13 @@ def test_list_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(
+        LXDError, match="Failed to list instances for project 'test-project'."
+    ):
         LXC().list(
             project="test-project",
             remote="test-remote",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to list instances for project 'test-project'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_list_parse_error(fake_process):
@@ -1885,7 +1818,7 @@ def test_list_parse_error(fake_process):
         details=(
             "* Command that failed:"
             " 'lxc --project test-project list test-remote: --format=yaml'\n"
-            "* Command output: b'fail:\\nthis\\n'"
+            "* Command output: 'fail:\\nthis\\n'"
         ),
     )
 
@@ -1976,20 +1909,13 @@ def test_profile_edit_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to set profile 'test-profile'."):
         LXC().profile_edit(
             profile="test-profile",
             config={"test-key": "test-value", "test-key2": "test-value2"},
             project="test-project",
             remote="test-remote",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to set profile 'test-profile'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_profile_show(fake_process):
@@ -2028,19 +1954,12 @@ def test_profile_show_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to show profile 'test-profile'."):
         LXC().profile_show(
             profile="test-profile",
             project="test-project",
             remote="test-remote",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to show profile 'test-profile'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_project_create(fake_process):
@@ -2087,18 +2006,11 @@ def test_project_create_error(fake_process):
         returncode=0,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to create project 'test-project'."):
         LXC().project_create(
             project="test-project",
             remote="test-remote",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to create project 'test-project'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_project_create_error_race(fake_process):
@@ -2165,18 +2077,11 @@ def test_project_delete_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to delete project 'test-project'."):
         LXC().project_delete(
             project="test-project",
             remote="test-remote",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to delete project 'test-project'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_project_list(fake_process):
@@ -2211,17 +2116,12 @@ def test_project_list_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(
+        LXDError, match="Failed to list projects on remote 'test-remote'."
+    ):
         LXC().project_list(
             remote="test-remote",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to list projects on remote 'test-remote'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_project_list_parse_error(fake_process):
@@ -2245,7 +2145,7 @@ def test_project_list_parse_error(fake_process):
         brief="Failed to parse lxc project list.",
         details=(
             "* Command that failed: 'lxc project list test-remote: --format=yaml'\n"
-            "* Command output: b'fail:\\nthis\\n'"
+            "* Command output: 'fail:\\nthis\\n'"
         ),
     )
 
@@ -2271,7 +2171,7 @@ def test_project_list_parse_error_missing_name(fake_process):
         brief="Failed to parse lxc project list.",
         details=(
             "* Command that failed: 'lxc project list test-remote: --format=yaml'\n"
-            "* Command output: b'- foo: bar'"
+            "* Command output: '- foo: bar'"
         ),
     )
 
@@ -2311,20 +2211,13 @@ def test_publish_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to publish image from 'test-instance'."):
         LXC().publish(
             instance_name="test-instance",
             remote="test-remote",
             image_remote="test-image-remote",
             project="test-project",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to publish image from 'test-instance'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_publish_all_opts(fake_process):
@@ -2387,19 +2280,12 @@ def test_remote_add_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to add remote 'test-remote'."):
         LXC().remote_add(
             remote="test-remote",
             addr="test-remote-addr",
             protocol="test-protocol",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to add remote 'test-remote'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_remote_list(fake_process):
@@ -2430,15 +2316,8 @@ def test_remote_list_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to list remotes."):
         LXC().remote_list()
-
-    assert exc_info.value == LXDError(
-        brief="Failed to list remotes.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_remote_list_parse_error(fake_process):
@@ -2449,7 +2328,7 @@ def test_remote_list_parse_error(fake_process):
             "list",
             "--format=yaml",
         ],
-        stdout=b"fail:\nthis",
+        stdout="fail:\nthis",
     )
 
     with pytest.raises(LXDError) as exc_info:
@@ -2459,7 +2338,7 @@ def test_remote_list_parse_error(fake_process):
         brief="Failed to parse lxc remote list.",
         details=(
             "* Command that failed: 'lxc remote list --format=yaml'\n"
-            "* Command output: b'fail:\\nthis'"
+            "* Command output: 'fail:\\nthis'"
         ),
     )
 
@@ -2496,19 +2375,12 @@ def test_start_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to start 'test-instance'."):
         LXC().start(
             instance_name="test-instance",
             project="test-project",
             remote="test-remote",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to start 'test-instance'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_restart(fake_process):
@@ -2543,19 +2415,12 @@ def test_restart_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to restart 'test-instance'."):
         LXC().restart(
             instance_name="test-instance",
             project="test-project",
             remote="test-remote",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to restart 'test-instance'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_stop(fake_process):
@@ -2614,19 +2479,12 @@ def test_stop_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to stop 'test-instance'."):
         LXC().stop(
             instance_name="test-instance",
             project="test-project",
             remote="test-remote",
         )
-
-    assert exc_info.value == LXDError(
-        brief="Failed to stop 'test-instance'.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore  # noqa: PGH003
-        ),
-    )
 
 
 def test_yaml_loader_invalid_timestamp():
@@ -2634,7 +2492,7 @@ def test_yaml_loader_invalid_timestamp():
     # resolving timestamps.
     data = "last_used_at: 0000-01-01T00:00:00Z"
 
-    obj = lxc.load_yaml(data)
+    obj = lxc.load_yaml_flat(data)
 
     assert "last_used_at" in obj
     assert isinstance(obj["last_used_at"], str)
