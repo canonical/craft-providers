@@ -3,7 +3,7 @@
 # Remember, the last match takes precedence.
 
 # Owner of libraries
-*       /docs/reference/changelog.rst @canonical/starcraft-reviewers
+*    @canonical/starcraft-reviewers
 
 # Documentation owners
 /docs/  @canonical/starcraft-authors
