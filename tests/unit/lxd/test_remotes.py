@@ -148,6 +148,7 @@ def test_add_remote_race_condition_error(fake_remote_image, mock_lxc, logs):
         (ubuntu.BuilddBaseAlias.ORACULAR, "oracular"),
         (ubuntu.BuilddBaseAlias.PLUCKY, "plucky"),
         (ubuntu.BuilddBaseAlias.QUESTING, "questing"),
+        (ubuntu.BuilddBaseAlias.RESOLUTE, "resolute"),
         (ubuntu.BuilddBaseAlias.DEVEL, "devel"),
     ],
 )
