@@ -62,7 +62,6 @@ BASE_NAME_TO_BASE_ALIAS: dict[BaseName, BaseAlias] = {
     BaseName("ubuntu", "20.04"): ubuntu.BuilddBaseAlias.FOCAL,
     BaseName("ubuntu", "22.04"): ubuntu.BuilddBaseAlias.JAMMY,
     BaseName("ubuntu", "24.04"): ubuntu.BuilddBaseAlias.NOBLE,
-    BaseName("ubuntu", "24.10"): ubuntu.BuilddBaseAlias.ORACULAR,
     BaseName("ubuntu", "25.04"): ubuntu.BuilddBaseAlias.PLUCKY,
     BaseName("ubuntu", "25.10"): ubuntu.BuilddBaseAlias.QUESTING,
     BaseName("ubuntu", "26.04"): ubuntu.BuilddBaseAlias.RESOLUTE,

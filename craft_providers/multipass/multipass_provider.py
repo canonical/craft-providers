@@ -108,9 +108,6 @@ _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: dict[Enum, RemoteImage] = {
     ubuntu.BuilddBaseAlias.NOBLE: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="24.04"
     ),
-    ubuntu.BuilddBaseAlias.ORACULAR: RemoteImage(
-        remote=Remote.DAILY, image_name="oracular"
-    ),
     ubuntu.BuilddBaseAlias.PLUCKY: RemoteImage(
         remote=Remote.DAILY, image_name="plucky"
     ),
