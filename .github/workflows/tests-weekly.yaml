@@ -49,7 +49,7 @@ jobs:
           make -j setup-tests UV_PYTHON="${{ matrix.python-version }}"
       - name: Run tests
         run: |
-          make test MARKERS='lxd_instance' PYTEST_ADDOPTS="--no-header -v -rN"
+          make test PYTEST_ADDOPTS="--no-header -v -rN -m lxd_instance"
   integration-macos:
     strategy:
       fail-fast: false
