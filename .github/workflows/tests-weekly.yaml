@@ -14,6 +14,34 @@ on:
         default: false
 
 jobs:
+  lxd:
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-22.04-arm, ubuntu-24.04, ubuntu-24.04-arm]
+        lxd-channel:
+          - latest/candidate
+          - latest/edge
+          - 5.21/candidate
+          - 5.21/edge
+          - 5.0/candidate
+          - 5.0/edge
+        python-version: ["3.10", "3.12", "3.14", "3.14t"]
+        include:
+          - os: ubuntu-22.04
+            lxd-channel: 4.0/candidate
+            python-version: "3.10"
+          - os: ubuntu-22.04
+            lxd-channel: 4.0/edge
+            python-version: "3.10"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Set up runner
+        uses: canonical/starflow/setup-python-runner@main
+        with:
+          lxd-channel: ${{ matrix.lxd-channel }}
+      - name: Run tests
+        run: |
+          make test MARKERS='lxd_instance' PYTEST_ADDOPTS="--no-header -v -rN"
   integration-macos:
     strategy:
       fail-fast: false
