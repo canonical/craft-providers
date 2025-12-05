@@ -36,6 +36,9 @@ jobs:
             python-version: "3.10"
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Pristine Ubuntu
+        if: ${{ runner.os == 'Linux' && runner.environment == 'github-hosted' }}
+        uses: lengau/pristine-ubuntu-action@v0
       - name: Set up runner
         uses: canonical/starflow/setup-python-runner@main
         with:
