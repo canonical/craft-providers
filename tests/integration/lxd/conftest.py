@@ -16,7 +16,6 @@
 #
 
 """Fixtures for LXD integration tests."""
-import contextlib
 import os
 import random
 import string
@@ -36,6 +35,8 @@ from craft_providers.lxd.remotes import (
     BUILDD_DAILY_REMOTE_NAME,
     BUILDD_RELEASES_REMOTE_ADDRESS,
     BUILDD_RELEASES_REMOTE_NAME,
+    ProtocolType,
+    RemoteImage,
 )
 
 _xfail_bases = {
@@ -72,23 +73,23 @@ def configure_lxd_remotes(installed_lxd):
     """
     lxc = LXC()
 
-    # Add the buildd releases remote if it doesn't exist
-    if BUILDD_RELEASES_REMOTE_NAME not in lxc.remote_list():
-        with contextlib.suppress(subprocess.CalledProcessError):
-            lxc.remote_add(
-                remote=BUILDD_RELEASES_REMOTE_NAME,
-                addr=BUILDD_RELEASES_REMOTE_ADDRESS,
-                protocol="simplestreams",
-            )
+    # Add the buildd releases remote
+    buildd_releases_remote = RemoteImage(
+        image_name="",  # Not needed for remote configuration
+        remote_name=BUILDD_RELEASES_REMOTE_NAME,
+        remote_address=BUILDD_RELEASES_REMOTE_ADDRESS,
+        remote_protocol=ProtocolType.SIMPLESTREAMS,
+    )
+    buildd_releases_remote.add_remote(lxc=lxc)
 
-    # Add the buildd daily remote if it doesn't exist
-    if BUILDD_DAILY_REMOTE_NAME not in lxc.remote_list():
-        with contextlib.suppress(subprocess.CalledProcessError):
-            lxc.remote_add(
-                remote=BUILDD_DAILY_REMOTE_NAME,
-                addr=BUILDD_DAILY_REMOTE_ADDRESS,
-                protocol="simplestreams",
-            )
+    # Add the buildd daily remote
+    buildd_daily_remote = RemoteImage(
+        image_name="",  # Not needed for remote configuration
+        remote_name=BUILDD_DAILY_REMOTE_NAME,
+        remote_address=BUILDD_DAILY_REMOTE_ADDRESS,
+        remote_protocol=ProtocolType.SIMPLESTREAMS,
+    )
+    buildd_daily_remote.add_remote(lxc=lxc)
 
 
 @pytest.fixture
