@@ -136,6 +136,7 @@ line_length = 88
 minversion = "7.0"
 testpaths = "tests"
 xfail_strict = true
+addopts = "-p no:tracemalloc"
 markers = [
     "with_sudo: Test requires sudo",
 ]
