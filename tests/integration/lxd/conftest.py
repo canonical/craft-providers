@@ -16,6 +16,7 @@
 #
 
 """Fixtures for LXD integration tests."""
+import contextlib
 import os
 import random
 import string
@@ -30,6 +31,12 @@ from craft_providers.lxd import LXC
 from craft_providers.lxd import project as lxc_project
 from craft_providers.lxd.lxd_instance import LXDInstance
 from craft_providers.lxd.lxd_provider import LXDProvider
+from craft_providers.lxd.remotes import (
+    BUILDD_DAILY_REMOTE_ADDRESS,
+    BUILDD_DAILY_REMOTE_NAME,
+    BUILDD_RELEASES_REMOTE_ADDRESS,
+    BUILDD_RELEASES_REMOTE_NAME,
+)
 
 _xfail_bases = {
     ubuntu.BuilddBaseAlias.XENIAL: "Fails to setup snapd (#582)",
@@ -54,6 +61,34 @@ UBUNTU_BASES_PARAM = [
 @pytest.fixture(autouse=True, scope="module")
 def installed_lxd_required(installed_lxd):
     """All LXD integration tests required LXD to be installed."""
+
+
+@pytest.fixture(autouse=True, scope="session")
+def configure_lxd_remotes(installed_lxd):
+    """Configure required LXD remotes for integration tests.
+
+    Ensures that the craft-com.ubuntu.cloud-buildd and
+    craft-com.ubuntu.cloud-buildd-daily remotes are configured.
+    """
+    lxc = LXC()
+
+    # Add the buildd releases remote if it doesn't exist
+    if BUILDD_RELEASES_REMOTE_NAME not in lxc.remote_list():
+        with contextlib.suppress(subprocess.CalledProcessError):
+            lxc.remote_add(
+                remote=BUILDD_RELEASES_REMOTE_NAME,
+                addr=BUILDD_RELEASES_REMOTE_ADDRESS,
+                protocol="simplestreams",
+            )
+
+    # Add the buildd daily remote if it doesn't exist
+    if BUILDD_DAILY_REMOTE_NAME not in lxc.remote_list():
+        with contextlib.suppress(subprocess.CalledProcessError):
+            lxc.remote_add(
+                remote=BUILDD_DAILY_REMOTE_NAME,
+                addr=BUILDD_DAILY_REMOTE_ADDRESS,
+                protocol="simplestreams",
+            )
 
 
 @pytest.fixture
