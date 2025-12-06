@@ -73,7 +73,7 @@ def test_ensure_guest_compatible_non_ubuntu_host(
     "base_alias",
     [
         ubuntu.BuilddBaseAlias.JAMMY,  # host greater than FOCAL
-        ubuntu.BuilddBaseAlias.FOCAL,  # guest less than ORACULAR
+        ubuntu.BuilddBaseAlias.FOCAL,  # guest less than PLUCKY
     ],
 )
 def test_ensure_guest_compatible_valid_ubuntu(
@@ -141,16 +141,16 @@ def test_ensure_guest_compatible_valid_ubuntu(
 @pytest.mark.parametrize(
     ("host_base_alias", "guest_base_alias", "lxd_version", "kernel_version"),
     [
-        # host FOCAL or older AND guest ORACULAR or newer
+        # host FOCAL or older AND guest PLUCKY or newer
         (
             ubuntu.BuilddBaseAlias.BIONIC,
-            ubuntu.BuilddBaseAlias.ORACULAR,
+            ubuntu.BuilddBaseAlias.PLUCKY,
             "6.0",
             "5.14",
         ),
         (
             ubuntu.BuilddBaseAlias.FOCAL,
-            ubuntu.BuilddBaseAlias.ORACULAR,
+            ubuntu.BuilddBaseAlias.PLUCKY,
             "5.0.4",
             "2.6.32-51555-generic",
         ),
