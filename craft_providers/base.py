@@ -631,6 +631,7 @@ class Base(ABC, Generic[_T_enum_co]):
                 )
                 if "daemon is stopping" in stderr and attempt < max_retries - 1:
                     # Transient snapd state, retry with exponential backoff
+                    # Wait times: 1s (2^0), 2s (2^1), 4s (2^2), 8s (2^3), 16s (2^4)
                     wait_time = 2**attempt
                     logger.debug(
                         "snapd is in transitional state, retrying in %ss "
