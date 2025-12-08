@@ -105,7 +105,11 @@ def ensure_guest_compatible(
         )
         return
 
-    host_base_alias = BuilddBaseAlias(host_os_release.get("VERSION_ID"))
+    try:
+        host_base_alias = BuilddBaseAlias(host_os_release.get("VERSION_ID"))
+    except ValueError:  # Unknown Ubuntu version, don't check.
+        logger.warning("Unknown host Ubuntu version, not checking guest compatibility")
+        return
 
     guest_os_release = base_configuration.get_os_release(executor=instance)
     guest_base_alias = BuilddBaseAlias(guest_os_release.get("VERSION_ID"))
