@@ -1626,7 +1626,7 @@ def test_disable_and_wait_for_snap_refresh_retry_daemon_stopping(
     """Retry when snapd reports 'daemon is stopping' error."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"])
-    
+
     # First two attempts fail with "daemon is stopping" error
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
@@ -1638,7 +1638,7 @@ def test_disable_and_wait_for_snap_refresh_retry_daemon_stopping(
         returncode=1,
         stderr=b"error: daemon is stopping to wait for socket activation\n",
     )
-    
+
     # Third attempt succeeds
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
@@ -1650,13 +1650,11 @@ def test_disable_and_wait_for_snap_refresh_retry_daemon_stopping(
 
 
 @pytest.mark.usefixtures("instant_sleep")
-def test_disable_and_wait_for_snap_refresh_retry_exhausted(
-    fake_process, fake_executor
-):
+def test_disable_and_wait_for_snap_refresh_retry_exhausted(fake_process, fake_executor):
     """Raise error when all retries are exhausted for 'daemon is stopping' error."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"])
-    
+
     # All attempts fail with "daemon is stopping" error
     for _ in range(5):
         fake_process.register_subprocess(
@@ -1678,7 +1676,7 @@ def test_disable_and_wait_for_snap_refresh_non_transient_error(
     """Don't retry for non-transient errors."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"])
-    
+
     # Fail with a different error (not "daemon is stopping")
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],

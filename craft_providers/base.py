@@ -27,6 +27,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import time
 from abc import ABC, abstractmethod
 from enum import Enum
 from textwrap import dedent
@@ -595,8 +596,6 @@ class Base(ABC, Generic[_T_enum_co]):
         :raises BaseConfigurationError: if snap refreshes cannot be disabled or an
         error occurs while waiting for pending refreshes to complete.
         """
-        import time
-
         logger.debug("Holding refreshes for snaps.")
 
         try:
@@ -625,10 +624,14 @@ class Base(ABC, Generic[_T_enum_co]):
                 )
                 break  # Success
             except subprocess.CalledProcessError as error:
-                stderr = error.stderr.decode() if isinstance(error.stderr, bytes) else (error.stderr or "")
+                stderr = (
+                    error.stderr.decode()
+                    if isinstance(error.stderr, bytes)
+                    else (error.stderr or "")
+                )
                 if "daemon is stopping" in stderr and attempt < max_retries - 1:
                     # Transient snapd state, retry with exponential backoff
-                    wait_time = 2 ** attempt
+                    wait_time = 2**attempt
                     logger.debug(
                         "snapd is in transitional state, retrying in %ss "
                         "(attempt %s/%s)",
