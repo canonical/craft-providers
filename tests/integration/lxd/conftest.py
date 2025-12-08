@@ -56,7 +56,6 @@ def installed_lxd_required(installed_lxd):
 
 
 @pytest.fixture
-@pytest.mark.with_sudo
 def installed_lxd_without_init(uninstalled_lxd):
     """Ensure lxd is installed, but not initialized.
 
