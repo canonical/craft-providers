@@ -595,6 +595,8 @@ class Base(ABC, Generic[_T_enum_co]):
         :raises BaseConfigurationError: if snap refreshes cannot be disabled or an
         error occurs while waiting for pending refreshes to complete.
         """
+        import time
+
         logger.debug("Holding refreshes for snaps.")
 
         try:
@@ -612,18 +614,35 @@ class Base(ABC, Generic[_T_enum_co]):
 
         # a refresh may have started before the hold was set
         logger.debug("Waiting for pending snap refreshes to complete.")
-        try:
-            executor.execute_run(
-                ["snap", "watch", "--last=auto-refresh?"],
-                capture_output=True,
-                check=True,
-                timeout=self._timeout_simple,
-            )
-        except subprocess.CalledProcessError as error:
-            raise BaseConfigurationError(
-                brief="Failed to wait for snap refreshes to complete.",
-                details=details_from_called_process_error(error),
-            ) from error
+        max_retries = 5
+        for attempt in range(max_retries):
+            try:
+                executor.execute_run(
+                    ["snap", "watch", "--last=auto-refresh?"],
+                    capture_output=True,
+                    check=True,
+                    timeout=self._timeout_simple,
+                )
+                break  # Success
+            except subprocess.CalledProcessError as error:
+                stderr = error.stderr.decode() if isinstance(error.stderr, bytes) else (error.stderr or "")
+                if "daemon is stopping" in stderr and attempt < max_retries - 1:
+                    # Transient snapd state, retry with exponential backoff
+                    wait_time = 2 ** attempt
+                    logger.debug(
+                        "snapd is in transitional state, retrying in %ss "
+                        "(attempt %s/%s)",
+                        wait_time,
+                        attempt + 1,
+                        max_retries,
+                    )
+                    time.sleep(wait_time)
+                    continue
+                # Non-transient error or max retries exceeded
+                raise BaseConfigurationError(
+                    brief="Failed to wait for snap refreshes to complete.",
+                    details=details_from_called_process_error(error),
+                ) from error
 
     def _install_snaps(self, executor: Executor) -> None:
         """Install snaps.
