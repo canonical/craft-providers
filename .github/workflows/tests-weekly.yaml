@@ -36,6 +36,8 @@ jobs:
           fetch-depth: 0
       - name: Set up runner
         uses: canonical/starflow/setup-python-runner@main
+      - name: Configure uv to use Python 3.13
+        run: echo "UV_PYTHON=3.13" >> $GITHUB_ENV
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
@@ -67,6 +69,8 @@ jobs:
           fetch-depth: 0
       - name: Set up runner
         uses: canonical/starflow/setup-python-runner@main
+      - name: Configure uv to use Python 3.13
+        run: echo "UV_PYTHON=3.13" >> $GITHUB_ENV
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
