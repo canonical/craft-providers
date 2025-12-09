@@ -36,8 +36,6 @@ jobs:
           fetch-depth: 0
       - name: Set up runner
         uses: canonical/starflow/setup-python-runner@main
-      - name: Configure uv to use Python 3.13
-        run: echo "UV_PYTHON=3.13" >> $GITHUB_ENV
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
@@ -45,6 +43,7 @@ jobs:
           limit-access-to-actor: true
       - name: Run integration tests on MacOS
         env:
+          UV_PYTHON: "3.13"
           CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL: 1
           CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL: 1
           PYTEST_ADDOPTS: "--no-header -vv -rN"
@@ -69,8 +68,6 @@ jobs:
           fetch-depth: 0
       - name: Set up runner
         uses: canonical/starflow/setup-python-runner@main
-      - name: Configure uv to use Python 3.13
-        run: echo "UV_PYTHON=3.13" >> $GITHUB_ENV
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
@@ -78,6 +75,7 @@ jobs:
           limit-access-to-actor: true
       - name: Run integration slow tests on MacOS
         env:
+          UV_PYTHON: "3.13"
           CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL: 1
           CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL: 1
           PYTEST_ADDOPTS: "--no-header -vv -rN"
