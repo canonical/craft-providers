@@ -20,7 +20,7 @@ jobs:
     uses: canonical/starflow/.github/workflows/test-python.yaml@main
     with:
       # Fast tests run on several Ubuntu platforms and macos on ARM
-      fast-test-platforms: '["ubuntu-24.04", "ubuntu-24.04-arm", "macos-13"]'
+      fast-test-platforms: '["ubuntu-24.04", "ubuntu-24.04-arm", "macos-15-intel"]'
       fast-test-python-versions: '["3.10", "3.12", "3.13"]'
       # Slow tests (which include everything that needs multipass) run on several Ubuntu platforms
       slow-test-platforms: '["ubuntu-24.04", "ubuntu-24.04-arm"]'
@@ -54,7 +54,7 @@ jobs:
     with:
       # All fast tests run in the basic job
       fast-test-platforms: "[]"
-      slow-test-platforms: '["macos-13"]'
+      slow-test-platforms: '["macos-15-intel"]'
       slow-test-python-versions: '["3.12"]'
       lowest-python-platform: ""
       use-lxd: true
