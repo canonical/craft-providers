@@ -28,6 +28,7 @@ import tempfile
 import warnings
 from typing import TYPE_CHECKING, Any, cast
 
+import pylxd  # type: ignore[import-untyped]
 from typing_extensions import override
 
 from craft_providers.const import RETRY_WAIT, TIMEOUT_SIMPLE
@@ -66,6 +67,7 @@ class LXDInstance(Executor):
         remote: str = "local",
         lxc: LXC | None = None,
         intercept_mknod: bool = True,
+        client: pylxd.Client | None = None,
     ) -> None:
         """Create an LXD executor.
 
@@ -98,6 +100,8 @@ class LXDInstance(Executor):
             self.lxc = LXC()
         else:
             self.lxc = lxc
+
+        self._client = client or pylxd.Client(project=self.project)
 
     def _finalize_lxc_command(
         self,
@@ -283,7 +287,10 @@ class LXDInstance(Executor):
 
         :raises LXDError: On unexpected error.
         """
-        return self._get_instance_information() is not None
+        return cast(
+            bool,
+            self._client.instances.exists(self.instance_name),  # type: ignore[reportUnknownVariableType]
+        )
 
     def _get_disk_devices(self) -> dict[str, Any]:
         """Query instance and return dictionary of disk devices."""
