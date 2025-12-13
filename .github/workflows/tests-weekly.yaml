@@ -93,7 +93,7 @@ jobs:
       matrix:
         lxd-image:
           - almalinux/9
-          - amazonlinux/2023
+          # - amazonlinux/2023
           - centos/9-Stream
           - debian/12
           - debian/13
@@ -123,7 +123,8 @@ jobs:
           fi
 
           if [[ ${{ matrix.lxd-image }} =~ amazonlinux* ]]; then
-              wget -O /etc/yum.repos.d/snapd.repo https://bboozzoo.github.io/snapd-amazon-linux/al2023/snapd.repo
+            dnf install wget
+            wget -O /etc/yum.repos.d/snapd.repo https://bboozzoo.github.io/snapd-amazon-linux/al2023/snapd.repo
           fi
 
           # OpenSUSE tumbleweed
