@@ -132,7 +132,10 @@ jobs:
               lxc exec test-runner -- zypper --gpg-auto-import-keys refresh
           fi
 
-          lxc exec test-runner -- bash -c 'apt-get --yes install git make snapd fuse squashfuse build-essential libffi-dev || dnf install -y git make snapd libffi-devel gcc cargo python3-devel || zypper install -y snapd squashfuse fuse git make gcc libffi-devel python3-devel'
+          # Install snapd first so it has time to warm up while we're installing other stuff
+          lxc exec test-runner -- bash -c 'apt-get --yes install snapd fuse squashfuse || dnf install -y snapd fuse squashfuse || zypper install -y snapd squashfuse fuse'
+
+          lxc exec test-runner -- bash -c 'apt-get --yes install git make build-essential libffi-dev || dnf install -y git make libffi-devel gcc cargo python3-devel || zypper install -y git make gcc libffi-devel python3-devel'
           lxc exec test-runner -- snap wait system seed.loaded
       - name: Clone repository
         run: |
