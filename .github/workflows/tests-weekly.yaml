@@ -115,7 +115,7 @@ jobs:
           lxc exec test-runner -- git clone https://github.com/canonical/craft-providers
       - name: Set up tests
         run: |
-          lxc exec test-runner --cwd /root/craft-providers -- make setup-tests
+          lxc exec test-runner --cwd /root/craft-providers --env CI=1 -- make setup-tests
       - name: Run tests
         run: |
-          lxc exec test-runner --cwd /root/craft-providers -- make test PYTEST_ADDOPTS='-vv -m lxd_instance'
+          lxc exec test-runner --cwd /root/craft-providers --env CI=1 -- make test PYTEST_ADDOPTS='-vv -m lxd_instance'
