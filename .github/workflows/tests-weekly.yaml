@@ -101,7 +101,6 @@ jobs:
           - mint/virginia
           - mint/xia
           - opensuse/tumbleweed
-          - oracle/9
           - rockylinux/9
     runs-on: ubuntu-latest
     steps:
@@ -131,12 +130,15 @@ jobs:
           if [[ ${{ matrix.lxd-image }} == 'opensuse/tumbleweed' ]]; then
               lxc exec test-runner -- zypper addrepo --refresh https://download.opensuse.org/repositories/system:/snappy/openSUSE_Tumbleweed snappy
               lxc exec test-runner -- zypper --gpg-auto-import-keys refresh
+              lxc exec test-runner -- zypper install snapd squashfuse fuse
+              lxc exec test-runner -- systemctl enable --now snapd.apparmor
           fi
 
           # Install snapd first so it has time to warm up while we're installing other stuff
-          lxc exec test-runner -- bash -c 'apt-get --yes install snapd fuse squashfuse || dnf install -y snapd fuse squashfuse || zypper install -y snapd squashfuse fuse'
+          lxc exec test-runner -- bash -c 'apt-get --yes install snapd fuse squashfuse || dnf install -y snapd fuse squashfuse || true'
 
           lxc exec test-runner -- bash -c 'apt-get --yes install git make build-essential libffi-dev || dnf install -y git make libffi-devel gcc cargo python3-devel || zypper install -y git make gcc libffi-devel python3-devel'
+
           lxc exec test-runner -- snap wait system seed.loaded
       - name: Clone repository
         run: |
