@@ -107,8 +107,8 @@ jobs:
           lxc launch images:${{ matrix.lxd-image }}/default test-runner -c security.nesting=true
       - name: Install requirements in container
         run: |
-          lxc exec test-runner -- bash -c 'apt-get --yes install git make snapd build-essential libffi-dev || dnf install -y git make snapd libffi-devel @c-development cargo python3-devel'
           lxc exec test-runner -- ln -s /var/lib/snapd/snap /snap
+          lxc exec test-runner -- bash -c 'apt-get --yes install git make snapd fuse squashfuse build-essential libffi-dev || dnf install -y git make snapd libffi-devel @c-development cargo python3-devel'
           lxc exec test-runner -- snap wait system seed.loaded
       - name: Clone repository
         run: |
