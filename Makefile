@@ -56,6 +56,10 @@ else ifeq ($(shell which apt-get),)
 else
 	sudo $(APT) install $(APT_PACKAGES)
 endif
+ifeq ($(OS)_$(shell which lxd),Linux_)
+	sudo snap install lxd
+	lxd init --auto
+endif
 ifeq ($(CI)_$(OS),true_Linux)  # Only do this in CI on Linux
 	# In CI, delete the android SDK if it's installed. It's kinda huge!
 	sudo rm -rf /usr/local/lib/android/

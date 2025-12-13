@@ -4,6 +4,10 @@ on:
     # Every Monday at 00:00 UTC
     - cron: "0 0 * * 1"
 
+  push:
+    paths:
+      - .github/workflows/tests-weekly.yaml
+
   # Allows triggering the workflow manually from the Actions tab
   workflow_dispatch:
     inputs:
@@ -77,3 +81,41 @@ jobs:
         run: |
           make setup-tests
           make test-slow
+
+  integration-linux-lxd-distros:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+        lxd-image:
+          - almalinux/9
+          - amazonlinux/2023
+          - centos/9-Stream
+          - debian/12
+          - debian/13
+          - fedora/42
+          - mint/virginia
+          - mint/xia
+          - opensuse/tumbleweed
+          - oracle/9
+          - rockylinux/9
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: canonical/setup-lxd@v1
+      - name: Launch ${{ matrix.lxd-image }} container
+        run: |
+          lxc launch images:${{ matrix.lxd-image }}/default test-runner -c security.nesting=true
+      - name: Install requirements in container
+        run: |
+          lxc exec test-runner -- bash -c 'apt-get --yes install git make snapd build-essential libffi-dev || dnf install -y git make snapd libffi-devel @c-development cargo python3-devel'
+          lxc exec test-runner -- ln -s /var/lib/snapd/snap /snap
+          lxc exec test-runner -- snap wait system seed.loaded
+      - name: Clone repository
+        run: |
+          lxc exec test-runner -- git clone https://github.com/canonical/craft-providers
+      - name: Set up tests
+        run: |
+          lxc exec test-runner --cwd /root/craft-providers -- make setup-tests
+      - name: Run tests
+        run: |
+          lxc exec test-runner --cwd /root/craft-providers -- make test PYTEST_ADDOPTS='-vv -m lxd_instance'
