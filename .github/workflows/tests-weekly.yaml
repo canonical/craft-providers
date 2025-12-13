@@ -118,8 +118,8 @@ jobs:
 
           # centos-based distros need EPEL for snapd.
           if [[ ${{ matrix.lxd-image }} =~ almalinux* ]] || [[ ${{ matrix.lxd-image }} =~ amazonlinux* ]] || [[ ${{ matrix.lxd-image }} =~ centos* ]] || [[ ${{ matrix.lxd-image }} =~ rockylinux* ]]; then
-            lxc exec test-runner -- dnf install epel-release
-            lxc exec test-runner -- dnf upgrade
+            lxc exec test-runner -- dnf install -y epel-release
+            lxc exec test-runner -- dnf upgrade -y
           fi
 
           # OpenSUSE tumbleweed
