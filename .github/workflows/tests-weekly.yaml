@@ -109,7 +109,7 @@ jobs:
           lxc exec test-runner -- ln -s /var/lib/snapd/snap /snap
           # Non Debian like distros need longer to get network for some reason
           sleep 10
-          lxc exec test-runner -- bash -c 'apt-get --yes install git make snapd fuse squashfuse build-essential libffi-dev || dnf install -y git make snapd libffi-devel @c-development cargo python3-devel'
+          lxc exec test-runner -- bash -c 'apt-get --yes install git make snapd fuse squashfuse build-essential libffi-dev || dnf install -y git make snapd libffi-devel gcc cargo python3-devel'
           lxc exec test-runner -- snap wait system seed.loaded
       - name: Clone repository
         run: |
