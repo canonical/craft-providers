@@ -116,7 +116,13 @@ jobs:
             lxc exec test-runner -- dnf upgrade
           fi
 
-          lxc exec test-runner -- bash -c 'apt-get --yes install git make snapd fuse squashfuse build-essential libffi-dev || dnf install -y git make snapd libffi-devel gcc cargo python3-devel'
+          # OpenSUSE tumbleweed
+          if [[ ${{ matrix.lxd-image }} == 'opensuse/tumbleweed' ]]; then
+              lxc exec test-runner -- zypper addrepo --refresh https://download.opensuse.org/repositories/system:/snappy/openSUSE_Tumbleweed snappy
+              lxc exec test-runner -- zypper --gpg-auto-import-keys refresh
+          fi
+
+          lxc exec test-runner -- bash -c 'apt-get --yes install git make snapd fuse squashfuse build-essential libffi-dev || dnf install -y git make snapd libffi-devel gcc cargo python3-devel || zypper install -y snapd squashfuse fuse git make gcc libffi-devel python3-devel'
           lxc exec test-runner -- snap wait system seed.loaded
       - name: Clone repository
         run: |
