@@ -117,9 +117,13 @@ jobs:
           sleep 10
 
           # centos-based distros need EPEL for snapd.
-          if [[ ${{ matrix.lxd-image }} =~ almalinux* ]] || [[ ${{ matrix.lxd-image }} =~ amazonlinux* ]] || [[ ${{ matrix.lxd-image }} =~ centos* ]] || [[ ${{ matrix.lxd-image }} =~ rockylinux* ]]; then
+          if [[ ${{ matrix.lxd-image }} =~ almalinux* ]] || [[ ${{ matrix.lxd-image }} =~ centos* ]] || [[ ${{ matrix.lxd-image }} =~ rockylinux* ]]; then
             lxc exec test-runner -- dnf install -y epel-release
             lxc exec test-runner -- dnf upgrade -y
+          fi
+
+          if [[ ${{ matrix.lxd-image }} =~ amazonlinux* ]]; then
+              wget -O /etc/yum.repos.d/snapd.repo https://bboozzoo.github.io/snapd-amazon-linux/al2023/snapd.repo
           fi
 
           # OpenSUSE tumbleweed
