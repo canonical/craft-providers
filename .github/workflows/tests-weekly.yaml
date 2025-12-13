@@ -86,7 +86,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm]
         lxd-image:
           - almalinux/9
           - amazonlinux/2023
@@ -99,7 +98,7 @@ jobs:
           - opensuse/tumbleweed
           - oracle/9
           - rockylinux/9
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: canonical/setup-lxd@v1
       - name: Launch ${{ matrix.lxd-image }} container
