@@ -22,8 +22,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.11"]
-        os: [macos-13]
+        python: ["3.12"]
+        os: [macos-14-large]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -55,7 +55,7 @@ jobs:
       fail-fast: false
       matrix:
         python: ["3.11"]
-        os: [macos-13]
+        os: [macos-14-large]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install Multipass
@@ -107,6 +107,8 @@ jobs:
       - name: Install requirements in container
         run: |
           lxc exec test-runner -- ln -s /var/lib/snapd/snap /snap
+          # Non Debian like distros need longer to get network for some reason
+          sleep 10
           lxc exec test-runner -- bash -c 'apt-get --yes install git make snapd fuse squashfuse build-essential libffi-dev || dnf install -y git make snapd libffi-devel @c-development cargo python3-devel'
           lxc exec test-runner -- snap wait system seed.loaded
       - name: Clone repository
