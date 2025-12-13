@@ -103,12 +103,19 @@ jobs:
       - uses: canonical/setup-lxd@v1
       - name: Launch ${{ matrix.lxd-image }} container
         run: |
-          lxc launch images:${{ matrix.lxd-image }}/default test-runner -c security.nesting=true
+          lxc launch images:${{ matrix.lxd-image }} test-runner -c security.nesting=true
       - name: Install requirements in container
         run: |
           lxc exec test-runner -- ln -s /var/lib/snapd/snap /snap
           # Non Debian like distros need longer to get network for some reason
           sleep 10
+
+          # centos-based distros need EPEL for snapd.
+          if [[ ${{ matrix.lxd-image }} =~ almalinux* ]] || [[ ${{ matrix.lxd-image }} =~ amazonlinux* ]] || [[ ${{ matrix.lxd-image }} =~ centos* ]] || [[ ${{ matrix.lxd-image }} =~ rockylinux* ]]; then
+            lxc exec test-runner -- dnf install epel-release
+            lxc exec test-runner -- dnf upgrade
+          fi
+
           lxc exec test-runner -- bash -c 'apt-get --yes install git make snapd fuse squashfuse build-essential libffi-dev || dnf install -y git make snapd libffi-devel gcc cargo python3-devel'
           lxc exec test-runner -- snap wait system seed.loaded
       - name: Clone repository
