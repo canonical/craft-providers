@@ -53,6 +53,10 @@ _INVALID_INSTANCE = {
 }
 
 
+# These tests can't run on MacOS as LXD (and by extension, pylxd) don't work on it.
+pytestmark = [pytest.mark.skipif(sys.platform == "darwin")]
+
+
 @pytest.fixture
 def project_path(tmp_path):
     project_path = tmp_path / "git" / "project"
