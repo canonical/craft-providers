@@ -53,8 +53,12 @@ _INVALID_INSTANCE = {
 }
 
 
-# These tests can't run on MacOS as LXD (and by extension, pylxd) don't work on it.
-pytestmark = [pytest.mark.skipif(sys.platform == "darwin")]
+pytestmark = [
+    pytest.mark.skipif(
+        sys.platform == "darwin",
+        reason="These tests can't run on MacOS as LXD (and by extension, pylxd) don't work on it.",
+    )
+]
 
 
 @pytest.fixture
