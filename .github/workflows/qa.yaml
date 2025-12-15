@@ -57,5 +57,5 @@ jobs:
       slow-test-platforms: '["macos-14-large"]'
       slow-test-python-versions: '["3.12"]'
       lowest-python-platform: ""
-      use-lxd: true
+      use-lxd: false
       pytest-markers: smoketest

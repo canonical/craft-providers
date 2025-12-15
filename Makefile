@@ -66,6 +66,9 @@ ifeq ($(CI)_$(OS),true_Linux)  # Only do this in CI on Linux
 	echo "::endgroup::"
 else ifeq ($(CI)_$(OS),true_Darwin)  # Only do this in CI on macOS
 	brew install multipass
+	# Disable spotlight because it tries to index the multipass images, crashing
+	# macOS 14+ runners. Thapple.
+	sudo mdutil -a -i off
 endif
 
 
