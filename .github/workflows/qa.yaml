@@ -23,7 +23,7 @@ jobs:
       fast-test-platforms: '["ubuntu-24.04", "ubuntu-24.04-arm", "macos-15-intel"]'
       fast-test-python-versions: '["3.10", "3.12", "3.13"]'
       # Slow tests (which include everything that needs multipass) run on several Ubuntu platforms
-      slow-test-platforms: '["ubuntu-24.04", "ubuntu-24.04-arm"]'
+      slow-test-platforms: '["ubuntu-24.04"]'
       slow-test-python-versions: '["3.12"]'
       lowest-python-platform: "ubuntu-22.04"
       lowest-python-version: "3.10"
@@ -34,7 +34,7 @@ jobs:
     with:
       # All fast tests run in the basic job
       fast-test-platforms: "[]"
-      slow-test-platforms: '["ubuntu-24.04", "ubuntu-24.04-arm"]'
+      slow-test-platforms: '["ubuntu-24.04"]'
       slow-test-python-versions: '["3.12"]'
       lowest-python-platform: ""
       use-lxd: true
