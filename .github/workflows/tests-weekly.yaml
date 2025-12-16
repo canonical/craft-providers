@@ -30,13 +30,6 @@ jobs:
           - 5.0/candidate
           - 5.0/edge
         python-version: ["3.10", "3.12"]
-        include:
-          - os: self-hosted-linux-amd64-focal-medium
-            lxd-channel: 4.0/candidate
-            python-version: "3.10"
-          - os: self-hosted-linux-amd64-focal-medium
-            lxd-channel: 4.0/edge
-            python-version: "3.10"
     runs-on: ${{ matrix.os }}
     steps:
       - name: Pristine Ubuntu
