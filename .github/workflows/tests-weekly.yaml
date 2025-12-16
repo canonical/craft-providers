@@ -90,6 +90,9 @@ jobs:
         channel: [latest/candidate, latest/edge]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Pristine Ubuntu
+        if: ${{ runner.os == 'Linux' && runner.environment == 'github-hosted' }}
+        uses: lengau/pristine-ubuntu-action@v0
       - name: Install Multipass
         run: |
           sudo snap install multipass --channel=${{ matrix.channel }}
