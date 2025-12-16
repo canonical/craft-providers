@@ -102,6 +102,9 @@ jobs:
           fetch-depth: 0
       - name: Set up runner
         uses: canonical/starflow/setup-python-runner@main
+      - name: Set up dependencies
+        run: |
+          make -j setup-tests
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
@@ -114,5 +117,4 @@ jobs:
           CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL: 1
           PYTEST_ADDOPTS: "--no-header -vv -rN -m multipass_instance"
         run: |
-          make setup-tests
-          make test-slow
+          make test
