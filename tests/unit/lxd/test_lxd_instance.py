@@ -14,7 +14,6 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
-
 import io
 import os
 import pathlib
@@ -26,6 +25,7 @@ import tempfile
 from unittest import mock
 from unittest.mock import call
 
+import pylxd
 import pytest
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, LXDInstance
@@ -51,6 +51,14 @@ _INVALID_INSTANCE = {
     "name": "invalid-instance-$",
     "instance-name": "invalid-instance-86be3150e96a80a04e31",
 }
+
+
+pytestmark = [
+    pytest.mark.skipif(
+        sys.platform == "darwin",
+        reason="These tests can't run on MacOS as LXD (and by extension, pylxd) don't work on it.",
+    )
+]
 
 
 @pytest.fixture
@@ -113,9 +121,21 @@ def mock_os_unlink():
         yield mock_unlink
 
 
+@pytest.fixture(scope="session")
+def _pylxd_client() -> pylxd.Client:
+    return pylxd.Client()
+
+
 @pytest.fixture
-def instance(mock_lxc):
-    return LXDInstance(name=_TEST_INSTANCE["name"], lxc=mock_lxc)
+def mock_lxd_client(_pylxd_client: pylxd.Client):
+    return mock.Mock(spec=_pylxd_client)
+
+
+@pytest.fixture
+def instance(mock_lxc, mock_lxd_client) -> LXDInstance:
+    return LXDInstance(
+        name=_TEST_INSTANCE["name"], lxc=mock_lxc, client=mock_lxd_client
+    )
 
 
 def test_config_get(mock_lxc, instance):
@@ -453,20 +473,11 @@ def test_execute_run_with_env_unset(mock_lxc, instance):
     ]
 
 
-def test_exists(mock_lxc, instance):
-    assert instance.exists() is True
-    assert mock_lxc.mock_calls == [
-        mock.call.list(project=instance.project, remote=instance.remote)
-    ]
+@pytest.mark.parametrize(("should_exist"), [True, False])
+def test_exists_uses_api(instance: LXDInstance, should_exist: bool) -> None:
+    instance._client.instances.exists.return_value = should_exist  # type: ignore[reportAttributeAccessIssue]
 
-
-def test_exists_false(mock_lxc):
-    instance = LXDInstance(name="does-not-exist", lxc=mock_lxc)
-
-    assert instance.exists() is False
-    assert mock_lxc.mock_calls == [
-        mock.call.list(project=instance.project, remote=instance.remote)
-    ]
+    assert instance.exists() is should_exist
 
 
 def test_get_disk_devices_path_parse_error(mock_lxc, instance):
