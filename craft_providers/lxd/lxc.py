@@ -44,7 +44,7 @@ from .errors import LXDError
 
 if TYPE_CHECKING:
     import builtins
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +110,7 @@ class LXC:
     @overload
     def _run_lxc(
         self,
-        command: list[str],
+        command: Sequence[str],
         *,
         check: bool = True,
         project: str | None = None,
@@ -123,7 +123,7 @@ class LXC:
     @overload
     def _run_lxc(
         self,
-        command: list[str],
+        command: Sequence[str],
         *,
         check: bool = True,
         project: str | None = None,
@@ -136,7 +136,7 @@ class LXC:
     @overload
     def _run_lxc(
         self,
-        command: list[str],
+        command: Sequence[str],
         *,
         check: bool = True,
         project: str | None = None,
@@ -149,7 +149,7 @@ class LXC:
     @overload
     def _run_lxc(
         self,
-        command: list[str],
+        command: Sequence[str],
         *,
         check: bool = True,
         project: str | None = None,
@@ -161,7 +161,7 @@ class LXC:
     ) -> subprocess.CompletedProcess[str]: ...
     def _run_lxc(
         self,
-        command: list[str],
+        command: Sequence[str],
         *,
         check: bool = True,
         project: str | None = None,
@@ -445,7 +445,7 @@ class LXC:
     def exec(
         self,
         *,
-        command: list[str],
+        command: Sequence[str],
         instance_name: str,
         runner: Callable[..., subprocess.Popen[str]],
         cwd: str | None = None,
@@ -460,7 +460,7 @@ class LXC:
     def exec(
         self,
         *,
-        command: list[str],
+        command: Sequence[str],
         instance_name: str,
         runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
         cwd: str | None = None,
@@ -474,7 +474,7 @@ class LXC:
     def exec(  # noqa: PLR0913
         self,
         *,
-        command: list[str],
+        command: Sequence[str],
         instance_name: str,
         runner: Callable[..., subprocess.Popen[str]]
         | Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
@@ -867,7 +867,7 @@ class LXC:
 
     def image_list(
         self, *, project: str = "default", remote: str = "local"
-    ) -> list[dict[str, Any]]:
+    ) -> Sequence[dict[str, Any]]:
         """List images.
 
         :param project: Name of LXD project.
@@ -901,7 +901,7 @@ class LXC:
         *,
         project: str = "default",
         remote: str = "local",
-    ) -> list[dict[str, Any]]:
+    ) -> Sequence[dict[str, Any]]:
         """List instances and their status.
 
         :param project: Name of LXD project.

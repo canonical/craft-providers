@@ -41,7 +41,7 @@ from .errors import MultipassError
 
 if TYPE_CHECKING:
     import io
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ class Multipass:
         self.multipass_path = multipass_path
 
     def _run(
-        self, command: list[str], **kwargs: Any
+        self, command: Sequence[str], **kwargs: Any
     ) -> subprocess.CompletedProcess[Any]:
         """Execute a multipass command.
 
@@ -106,7 +106,7 @@ class Multipass:
     def exec(
         self,
         *,
-        command: list[str],
+        command: Sequence[str],
         instance_name: str,
         timeout: float | None = None,
         check: bool = False,
@@ -224,7 +224,7 @@ class Multipass:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    def list(self) -> list[str]:
+    def list(self) -> Sequence[str]:
         """List names of VMs.
 
         :returns: Data from stdout if instance exists, else None.
