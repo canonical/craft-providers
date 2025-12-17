@@ -80,6 +80,7 @@ class LXDInstance(Executor):
         :param remote: The name of the LXD remote.
         :param lxc: The LXC wrapper to use.
         :param intercept_mknod: If the host can, tell LXD instance to intercept mknod
+        :param client: The pylxd client to use.
 
         :raises LXDError: If the name is invalid.
         """
@@ -283,9 +284,7 @@ class LXDInstance(Executor):
     def exists(self) -> bool:
         """Check if instance exists.
 
-        :returns: True if instance exists.
-
-        :raises LXDError: On unexpected error.
+        :returns: True if the instance exists.
         """
         return cast(
             bool,
