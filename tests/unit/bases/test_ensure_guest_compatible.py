@@ -16,9 +16,10 @@
 #
 import contextlib
 import textwrap
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
+import pytest_mock
 from craft_providers.bases import centos, checks, ensure_guest_compatible, ubuntu
 from craft_providers.errors import ProviderError
 from craft_providers.util import os_release
@@ -26,24 +27,31 @@ from craft_providers.util import os_release
 from tests.unit.conftest import DEFAULT_FAKE_CMD
 
 
-def test_ensure_guest_compatible_not_ubuntu(fake_executor, fake_process):
+def test_ensure_guest_compatible_not_ubuntu(
+    mocker: pytest_mock.MockFixture, fake_executor, fake_process
+):
     base = centos.CentOSBase(alias=centos.CentOSBaseAlias.SEVEN)
-    base.get_os_release = MagicMock(spec=base.get_os_release)
+    mock_get_os_release = mocker.patch.object(
+        base, "get_os_release", spec=base.get_os_release
+    )
     ensure_guest_compatible(base, fake_executor, "")
 
     # The first thing that ensure_guest_compatible does is the base check.  The next
     # thing is to call get_os_release on the base.  So if that isn't called then we
     # haven't progressed.
-    base.get_os_release.assert_not_called()
+    mock_get_os_release.assert_not_called()
 
 
 def test_ensure_guest_compatible_non_ubuntu_host(
+    mocker: pytest_mock.MockFixture,
     fake_executor,
     fake_process,
 ):
     """Check for combinations of host and guest OS unaffected by the lxd issue."""
     guest_base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-    guest_base.get_os_release = MagicMock(spec=guest_base.get_os_release)
+    mock_get_os_release = mocker.patch.object(
+        guest_base, "get_os_release", spec=guest_base.get_os_release
+    )
 
     # Mock the host os-release file
     fake_process.register_subprocess(
@@ -66,7 +74,7 @@ def test_ensure_guest_compatible_non_ubuntu_host(
     # The first thing that ensure_guest_compatible does is the base check.  The next
     # thing is to call get_os_release on the base.  So if that isn't called then we
     # haven't progressed.
-    guest_base.get_os_release.assert_not_called()
+    mock_get_os_release.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -77,6 +85,7 @@ def test_ensure_guest_compatible_non_ubuntu_host(
     ],
 )
 def test_ensure_guest_compatible_valid_ubuntu(
+    mocker: pytest_mock.MockFixture,
     fake_executor,
     fake_process,
     base_alias,
@@ -96,7 +105,7 @@ def test_ensure_guest_compatible_valid_ubuntu(
         counter += 1
         return real_get_os_release(*args, **kwargs)
 
-    guest_base.get_os_release = fake_get_os_release
+    mocker.patch.object(guest_base, "get_os_release", fake_get_os_release)
 
     lxd_version = "0.0.0"
 

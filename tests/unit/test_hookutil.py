@@ -28,11 +28,11 @@ from craft_providers.hookutil import (
 PROJECT_NAME = "fakeproj"
 
 
-def test_no_projects():
+def test_no_projects(monkeypatch: pytest.MonkeyPatch):
     """Make sure HookError is raised if there is no corresponding lxc project."""
     # Use our own mock HookHelper rather than the fixture, we need to do things a little
     # differently here
-    HookHelper._check_has_lxd = MagicMock()
+    monkeypatch.setattr(HookHelper, "_check_has_lxd", MagicMock())
     original_lxc_func = HookHelper.lxc
 
     def fake_lxc(self, *args, **kwargs):
@@ -48,10 +48,12 @@ def test_no_projects():
 
 
 @pytest.fixture
-def fake_hookhelper():
+def fake_hookhelper(monkeypatch: pytest.MonkeyPatch):
     def fake_hookhelper(instance_list):
-        HookHelper._check_project_exists = MagicMock()  # raise nothing
-        HookHelper._check_has_lxd = MagicMock()
+        monkeypatch.setattr(
+            HookHelper, "_check_project_exists", MagicMock()
+        )  # raise nothing
+        monkeypatch.setattr(HookHelper, "_check_has_lxd", MagicMock())
         helper = HookHelper(project_name=PROJECT_NAME, simulate=False, debug=True)
 
         original_lxc_func = helper.lxc
@@ -61,11 +63,11 @@ def fake_hookhelper():
                 return instance_list
             return original_lxc_func(*args, **kwargs)
 
-        helper.lxc = fake_lxc
+        monkeypatch.setattr(helper, "lxc", fake_lxc)
 
-        helper.delete_instance = MagicMock()
-        helper.delete_project = MagicMock()
-        helper.delete_all_images = MagicMock()
+        monkeypatch.setattr(helper, "delete_instance", MagicMock())
+        monkeypatch.setattr(helper, "delete_project", MagicMock())
+        monkeypatch.setattr(helper, "delete_all_images", MagicMock())
         return helper
 
     return fake_hookhelper

@@ -65,7 +65,7 @@ class Executor(ABC):
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
         **kwargs: Any,
-    ) -> subprocess.Popen[str]:
+    ) -> subprocess.Popen[str] | subprocess.Popen[bytes]:
         """Execute a command in instance, using subprocess.Popen().
 
         The process' environment will inherit the execution environment's
