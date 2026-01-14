@@ -29,7 +29,6 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import yaml
 
-from craft_providers import pro
 from craft_providers.const import TIMEOUT_SIMPLE
 from craft_providers.errors import details_from_called_process_error
 from craft_providers.executor import Executor, get_instance_name
@@ -634,12 +633,12 @@ class LXDInstance(Executor):
 
     def attach_pro_subscription(self):
         """Attach the instance to a Pro subscription."""
-        guest_token, contract_url = pro.request_pro_guest_token()
+        # guest_token, contract_url = pro.request_pro_guest_token()
 
         self.lxc.attach_pro_subscription(
             instance_name=self.instance_name,
-            pro_token=guest_token,
-            contract_url=contract_url,
+            # pro_token=guest_token,
+            # contract_url=contract_url,
             project=self.project,
             remote=self.remote,
         )
