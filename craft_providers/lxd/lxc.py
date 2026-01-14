@@ -1481,6 +1481,7 @@ class LXC:
             "install",
             "-y",
             "ubuntu-advantage-tools",
+            "cloud-init",
         ]
         try:
             self._run_lxc(
@@ -1502,12 +1503,27 @@ class LXC:
                     "install",
                     "-y",
                     "ubuntu-advantage-tools=27.11.2~$(lsb_release -rs).1",
+                    "cloud-init",
                 ]
                 self._run_lxc(
                     command,
                     capture_output=True,
                     project=project,
                 )
+
+            cloud_init = [
+                "exec",
+                f"{remote}:{instance_name}",
+                "--",
+                "cloud-init",
+                "init",
+                "--local",
+            ]
+            self._run_lxc(
+                cloud_init,
+                capture_output=True,
+                project=project,
+            )
 
             logger.debug(
                 "Ubuntu Pro Client successfully installed in managed instance."
