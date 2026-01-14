@@ -24,6 +24,7 @@ import pathlib
 import shutil
 import subprocess
 import tempfile
+import textwrap
 import warnings
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -39,6 +40,14 @@ from craft_providers.util import env_cmd
 logger = logging.getLogger(__name__)
 
 PRO_SERVICES_YAML = pathlib.Path("/root/pro-services.yaml")
+_FAKE_CLOUD_ID_SCRIPT = textwrap.dedent(
+    """\
+    #!/bin/bash
+    # Since this instance is managed by us, report a fake cloud-id of "lxd" always.
+    echo "lxd"
+    exit 0
+    """
+)
 
 
 class LXDInstance(Executor):
@@ -633,8 +642,6 @@ class LXDInstance(Executor):
 
     def attach_pro_subscription(self):
         """Attach the instance to a Pro subscription."""
-        # guest_token, contract_url = pro.request_pro_guest_token()
-
         self.lxc.attach_pro_subscription(
             instance_name=self.instance_name,
             # pro_token=guest_token,

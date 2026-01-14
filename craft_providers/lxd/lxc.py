@@ -25,6 +25,7 @@ import os
 import pathlib
 import shlex
 import subprocess
+import tempfile
 import threading
 import time
 from collections import deque
@@ -1341,29 +1342,17 @@ class LXC:
 
         :raises LXDError: on unexpected error.
         """
-        command = [
-            "exec",
-            f"{remote}:{instance_name}",
-            "--",
-            "pro",
-            "auto-attach",
-        ]
+        self._create_fake_cloud_id(
+            instance_name=instance_name, project=project, remote=remote
+        )
         try:
-            self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
+            self._auto_attach_pro(
+                instance_name=instance_name, project=project, remote=remote
             )
-
-            logger.debug(
-                "Managed instance successfully attached to a Pro subscription."
+        finally:
+            self._remove_fake_cloud_id(
+                instance_name=instance_name, project=project, remote=remote
             )
-        except subprocess.CalledProcessError as error:
-            raise LXDError(
-                brief=f"Failed to attach {instance_name!r} to a Pro subscription.",
-                details=errors.details_from_called_process_error(error),
-            ) from error
 
     def enable_pro_service(
         self,
@@ -1481,7 +1470,6 @@ class LXC:
             "install",
             "-y",
             "ubuntu-advantage-tools",
-            "cloud-init",
         ]
         try:
             self._run_lxc(
@@ -1503,27 +1491,12 @@ class LXC:
                     "install",
                     "-y",
                     "ubuntu-advantage-tools=27.11.2~$(lsb_release -rs).1",
-                    "cloud-init",
                 ]
                 self._run_lxc(
                     command,
                     capture_output=True,
                     project=project,
                 )
-
-            cloud_init = [
-                "exec",
-                f"{remote}:{instance_name}",
-                "--",
-                "cloud-init",
-                "init",
-                "--local",
-            ]
-            self._run_lxc(
-                cloud_init,
-                capture_output=True,
-                project=project,
-            )
 
             logger.debug(
                 "Ubuntu Pro Client successfully installed in managed instance."
@@ -1533,3 +1506,68 @@ class LXC:
                 brief=f"Failed to install Ubuntu Pro Client in instance {instance_name!r}.",
                 details=errors.details_from_called_process_error(error),
             ) from error
+
+    def _auto_attach_pro(
+        self, *, instance_name: str, project: str, remote: str
+    ) -> None:
+        command = [
+            "exec",
+            f"{remote}:{instance_name}",
+            "--",
+            "pro",
+            "auto-attach",
+        ]
+        try:
+            self._run_lxc(
+                command,
+                capture_output=True,
+                check=True,
+                project=project,
+            )
+
+            logger.debug(
+                "Managed instance successfully attached to a Pro subscription."
+            )
+        except subprocess.CalledProcessError as error:
+            raise LXDError(
+                brief=f"Failed to attach {instance_name!r} to a Pro subscription.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
+    def _create_fake_cloud_id(
+        self, *, instance_name: str, project: str, remote: str
+    ) -> None:
+        """Create a fake "cloud-id" executable in the instance.
+
+        This is needed for the Ubuntu Pro Client to auto-attach properly in non-cloud-init
+        instances.
+        """
+        with tempfile.NamedTemporaryFile() as temp:
+            source = pathlib.Path(temp.name)
+            source.write_text("#!/bin/bash\necho 'lxd'\n")
+            self.file_push(
+                instance_name=instance_name,
+                source=source,
+                destination=pathlib.PurePath("/usr/local/bin/cloud-id"),
+                mode="0775",
+                project=project,
+                remote=remote,
+            )
+
+    def _remove_fake_cloud_id(
+        self, *, instance_name: str, project: str, remote: str
+    ) -> None:
+        """Clean up the fake "cloud-id" binary create by _create_fake_cloud_id()."""
+        command = [
+            "exec",
+            f"{remote}:{instance_name}",
+            "--",
+            "rm",
+            "-f",
+            "/usr/local/bin/cloud-id",
+        ]
+        self._run_lxc(
+            command,
+            capture_output=True,
+            project=project,
+        )
