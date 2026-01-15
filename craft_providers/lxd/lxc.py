@@ -1228,104 +1228,6 @@ class LXC:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    # def attach_pro_subscription(
-    #     self,
-    #     *,
-    #     instance_name: str,
-    #     pro_token: str,
-    #     contract_url: str,
-    #     project: str = "default",
-    #     remote: str = "local",
-    # ) -> None:
-    #     """Attach the instance to a managed subscription.
-    #
-    #     :param instance_name: Name of instance to attach.
-    #     :param pro_token: Pro token.
-    #     :param project: Name of LXD project.
-    #     :param remote: Name of LXD remote.
-    #
-    #     :raises LXDError: on unexpected error.
-    #     """
-    #     command = [
-    #         "exec",
-    #         f"{remote}:{instance_name}",
-    #         "--",
-    #         "pro",
-    #         "api",
-    #         "u.pro.attach.token.full_token_attach.v1",
-    #         "--data",
-    #         "-",
-    #     ]
-    #     try:
-    #         payload = json.dumps({"token": pro_token, "auto_enable_services": False})
-    #
-    #         pro_client_config = pathlib.PurePath("/etc/ubuntu-advantage/uaclient.conf")
-    #         with tempfile.NamedTemporaryFile() as tmp:
-    #             tmp_path = pathlib.Path(tmp.name)
-    #
-    #             try:
-    #                 self.file_pull(
-    #                     instance_name=instance_name,
-    #                     source=pro_client_config,
-    #                     destination=tmp_path,
-    #                     project=project,
-    #                 )
-    #             except LXDError as exc:
-    #                 if exc.brief.startswith("Failed to pull file"):
-    #                     raise LXDError(
-    #                         brief=f"Ubuntu Pro Client is not installed on {instance_name!r}."
-    #                     ) from exc
-    #
-    #                 raise
-    #
-    #             config = yaml.safe_load(tmp_path.read_text())
-    #
-    #             config["contract_url"] = contract_url
-    #
-    #             tmp_path.write_text(yaml.dump(config))
-    #
-    #             self.file_push(
-    #                 instance_name=instance_name,
-    #                 source=tmp_path,
-    #                 destination=pro_client_config,
-    #                 create_dirs=True,
-    #                 project=project,
-    #             )
-    #
-    #         proc = self._run_lxc(
-    #             command,
-    #             capture_output=True,
-    #             check=False,
-    #             project=project,
-    #             input=payload.encode(),
-    #         )
-    #
-    #         if proc.returncode == 0:
-    #             logger.debug(
-    #                 "Managed instance successfully attached to a Pro subscription."
-    #             )
-    #         elif proc.returncode == 1:
-    #             raise LXDError(
-    #                 brief=f"Invalid token used to attach {instance_name!r} to a Pro subscription."
-    #             )
-    #         elif proc.returncode == 2:
-    #             logger.debug(
-    #                 "Instance {instance_name!r} is already attached to a Pro subscription."
-    #             )
-    #         else:
-    #             raise LXDError(
-    #                 brief=f"Ubuntu Pro Client is not installed on {instance_name!r}."
-    #             )
-    #     except json.JSONDecodeError as error:
-    #         raise LXDError(
-    #             brief=f"Failed to parse JSON response of `pro` command on {instance_name!r}.",
-    #         ) from error
-    #     except subprocess.CalledProcessError as error:
-    #         raise LXDError(
-    #             brief=f"Failed to attach {instance_name!r} to a Pro subscription.",
-    #             details=errors.details_from_called_process_error(error),
-    #         ) from error
-
     def attach_pro_subscription(
         self,
         *,
@@ -1371,46 +1273,50 @@ class LXC:
 
         :raises LXDError: on unexpected error.
         """
-        for service in services:
-            command = [
-                "exec",
-                f"{remote}:{instance_name}",
-                "--",
-                "pro",
-                "api",
-                "u.pro.services.enable.v1",
-                "--data",
-                json.dumps({"service": service}),
-            ]
-            try:
-                proc = self._run_lxc(
-                    command,
-                    capture_output=True,
-                    check=False,
-                    project=project,
-                )
+        enabled_services = self._get_enabled_pro_services(
+            instance_name=instance_name, project=project, remote=remote
+        )
 
-                if proc.returncode == 0:
-                    logger.debug(
-                        f"Pro service {service!r} successfully enabled on instance."
-                    )
-                elif proc.returncode == 1:
-                    raise LXDError(
-                        brief=f"Failed to enable Pro service {service!r} on unattached instance {instance_name!r}.",
-                    )
-                else:
-                    raise LXDError(
-                        brief=f"Ubuntu Pro Client is not installed on {instance_name!r}."
-                    )
-            except json.JSONDecodeError as error:
-                raise LXDError(
-                    brief=f"Failed to parse JSON response of `pro` command on {instance_name!r}.",
-                ) from error
-            except subprocess.CalledProcessError as error:
-                raise LXDError(
-                    brief=f"Failed to enable Pro service {service!r} on instance {instance_name!r}.",
-                    details=errors.details_from_called_process_error(error),
-                ) from error
+        requested_services = set(services)
+        services_to_enable = requested_services - enabled_services
+        services_to_disable = enabled_services - requested_services
+
+        for service in services_to_enable:
+            logger.debug("Enabling Pro service '%s'", service)
+            self._switch_service(
+                service=service,
+                enable=True,
+                instance_name=instance_name,
+                project=project,
+                remote=remote,
+            )
+        for service in services_to_disable:
+            logger.debug("Disabling Pro service '%s'", service)
+            self._switch_service(
+                service=service,
+                enable=False,
+                instance_name=instance_name,
+                project=project,
+                remote=remote,
+            )
+
+    def _switch_service(
+        self,
+        *,
+        service: str,
+        enable: bool,
+        instance_name: str,
+        project: str = "default",
+        remote: str = "local",
+    ) -> None:
+        endpoint = "u.pro.services.enable.v1" if enable else "u.pro.services.disable.v1"
+        self._call_pro_api(
+            endpoint=endpoint,
+            data={"service": service},
+            instance_name=instance_name,
+            project=project,
+            remote=remote,
+        )
 
     def is_pro_installed(
         self,
@@ -1571,3 +1477,57 @@ class LXC:
             capture_output=True,
             project=project,
         )
+
+    def _get_enabled_pro_services(
+        self, *, instance_name: str, project: str, remote: str
+    ) -> set[str]:
+        command = [
+            "exec",
+            f"{remote}:{instance_name}",
+            "--",
+            "pro",
+            "api",
+            "u.pro.status.enabled_services.v1",
+        ]
+        proc = self._run_lxc(
+            command,
+            capture_output=True,
+            check=True,
+            project=project,
+        )
+
+        data = json.loads(proc.stdout)
+        if data.get("result") == "success":
+            enabled_services = data["data"]["attributes"]["enabled_services"]
+            return {service["name"] for service in enabled_services}
+
+        logger.debug("Invalid response from `pro` command: %s", data)
+        raise LXDError(
+            brief=f"Failed to query enabled pro services on {instance_name!r}.",
+        )
+
+    def _call_pro_api(
+        self,
+        *,
+        endpoint: str,
+        instance_name: str,
+        data: None | dict[Any, Any] = None,
+        project: str = "default",
+        remote: str = "local",
+    ) -> str:
+        command = ["exec", f"{remote}:{instance_name}", "--", "pro", "api", endpoint]
+
+        if data:
+            command += [
+                "--data",
+                json.dumps(data),
+            ]
+
+        proc = self._run_lxc(
+            command,
+            capture_output=True,
+            check=True,
+            project=project,
+        )
+
+        return proc.stdout
