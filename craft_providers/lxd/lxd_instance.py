@@ -644,8 +644,6 @@ class LXDInstance(Executor):
         """Attach the instance to a Pro subscription."""
         self.lxc.attach_pro_subscription(
             instance_name=self.instance_name,
-            # pro_token=guest_token,
-            # contract_url=contract_url,
             project=self.project,
             remote=self.remote,
         )

@@ -1310,13 +1310,20 @@ class LXC:
         remote: str = "local",
     ) -> None:
         endpoint = "u.pro.services.enable.v1" if enable else "u.pro.services.disable.v1"
-        self._call_pro_api(
-            endpoint=endpoint,
-            data={"service": service},
-            instance_name=instance_name,
-            project=project,
-            remote=remote,
-        )
+        try:
+            self._call_pro_api(
+                endpoint=endpoint,
+                data={"service": service},
+                instance_name=instance_name,
+                project=project,
+                remote=remote,
+            )
+        except subprocess.CalledProcessError as error:
+            action = "enable" if enable else "disable"
+            raise LXDError(
+                brief=f"Failed to {action} Pro service {service!r} on instance {instance_name!r}.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
 
     def is_pro_installed(
         self,
@@ -1423,22 +1430,27 @@ class LXC:
             "pro",
             "auto-attach",
         ]
-        try:
-            self._run_lxc(
-                command,
-                capture_output=True,
-                check=True,
-                project=project,
-            )
 
+        proc = self._run_lxc(
+            command,
+            capture_output=True,
+            check=False,
+            project=project,
+        )
+
+        if proc.returncode == 0:
             logger.debug(
                 "Managed instance successfully attached to a Pro subscription."
             )
-        except subprocess.CalledProcessError as error:
+        elif proc.returncode == 2:
+            logger.debug(
+                "Instance {instance_name!r} is already attached to a Pro subscription."
+            )
+        else:
+            logger.debug("Failed to attach Pro subscription: %s", proc.stdout)
             raise LXDError(
-                brief=f"Failed to attach {instance_name!r} to a Pro subscription.",
-                details=errors.details_from_called_process_error(error),
-            ) from error
+                brief=f"Failed to attach {instance_name!r} to a Pro subscription."
+            )
 
     def _create_fake_cloud_id(
         self, *, instance_name: str, project: str, remote: str
@@ -1449,11 +1461,10 @@ class LXC:
         instances.
         """
         with tempfile.NamedTemporaryFile() as temp:
-            source = pathlib.Path(temp.name)
-            source.write_text("#!/bin/bash\necho 'lxd'\n")
+            temp.write(b"#!/bin/bash\necho 'lxd'\n")
             self.file_push(
                 instance_name=instance_name,
-                source=source,
+                source=pathlib.Path(temp.name),
                 destination=pathlib.PurePath("/usr/local/bin/cloud-id"),
                 mode="0775",
                 project=project,
@@ -1489,12 +1500,18 @@ class LXC:
             "api",
             "u.pro.status.enabled_services.v1",
         ]
-        proc = self._run_lxc(
-            command,
-            capture_output=True,
-            check=True,
-            project=project,
-        )
+        try:
+            proc = self._run_lxc(
+                command,
+                capture_output=True,
+                check=True,
+                project=project,
+            )
+        except subprocess.CalledProcessError as error:
+            raise LXDError(
+                brief=f"Failed to query enabled pro services on {instance_name!r}.",
+                details=errors.details_from_called_process_error(error),
+            )
 
         data = json.loads(proc.stdout)
         if data.get("result") == "success":
