@@ -1238,7 +1238,6 @@ class LXC:
         """Attach the instance to a managed subscription.
 
         :param instance_name: Name of instance to attach.
-        :param pro_token: Pro token.
         :param project: Name of LXD project.
         :param remote: Name of LXD remote.
 
@@ -1520,7 +1519,7 @@ class LXC:
 
         logger.debug("Invalid response from `pro` command: %s", data)
         raise LXDError(
-            brief=f"Failed to query enabled pro services on {instance_name!r}.",
+            brief=f"Failed to query enabled Pro services on {instance_name!r}.",
         )
 
     def _call_pro_api(
