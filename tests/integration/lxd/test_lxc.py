@@ -313,13 +313,11 @@ def test_attach_pro_subscription_success(instance, lxc, session_project):
     with pytest.raises(LXDError) as raised:
         lxc.attach_pro_subscription(
             instance_name=instance,
-            pro_token="random",  # noqa: S106
-            contract_url="random",
             project=session_project,
         )
 
     assert raised.value.brief == (
-        f"Invalid token used to attach {instance!r} to a Pro subscription."
+        f"Failed to attach {instance!r} to a Pro subscription."
     )
 
 
@@ -328,13 +326,11 @@ def test_attach_pro_subscription_failure(instance_alma, lxc, session_project):
     with pytest.raises(LXDError) as raised:
         lxc.attach_pro_subscription(
             instance_name=instance_alma,
-            pro_token="random",  # noqa: S106
-            contract_url="random",
             project=session_project,
         )
 
     assert raised.value.brief == (
-        f"Ubuntu Pro Client is not installed on {instance_alma!r}."
+        f"Failed to attach {instance_alma!r} to a Pro subscription."
     )
 
 
@@ -348,7 +344,7 @@ def test_enable_pro_service_success(instance, lxc, session_project):
         )
 
     assert raised.value.brief == (
-        f"Failed to enable Pro service 'esm-infra' on unattached instance {instance!r}."
+        f"Failed to enable Pro service 'esm-infra' on instance {instance!r}."
     )
 
 
@@ -362,7 +358,7 @@ def test_enable_pro_service_failure(instance_alma, lxc, session_project):
         )
 
     assert raised.value.brief == (
-        f"Ubuntu Pro Client is not installed on {instance_alma!r}."
+        f"Failed to query enabled pro services on {instance_alma!r}."
     )
 
 

@@ -16,6 +16,7 @@
 #
 
 """Fixtures for LXD integration tests."""
+
 import os
 import random
 import string
@@ -159,7 +160,11 @@ def project(lxc, project_name):
     expected_cfg = lxc.profile_show(profile="default", project="default")
     expected_cfg["used_by"] = []
 
-    assert lxc.profile_show(profile="default", project=project_name) == expected_cfg
+    actual_cfg = lxc.profile_show(profile="default", project=project_name)
+    actual_cfg.pop("project", None)
+    expected_cfg.pop("project", None)
+
+    assert actual_cfg == expected_cfg
 
     yield project_name
 
@@ -170,6 +175,8 @@ def project(lxc, project_name):
 def session_project(installed_lxd):
     lxc = LXC()
     project_name = "craft-providers-test-session"
+    # We could need to purge if previous tests were killed.
+    lxc_project.purge(lxc=lxc, project=project_name)
     lxc_project.create_with_default_profile(lxc=lxc, project=project_name)
 
     projects = lxc.project_list()
@@ -180,8 +187,14 @@ def session_project(installed_lxd):
 
     expected_cfg = lxc.profile_show(profile="default", project="default")
     expected_cfg["used_by"] = []
+    if "project" in expected_cfg:
+        del expected_cfg["project"]
 
-    assert lxc.profile_show(profile="default", project=project_name) == expected_cfg
+    actual_config = lxc.profile_show(profile="default", project=project_name)
+    if "project" in actual_config:
+        del actual_config["project"]
+
+    assert actual_config == expected_cfg
 
     yield project_name
 
