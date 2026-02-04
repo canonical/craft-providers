@@ -4,7 +4,7 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
-3.3.0 (Unreleased)
+3.3.0 (2026-02-05)
 ------------------
 
 Breaking changes:
@@ -14,6 +14,7 @@ Breaking changes:
 Bug fixes:
 
 - Do not fail if the build host is an unknown Ubuntu release.
+- Fix a bug where setting up snapd would fail on when waiting for refreshes to complete.
 
 3.2.0 (2025-11-13)
 ------------------
