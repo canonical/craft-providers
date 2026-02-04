@@ -612,12 +612,23 @@ class Base(ABC, Generic[_T_enum_co]):
 
         # a refresh may have started before the hold was set
         logger.debug("Waiting for pending snap refreshes to complete.")
-        try:
+
+        def snap_watch(timeout: float) -> None:
             executor.execute_run(
                 ["snap", "watch", "--last=auto-refresh?"],
                 capture_output=True,
                 check=True,
-                timeout=self._timeout_simple,
+                timeout=timeout,
+            )
+
+        try:
+            # There is a small time window after restarting the snapd service where snapd
+            # claims it's ready but actually isn't (SNAPDENG-36387). The workaround is to
+            # retry.
+            retry.retry_until_timeout(
+                self._timeout_simple or TIMEOUT_SIMPLE,
+                self._retry_wait,
+                snap_watch,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
