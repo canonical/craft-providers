@@ -1733,6 +1733,78 @@ def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executo
         base_config._disable_and_wait_for_snap_refresh(executor=fake_executor)
 
 
+@pytest.mark.usefixtures("instant_sleep")
+def test_disable_and_wait_for_snap_refresh_retry_daemon_stopping(
+    fake_process, fake_executor
+):
+    """Retry when snapd reports 'daemon is stopping' error."""
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"])
+
+    # First two attempts fail with "daemon is stopping" error
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
+        returncode=1,
+        stderr=b"error: daemon is stopping to wait for socket activation\n",
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
+        returncode=1,
+        stderr=b"error: daemon is stopping to wait for socket activation\n",
+    )
+
+    # Third attempt succeeds
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
+        returncode=0,
+    )
+
+    # Should succeed after retries
+    base_config._disable_and_wait_for_snap_refresh(executor=fake_executor)
+
+
+@pytest.mark.usefixtures("instant_sleep")
+def test_disable_and_wait_for_snap_refresh_retry_exhausted(fake_process, fake_executor):
+    """Raise error when all retries are exhausted for 'daemon is stopping' error."""
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"])
+
+    # All attempts fail with "daemon is stopping" error
+    for _ in range(5):
+        fake_process.register_subprocess(
+            [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
+            returncode=1,
+            stderr=b"error: daemon is stopping to wait for socket activation\n",
+        )
+
+    with pytest.raises(
+        BaseConfigurationError, match="Failed to wait for snap refreshes to complete."
+    ):
+        base_config._disable_and_wait_for_snap_refresh(executor=fake_executor)
+
+
+@pytest.mark.usefixtures("instant_sleep")
+def test_disable_and_wait_for_snap_refresh_non_transient_error(
+    fake_process, fake_executor
+):
+    """Don't retry for non-transient errors."""
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"])
+
+    # Fail with a different error (not "daemon is stopping")
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
+        returncode=1,
+        stderr=b"error: some other error\n",
+    )
+
+    # Should fail immediately without retries
+    with pytest.raises(
+        BaseConfigurationError, match="Failed to wait for snap refreshes to complete."
+    ):
+        base_config._disable_and_wait_for_snap_refresh(executor=fake_executor)
+
+
 def test_devel_never_eol(fake_process, fake_executor, mock_requests_head, logs):
     """Verify that the devel base skips EOL checks."""
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.DEVEL)
