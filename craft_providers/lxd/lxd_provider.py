@@ -39,7 +39,7 @@ from .remotes import get_remote_image
 
 if TYPE_CHECKING:
     import pathlib
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Collection, Iterator
     from enum import Enum
 
     from craft_providers import Executor
@@ -101,6 +101,15 @@ class LXDProvider(Provider):
         :returns: True if installed.
         """
         return is_installed()
+
+    def list_instances(self) -> Collection[LXDInstance]:
+        """Get a collection of all existing instances for this LXD provider."""
+        return [
+            LXDInstance(name=name, project=self.lxd_project, remote=self.lxd_remote)
+            for name in self.lxc.list_names(
+                project=self.lxd_project, remote=self.lxd_remote
+            )
+        ]
 
     def create_environment(self, *, instance_name: str) -> Executor:
         """Create a bare environment for specified base.

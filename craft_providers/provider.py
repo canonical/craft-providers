@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING
 from .base import Base
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Collection
 
     from craft_providers import Executor
 from typing import TYPE_CHECKING
@@ -93,6 +93,10 @@ class Provider(ABC):
 
         :returns: True if installed.
         """
+
+    @abstractmethod
+    def list_instances(self) -> Collection[Executor]:
+        """Get a collection of existing instances for this provider."""
 
     @abstractmethod
     def create_environment(self, *, instance_name: str) -> Executor:

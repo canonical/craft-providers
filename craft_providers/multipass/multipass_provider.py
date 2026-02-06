@@ -39,7 +39,7 @@ from .multipass_instance import MultipassInstance
 
 if TYPE_CHECKING:
     import pathlib
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Collection, Iterator
 
     from craft_providers import Executor
 
@@ -178,6 +178,13 @@ class MultipassProvider(Provider):
         if not is_installed():
             install()
         ensure_multipass_is_ready()
+
+    def list_instances(self) -> Collection[MultipassInstance]:
+        """Get a collection of all existing multipass VMs."""
+        return [
+            MultipassInstance(name=name, multipass=self.multipass)
+            for name in self.multipass.list()
+        ]
 
     def create_environment(self, *, instance_name: str) -> Executor:
         """Create a bare environment for specified base.
