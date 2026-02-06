@@ -53,6 +53,14 @@ def mock_lxc(mocker):
     return mocker.patch("craft_providers.lxd.LXC", autospec=True)
 
 
+@pytest.fixture
+def mock_lxc_container(mocker):
+    lxc = mocker.Mock()
+    mocker.patch("craft_providers.lxd.lxd_instance.pylxd.Client")
+    lxc.list_names.return_value = ["test-instance-1", "test-instance-2"]
+    return lxc
+
+
 @pytest.fixture(autouse=True)
 def mock_ensure_lxd_is_ready(mocker):
     return mocker.patch(
@@ -302,3 +310,18 @@ def test_lxd_install_recommendation():
         provider.install_recommendation
         == "Visit https://ubuntu.com/lxd/install for instructions to install LXD."
     )
+
+
+def test_lxd_list_instances(mock_lxc_container):
+    """Verify LXDProvider's instances"""
+    provider = LXDProvider(
+        lxc=mock_lxc_container,
+        lxd_project="default",
+        lxd_remote="local",
+    )
+
+    instances = list(provider.list_instances())
+
+    assert len(instances) == 2
+    assert instances[0].name == "test-instance-1"
+    assert instances[1].name == "test-instance-2"
