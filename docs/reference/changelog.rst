@@ -14,7 +14,7 @@ Breaking changes:
 Bug fixes:
 
 - Do not fail if the build host is an unknown Ubuntu release.
-- Fix a bug where setting up snapd would fail on when waiting for refreshes to complete.
+- Fix a bug where snapd would fail while waiting for snap refreshes to complete.
 
 3.2.0 (2025-11-13)
 ------------------

@@ -366,7 +366,7 @@ def test_snap_refresh_hold_error(fake_process, fake_executor, fake_base):
 def test_snap_refresh_watch_error(fake_process, fake_executor, fake_base):
     """Error on failure of 'snap watch'."""
     stderr = "error: daemon is stopping to wait for socket activation"
-    fake_base._timeout_simple = 0.01
+    fake_base._timeout_complex = 0.01
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"],
         returncode=0,

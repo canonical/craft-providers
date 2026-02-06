@@ -626,7 +626,7 @@ class Base(ABC, Generic[_T_enum_co]):
             # claims it's ready but actually isn't (SNAPDENG-36387). The workaround is to
             # retry.
             retry.retry_until_timeout(
-                self._timeout_simple or TIMEOUT_SIMPLE,
+                self._timeout_complex or TIMEOUT_COMPLEX,
                 self._retry_wait,
                 snap_watch,
             )
