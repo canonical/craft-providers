@@ -4,7 +4,7 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
-3.3.0 (2026-02-05)
+3.3.0 (2026-02-09)
 ------------------
 
 Breaking changes:
