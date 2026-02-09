@@ -838,6 +838,8 @@ def test_setup_snapd_failures(fake_process, fake_executor):
 @pytest.mark.parametrize("fail_index", list(range(0, 8)))
 def test_post_setup_snapd_failures(fake_process, fake_executor, fail_index):
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
+    base_config._retry_wait = 0.01
+    base_config._timeout_complex = 0.01
 
     return_codes = [0] * 8
     return_codes[fail_index] = 1
@@ -1607,6 +1609,8 @@ def test_disable_and_wait_for_snap_refresh_hold_error(fake_process, fake_executo
 def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executor):
     """Raise BaseConfigurationError when the `snap watch` command fails."""
     base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
+    base_config._retry_wait = 0.01
+    base_config._timeout_complex = 0.01
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"])
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
