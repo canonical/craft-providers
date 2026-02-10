@@ -369,4 +369,4 @@ classmethod-decorators = ["pydantic.validator", "pydantic.root_validator"]
 [tool.ty.rules]
 # Temporarily disabled while mypy and pyright are still in use.
 # See: https://github.com/canonical/craft-providers/issues/901
-unused-type-ignore-comment = "ignore"
+unused-ignore-comment = "ignore"
