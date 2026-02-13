@@ -116,10 +116,11 @@ class LXDProvider(Provider):
         instances = []
 
         for name in names:
-            if name.startswith("base-instance-") and include_base_instances:
+            if name.startswith("base-instance-") and not include_base_instances:
                 continue
             if instance_name_prefix and not name.startswith(instance_name_prefix):
                 continue
+
             instances.append(
                 LXDInstance(
                     name=name, project=project, remote=self.lxd_remote, lxc=self.lxc
