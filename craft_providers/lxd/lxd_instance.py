@@ -104,9 +104,6 @@ class LXDInstance(Executor):
 
         self._client = client or pylxd.Client(project=self.project)
 
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(name={self.name!r}, instance_name={self.instance_name!r}, default_command_environment={self.default_command_environment!r}, project={self.project!r}, remote={self.remote!r})"
-
     def _finalize_lxc_command(
         self,
         command: list[str],

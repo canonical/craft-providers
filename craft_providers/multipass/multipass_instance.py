@@ -99,9 +99,6 @@ class MultipassInstance(Executor):
         else:
             self._multipass = Multipass()
 
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(name={self.name!r}, instance_name={self.instance_name})"
-
     def _create_temp_file(self) -> str:
         """Create a temporary file inside the instance owned by the `ubuntu` user.
 
