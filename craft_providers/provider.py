@@ -95,8 +95,22 @@ class Provider(ABC):
         """
 
     @abstractmethod
-    def list_instances(self) -> Collection[Executor]:
-        """Get a collection of existing instances for this provider."""
+    def list_instances(
+        self,
+        *,
+        project_name: str | None = None,
+        instance_name_prefix: str | None = None,
+        include_base_instances: bool = False,
+    ) -> Collection[Executor]:
+        """Get a collection of existing instances for this provider.
+
+        :param project_name: Optional project name to scope instances to a specific
+            application or project, if supported by the provider.
+        :param instance_name_prefix: Optional prefix to filter instances by name.
+        :param include_base_instances: If True, include any base instances created
+            by the provider; if False (default), base instances should be excluded
+            from the results when possible.
+        """
 
     @abstractmethod
     def create_environment(self, *, instance_name: str) -> Executor:
