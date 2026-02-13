@@ -34,8 +34,8 @@ dev = [
     "coverage[toml]~=7.6",
     "freezegun~=1.5",
     "logassert~=8.1",
-    "pyfakefs~=5.10.0",
-    "pytest~=8.3",
+    "pyfakefs~=6.1.0",
+    "pytest~=9.0",
     "pytest-cov~=7.0",
     "pytest-mock~=3.14",
     "pytest-rerunfailures~=16.0",
@@ -365,3 +365,8 @@ classmethod-decorators = ["pydantic.validator", "pydantic.root_validator"]
 "craft_providers/base.py" = [
     "ARG002",  # This file has a lot of no-op default implementations where the child may need the arg.
 ]
+
+[tool.ty.rules]
+# Temporarily disabled while mypy and pyright are still in use.
+# See: https://github.com/canonical/craft-providers/issues/901
+unused-type-ignore-comment = "ignore"

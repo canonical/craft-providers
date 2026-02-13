@@ -342,3 +342,73 @@ def test_set_hostname(fake_base):
     bad_name = "bad_123-ABC%-"
     fake_base._set_hostname(bad_name)
     assert fake_base._hostname == "bad123-ABC"
+
+
+def test_snap_refresh(fake_process, fake_executor, fake_base):
+    """Disable and wait for snap refreshes."""
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"],
+        returncode=0,
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
+        returncode=0,
+    )
+
+    fake_base._disable_and_wait_for_snap_refresh(executor=fake_executor)
+
+
+def test_snap_refresh_hold_error(fake_process, fake_executor, fake_base):
+    """Error on failure to hold refreshes."""
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"],
+        stderr="test error",
+        returncode=1,
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
+        returncode=0,
+    )
+
+    with pytest.raises(BaseConfigurationError) as err:
+        fake_base._disable_and_wait_for_snap_refresh(executor=fake_executor)
+
+    assert err.value.brief == "Failed to hold snap refreshes."
+    assert err.value.details
+    assert "test error" in err.value.details
+
+
+def test_snap_refresh_watch_error(fake_process, fake_executor, fake_base):
+    """Error on failure of 'snap watch'."""
+    stderr = "error: daemon is stopping to wait for socket activation"
+    fake_base._timeout_complex = 0.01
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"],
+        returncode=0,
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
+        stderr=stderr,
+        returncode=1,
+    )
+
+    with pytest.raises(BaseConfigurationError) as err:
+        fake_base._disable_and_wait_for_snap_refresh(executor=fake_executor)
+
+    assert err.value.brief == "Failed to wait for snap refreshes to complete."
+    assert err.value.details
+    assert stderr in err.value.details
+
+
+def test_snap_refresh_watch_retry(fake_process, fake_executor, fake_base):
+    """Retry when 'snap watch' fails."""
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"],
+        returncode=0,
+    )
+    # fail twice then succeed
+    snap_watch = [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"]
+    for returncode in (1, 1, 0):
+        fake_process.register_subprocess(snap_watch, returncode=returncode)
+
+    fake_base._disable_and_wait_for_snap_refresh(executor=fake_executor)

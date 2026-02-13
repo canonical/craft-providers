@@ -113,7 +113,7 @@ class Multipass:
         # Mypy and ty don't have good answers here re: what to do about this:
         # https://github.com/python/mypy/issues/3737
         # https://github.com/astral-sh/ty/issues/592
-        runner: Callable[..., T] = subprocess.run,  # type: ignore[assignment]  # ty: ignore[invalid-parameter-default]
+        runner: Callable[..., T] = subprocess.run,  # type: ignore[assignment]
         **kwargs: Any,
     ) -> T:
         """Execute command in instance_name with specified runner.
