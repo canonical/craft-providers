@@ -102,14 +102,31 @@ class LXDProvider(Provider):
         """
         return is_installed()
 
-    def list_instances(self) -> Collection[LXDInstance]:
+    def list_instances(
+        self,
+        *,
+        project_name: str | None = None,
+        instance_name_prefix: str | None = None,
+        include_base_instances: bool = False,
+    ) -> Collection[LXDInstance]:
         """Get a collection of all existing instances for this LXD provider."""
-        return [
-            LXDInstance(name=name, project=self.lxd_project, remote=self.lxd_remote)
-            for name in self.lxc.list_names(
-                project=self.lxd_project, remote=self.lxd_remote
+        project = project_name if project_name and not None else self.lxd_project
+        names = self.lxc.list_names(project=project, remote=self.lxd_remote)
+
+        instances = []
+
+        for name in names:
+            if name.startswith("base-instance-") and include_base_instances:
+                continue
+            if instance_name_prefix and not name.startswith(instance_name_prefix):
+                continue
+            instances.append(
+                LXDInstance(
+                    name=name, project=project, remote=self.lxd_remote, lxc=self.lxc
+                )
             )
-        ]
+
+        return instances
 
     def create_environment(self, *, instance_name: str) -> Executor:
         """Create a bare environment for specified base.
