@@ -154,7 +154,7 @@ class LXDInstance(Executor):
         :raises LXDError: On unexpected error.
         """
         with tempfile.NamedTemporaryFile() as temp_file:
-            shutil.copyfileobj(content, temp_file)
+            shutil.copyfileobj(content, temp_file)  # ty: ignore[invalid-argument-type], see https://github.com/astral-sh/ty/issues/2812
             # Ensure the file is written to disk.
             temp_file.flush()
 
