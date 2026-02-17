@@ -57,7 +57,11 @@ def mock_lxc(mocker):
 def mock_lxc_container(mocker):
     lxc = mocker.Mock()
     mocker.patch("craft_providers.lxd.lxd_instance.pylxd.Client")
-    lxc.list_names.return_value = ["test-instance-1", "test-instance-2"]
+    lxc.list_names.return_value = [
+        "test-instance-1",
+        "test-instance-2",
+        "base-instance-1",
+    ]
     return lxc
 
 
@@ -323,5 +327,76 @@ def test_lxd_list_instances(mock_lxc_container):
     instances = list(provider.list_instances())
 
     assert len(instances) == 2
+
     assert instances[0].name == "test-instance-1"
+    assert instances[0].project == "default"
+    assert instances[0].remote == "local"
+
     assert instances[1].name == "test-instance-2"
+    assert instances[1].project == "default"
+    assert instances[1].remote == "local"
+
+
+def test_lxd_list_instances_include_base(mock_lxc_container):
+    """Verify list instance filters on base instances"""
+    provider = LXDProvider(
+        lxc=mock_lxc_container,
+        lxd_project="default",
+        lxd_remote="local",
+    )
+
+    instances = list(provider.list_instances(include_base_instances=True))
+
+    assert len(instances) == 3
+
+    assert instances[0].name == "test-instance-1"
+    assert instances[0].project == "default"
+    assert instances[0].remote == "local"
+
+    assert instances[1].name == "test-instance-2"
+    assert instances[1].project == "default"
+    assert instances[1].remote == "local"
+
+    assert instances[2].name == "base-instance-1"
+    assert instances[2].project == "default"
+    assert instances[2].remote == "local"
+
+
+def test_lxd_list_instances_project_override(mock_lxc_container):
+    provider = LXDProvider(
+        lxc=mock_lxc_container,
+        lxd_project="default",
+        lxd_remote="local",
+    )
+
+    provider.list_instances(project_name="custom-project")
+
+    mock_lxc_container.list_names.assert_called_with(
+        project="custom-project",
+        remote="local",
+    )
+
+
+def test_lxd_list_instances_prefix_filter(mock_lxc_container):
+    mock_lxc_container.list_names.return_value.append(
+        "alpha-1",
+    )
+    mock_lxc_container.list_names.return_value.append(
+        "beta-1",
+    )
+    mock_lxc_container.list_names.return_value.append(
+        "alpha-2",
+    )
+
+    provider = LXDProvider(
+        lxc=mock_lxc_container,
+        lxd_project="default",
+        lxd_remote="local",
+    )
+
+    instances = list(provider.list_instances(instance_name_prefix="alpha-"))
+
+    assert len(instances) == 2
+
+    for instance in instances:
+        assert instance.name.startswith("alpha-")
