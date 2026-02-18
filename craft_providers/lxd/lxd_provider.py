@@ -111,7 +111,7 @@ class LXDProvider(Provider):
         include_base_instances: bool = False,
     ) -> Collection[LXDInstance]:
         """Get a collection of all existing instances for this LXD provider."""
-        project = project_name if project_name and not None else self.lxd_project
+        project = project_name or self.lxd_project
         names = self.lxc.list_names(project=project, remote=self.lxd_remote)
 
         instances = []

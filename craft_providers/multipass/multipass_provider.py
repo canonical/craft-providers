@@ -188,7 +188,7 @@ class MultipassProvider(Provider):
         include_base_instances: bool = False,
     ) -> Collection[MultipassInstance]:
         """Get a collection of all existing multipass VMs."""
-        multipass_name = project_name if project_name and not None else self.name
+        multipass_name = project_name or self.name
         names = self.multipass.list()
 
         instances = []
