@@ -179,12 +179,31 @@ class MultipassProvider(Provider):
             install()
         ensure_multipass_is_ready()
 
-    def list_instances(self) -> Collection[MultipassInstance]:
+    @override
+    def list_instances(
+        self,
+        *,
+        project_name: str | None = None,
+        instance_name_prefix: str | None = None,
+        include_base_instances: bool = False,
+    ) -> Collection[MultipassInstance]:
         """Get a collection of all existing multipass VMs."""
-        return [
-            MultipassInstance(name=name, multipass=self.multipass)
-            for name in self.multipass.list()
-        ]
+        multipass_name = project_name if project_name and not None else self.name
+        names = self.multipass.list()
+
+        instances = []
+
+        for name in names:
+            if name.startswith("base-instance-") and not include_base_instances:
+                continue
+            if instance_name_prefix and not name.startswith(instance_name_prefix):
+                continue
+
+            instances.append(
+                MultipassInstance(name=multipass_name, multipass=self.multipass)
+            )
+
+        return instances
 
     def create_environment(self, *, instance_name: str) -> Executor:
         """Create a bare environment for specified base.
