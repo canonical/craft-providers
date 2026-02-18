@@ -102,6 +102,7 @@ class LXDProvider(Provider):
         """
         return is_installed()
 
+    @override
     def list_instances(
         self,
         *,
