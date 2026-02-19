@@ -114,7 +114,7 @@ class LXDProvider(Provider):
         project = project_name or self.lxd_project
         names = self.lxc.list_names(project=project, remote=self.lxd_remote)
 
-        instances: Collection[LXDInstance] = []
+        instances: list[LXDInstance] = []
 
         for name in names:
             if name.startswith("base-instance-") and not include_base_instances:
