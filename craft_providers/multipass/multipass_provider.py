@@ -191,7 +191,7 @@ class MultipassProvider(Provider):
         multipass_name = project_name or self.name
         names = self.multipass.list()
 
-        instances = []
+        instances: Collection[MultipassInstance] = []
 
         for name in names:
             if name.startswith("base-instance-") and not include_base_instances:
