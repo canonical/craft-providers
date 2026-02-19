@@ -18,16 +18,21 @@
 
 """Manages LXD remotes and provides access to remote images."""
 
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict
+from typing import TYPE_CHECKING
 
-from craft_providers import Base
 from craft_providers.bases import almalinux, centos, ubuntu
 
 from .errors import LXDError
-from .lxc import LXC
+
+if TYPE_CHECKING:
+    from craft_providers import Base
+
+    from .lxc import LXC
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +97,6 @@ class RemoteImage:
 
         :param lxc: LXC client.
         """
-        # TODO verify both the remote name and address
         if self.remote_name in lxc.remote_list():
             logger.debug("Remote %r already exists.", self.remote_name)
         else:
@@ -121,7 +125,7 @@ class RemoteImage:
 
 
 # mapping from supported bases to actual lxd remote images
-_PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
+_PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: dict[Enum, RemoteImage] = {
     ubuntu.BuilddBaseAlias.BIONIC: RemoteImage(
         image_name="core18",
         remote_name=BUILDD_RELEASES_REMOTE_NAME,
@@ -142,12 +146,24 @@ _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
     ),
     ubuntu.BuilddBaseAlias.NOBLE: RemoteImage(
         image_name="core24",
+        remote_name=BUILDD_RELEASES_REMOTE_NAME,
+        remote_address=BUILDD_RELEASES_REMOTE_ADDRESS,
+        remote_protocol=ProtocolType.SIMPLESTREAMS,
+    ),
+    ubuntu.BuilddBaseAlias.PLUCKY: RemoteImage(
+        image_name="plucky",
         remote_name=BUILDD_DAILY_REMOTE_NAME,
         remote_address=BUILDD_DAILY_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
-    ubuntu.BuilddBaseAlias.ORACULAR: RemoteImage(
-        image_name="oracular",
+    ubuntu.BuilddBaseAlias.QUESTING: RemoteImage(
+        image_name="questing",
+        remote_name=BUILDD_RELEASES_REMOTE_NAME,
+        remote_address=BUILDD_RELEASES_REMOTE_ADDRESS,
+        remote_protocol=ProtocolType.SIMPLESTREAMS,
+    ),
+    ubuntu.BuilddBaseAlias.RESOLUTE: RemoteImage(
+        image_name="resolute",
         remote_name=BUILDD_DAILY_REMOTE_NAME,
         remote_address=BUILDD_DAILY_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
@@ -173,7 +189,7 @@ _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
 }
 
 
-def get_remote_image(provider_base: Base) -> RemoteImage:
+def get_remote_image(provider_base: Base[Enum]) -> RemoteImage:
     """Get a RemoteImage for a particular provider base.
 
     :param provider_base: string containing the provider base

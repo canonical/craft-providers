@@ -21,7 +21,10 @@ import logging
 import re
 from textwrap import dedent
 
+import pytest
 from craft_providers.actions import snap_installer
+
+pytestmark = [pytest.mark.slow]
 
 
 def test_inject_from_host(core22_lxd_instance, installed_snap, caplog):
@@ -219,7 +222,10 @@ def test_install_from_store_channel(core22_lxd_instance, installed_snap, caplog)
     )
 
     proc = core22_lxd_instance.execute_run(
-        ["/snap/bin/go", "version"], capture_output=True, check=True, text=True
+        ["/snap/bin/go", "version"],
+        capture_output=True,
+        check=True,
+        text=True,
     )
 
     assert "go1.15" in proc.stdout

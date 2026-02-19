@@ -132,9 +132,9 @@ def test_add_remote_race_condition(fake_remote_image, mock_lxc, logs):
 def test_add_remote_race_condition_error(fake_remote_image, mock_lxc, logs):
     """Race condition code triggered but it was actually an error."""
     mock_lxc.remote_list.return_value = {}
-    mock_lxc.remote_add.side_effect = ValueError()
+    mock_lxc.remote_add.side_effect = ValueError("uh oh!")
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="uh oh!"):
         fake_remote_image.add_remote(mock_lxc)
 
 
@@ -145,7 +145,9 @@ def test_add_remote_race_condition_error(fake_remote_image, mock_lxc, logs):
         (ubuntu.BuilddBaseAlias.FOCAL, "core20"),
         (ubuntu.BuilddBaseAlias.JAMMY, "core22"),
         (ubuntu.BuilddBaseAlias.NOBLE, "core24"),
-        (ubuntu.BuilddBaseAlias.ORACULAR, "oracular"),
+        (ubuntu.BuilddBaseAlias.PLUCKY, "plucky"),
+        (ubuntu.BuilddBaseAlias.QUESTING, "questing"),
+        (ubuntu.BuilddBaseAlias.RESOLUTE, "resolute"),
         (ubuntu.BuilddBaseAlias.DEVEL, "devel"),
     ],
 )
@@ -174,10 +176,8 @@ def test_get_image_remote_xenial_error():
 
 def test_get_image_remote_error():
     """Raise an error for an unknown provider base."""
-    base = ubuntu.BuilddBase(alias=-1)  # type: ignore
-    with pytest.raises(lxd.LXDError) as raised:
+    base = ubuntu.BuilddBase(alias=-1)  # type: ignore[reportArgumentType]
+    with pytest.raises(
+        lxd.LXDError, match="could not find a lxd remote image for the provider base"
+    ):
         lxd.remotes.get_remote_image(base)
-
-    assert "could not find a lxd remote image for the provider base " in str(
-        raised.value
-    )

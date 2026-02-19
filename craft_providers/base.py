@@ -17,8 +17,8 @@
 
 """Base configuration module."""
 
+from __future__ import annotations
 
-import enum
 import io
 import logging
 import math
@@ -30,7 +30,7 @@ import sys
 from abc import ABC, abstractmethod
 from enum import Enum
 from textwrap import dedent
-from typing import Dict, List, Optional, Type, final
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, final, overload
 
 from pydantic import ValidationError
 
@@ -46,17 +46,23 @@ from craft_providers.errors import (
     BaseCompatibilityError,
     BaseConfigurationError,
     NetworkError,
+    ProviderError,
     details_from_called_process_error,
 )
-from craft_providers.executor import Executor
 from craft_providers.instance_config import InstanceConfiguration
 from craft_providers.util import retry
-from craft_providers.util.os_release import parse_os_release
+from craft_providers.util.os_release import OS_RELEASE_FILE, parse_os_release
+
+if TYPE_CHECKING:
+    from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 
+# Needed until on Python 3.12 - see https://github.com/microsoft/pyright/issues/6750.
+_T_enum_co = TypeVar("_T_enum_co", covariant=True, bound=Enum)
 
-class Base(ABC):
+
+class Base(ABC, Generic[_T_enum_co]):
     """Interface for providers to configure instantiated environments.
 
     Defines how to setup/configure an environment that has been instantiated by
@@ -85,37 +91,37 @@ class Base(ABC):
         directories depend on the base implementation.
     """
 
-    _environment: Dict[str, Optional[str]]
+    _environment: dict[str, str | None]
     _hostname: str
     _instance_config_path = pathlib.PurePosixPath("/etc/craft-instance.conf")
-    _instance_config_class: Type[InstanceConfiguration] = InstanceConfiguration
-    _snaps: Optional[List[Snap]] = None
-    _packages: Optional[List[str]] = None
+    _instance_config_class: type[InstanceConfiguration] = InstanceConfiguration
+    _snaps: list[Snap] | None = None
+    _packages: list[str] | None = None
     _retry_wait: float = RETRY_WAIT
-    _timeout_simple: Optional[float] = TIMEOUT_SIMPLE
-    _timeout_complex: Optional[float] = TIMEOUT_COMPLEX
-    _timeout_unpredictable: Optional[float] = TIMEOUT_UNPREDICTABLE
-    _cache_path: Optional[pathlib.Path] = None
-    alias: Enum
+    _timeout_simple: float | None = TIMEOUT_SIMPLE
+    _timeout_complex: float | None = TIMEOUT_COMPLEX
+    _timeout_unpredictable: float | None = TIMEOUT_UNPREDICTABLE
+    _cache_path: pathlib.Path | None = None
+    alias: _T_enum_co
     compatibility_tag: str = "base-v7"
 
     @abstractmethod
     def __init__(
         self,
         *,
-        alias: enum.Enum,
-        compatibility_tag: Optional[str] = None,
-        environment: Optional[Dict[str, Optional[str]]] = None,
+        alias: _T_enum_co,
+        compatibility_tag: str | None = None,
+        environment: dict[str, str | None] | None = None,
         hostname: str = "craft-instance",
-        snaps: Optional[List] = None,
-        packages: Optional[List[str]] = None,
+        snaps: list[Snap] | None = None,
+        packages: list[str] | None = None,
         use_default_packages: bool = True,
-        cache_path: Optional[pathlib.Path] = None,
+        cache_path: pathlib.Path | None = None,
     ) -> None:
         pass
 
     @staticmethod
-    def default_command_environment() -> Dict[str, Optional[str]]:
+    def default_command_environment() -> dict[str, str | None]:
         """Provide default command environment dictionary.
 
         The minimum environment for the image to be configured and function
@@ -147,7 +153,7 @@ class Base(ABC):
         truncated_name = hostname[:63]
 
         # remove anything that is not an alphanumeric character or hyphen
-        name_with_valid_chars = re.sub(r"[^\w-]", "", truncated_name)
+        name_with_valid_chars = re.sub(r"[^a-zA-Z0-9-]", "", truncated_name)
 
         # trim hyphens from the beginning and end
         valid_name = name_with_valid_chars.strip("-")
@@ -180,8 +186,6 @@ class Base(ABC):
                 brief="Failed to parse instance configuration file.",
             ) from error
         # if no config exists, assume base is compatible (likely unfinished setup)
-        # XXX: checking the compatibility_tag should be much more strict when called
-        # by warmup (warmup will continue if the compatibility tag is missing or none!)
         except FileNotFoundError:
             return
 
@@ -231,7 +235,7 @@ class Base(ABC):
 
         logger.debug("Instance has already been setup.")
 
-    def _get_os_release(self, executor: Executor) -> Dict[str, str]:
+    def get_os_release(self, executor: Executor) -> dict[str, str]:
         """Get the OS release information from an instance's /etc/os-release.
 
         :returns: Dictionary of key-mappings found in os-release.
@@ -244,7 +248,7 @@ class Base(ABC):
                 # Replace encoding errors if it somehow occurs with utf-8. This
                 # doesn't need to be perfect for checking compatibility.
                 proc = executor.execute_run(
-                    command=["cat", "/etc/os-release"],
+                    command=["cat", OS_RELEASE_FILE.as_posix()],
                     capture_output=True,
                     check=True,
                     text=True,
@@ -254,12 +258,12 @@ class Base(ABC):
                 )
             except subprocess.CalledProcessError as error:
                 raise BaseConfigurationError(
-                    brief="Failed to read /etc/os-release.",
+                    brief=f"Failed to read {OS_RELEASE_FILE}.",
                     details=details_from_called_process_error(error),
                 ) from error
             if not proc.stdout:
                 raise BaseConfigurationError(
-                    brief="Failed to read /etc/os-release.",
+                    brief=f"Failed to read {OS_RELEASE_FILE}.",
                     details="File appears to be empty.",
                 )
             return proc.stdout
@@ -281,7 +285,7 @@ class Base(ABC):
         :raises BaseConfigurationError: on other unexpected error.
         """
 
-    def get_command_environment(self) -> Dict[str, Optional[str]]:
+    def get_command_environment(self) -> dict[str, str | None]:
         """Get command environment to use when executing commands.
 
         :returns: Dictionary of environment, allowing None as a value to
@@ -289,7 +293,7 @@ class Base(ABC):
         """
         return self._environment.copy()
 
-    def _update_setup_status(self, executor: Executor, status: bool) -> None:
+    def _update_setup_status(self, executor: Executor, *, status: bool) -> None:
         """Update the instance config to indicate the status of the setup.
 
         :param status: True if the setup is complete, False otherwise.
@@ -342,7 +346,7 @@ class Base(ABC):
             system_state = proc.stdout.strip()
             if system_state not in ("running", "degraded"):
                 logger.debug("systemctl is-system-running status: %s", system_state)
-                raise ValueError
+                raise ValueError(system_state)
 
         error = BaseConfigurationError(
             brief="Timed out waiting for environment to be ready."
@@ -354,7 +358,7 @@ class Base(ABC):
             error=error,
         )
 
-    def _setup_hostname(self, executor: Executor) -> None:
+    def setup_hostname(self, executor: Executor) -> None:
         """Configure hostname, installing /etc/hostname."""
         executor.push_file_io(
             destination=pathlib.PurePosixPath("/etc/hostname"),
@@ -559,17 +563,19 @@ class Base(ABC):
         """Configure the snapd proxy."""
         try:
             http_proxy = self._environment.get("http_proxy")
-            if http_proxy:
-                command = ["snap", "set", "system", f"proxy.http={http_proxy}"]
-            else:
-                command = ["snap", "unset", "system", "proxy.http"]
+            command = (
+                ["snap", "set", "system", f"proxy.http={http_proxy}"]
+                if http_proxy
+                else ["snap", "unset", "system", "proxy.http"]
+            )
             self._execute_run(command, executor=executor, timeout=self._timeout_simple)
 
             https_proxy = self._environment.get("https_proxy")
-            if https_proxy:
-                command = ["snap", "set", "system", f"proxy.https={https_proxy}"]
-            else:
-                command = ["snap", "unset", "system", "proxy.https"]
+            command = (
+                ["snap", "set", "system", f"proxy.https={https_proxy}"]
+                if https_proxy
+                else ["snap", "unset", "system", "proxy.https"]
+            )
             self._execute_run(command, executor=executor, timeout=self._timeout_simple)
 
         except subprocess.CalledProcessError as error:
@@ -606,12 +612,23 @@ class Base(ABC):
 
         # a refresh may have started before the hold was set
         logger.debug("Waiting for pending snap refreshes to complete.")
-        try:
+
+        def snap_watch(timeout: float) -> None:
             executor.execute_run(
                 ["snap", "watch", "--last=auto-refresh?"],
                 capture_output=True,
                 check=True,
-                timeout=self._timeout_simple,
+                timeout=timeout,
+            )
+
+        try:
+            # There is a small time window after restarting the snapd service where snapd
+            # claims it's ready but actually isn't (SNAPDENG-36387). The workaround is to
+            # retry.
+            retry.retry_until_timeout(
+                self._timeout_complex or TIMEOUT_COMPLEX,
+                self._retry_wait,
+                snap_watch,
             )
         except subprocess.CalledProcessError as error:
             raise BaseConfigurationError(
@@ -670,6 +687,9 @@ class Base(ABC):
                             f" channel {snap.channel!r} in target environment."
                         ),
                         details=error.details,
+                        resolution=(
+                            "Check Snap store status at https://status.snapcraft.io"
+                        ),
                     ) from error
             else:
                 try:
@@ -780,7 +800,7 @@ class Base(ABC):
 
         This step usually does not need to be overridden.
         """
-        self._setup_hostname(executor=executor)
+        self.setup_hostname(executor=executor)
 
     def _post_setup_network(self, executor: Executor) -> None:
         """Do anything after setting up the basic network.
@@ -835,7 +855,13 @@ class Base(ABC):
             ["mkdir", "-p", guest_pip_cache_path.as_posix()],
         )
 
-        executor.mount(host_source=host_pip_cache_path, target=guest_pip_cache_path)
+        try:
+            executor.mount(host_source=host_pip_cache_path, target=guest_pip_cache_path)
+        except ProviderError as exc:
+            logger.warning(
+                "Failed to mount cache in instance. Proceeding without cache."
+            )
+            logger.debug(exc)
 
     def _pre_setup_packages(self, executor: Executor) -> None:
         """Do anything before setting up the packages.
@@ -973,12 +999,21 @@ class Base(ABC):
         """
         self._update_setup_status(executor=executor, status=True)
 
+    def setup_permissions(self, executor: Executor) -> None:
+        """Configure permissions on the root directory.
+
+        This step fixes an issue where service users, such as "_apt", end up unable to
+        make use of project cache directories because they live under a directory they
+        cannot enter on the instance.
+        """
+        executor.execute_run(["chmod", "go+x", "/root"])
+
     @final
     def setup(
         self,
         *,
         executor: Executor,
-        timeout: Optional[float] = TIMEOUT_UNPREDICTABLE,
+        timeout: float | None = TIMEOUT_UNPREDICTABLE,
         mount_cache: bool = True,
     ) -> None:
         """Prepare base instance for use by the application.
@@ -1026,6 +1061,8 @@ class Base(ABC):
 
         self._setup_wait_for_system_ready(executor=executor)
 
+        self.setup_permissions(executor=executor)
+
         self._pre_setup_network(executor=executor)
         self._setup_network(executor=executor)
         self._post_setup_network(executor=executor)
@@ -1056,7 +1093,7 @@ class Base(ABC):
         self,
         *,
         executor: Executor,
-        timeout: Optional[float] = TIMEOUT_UNPREDICTABLE,
+        timeout: float | None = TIMEOUT_UNPREDICTABLE,
     ) -> None:
         """Prepare a previously created and setup instance for use by the application.
 
@@ -1089,6 +1126,7 @@ class Base(ABC):
 
         self._setup_wait_for_system_ready(executor=executor)
         self._setup_wait_for_network(executor=executor)
+        self.setup_permissions(executor=executor)
 
         self._warmup_snapd(executor=executor)
 
@@ -1120,18 +1158,44 @@ class Base(ABC):
             return False
         return proc.returncode == 0
 
+    @overload
     @classmethod
     def _execute_run(
         cls,
-        command: List[str],
+        command: list[str],
+        *,
+        executor: Executor,
+        check: bool = True,
+        capture_output: bool = True,
+        text: Literal[True],
+        timeout: float | None = None,
+        verify_network: bool = False,
+    ) -> subprocess.CompletedProcess[str]: ...
+    @overload
+    @classmethod
+    def _execute_run(
+        cls,
+        command: list[str],
+        *,
+        executor: Executor,
+        check: bool = True,
+        capture_output: bool = True,
+        text: Literal[False] = False,
+        timeout: float | None = None,
+        verify_network: bool = False,
+    ) -> subprocess.CompletedProcess[bytes]: ...
+    @classmethod
+    def _execute_run(
+        cls,
+        command: list[str],
         *,
         executor: Executor,
         check: bool = True,
         capture_output: bool = True,
         text: bool = False,
-        timeout: Optional[float] = None,
-        verify_network=False,
-    ) -> subprocess.CompletedProcess:
+        timeout: float | None = None,
+        verify_network: bool = False,
+    ) -> subprocess.CompletedProcess[Any]:
         """Run a command through the executor.
 
         This is a helper to simplify most common calls and provide extra network
@@ -1150,10 +1214,10 @@ class Base(ABC):
         try:
             proc = executor.execute_run(
                 command,
-                check=check,
                 capture_output=capture_output,
                 text=text,
                 timeout=timeout,
+                check=check,
             )
         except subprocess.CalledProcessError as exc:
             if verify_network and not cls._network_connected(executor=executor):

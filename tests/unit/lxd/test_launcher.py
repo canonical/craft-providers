@@ -23,10 +23,13 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, call
 
 import pytest
-from craft_providers import Base, ProviderError, bases, lxd
+from craft_providers import Base, Executor, ProviderError, bases, lxd
 from craft_providers.lxd import LXDError, lxd_instance_status
 from freezegun import freeze_time
-from logassert import Exact  # type: ignore
+from logassert import Exact  # type: ignore[import-untyped]
+
+C = 299792458  # m/s
+VCS = 9192631770  # Hz
 
 
 @pytest.fixture
@@ -165,6 +168,7 @@ def test_launch_no_base_instance(
             ephemeral=False,
             map_user_uid=False,
             uid=None,
+            gid=None,
         ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
@@ -280,7 +284,14 @@ def test_launch_use_base_instance_failed_lxc(
         )
 
 
-@pytest.mark.parametrize(("map_user_uid", "uid"), [(True, 1234), (False, None)])
+@pytest.mark.parametrize(
+    ("map_user_uid", "uid", "gid"),
+    [
+        (True, 1234, 1234),  # Standard machine with uid matching gid
+        (True, C, VCS),  # Mismatching UID and GID, high numbers.
+        (False, None, None),
+    ],
+)
 def test_launch_use_existing_base_instance(
     fake_instance,
     fake_base_instance,
@@ -292,10 +303,11 @@ def test_launch_use_existing_base_instance(
     mock_timezone,
     map_user_uid,
     uid,
+    gid,
 ):
     """Create instance from an existing base instance."""
     fake_base_instance.exists.return_value = True
-    mock_lxc.config_get.return_value = "both 1234 0"
+    mock_lxc.config_get.return_value = f"uid {uid} 0\n\n\ngid {gid} 0"
 
     lxd.launch(
         name=fake_instance.name,
@@ -304,6 +316,7 @@ def test_launch_use_existing_base_instance(
         image_remote="image-remote",
         map_user_uid=map_user_uid,
         uid=uid,
+        gid=gid,
         use_base_instance=True,
         project="test-project",
         remote="test-remote",
@@ -325,7 +338,7 @@ def test_launch_use_existing_base_instance(
             call.config_set(
                 instance_name=fake_instance.instance_name,
                 key="raw.idmap",
-                value="both 1234 0",
+                value=f"uid {uid} 0\ngid {gid} 0",
                 project="test-project",
                 remote="test-remote",
             ),
@@ -367,7 +380,7 @@ def test_launch_use_existing_base_instance(
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.get_command_environment(),
-        call._setup_hostname(executor=fake_instance),
+        call.setup_hostname(executor=fake_instance),
         call.warmup(executor=fake_instance),
     ]
 
@@ -387,7 +400,7 @@ def test_launch_use_existing_base_instance_already_running(
     fake_base_instance.is_running.return_value = True
 
     fake_instance.is_running.return_value = True
-    mock_lxc.config_get.return_value = "both 1234 0"
+    mock_lxc.config_get.return_value = "uid 1234 0\ngid 5678 0"
 
     lxd.launch(
         name=fake_instance.name,
@@ -396,6 +409,7 @@ def test_launch_use_existing_base_instance_already_running(
         image_remote="image-remote",
         map_user_uid=True,
         uid=1234,
+        gid=5678,
         use_base_instance=True,
         project="test-project",
         remote="test-remote",
@@ -494,6 +508,7 @@ def test_launch_existing_base_instance_invalid(
             ephemeral=False,
             map_user_uid=False,
             uid=None,
+            gid=None,
         ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
@@ -517,6 +532,37 @@ def test_launch_existing_base_instance_invalid(
     ]
 
 
+@pytest.mark.parametrize("use_base_instance", [True, False])
+def test_launch_prepare_instance(
+    use_base_instance,
+    fake_instance,
+    mock_base_configuration,
+    mock_lxc,
+    mock_lxd_instance,
+    mock_platform,
+    mock_timezone,
+):
+    """Create an instance from an image and do not save a copy as the base instance."""
+    fake_instance.config_get.return_value = "STARTING"
+    instance_prepared = [False]
+
+    def _prepare_instance(instance: Executor) -> None:
+        instance_prepared[0] = True
+
+    with freeze_time("2023-01-01"):
+        lxd.launch(
+            name=fake_instance.name,
+            base_configuration=mock_base_configuration,
+            image_name="image-name",
+            image_remote="image-remote",
+            use_base_instance=use_base_instance,
+            prepare_instance=_prepare_instance,
+            lxc=mock_lxc,
+        )
+
+    assert instance_prepared[0] is True
+
+
 def test_launch_all_opts(
     fake_instance,
     mock_base_configuration,
@@ -528,7 +574,10 @@ def test_launch_all_opts(
 ):
     """Parse all parameters."""
     fake_instance.config_get.return_value = "STARTING"
-    fake_instance.lxc.config_get.return_value = "both 1234 0"
+    fake_instance.lxc.config_get.return_value = "uid 1234 0\ngid 5678 0"
+
+    def _prepare_instance(instance: Executor) -> None:
+        pass
 
     with freeze_time("2023-01-01"):
         lxd.launch(
@@ -538,9 +587,11 @@ def test_launch_all_opts(
             image_remote="image-remote",
             auto_clean=True,
             auto_create_project=True,
+            prepare_instance=_prepare_instance,
             ephemeral=True,
             map_user_uid=True,
             uid=1234,
+            gid=5678,
             project="test-project",
             remote="test-remote",
             lxc=mock_lxc,
@@ -565,6 +616,7 @@ def test_launch_all_opts(
             ephemeral=True,
             map_user_uid=True,
             uid=1234,
+            gid=5678,
         ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
@@ -579,7 +631,7 @@ def test_launch_all_opts(
         call.lxc.config_set(
             instance_name=fake_instance.instance_name,
             key="raw.idmap",
-            value="both 1234 0",
+            value="uid 1234 0\ngid 5678 0",
             project="test-project",
             remote="test-remote",
         ),
@@ -671,6 +723,7 @@ def test_launch_create_project(
             ephemeral=False,
             map_user_uid=False,
             uid=None,
+            gid=None,
         ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
@@ -710,7 +763,9 @@ def test_launch_with_existing_instance_not_running(
         lxc=mock_lxc,
     )
 
-    assert mock_lxc.mock_calls == [call.project_list("local")]
+    assert mock_lxc.mock_calls == [
+        call.project_list("local"),
+    ]
     assert mock_lxd_instance.mock_calls == [
         call(
             name=fake_instance.name,
@@ -745,7 +800,9 @@ def test_launch_with_existing_instance_running(
         lxc=mock_lxc,
     )
 
-    assert mock_lxc.mock_calls == [call.project_list("local")]
+    assert mock_lxc.mock_calls == [
+        call.project_list("local"),
+    ]
     assert mock_lxd_instance.mock_calls == [
         call(
             name=fake_instance.name,
@@ -754,7 +811,11 @@ def test_launch_with_existing_instance_running(
             default_command_environment={"foo": "bar"},
         ),
     ]
-    assert fake_instance.mock_calls == [call.exists(), call.is_running()]
+    assert fake_instance.mock_calls == [
+        call.exists(),
+        call.is_running(),
+        call.execute_run(["shutdown", "-c"]),
+    ]
     assert mock_base_configuration.mock_calls == [
         call.get_command_environment(),
         call.warmup(executor=fake_instance),
@@ -813,6 +874,7 @@ def test_launch_with_existing_instance_incompatible_with_auto_clean(
             ephemeral=False,
             map_user_uid=False,
             uid=None,
+            gid=None,
         ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
@@ -909,6 +971,7 @@ def test_launch_with_existing_ephemeral_instance(
             ephemeral=True,
             map_user_uid=False,
             uid=None,
+            gid=None,
         ),
         call.config_get("user.craft_providers.status"),
         call.config_set("user.craft_providers.status", "PREPARING"),
@@ -951,6 +1014,7 @@ def test_launch_existing_instance_id_map_mismatch_with_auto_clean(
         ephemeral=False,
         map_user_uid=True,
         uid=1234,
+        gid=5678,
     )
 
     assert not result
@@ -986,6 +1050,7 @@ def test_launch_existing_instance_id_map_mismatch_without_auto_clean(
             ephemeral=False,
             map_user_uid=True,
             uid=1234,
+            gid=5678,
         )
 
     assert raised.value.brief == (
@@ -1033,7 +1098,10 @@ def test_name_matches_base_name(
 )
 def test_is_valid(creation_date, fake_instance):
     """Instances younger than the expiration date (inclusive) are valid."""
-    fake_instance.info.return_value = {"Created": creation_date, "Status": "STOPPED"}
+    fake_instance.info.return_value = {
+        "Created": creation_date,
+        "Status": lxd_instance_status.LXDInstanceState.STOPPED.value,
+    }
     fake_instance.config_get.return_value = (
         lxd_instance_status.ProviderInstanceStatus.FINISHED.value
     )
@@ -1052,7 +1120,7 @@ def test_is_valid_expired(fake_instance, mock_lxc):
     # 91 days old
     fake_instance.info.return_value = {
         "Created": "2022/09/07 11:05 UTC",
-        "Status": "STOPPED",
+        "Status": lxd_instance_status.LXDInstanceState.STOPPED.value,
     }
     fake_instance.config_get.return_value = (
         lxd_instance_status.ProviderInstanceStatus.FINISHED.value
@@ -1120,7 +1188,7 @@ def test_is_valid_wait_for_ready_error(logs, fake_instance, mocker):
     )
     fake_instance.info.return_value = {
         "Created": "2022/12/08 11:05 UTC",
-        "Status": "STOPPED",
+        "Status": lxd_instance_status.LXDInstanceState.STOPPED.value,
     }
 
     fake_instance.config_get.return_value = (
@@ -1140,7 +1208,8 @@ def test_is_valid_wait_for_ready_error(logs, fake_instance, mocker):
 def test_set_id_map_default(fake_base_instance, mock_lxc, mocker):
     """Verify `_set_id_map()` sets the id map with default arguments."""
     mocker.patch("craft_providers.lxd.launcher.os.getuid", return_value=101)
-    mock_lxc.config_get.return_value = "both 101 0"
+    mocker.patch("craft_providers.lxd.launcher.os.getgid", return_value=123)
+    mock_lxc.config_get.return_value = "uid 101 0\ngid 123 0"
 
     lxd.launcher._set_id_map(instance=fake_base_instance, lxc=mock_lxc)
 
@@ -1148,7 +1217,7 @@ def test_set_id_map_default(fake_base_instance, mock_lxc, mocker):
         call(
             instance_name=fake_base_instance.instance_name,
             key="raw.idmap",
-            value="both 101 0",
+            value="uid 101 0\ngid 123 0",
             project="default",
             remote="local",
         )
@@ -1170,7 +1239,7 @@ def test_set_id_map_default_fail(fake_base_instance, mock_lxc, mocker):
 def test_set_id_map_all_options(fake_base_instance, mock_lxc, mocker):
     """Verify `_set_id_map()` sets the id map with all parameters specified."""
     mocker.patch("craft_providers.lxd.launcher.os.getuid", return_value=101)
-    mock_lxc.config_get.return_value = "both 202 0"
+    mock_lxc.config_get.return_value = "uid 202 0\ngid 303 0"
 
     lxd.launcher._set_id_map(
         instance=fake_base_instance,
@@ -1178,13 +1247,14 @@ def test_set_id_map_all_options(fake_base_instance, mock_lxc, mocker):
         project="test-project",
         remote="test-remote",
         uid=202,
+        gid=303,
     )
 
     assert mock_lxc.config_set.mock_calls == [
         call(
             instance_name=fake_base_instance.instance_name,
             key="raw.idmap",
-            value="both 202 0",
+            value="uid 202 0\ngid 303 0",
             project="test-project",
             remote="test-remote",
         )
@@ -1193,38 +1263,47 @@ def test_set_id_map_all_options(fake_base_instance, mock_lxc, mocker):
 
 @pytest.mark.skipif(sys.platform == "win32", reason="unsupported on windows")
 @pytest.mark.parametrize(
-    ("map_user_uid", "actual_uid", "expected_uid", "expected_result"),
+    (
+        "map_user_uid",
+        "actual_uid",
+        "expected_uid",
+        "actual_gid",
+        "expected_gid",
+        "expected_result",
+    ),
     [
         # return True if an id map is not expected and there is no id map
-        (False, None, None, True),
+        (False, None, None, None, None, True),
         # return False if an id map is expected and there is no id map
-        (True, None, 5678, False),
+        (True, None, 5678, None, 5678, False),
         # return False if id map is not expected and there is an id map
-        (False, 1234, None, False),
+        (False, 1234, None, 1234, None, False),
         # return True if an id map is expected and the uid matches
-        (True, 1234, 1234, True),
+        (True, 1234, 1234, 5678, 5678, True),
         # return False if an id map is expected and the uid does not match
-        (True, 1234, 5678, False),
+        (True, 1234, 5678, 1, 1, False),
         # return True if an id map is expected and the uid matches the current users uid
-        (True, 101, None, True),
+        (True, 101, None, 102, None, True),
     ],
 )
 def test_check_id_map(
-    map_user_uid,
-    expected_uid,
-    actual_uid,
-    expected_result,
+    map_user_uid: bool,
+    expected_uid: int | None,
+    actual_uid: int | None,
+    expected_gid: int | None,
+    actual_gid: int | None,
+    expected_result: bool,
     fake_base_instance,
     mock_lxc,
     mocker,
 ):
     """Verify the instances id map is properly checked."""
     mocker.patch("craft_providers.lxd.launcher.os.getuid", return_value=101)
+    mocker.patch("craft_providers.lxd.launcher.os.getgid", return_value=102)
 
-    if actual_uid:
-        mock_lxc.config_get.return_value = f"both {actual_uid} 0"
-    else:
-        mock_lxc.config_get.return_value = ""
+    uid_line = f"uid {actual_uid} 0" if actual_uid else ""
+    gid_line = f"gid {actual_gid} 0" if actual_gid else ""
+    mock_lxc.config_get.return_value = f"{uid_line}\n{gid_line}"
 
     result = lxd.launcher._check_id_map(
         instance=fake_base_instance,
@@ -1233,6 +1312,7 @@ def test_check_id_map(
         remote="test-remote",
         map_user_uid=map_user_uid,
         uid=expected_uid,
+        gid=expected_gid,
     )
 
     assert result == expected_result
@@ -1249,13 +1329,14 @@ def test_check_id_map_wrong_format(fake_base_instance, logs, mock_lxc, mocker):
         remote="test-remote",
         map_user_uid=True,
         uid=1234,
+        gid=None,
     )
 
     assert not result
     assert (
         Exact(
             f"Unexpected id map for '{fake_base_instance.instance_name}' "
-            "(expected 'both 1234 0', got 'gid 100-200 300-400')."
+            "(expected 'uid 1234 0', got 'gid 100-200 300-400')."
         )
         in logs.debug
     )
@@ -1312,7 +1393,9 @@ def test_timer_error_ignore(fake_instance, fake_process, mock_lxc, mocker):
 
 def test_wait_for_instance_ready(fake_instance, logs):
     """Return if the instance is ready."""
-    fake_instance.info.return_value = {"Status": "STOPPED"}
+    fake_instance.info.return_value = {
+        "Status": lxd_instance_status.LXDInstanceState.STOPPED.value,
+    }
     fake_instance.config_get.return_value = "FINISHED"
 
     lxd.launcher._wait_for_instance_ready(fake_instance)
@@ -1322,7 +1405,9 @@ def test_wait_for_instance_ready(fake_instance, logs):
 
 def test_wait_for_instance_pid_active(fake_instance, mocker):
     """If the instance is not ready and the pid is active, then check the status."""
-    fake_instance.info.return_value = {"Status": "STOPPED"}
+    fake_instance.info.return_value = {
+        "Status": lxd_instance_status.LXDInstanceState.STOPPED.value,
+    }
     # first call returns status, second returns the pid
     fake_instance.config_get.side_effect = ["PREPARING", "123"]
     # mock for the call `Path("/proc/123").exists()
@@ -1337,7 +1422,9 @@ def test_wait_for_instance_pid_active(fake_instance, mocker):
 def test_wait_for_instance_skip_pid_check(platform, fake_instance, mocker, logs):
     """Do not check for the pid if not on linux."""
     mocker.patch("sys.platform", platform)
-    fake_instance.info.return_value = {"Status": "STOPPED"}
+    fake_instance.info.return_value = {
+        "Status": lxd_instance_status.LXDInstanceState.STOPPED.value,
+    }
     # first call returns status, second returns the pid
     fake_instance.config_get.side_effect = ["PREPARING", "123"]
 
@@ -1350,7 +1437,9 @@ def test_wait_for_instance_skip_pid_check(platform, fake_instance, mocker, logs)
 @pytest.mark.usefixtures("mock_platform")
 def test_wait_for_instance_no_pid(fake_instance):
     """Raise an error if there is no pid in the config."""
-    fake_instance.info.return_value = {"Status": "STOPPED"}
+    fake_instance.info.return_value = {
+        "Status": lxd_instance_status.LXDInstanceState.STOPPED.value,
+    }
     # first call returns status, second returns an empty string for the pid
     fake_instance.config_get.side_effect = ["PREPARING", ""]
 
@@ -1367,7 +1456,9 @@ def test_wait_for_instance_no_pid(fake_instance):
 @pytest.mark.usefixtures("mock_platform")
 def test_wait_for_instance_pid_inactive(fake_instance, mocker):
     """Raise an error if the instance is not ready and the pid is inactive."""
-    fake_instance.info.return_value = {"Status": "STOPPED"}
+    fake_instance.info.return_value = {
+        "Status": lxd_instance_status.LXDInstanceState.STOPPED.value,
+    }
     # first call returns status, second returns the pid
     fake_instance.config_get.side_effect = ["PREPARING", "123"]
     # mock for the call `Path("/proc/123").exists()

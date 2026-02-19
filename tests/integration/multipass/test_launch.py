@@ -26,7 +26,11 @@ from craft_providers.errors import BaseCompatibilityError
 
 from . import conftest
 
-pytestmark = [pytest.mark.xdist_group("multipass_launch_tests")]
+pytestmark = [
+    pytest.mark.xdist_group("multipass_launch_tests"),
+    pytest.mark.slow,
+    pytest.mark.multipass_instance,
+]
 
 
 @pytest.fixture

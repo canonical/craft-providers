@@ -21,7 +21,8 @@ This implementation interfaces with multipass using the `multipass` command-line
 utility.
 """
 
-import io
+from __future__ import annotations
+
 import json
 import locale
 import logging
@@ -29,7 +30,7 @@ import pathlib
 import shlex
 import subprocess
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import IO, TYPE_CHECKING, Any, TypeVar, cast
 
 import packaging.version
 
@@ -38,7 +39,14 @@ from craft_providers.const import RETRY_WAIT
 
 from .errors import MultipassError
 
+if TYPE_CHECKING:
+    import io
+    from collections.abc import Callable, Sequence
+
 logger = logging.getLogger(__name__)
+
+
+T = TypeVar("T")
 
 
 class Multipass:
@@ -55,7 +63,9 @@ class Multipass:
     ) -> None:
         self.multipass_path = multipass_path
 
-    def _run(self, command: List[str], **kwargs) -> subprocess.CompletedProcess:
+    def _run(
+        self, command: Sequence[str], **kwargs: Any
+    ) -> subprocess.CompletedProcess[Any]:
         """Execute a multipass command.
 
         It always checks the result (as no errors should pass silently) and captures the
@@ -64,9 +74,15 @@ class Multipass:
         command = [str(self.multipass_path), *command]
 
         logger.debug("Executing on host: %s", shlex.join(command))
-        return subprocess.run(command, check=True, capture_output=True, **kwargs)
+        # Mypy detects this correctly, but pyright thinks the return type is unknown.
+        return subprocess.run(  # pyright: ignore[reportUnknownVariableType]
+            command,
+            check=True,
+            capture_output=True,
+            **kwargs,
+        )
 
-    def delete(self, *, instance_name: str, purge=True) -> None:
+    def delete(self, *, instance_name: str, purge: bool = True) -> None:
         """Passthrough for running multipass delete.
 
         :param instance_name: The name of the instance_name to delete.
@@ -90,13 +106,16 @@ class Multipass:
     def exec(
         self,
         *,
-        command: List[str],
+        command: Sequence[str],
         instance_name: str,
-        runner: Callable = subprocess.run,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
         check: bool = False,
-        **kwargs,
-    ):
+        # Mypy and ty don't have good answers here re: what to do about this:
+        # https://github.com/python/mypy/issues/3737
+        # https://github.com/astral-sh/ty/issues/592
+        runner: Callable[..., T] = subprocess.run,  # type: ignore[assignment]
+        **kwargs: Any,
+    ) -> T:
         """Execute command in instance_name with specified runner.
 
         The working directory the command is executed from inside the instance depends
@@ -128,7 +147,7 @@ class Multipass:
 
         return runner(final_cmd, **kwargs)
 
-    def info(self, *, instance_name: str) -> Dict[str, Any]:
+    def info(self, *, instance_name: str) -> dict[str, Any]:
         """Get information/state for instance.
 
         :returns: Parsed json data from info command.
@@ -138,14 +157,14 @@ class Multipass:
         command = ["info", instance_name, "--format", "json"]
 
         try:
-            proc = self._run(command, text=True)
+            proc = self._run(command)
         except subprocess.CalledProcessError as error:
             raise MultipassError(
                 brief=f"Failed to query info for VM {instance_name!r}.",
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-        return json.loads(proc.stdout)
+        return cast("dict[str, Any]", json.loads(proc.stdout))
 
     def is_supported_version(self) -> bool:
         """Check if Multipass version is supported.
@@ -162,7 +181,7 @@ class Multipass:
         while parsed_version is None:
             try:
                 parsed_version = packaging.version.parse(version)
-            except packaging.version.InvalidVersion:
+            except packaging.version.InvalidVersion:  # noqa: PERF203
                 # This catches versions such as: 1.15.0-dev.2929.pr661, which are
                 # compliant, but not pep440 compliant. We can lob off sections until
                 # we get a pep440 cempliant version.
@@ -175,9 +194,9 @@ class Multipass:
         *,
         instance_name: str,
         image: str,
-        cpus: Optional[str] = None,
-        mem: Optional[str] = None,
-        disk: Optional[str] = None,
+        cpus: str | None = None,
+        mem: str | None = None,
+        disk: str | None = None,
     ) -> None:
         """Launch multipass VM.
 
@@ -205,7 +224,7 @@ class Multipass:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    def list(self) -> List[str]:
+    def list(self) -> Sequence[str]:
         """List names of VMs.
 
         :returns: Data from stdout if instance exists, else None.
@@ -215,7 +234,7 @@ class Multipass:
         command = ["list", "--format", "json"]
 
         try:
-            proc = self._run(command, text=True)
+            proc = self._run(command)
         except subprocess.CalledProcessError as error:
             raise MultipassError(
                 brief="Failed to query list of VMs.",
@@ -230,8 +249,8 @@ class Multipass:
         *,
         source: pathlib.Path,
         target: str,
-        uid_map: Optional[Dict[str, str]] = None,
-        gid_map: Optional[Dict[str, str]] = None,
+        uid_map: dict[str, str] | None = None,
+        gid_map: dict[str, str] | None = None,
     ) -> None:
         """Mount host source path to target.
 
@@ -352,12 +371,8 @@ class Multipass:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         ) as proc:
-            # Should never happen, but mypy/pyright makes noise.
-            assert proc.stdout is not None
-            assert proc.stderr is not None
-
             while True:
-                data = proc.stdout.read(chunk_size)
+                data = cast("IO[bytes]", proc.stdout).read(chunk_size)
                 if not data:
                     break
 
@@ -365,7 +380,7 @@ class Multipass:
 
             # Take one read of stderr in case there is anything useful
             # for debugging an error.
-            stderr = proc.stderr.read()
+            stderr = cast("IO[bytes]", proc.stderr).read()
 
         if proc.returncode != 0:
             raise MultipassError(
@@ -394,24 +409,22 @@ class Multipass:
         with subprocess.Popen(
             command, stdin=subprocess.PIPE, stderr=subprocess.PIPE
         ) as proc:
-            # Should never happen, but mypy/pyright makes noise.
-            assert proc.stdin is not None
-            assert proc.stderr is not None
-
+            stdin_buf = cast("IO[bytes]", proc.stdin)
+            stderr_buf = cast("IO[bytes]", proc.stderr)
             while True:
                 data = source.read(chunk_size)
                 if not data:
                     break
 
-                proc.stdin.write(data)
+                stdin_buf.write(data)
 
             # Close stdin before reading stderr, otherwise read() will hang
             # because process is waiting for more data.
-            proc.stdin.close()
+            stdin_buf.close()
 
             # Take one read of stderr in case there is anything useful
             # for debugging an error.
-            stderr = proc.stderr.read()
+            stderr = stderr_buf.read()
 
         if proc.returncode != 0:
             raise MultipassError(
@@ -441,8 +454,8 @@ class Multipass:
             ) from error
 
     def wait_until_ready(
-        self, *, timeout: Optional[float] = None
-    ) -> Tuple[str, Optional[str]]:
+        self, *, timeout: float | None = None
+    ) -> tuple[str, str | None]:
         """Wait until Multipass is ready (upon install/startup).
 
         :param timeout: Timeout in seconds.
@@ -451,7 +464,7 @@ class Multipass:
             may be None if Multipass is not ready and the timeout limit is reached.
         """
         if timeout is not None:
-            deadline: Optional[float] = time.time() + timeout
+            deadline: float | None = time.time() + timeout
         else:
             deadline = None
 
@@ -470,7 +483,7 @@ class Multipass:
             brief="Timed out waiting for Multipass to become ready.",
         )
 
-    def version(self) -> Tuple[str, Optional[str]]:
+    def version(self) -> tuple[str, str | None]:
         """Get multipass and multipassd versions.
 
         :returns: Tuple of parsed versions (multipass, multipassd).  multipassd
@@ -521,20 +534,20 @@ class Multipass:
         #   SOME NOTICE INFORMATION....
         #
         # After stripping and splitting:
-        #    - ['multipass', '1.5.0'] # noqa: ERA001
-        #    - ['multipass', '1.5.0', 'multipassd', '1.5.0'] # noqa: ERA001
-        #    - ['multipass', '1.5.0+mac', 'multipassd', '1.5.0+mac'] # noqa: ERA001
-        #    - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win'] # noqa: ERA001
-        #    - ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win', ...] # noqa: ERA001
+        #    1: ['multipass', '1.5.0']
+        #    2: ['multipass', '1.5.0', 'multipassd', '1.5.0']
+        #    3: ['multipass', '1.5.0+mac', 'multipassd', '1.5.0+mac']
+        #    4: ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win']
+        #    5: ['multipass', '1.5.0+win', 'multipassd', '1.5.0+win', ...]
         output_split = output.strip().split()
-        if len(output_split) < 2 or output_split[0] != "multipass":
+        if len(output_split) < 2 or output_split[0] != "multipass":  # noqa: PLR2004
             raise MultipassError(
                 brief=f"Unable to parse version output: {proc.stdout!r}",
             )
 
         multipass_version = output_split[1].split("+")[0]
 
-        if len(output_split) >= 4 and output_split[2] == "multipassd":
+        if len(output_split) >= 4 and output_split[2] == "multipassd":  # noqa: PLR2004
             multipassd_version = output_split[3].split("+")[0]
         else:
             multipassd_version = None

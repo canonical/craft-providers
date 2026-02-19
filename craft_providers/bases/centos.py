@@ -16,20 +16,27 @@
 #
 
 """CentOS image(s)."""
+
+from __future__ import annotations
+
 import enum
 import logging
-import pathlib
+import os
 import subprocess
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING
 
-from craft_providers.actions.snap_installer import Snap
 from craft_providers.base import Base
 from craft_providers.errors import (
     BaseCompatibilityError,
     BaseConfigurationError,
     details_from_called_process_error,
 )
-from craft_providers.executor import Executor
+
+if TYPE_CHECKING:
+    import pathlib
+
+    from craft_providers.actions.snap_installer import Snap
+    from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +47,7 @@ class CentOSBaseAlias(enum.Enum):
     SEVEN = "7"
 
 
-class CentOSBase(Base):
+class CentOSBase(Base[CentOSBaseAlias]):
     """Support for CentOS images.
 
     :cvar compatibility_tag: Tag/Version for variant of build configuration and
@@ -74,18 +81,17 @@ class CentOSBase(Base):
         self,
         *,
         alias: CentOSBaseAlias,
-        compatibility_tag: Optional[str] = None,
-        environment: Optional[Dict[str, Optional[str]]] = None,
+        compatibility_tag: str | None = None,
+        environment: dict[str, str | None] | None = None,
         hostname: str = "craft-centos-instance",
-        snaps: Optional[List[Snap]] = None,
-        packages: Optional[List[str]] = None,
+        snaps: list[Snap] | None = None,
+        packages: list[str] | None = None,
         use_default_packages: bool = True,
-        cache_path: Optional[pathlib.Path] = None,
+        cache_path: pathlib.Path | None = None,
     ) -> None:
         self._cache_dir = cache_path
 
-        # ignore enum subclass (see https://github.com/microsoft/pyright/issues/6750)
-        self.alias: CentOSBaseAlias = alias  # pyright: ignore
+        self.alias: CentOSBaseAlias = alias
 
         if environment is None:
             self._environment = self.default_command_environment()
@@ -97,7 +103,7 @@ class CentOSBase(Base):
 
         self._set_hostname(hostname)
 
-        self._packages: Optional[List[str]] = []
+        self._packages: list[str] | None = []
         if use_default_packages:
             self._packages.extend(
                 [
@@ -122,7 +128,7 @@ class CentOSBase(Base):
         self._snaps = snaps
 
     @staticmethod
-    def default_command_environment() -> Dict[str, Optional[str]]:
+    def default_command_environment() -> dict[str, str | None]:
         """Provide default command environment dictionary.
 
         The minimum environment for the CentOS image to be configured and function
@@ -143,7 +149,7 @@ class CentOSBase(Base):
         :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.
         """
-        os_release = self._get_os_release(executor=executor)
+        os_release = self.get_os_release(executor=executor)
 
         os_id = os_release.get("ID")
         if os_id not in ("centos", "rhel"):
@@ -157,8 +163,7 @@ class CentOSBase(Base):
         if version_id != compat_version_id:
             raise BaseCompatibilityError(
                 reason=(
-                    f"Expected OS version {compat_version_id!r},"
-                    f" found {version_id!r}"
+                    f"Expected OS version {compat_version_id!r}, found {version_id!r}"
                 )
             )
 
@@ -188,19 +193,22 @@ class CentOSBase(Base):
 
     def _setup_packages(self, executor: Executor) -> None:
         """Configure yum, update cache and install needed packages."""
-        # update system
-        try:
-            self._execute_run(
-                ["yum", "update", "-y"],
-                executor=executor,
-                verify_network=True,
-                timeout=self._timeout_unpredictable,
-            )
-        except subprocess.CalledProcessError as error:
-            raise BaseConfigurationError(
-                brief="Failed to update system using yum.",
-                details=details_from_called_process_error(error),
-            ) from error
+        suppress_upgrade = os.environ.get(
+            "CRAFT_PROVIDERS_EXPERIMENTAL_SUPPRESS_UPGRADE_UNSUPPORTED"
+        )
+        if not suppress_upgrade:
+            try:
+                self._execute_run(
+                    ["yum", "update", "-y"],
+                    executor=executor,
+                    verify_network=True,
+                    timeout=self._timeout_unpredictable,
+                )
+            except subprocess.CalledProcessError as error:
+                raise BaseConfigurationError(
+                    brief="Failed to update system using yum.",
+                    details=details_from_called_process_error(error),
+                ) from error
 
         # install required packages and user-defined packages
         if not self._packages:

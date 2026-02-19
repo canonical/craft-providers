@@ -25,10 +25,12 @@ from craft_providers.lxd import LXDInstance
 from . import conftest
 
 pytestmark = [
+    pytest.mark.slow,
     # These tests are flaky on very busy systems.
     # https://github.com/lxc/lxd/issues/11422
     # https://github.com/lxc/lxd/issues/11890
     pytest.mark.flaky(reruns=2, reruns_delay=1),
+    pytest.mark.lxd_instance,
 ]
 
 
@@ -94,6 +96,10 @@ def test_push_file_io(reusable_instance, content, mode, user, group):
     finally:
         reusable_instance.execute_run(
             command=["rm", "-f", "/tmp/file-test.txt"],
+            capture_output=True,
+        )
+        reusable_instance.execute_run(
+            command=["test", "!", "-e", "/tmp/file-test.txt"],
             capture_output=True,
         )
 

@@ -9,9 +9,12 @@ CentOS
 Changelog
 charmcraft
 Charmhub
+Cryptographic
+cryptographic
 cfg
 config
 config's
+Devels
 devel
 diataxis
 Diátaxis
@@ -54,6 +57,7 @@ readthedocs
 RemoteImage
 RemoteImage's
 rockcraft
+sanitized
 snapcraft
 snapd
 stdin

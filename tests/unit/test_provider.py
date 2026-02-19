@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import sys
+
 import pytest
 from craft_providers import ProviderError
 from craft_providers.lxd import LXDError, LXDProvider
@@ -24,6 +26,10 @@ known_provider_classes = [LXDProvider, MultipassProvider]
 
 @pytest.fixture(params=known_provider_classes)
 def provider_class(request):
+    if sys.platform == "darwin" and request.param is LXDProvider:
+        pytest.skip(
+            reason="These tests can't run on MacOS as LXD (and by extension, pylxd) don't work on it."
+        )
     return request.param
 
 

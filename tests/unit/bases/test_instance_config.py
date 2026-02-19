@@ -40,8 +40,7 @@ def default_config_data():
 
 @pytest.fixture
 def mock_executor():
-    executor_mock = mock.Mock(spec=Executor)
-    return executor_mock
+    return mock.Mock(spec=Executor)
 
 
 @pytest.fixture

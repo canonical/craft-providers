@@ -23,12 +23,14 @@ From that, the thing we care most about is the compatibility tag:
     whatevercraft-buildd-base-v7
 """
 
+from __future__ import annotations
+
 import dataclasses
 import json
 import re
 import subprocess
 import sys
-from typing import Any
+from typing import Any, cast
 
 from typing_extensions import Self
 
@@ -108,13 +110,13 @@ class HookHelper:
     def _check_project_exists(self) -> None:
         """Raise HookError if lxc doesn't know about this app."""
         for project in self.lxc("project", "list", proj=False):
-            if project["name"] == self._project_name:
+            if cast("dict[str, Any]", project)["name"] == self._project_name:
                 return
 
         # Didn't find our project name
         raise HookError(f"Project {self._project_name} does not exist in LXD.")
 
-    def dprint(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
+    def dprint(self, *args: Any, **kwargs: Any) -> None:
         """Print messages to stderr if debug=True.
 
         Can treat this like normal print(), except can also pass an instance
@@ -135,11 +137,11 @@ class HookHelper:
 
     def lxc(
         self,
-        *args: Any,  # noqa: ANN401
+        *args: Any,
         fail_msg: str | None = None,
         proj: bool = True,
         json_out: bool = True,
-    ) -> Any:  # noqa: ANN401
+    ) -> str | dict[str, Any]:
         """Run lxc commands specified in *args.
 
         :param fail_msg: Print this if the command returns nonzero.
@@ -170,8 +172,8 @@ class HookHelper:
             if not json_out:
                 return out
             try:
-                return json.loads(out)
-            except json.decoder.JSONDecodeError as e:
+                return cast("dict[str, Any]", json.loads(out))
+            except json.JSONDecodeError as e:
                 raise HookError(f"Didn't get back JSON: {out}") from e
 
     def delete_instance(self, instance: LXDInstance) -> None:
@@ -213,15 +215,21 @@ class HookHelper:
 
     def _list_images(self) -> list[str]:
         """Return fingerprints of all images associated with the lxc project."""
-        return [image["fingerprint"] for image in self.lxc("image", "list")]
+        return [
+            cast("dict[str, Any]", image)["fingerprint"]
+            for image in self.lxc("image", "list")
+        ]
 
     def list_instances(self) -> list[LXDInstance]:
         """Return a list of all instance objects for the project."""
-        return [LXDInstance.unmarshal(instance) for instance in self.lxc("list")]
+        return [
+            LXDInstance.unmarshal(cast("dict[str, Any]", instance))
+            for instance in self.lxc("list")
+        ]
 
     def list_base_instances(self) -> list[LXDInstance]:
         """Return a list of all base instance objects for the project."""
-        base_instances = []
+        base_instances: list[LXDInstance] = []
         for instance in self.list_instances():
             if not instance.is_base_instance():
                 self.dprint(instance, "Not a base instance")
@@ -234,7 +242,7 @@ class HookHelper:
 def configure_hook(lxc: HookHelper) -> None:
     """Cleanup hook run on snap configure."""
     # Keep the newest base instance with the most recent compatibility tag.
-    delete_base_full_names = set()
+    delete_base_full_names: set[str] = set()
     for instance in lxc.list_base_instances():
         if instance.is_current_base_instance():
             lxc.dprint(instance, "Base instance is current")

@@ -14,26 +14,34 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
+
+"""Unit tests for Ubuntu bases."""
+
+import importlib.resources
 import pathlib
+import re
 import subprocess
-import sys
+import tempfile
 from pathlib import Path
 from textwrap import dedent
 from unittest.mock import ANY, call, patch
 
 import pytest
+import requests
 from craft_providers.actions.snap_installer import Snap, SnapInstallationError
 from craft_providers.bases import ubuntu
 from craft_providers.errors import (
     BaseCompatibilityError,
     BaseConfigurationError,
     NetworkError,
-    details_from_called_process_error,
 )
 from craft_providers.instance_config import InstanceConfiguration
-from logassert import Exact  # type: ignore
+from freezegun import freeze_time
+from logassert import Exact  # type: ignore[import-untyped]
 
 from tests.unit.conftest import DEFAULT_FAKE_CMD
+
+TEST_DIR = pathlib.Path(__file__).parent.parent / "data"
 
 
 @pytest.fixture
@@ -63,7 +71,7 @@ def mock_inject_from_host(mocker):
 def mock_get_os_release(mocker):
     return mocker.patch.object(
         ubuntu.BuilddBase,
-        "_get_os_release",
+        "get_os_release",
         return_value={
             "NAME": "Ubuntu",
             "VERSION_ID": "22.04",
@@ -72,6 +80,23 @@ def mock_get_os_release(mocker):
     )
 
 
+@pytest.fixture
+def mock_requests_head(mocker, request):
+    status_code = getattr(request, "param", 404)
+    mock_response = mocker.Mock(status_code=status_code)
+    return mocker.patch("requests.head", return_value=mock_response)
+
+
+@pytest.fixture
+def fake_update_commands(fake_process):
+    """Allow running update commands with a fake process."""
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "apt-get", "-y", "dist-upgrade"]
+    )
+
+
+@pytest.mark.usefixtures("fake_update_commands")
 @pytest.mark.parametrize("alias", list(ubuntu.BuilddBaseAlias))
 @pytest.mark.parametrize(
     ("environment", "etc_environment_content"),
@@ -164,6 +189,7 @@ def test_setup(
     mock_load,
     mock_inject_from_host,
     mock_install_from_store,
+    mock_requests_head,
     mocker,
     snaps,
     expected_snap_call,
@@ -172,6 +198,11 @@ def test_setup(
     tag,
     expected_tag,
 ):
+    with importlib.resources.path(
+        "craft_providers.data", "ubuntu.csv"
+    ) as distro_info_file:
+        fake_filesystem.add_real_file(distro_info_file)
+
     mock_load.return_value = InstanceConfiguration(compatibility_tag=expected_tag)
 
     if environment is None:
@@ -218,6 +249,7 @@ def test_setup(
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "hostname", "-F", "/etc/hostname"]
     )
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "chmod", "go+x", "/root"])
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
@@ -251,10 +283,10 @@ def test_setup(
             ID_LIKE=debian
             VERSION_ID="{alias.value}"
             VERSION_CODENAME="test-name"
+            UBUNTU_CODENAME="noble"
             """
         ),
     )
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", *expected_packages]
     )
@@ -483,7 +515,8 @@ def test_install_snaps_install_from_store_error(fake_executor, mocker):
         brief=(
             "failed to install snap 'snap1' from store"
             " channel 'candidate' in target environment."
-        )
+        ),
+        resolution="Check Snap store status at https://status.snapcraft.io",
     )
 
 
@@ -505,11 +538,11 @@ def test_install_snaps_inject_from_host_error(fake_executor, mocker):
     )
 
 
+@pytest.mark.usefixtures("fake_update_commands")
 def test_setup_apt(fake_executor, fake_process):
     """Verify packages are installed as expected."""
     packages = ["grep", "git"]
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY, packages=packages)
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
@@ -534,10 +567,11 @@ def test_setup_apt(fake_executor, fake_process):
     base._setup_packages(executor=fake_executor)
 
 
+@pytest.mark.usefixtures("fake_update_commands")
 def test_setup_apt_install_default(fake_executor, fake_process):
     """Verify only default packages are installed."""
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
+
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
@@ -560,6 +594,7 @@ def test_setup_apt_install_default(fake_executor, fake_process):
     base._setup_packages(executor=fake_executor)
 
 
+@pytest.mark.usefixtures("fake_update_commands")
 def test_setup_apt_install_override_system(fake_executor, fake_process):
     """Verify override default packages."""
     base = ubuntu.BuilddBase(
@@ -567,7 +602,6 @@ def test_setup_apt_install_override_system(fake_executor, fake_process):
         packages=["clang"],
         use_default_packages=False,
     )
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "apt-get", "update"])
     fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
@@ -581,12 +615,26 @@ def test_setup_apt_install_override_system(fake_executor, fake_process):
     base._setup_packages(executor=fake_executor)
 
 
-def test_setup_apt_install_packages_update_error(mocker, fake_executor):
+def test_setup_apt_install_packages_update_error(
+    mocker, fake_executor, mock_requests_head, fake_process
+):
     """Verify error is caught from `apt-get update` call."""
-    error = subprocess.CalledProcessError(100, ["error"])
-    base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
-    mocker.patch.object(fake_executor, "execute_run", side_effect=error)
+    def _raise_error(process) -> None:
+        raise subprocess.CalledProcessError(100, ["error"])
+
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout="UBUNTU_CODENAME=jammy",
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "apt-get", "update"],
+        callback=_raise_error,
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
+    )
+    base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     with pytest.raises(BaseConfigurationError) as exc_info:
         base._pre_setup_packages(executor=fake_executor)
@@ -597,24 +645,32 @@ def test_setup_apt_install_packages_update_error(mocker, fake_executor):
     )
 
 
-def test_setup_apt_install_packages_install_error(mocker, fake_executor):
+def test_setup_apt_install_packages_install_error(mocker, fake_executor, fake_process):
     """Verify error is caught from `apt-get install` call."""
-    error = subprocess.CalledProcessError(100, ["error"])
     base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
-    side_effects = [
-        error,  # make apt-get install fail
-        subprocess.CompletedProcess("args", returncode=0),  # network connectivity check
-    ]
-    mocker.patch.object(fake_executor, "execute_run", side_effect=side_effects)
-
-    with pytest.raises(BaseConfigurationError) as exc_info:
-        base._setup_packages(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to install packages.",
-        details="* Command that failed: 'error'\n* Command exit code: 100",
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "apt-get", "-y", "dist-upgrade"]
     )
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "apt-get",
+            "install",
+            "-y",
+            fake_process.any(min=1, max=100),
+        ],
+        returncode=43,
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"]
+    )
+
+    with pytest.raises(
+        BaseConfigurationError,
+        match=r"Failed to install packages.\n.+\n\* Command exit code: 43",
+    ):
+        base._setup_packages(executor=fake_executor)
 
 
 def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
@@ -634,11 +690,14 @@ def test_ensure_image_version_compatible_failure(fake_executor, monkeypatch):
 
 
 @pytest.mark.parametrize("alias", list(ubuntu.BuilddBaseAlias))
-@pytest.mark.parametrize("cache_path", [pathlib.Path("/tmp/fake-cache-dir")])
-def test_mount_cache_dirs(fake_process, fake_executor, cache_path, alias):
+@pytest.mark.parametrize(
+    "cache_path", [pathlib.Path(tempfile.gettempdir(), "fake-cache-dir")]
+)
+def test_mount_cache_dirs(fake_process, fake_executor, cache_path: pathlib.Path, alias):
     """Test mounting of cache directories with a cache directory set."""
+
     base = ubuntu.BuilddBase(alias=alias, cache_path=cache_path)
-    host_cache_dir = cache_path / base.compatibility_tag / str(base.alias)
+    host_cache_dir = (cache_path / base.compatibility_tag / str(base.alias)).resolve()
     user_cache_dir = pathlib.Path("/root/.cache")
     fake_process.register(
         [*DEFAULT_FAKE_CMD, "bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
@@ -650,32 +709,24 @@ def test_mount_cache_dirs(fake_process, fake_executor, cache_path, alias):
 
     base._mount_shared_cache_dirs(fake_executor)
 
-    if sys.platform == "win32":
-        expected_mounts = [
-            {
-                "host_source": pathlib.WindowsPath("D:") / host_cache_dir / "pip",
-                "target": user_cache_dir / "pip",
-            }
-        ]
-    else:
-        expected_mounts = [
-            {
-                "host_source": host_cache_dir / "pip",
-                "target": user_cache_dir / "pip",
-            },
-        ]
+    expected_mounts = [
+        {
+            "host_source": host_cache_dir / "pip",
+            "target": user_cache_dir / "pip",
+        },
+    ]
     assert fake_executor.records_of_mount == expected_mounts
 
 
 def test_get_os_release(fake_process, fake_executor):
-    """`_get_os_release` should parse data from `/etc/os-release` to a dict."""
+    """`get_os_release` should parse data from `/etc/os-release` to a dict."""
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
         stdout="NAME=Ubuntu\nVERSION_ID=12.04\n",
     )
 
-    result = base_config._get_os_release(executor=fake_executor)
+    result = base_config.get_os_release(executor=fake_executor)
 
     assert result == {"NAME": "Ubuntu", "VERSION_ID": "12.04"}
 
@@ -746,15 +797,8 @@ def test_setup_hostname_failure(fake_process, fake_executor):
         returncode=-1,
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
-        base_config._setup_hostname(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to set hostname.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
+    with pytest.raises(BaseConfigurationError, match="Failed to set hostname."):
+        base_config.setup_hostname(executor=fake_executor)
 
 
 def test_setup_networkd_enable_failure(fake_process, fake_executor):
@@ -764,15 +808,10 @@ def test_setup_networkd_enable_failure(fake_process, fake_executor):
         returncode=-1,
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(
+        BaseConfigurationError, match="Failed to setup systemd-networkd."
+    ):
         base_config._setup_networkd(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to setup systemd-networkd.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
 
 
 def test_setup_networkd_restart_failure(fake_process, fake_executor):
@@ -785,15 +824,10 @@ def test_setup_networkd_restart_failure(fake_process, fake_executor):
         returncode=-1,
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(
+        BaseConfigurationError, match="Failed to setup systemd-networkd."
+    ):
         base_config._setup_networkd(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to setup systemd-networkd.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
 
 
 def test_setup_resolved_enable_failure(fake_process, fake_executor):
@@ -812,15 +846,10 @@ def test_setup_resolved_enable_failure(fake_process, fake_executor):
         returncode=-1,
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(
+        BaseConfigurationError, match="Failed to setup systemd-resolved."
+    ):
         base_config._setup_resolved(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to setup systemd-resolved.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
 
 
 def test_setup_resolved_restart_failure(fake_process, fake_executor):
@@ -842,28 +871,23 @@ def test_setup_resolved_restart_failure(fake_process, fake_executor):
         returncode=-1,
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(
+        BaseConfigurationError, match="Failed to setup systemd-resolved."
+    ):
         base_config._setup_resolved(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to setup systemd-resolved.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
 
 
 def test_setup_snapd_proxy(fake_executor, fake_process):
     """Verify snapd proxy is set or unset."""
-    environment = {
+    environment: dict[str, str | None] = {
         "http_proxy": "http://foo.bar:8080",
         "https_proxy": "http://foo.bar:8081",
     }
     base_config = ubuntu.BuilddBase(
         alias=ubuntu.BuilddBaseAlias.JAMMY,
-        environment=environment,  # type: ignore
+        environment=environment,
     )
-    fake_process.keep_last_process(True)
+    fake_process.keep_last_process(keep=True)
     fake_process.register([fake_process.any()])
 
     base_config._setup_snapd_proxy(executor=fake_executor)
@@ -899,15 +923,8 @@ def test_setup_snapd_proxy_failures(fake_process, fake_executor, fail_index):
         returncode=return_codes[1],
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(BaseConfigurationError, match="Failed to set the snapd proxy."):
         base_config._setup_snapd_proxy(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to set the snapd proxy.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
 
 
 @pytest.mark.usefixtures("stub_verify_network")
@@ -931,15 +948,10 @@ def test_pre_setup_snapd_failures(fake_process, fake_executor, fail_index):
         returncode=return_codes[1],
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(
+        BaseConfigurationError, match="Failed to enable systemd-udevd service."
+    ):
         base_config._pre_setup_snapd(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to enable systemd-udevd service.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
 
 
 @pytest.mark.usefixtures("stub_verify_network")
@@ -950,20 +962,15 @@ def test_setup_snapd_failures(fake_process, fake_executor):
         returncode=1,
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(BaseConfigurationError, match="Failed to setup snapd."):
         base_config._setup_snapd(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to setup snapd.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
 
 
 @pytest.mark.parametrize("fail_index", list(range(0, 8)))
 def test_post_setup_snapd_failures(fake_process, fake_executor, fail_index):
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    base_config._retry_wait = 0.01
+    base_config._timeout_complex = 0.01
     return_codes = [0] * 8
     return_codes[fail_index] = 1
 
@@ -1019,15 +1026,8 @@ def test_warmup_snapd_failures(fake_process, fake_executor, fail_index):
         returncode=return_codes[1],
     )
 
-    with pytest.raises(BaseConfigurationError) as raised:
+    with pytest.raises(BaseConfigurationError, match="Failed to set the snapd proxy."):
         base_config._warmup_snapd(executor=fake_executor)
-
-    assert raised.value == BaseConfigurationError(
-        brief="Failed to set the snapd proxy.",
-        details=details_from_called_process_error(
-            raised.value.__cause__  # type: ignore
-        ),
-    )
 
 
 @pytest.mark.parametrize("alias", list(ubuntu.BuilddBaseAlias))
@@ -1107,12 +1107,10 @@ def test_wait_for_system_ready_timeout(fake_executor, fake_process, alias):
         returncode=-1,
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(
+        BaseConfigurationError, match="Timed out waiting for environment to be ready."
+    ):
         base_config.wait_until_ready(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Timed out waiting for environment to be ready."
-    )
 
 
 @pytest.mark.parametrize("alias", list(ubuntu.BuilddBaseAlias))
@@ -1131,12 +1129,10 @@ def test_wait_for_system_ready_timeout_in_network(
         returncode=-1,
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(
+        BaseConfigurationError, match="Timed out waiting for networking to be ready."
+    ):
         base_config.wait_until_ready(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Timed out waiting for networking to be ready."
-    )
 
 
 def test_update_compatibility_tag(fake_executor, mock_load):
@@ -1188,12 +1184,10 @@ def test_ensure_config_compatible_validation_error(
 
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(
+        BaseConfigurationError, match="Failed to parse instance configuration file."
+    ):
         base_config._ensure_instance_config_compatible(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to parse instance configuration file."
-    )
 
 
 def test_ensure_config_compatible_empty_config_returns_none(fake_executor, mock_load):
@@ -1225,12 +1219,10 @@ def test_ensure_setup_completed_validation_error(
 
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
-    with pytest.raises(BaseCompatibilityError) as raised:
+    with pytest.raises(
+        BaseCompatibilityError, match="failed to parse instance configuration file"
+    ):
         base_config._ensure_setup_completed(executor=fake_executor)
-
-    assert raised.value == BaseCompatibilityError(
-        "failed to parse instance configuration file"
-    )
 
 
 def test_ensure_setup_completed_file_not_found_error(fake_executor, mock_load):
@@ -1309,6 +1301,7 @@ def test_warmup_overall(
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "systemctl", "is-system-running"], stdout="degraded"
     )
+    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "chmod", "go+x", "/root"])
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "getent", "hosts", "snapcraft.io"]
     )
@@ -1593,12 +1586,11 @@ def test_execute_run_options_for_run(fake_executor):
             executor=fake_executor,
             check=False,
             capture_output=False,
-            text=True,
             timeout=None,
         )
 
     mock.assert_called_with(
-        command, check=False, capture_output=False, text=True, timeout=None
+        command, check=False, capture_output=False, text=False, timeout=None
     )
 
 
@@ -1724,32 +1716,198 @@ def test_disable_and_wait_for_snap_refresh_hold_error(fake_process, fake_executo
         returncode=-1,
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(BaseConfigurationError, match="Failed to hold snap refreshes."):
         base_config._disable_and_wait_for_snap_refresh(executor=fake_executor)
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to hold snap refreshes.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
 
 
 def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executor):
     """Raise BaseConfigurationError when the `snap watch` command fails."""
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    base_config._retry_wait = 0.01
+    base_config._timeout_complex = 0.01
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"])
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
         returncode=-1,
     )
 
-    with pytest.raises(BaseConfigurationError) as exc_info:
+    with pytest.raises(
+        BaseConfigurationError, match="Failed to wait for snap refreshes to complete."
+    ):
         base_config._disable_and_wait_for_snap_refresh(executor=fake_executor)
 
-    assert exc_info.value == BaseConfigurationError(
-        brief="Failed to wait for snap refreshes to complete.",
-        details=details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
+
+def test_devel_never_eol(fake_process, fake_executor, mock_requests_head, logs):
+    """Verify that the devel base skips EOL checks."""
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.DEVEL)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout="UBUNTU_CODENAME=grumpy",
+    )
+
+    base_config._update_eol_sources(fake_executor)
+
+    assert re.escape("Skipping EOL check for base 'devel'.") in logs.debug
+
+
+@freeze_time("2027-01-01")
+@pytest.mark.parametrize("mock_requests_head", [200], indirect=True)
+def test_base_past_eol(fake_process, fake_executor, mock_requests_head, logs):
+    """Update the sources if the base is past its EOL date."""
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout="UBUNTU_CODENAME=plucky",
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "bash", "/tmp/craft-sources.sh"]
+    )
+
+    base_config._update_eol_sources(fake_executor)
+
+    assert re.escape("Getting EOL data for 25.04 (plucky).") in logs.debug
+    assert re.escape("25.04 is EOL.") in logs.debug
+    assert (
+        re.escape("Checking for 25.04 (plucky) on https://old-releases.ubuntu.com.")
+        in logs.debug
+    )
+    assert (
+        re.escape("25.04 is available on https://old-releases.ubuntu.com.")
+        in logs.debug
+    )
+    assert re.escape("Updating EOL sources.") in logs.debug
+    with importlib.resources.path(
+        "craft_providers.util", "sources.sh"
+    ) as sources_script:
+        assert fake_executor.records_of_push_file == [
+            {"source": sources_script, "destination": Path("/tmp/craft-sources.sh")}
+        ]
+
+
+@freeze_time("2025-01-01")
+@pytest.mark.parametrize("mock_requests_head", [200], indirect=True)
+def test_base_not_past_eol(fake_process, fake_executor, mock_requests_head, logs):
+    """Don't update EOL sources if the base isn't past its EOL date."""
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
+
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout="UBUNTU_CODENAME=plucky",
+    )
+
+    base_config._update_eol_sources(fake_executor)
+
+    assert re.escape("Not updating EOL sources because 25.04 isn't EOL.") in logs.debug
+
+
+@freeze_time("2027-01-01")
+def test_base_not_on_old_releases(
+    fake_process, fake_executor, mock_requests_head, logs
+):
+    """Don't update EOL sources if the base isn't on old-releases.ubuntu.com."""
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout="UBUNTU_CODENAME=plucky",
+    )
+
+    base_config._update_eol_sources(fake_executor)
+
+    assert (
+        re.escape(
+            "Not updating EOL sources because 25.04 isn't on https://old-releases.ubuntu.com."
+        )
+        in logs.debug
+    )
+
+
+@freeze_time("2027-01-01")
+def test_get_old_releases_retry(fake_process, fake_executor, mock_requests_head, logs):
+    """Retry requests to https://old-releases.ubuntu.com."""
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
+    mock_requests_head.side_effect = [
+        requests.ConnectionError(),
+        requests.ConnectionError,
+        mock_requests_head.return_value,
+    ]
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout="UBUNTU_CODENAME=plucky",
+    )
+
+    base_config._update_eol_sources(fake_executor)
+
+    assert (
+        re.escape(
+            "Not updating EOL sources because 25.04 isn't on https://old-releases.ubuntu.com."
+        )
+        in logs.debug
+    )
+
+
+@freeze_time("2027-01-01")
+def test_get_old_releases_error(fake_process, fake_executor, mock_requests_head, logs):
+    """Error if https://old-releases.ubuntu.com can't be reached."""
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
+    mock_requests_head.side_effect = requests.ConnectionError()
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout="UBUNTU_CODENAME=plucky",
+    )
+    # shorten the retries because mock_instant_sleep doesn't work well with freeze_time
+    base_config._retry_wait = 0.01
+    base_config._timeout_simple = 0.001
+
+    expected_error = re.escape(
+        "Failed to get https://old-releases.ubuntu.com/ubuntu/dists/plucky/."
+    )
+    with pytest.raises(BaseConfigurationError, match=expected_error):
+        base_config._update_eol_sources(fake_executor)
+
+
+def test_get_codename_error(fake_process, fake_executor, mock_requests_head, logs):
+    """Error if the codename isn't in /etc/os-release."""
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
+
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout="OTHER=value",
+    )
+
+    with pytest.raises(BaseConfigurationError) as raised:
+        base_config._update_eol_sources(fake_executor)
+
+    assert raised.value == BaseConfigurationError(
+        brief="Couldn't find Ubuntu codename in OS release data.",
+        details="OS release data: {'OTHER': 'value'}.",
+    )
+
+
+@freeze_time("2027-01-01")
+@pytest.mark.parametrize("mock_requests_head", [200], indirect=True)
+def test_update_eol_sources_error(
+    fake_process, fake_executor, mock_requests_head, logs
+):
+    """Error if the bash script fails to run in the instance."""
+
+    def _raise_error(process) -> None:
+        raise subprocess.CalledProcessError(100, ["error"])
+
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
+
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout="UBUNTU_CODENAME=plucky",
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "bash", "/tmp/craft-sources.sh"],
+        callback=_raise_error,
+    )
+
+    with pytest.raises(BaseConfigurationError) as raised:
+        base_config._update_eol_sources(fake_executor)
+
+    assert raised.value == BaseConfigurationError(
+        brief="Failed to update EOL sources.",
+        details="* Command that failed: 'error'\n* Command exit code: 100",
     )

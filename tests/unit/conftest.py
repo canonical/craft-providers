@@ -18,7 +18,7 @@ import contextlib
 import io
 import pathlib
 import subprocess
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pytest
 import responses as responses_module
@@ -26,6 +26,7 @@ from craft_providers.executor import Executor
 from craft_providers.util import env_cmd
 from pydantic import ValidationError
 from pydantic_core import InitErrorDetails
+from typing_extensions import override
 
 # command used by the FakeExecutor
 DEFAULT_FAKE_CMD = ["fake-executor"]
@@ -35,21 +36,22 @@ class FakeExecutor(Executor):
     """Fake Executor.
 
     Provides a fake execution environment meant to be paired with the
-    fake_subprocess fixture for complete control over execution behaviors.
+    fake_process fixture for complete control over execution behaviors.
 
     Calls to each method are recorded in `records_of_<method_name>` for introspection,
     similar to mock_calls.
     """
 
     def __init__(self) -> None:
-        self.records_of_push_file_io: List[Dict[str, Any]] = []
-        self.records_of_pull_file: List[Dict[str, Any]] = []
-        self.records_of_push_file: List[Dict[str, Any]] = []
-        self.records_of_delete: List[Dict[str, Any]] = []
-        self.records_of_exists: List[Dict[str, Any]] = []
-        self.records_of_mount: List[Dict[str, Any]] = []
-        self.records_of_is_running: List[Dict[str, Any]] = []
+        self.records_of_push_file_io: list[dict[str, Any]] = []
+        self.records_of_pull_file: list[dict[str, Any]] = []
+        self.records_of_push_file: list[dict[str, Any]] = []
+        self.records_of_delete: list[dict[str, Any]] = []
+        self.records_of_exists: list[dict[str, Any]] = []
+        self.records_of_mount: list[dict[str, Any]] = []
+        self.records_of_is_running: list[dict[str, Any]] = []
 
+    @override
     def push_file_io(
         self,
         *,
@@ -69,35 +71,40 @@ class FakeExecutor(Executor):
             }
         )
 
+    @override
     def execute_popen(
         self,
-        command: List[str],
+        command: list[str],
         *,
-        cwd: Optional[pathlib.PurePath] = None,
-        env: Optional[Dict[str, Optional[str]]] = None,
-        **kwargs,
-    ) -> subprocess.Popen:
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        timeout: float | None = None,
+        **kwargs: Any,
+    ) -> subprocess.Popen[str]:
         env_args = [] if env is None else env_cmd.formulate_command(env, chdir=cwd)
 
         final_cmd = [*DEFAULT_FAKE_CMD, *env_args, *command]
         return subprocess.Popen(final_cmd, **kwargs)
 
+    @override
     def execute_run(
         self,
-        command: List[str],
+        command: list[str],
         *,
-        cwd: Optional[pathlib.PurePath] = None,
-        env: Optional[Dict[str, Optional[str]]] = None,
-        timeout: Optional[float] = None,
-        check: bool = False,
-        **kwargs,
-    ) -> subprocess.CompletedProcess:
+        cwd: pathlib.PurePath | None = None,
+        env: dict[str, str | None] | None = None,
+        timeout: float | None = None,
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[Any]:
         env_args = [] if env is None else env_cmd.formulate_command(env, chdir=cwd)
 
         final_cmd = [*DEFAULT_FAKE_CMD, *env_args, *command]
 
-        return subprocess.run(final_cmd, timeout=timeout, check=check, **kwargs)
+        # We're not using an explicit check here because we're getting check from the
+        # calling method.
+        return subprocess.run(final_cmd, timeout=timeout, **kwargs)  # noqa: PLW1510
 
+    @override
     def pull_file(self, *, source: pathlib.PurePath, destination: pathlib.Path) -> None:
         self.records_of_pull_file.append(
             {
@@ -106,6 +113,7 @@ class FakeExecutor(Executor):
             }
         )
 
+    @override
     def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:
         self.records_of_push_file.append(
             {
@@ -114,23 +122,27 @@ class FakeExecutor(Executor):
             }
         )
 
+    @override
     def delete(self) -> None:
         self.records_of_delete.append({})
 
+    @override
     def exists(self) -> bool:
         self.records_of_exists.append({})
         return True
 
+    @override
     def mount(self, *, host_source: pathlib.Path, target: pathlib.PurePath) -> None:
         self.records_of_mount.append({"host_source": host_source, "target": target})
 
+    @override
     def is_running(self) -> bool:
         self.records_of_is_running.append({})
         return True
 
 
 @pytest.fixture
-def fake_executor():
+def fake_executor(fake_process):
     return FakeExecutor()
 
 

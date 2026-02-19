@@ -16,18 +16,23 @@
 #
 
 """Craft provider errors."""
+
+from __future__ import annotations
+
 import dataclasses
 import shlex
-import subprocess
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import subprocess
 
 
 def details_from_command_error(
     *,
-    cmd: List[str],
+    cmd: list[str],
     returncode: int,
-    stdout: Optional[Union[bytes, str]] = None,
-    stderr: Optional[Union[bytes, str]] = None,
+    stdout: bytes | str | None = None,
+    stderr: bytes | str | None = None,
 ) -> str:
     """Create a consistent ProviderError from command errors.
 
@@ -84,8 +89,8 @@ class ProviderError(Exception):
     """
 
     brief: str
-    details: Optional[str] = None
-    resolution: Optional[str] = None
+    details: str | None = None
+    resolution: str | None = None
 
     def __str__(self) -> str:
         parts = [self.brief]
@@ -109,7 +114,7 @@ class BaseCompatibilityError(ProviderError):
     :param reason: Reason for incompatibility.
     """
 
-    def __init__(self, reason: str, *, details: Optional[str] = None) -> None:
+    def __init__(self, reason: str, *, details: str | None = None) -> None:
         self.reason = reason
 
         brief = f"Incompatible base detected: {reason}."
@@ -123,8 +128,6 @@ class NetworkError(ProviderError):
 
     def __init__(self) -> None:
         brief = "A network related operation failed in a context of no network access."
-        # XXX Facundo 2022-12-13: need to improve the URL here once
-        # we have the online docs updated
         url = "https://canonical-craft-providers.readthedocs-hosted.com/en/latest/explanation/"
         resolution = (
             "Verify that the environment has internet connectivity; "

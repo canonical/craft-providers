@@ -15,16 +15,17 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 """Tests for abstract Base's implementations."""
+
 import enum
+import logging
 import pathlib
 import subprocess
-import sys
 from unittest import mock
 
 import pytest
 import pytest_subprocess.fake_popen
 from craft_providers import Executor, base
-from craft_providers.errors import BaseConfigurationError
+from craft_providers.errors import BaseConfigurationError, ProviderError
 
 from tests.unit.conftest import DEFAULT_FAKE_CMD
 
@@ -34,7 +35,7 @@ WAIT_FOR_SYSTEM_READY_CMD = ["systemctl", "is-system-running"]
 WAIT_FOR_NETWORK_CMD = ["getent", "hosts", "snapcraft.io"]
 
 
-class FakeBase(base.Base):
+class FakeBase(base.Base[enum.Enum]):
     FakeBaseAlias = enum.Enum("FakeBaseAlias", ["TREBLE"])
     _environment = {}
 
@@ -62,7 +63,7 @@ class FakeBase(base.Base):
 
 
 @pytest.fixture
-def fake_base() -> base.Base:
+def fake_base() -> base.Base[enum.Enum]:
     return FakeBase()
 
 
@@ -107,7 +108,7 @@ def test_wait_for_system_ready_timeout(
     fake_process.register(
         [*DEFAULT_FAKE_CMD, *WAIT_FOR_SYSTEM_READY_CMD], callback=callback
     )
-    fake_process.keep_last_process(True)
+    fake_process.keep_last_process(keep=True)
 
     with pytest.raises(BaseConfigurationError):
         fake_base._setup_wait_for_system_ready(fake_executor)
@@ -134,7 +135,7 @@ def test_wait_for_network_success(
 )
 def test_wait_for_network_timeout(fake_base, fake_executor, fake_process, callback):
     fake_process.register([*DEFAULT_FAKE_CMD, *WAIT_FOR_NETWORK_CMD], callback=callback)
-    fake_process.keep_last_process(True)
+    fake_process.keep_last_process(keep=True)
 
     with pytest.raises(BaseConfigurationError):
         fake_base._setup_wait_for_system_ready(fake_executor)
@@ -143,7 +144,7 @@ def test_wait_for_network_timeout(fake_base, fake_executor, fake_process, callba
 @pytest.mark.parametrize("cache_dir", [pathlib.Path("/tmp/fake-cache-dir")])
 def test_mount_shared_cache_dirs(fake_process, fake_base, fake_executor, cache_dir):
     """Test mounting of cache directories with a cache directory set."""
-    fake_base._cache_path = cache_dir
+    fake_base._cache_path = cache_dir.resolve()
     user_cache_dir = pathlib.Path("/root/.cache")
 
     fake_process.register(
@@ -157,20 +158,10 @@ def test_mount_shared_cache_dirs(fake_process, fake_base, fake_executor, cache_d
 
     fake_base._mount_shared_cache_dirs(fake_executor)
 
-    if sys.platform == "win32":
-        expected = {
-            "host_source": pathlib.WindowsPath("d:")
-            / cache_dir
-            / "base-v7"
-            / "FakeBaseAlias.TREBLE"
-            / "pip",
-            "target": user_cache_dir / "pip",
-        }
-    else:
-        expected = {
-            "host_source": cache_dir / "base-v7" / "FakeBaseAlias.TREBLE" / "pip",
-            "target": user_cache_dir / "pip",
-        }
+    expected = {
+        "host_source": cache_dir.resolve() / "base-v7" / "FakeBaseAlias.TREBLE" / "pip",
+        "target": user_cache_dir / "pip",
+    }
     assert fake_executor.records_of_mount == [expected]
 
 
@@ -195,6 +186,36 @@ def test_mount_shared_cache_dirs_mkdir_failed(
 
     with pytest.raises(BaseConfigurationError):
         fake_base._mount_shared_cache_dirs(fake_executor)
+
+
+def test_mount_shared_cache_dirs_mount_failed(
+    caplog: pytest.LogCaptureFixture, fake_process, fake_base, fake_executor, mocker
+):
+    """Test mounting of cache directories with a cache directory set, but mkdir failed."""
+    caplog.set_level(logging.DEBUG)
+    error_msg = "Lol couldn't mount the cache dir"
+    cache_dir = pathlib.Path("/this/directory/should/not/exist")
+    fake_base._cache_path = cache_dir
+    user_cache_dir = pathlib.Path("/root/.cache")
+
+    fake_process.register(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "echo -n ${XDG_CACHE_HOME:-${HOME}/.cache}"],
+        stdout=str(user_cache_dir),
+    )
+    fake_process.register(
+        [*DEFAULT_FAKE_CMD, "mkdir", "-p", "/root/.cache/pip"],
+    )
+    mocker.patch("pathlib.Path.mkdir")  # don't try to create the directory
+    mocker.patch.object(fake_executor, "mount", side_effect=ProviderError(error_msg))
+
+    fake_base._mount_shared_cache_dirs(fake_executor)
+
+    log_entries = caplog.get_records("call")
+    assert (
+        log_entries[0].message
+        == "Failed to mount cache in instance. Proceeding without cache."
+    )
+    assert log_entries[1].message == error_msg
 
 
 @pytest.mark.parametrize(
@@ -259,14 +280,14 @@ def test_mount_shared_cache_dirs_mkdir_failed(
 def test_get_os_release_success(
     fake_process, fake_executor, fake_base, process_outputs, expected
 ):
-    """`_get_os_release` should parse data from `/etc/os-release` to a dict."""
+    """`get_os_release` should parse data from `/etc/os-release` to a dict."""
     for output in process_outputs:
         fake_process.register_subprocess(
             [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
             stdout=output,
         )
 
-    result = fake_base._get_os_release(executor=fake_executor)
+    result = fake_base.get_os_release(executor=fake_executor)
 
     assert result == expected
 
@@ -287,10 +308,10 @@ def test_get_os_release_error_output(
         stdout=stdout,
         returncode=returncode,
     )
-    fake_process.keep_last_process(True)
+    fake_process.keep_last_process(keep=True)
 
     with pytest.raises(BaseConfigurationError):
-        fake_base._get_os_release(executor=fake_executor)
+        fake_base.get_os_release(executor=fake_executor)
 
 
 def test_get_os_release_exception(fake_base, mock_executor):
@@ -299,4 +320,80 @@ def test_get_os_release_exception(fake_base, mock_executor):
     )
 
     with pytest.raises(BaseConfigurationError):
-        fake_base._get_os_release(executor=mock_executor)
+        fake_base.get_os_release(executor=mock_executor)
+
+
+def test_set_hostname(fake_base):
+    bad_name = "bad_123-ABC%-"
+    fake_base._set_hostname(bad_name)
+    assert fake_base._hostname == "bad123-ABC"
+
+
+def test_snap_refresh(fake_process, fake_executor, fake_base):
+    """Disable and wait for snap refreshes."""
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"],
+        returncode=0,
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
+        returncode=0,
+    )
+
+    fake_base._disable_and_wait_for_snap_refresh(executor=fake_executor)
+
+
+def test_snap_refresh_hold_error(fake_process, fake_executor, fake_base):
+    """Error on failure to hold refreshes."""
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"],
+        stderr="test error",
+        returncode=1,
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
+        returncode=0,
+    )
+
+    with pytest.raises(BaseConfigurationError) as err:
+        fake_base._disable_and_wait_for_snap_refresh(executor=fake_executor)
+
+    assert err.value.brief == "Failed to hold snap refreshes."
+    assert err.value.details
+    assert "test error" in err.value.details
+
+
+def test_snap_refresh_watch_error(fake_process, fake_executor, fake_base):
+    """Error on failure of 'snap watch'."""
+    stderr = "error: daemon is stopping to wait for socket activation"
+    fake_base._timeout_complex = 0.01
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"],
+        returncode=0,
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
+        stderr=stderr,
+        returncode=1,
+    )
+
+    with pytest.raises(BaseConfigurationError) as err:
+        fake_base._disable_and_wait_for_snap_refresh(executor=fake_executor)
+
+    assert err.value.brief == "Failed to wait for snap refreshes to complete."
+    assert err.value.details
+    assert stderr in err.value.details
+
+
+def test_snap_refresh_watch_retry(fake_process, fake_executor, fake_base):
+    """Retry when 'snap watch' fails."""
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"],
+        returncode=0,
+    )
+    # fail twice then succeed
+    snap_watch = [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"]
+    for returncode in (1, 1, 0):
+        fake_process.register_subprocess(snap_watch, returncode=returncode)
+
+    fake_base._disable_and_wait_for_snap_refresh(executor=fake_executor)

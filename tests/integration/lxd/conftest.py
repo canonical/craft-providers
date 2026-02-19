@@ -23,7 +23,7 @@ import string
 import subprocess
 import time
 from contextlib import contextmanager
-from typing import Any, Dict, Optional
+from typing import Any
 
 import pytest
 from craft_providers.bases import ubuntu
@@ -34,8 +34,6 @@ from craft_providers.lxd.lxd_provider import LXDProvider
 
 _xfail_bases = {
     ubuntu.BuilddBaseAlias.XENIAL: "Fails to setup snapd (#582)",
-    ubuntu.BuilddBaseAlias.ORACULAR: "24.10 fails setup (#598)",
-    ubuntu.BuilddBaseAlias.DEVEL: "24.10 fails setup (#598)",
 }
 """List of bases that are expected to fail and a reason why."""
 
@@ -58,7 +56,6 @@ def installed_lxd_required(installed_lxd):
 
 
 @pytest.fixture
-@pytest.mark.with_sudo
 def installed_lxd_without_init(uninstalled_lxd):
     """Ensure lxd is installed, but not initialized.
 
@@ -78,14 +75,17 @@ def installed_lxd_without_init(uninstalled_lxd):
 def tmp_instance(
     *,
     name: str,
-    config_keys: Optional[Dict[str, Any]] = None,
+    config_keys: dict[str, Any] | None = None,
     ephemeral: bool = True,
     image: str = "22.04",
     image_remote: str = "ubuntu",
     project: str,
     remote: str = "local",
-    lxc: LXC = LXC(),
+    lxc: LXC | None = None,
 ):
+    if lxc is None:
+        lxc = LXC()
+
     if config_keys is None:
         config_keys = {}
 
@@ -116,7 +116,6 @@ def tmp_instance(
             remote=remote,
             capture_output=True,
             check=False,
-            text=True,
         )
 
         running_state = proc.stdout.strip()
@@ -143,7 +142,7 @@ def lxc():
 @pytest.fixture
 def project_name():
     """Create temporary LXD project and assert expected properties."""
-    return "ptest-" + "".join(random.choices(string.ascii_uppercase, k=4))
+    return "ptest-" + "".join(random.choices(string.ascii_uppercase, k=4))  # noqa: S311
 
 
 @pytest.fixture
@@ -202,5 +201,5 @@ def session_project(installed_lxd):
 
 
 @pytest.fixture(scope="session")
-def session_provider(session_project):
-    return LXDProvider(lxd_project=session_project)
+def session_provider(session_lxd_project):
+    return LXDProvider(lxd_project=session_lxd_project)

@@ -99,14 +99,15 @@ def test_temporarypull_temp_file_cleaned(
     source = tmp_path / "source.txt"
     source.write_text("test content")
 
-    with pytest.raises(ValueError), fake_executor_local_pull.temporarily_pull_file(
-        source=source
-    ) as localfilepath:
+    with (
+        pytest.raises(ValueError, match="boom"),
+        fake_executor_local_pull.temporarily_pull_file(source=source) as localfilepath,
+    ):
         # internal crash
         raise ValueError("boom")
 
     # file is removed afterwards
-    assert not localfilepath.exists()  # pyright: ignore [reportUnboundVariable]
+    assert not localfilepath.exists()
 
 
 @pytest.mark.parametrize(
@@ -162,7 +163,7 @@ def test_set_instance_name_unchanged(logs, name):
 def test_set_instance_name(logs, name, expected_name):
     """Verify name is compliant with naming conventions."""
     # compute hash
-    hashed_name = hashlib.sha1(name.encode()).hexdigest()[:20]
+    hashed_name = hashlib.sha1(name.encode()).hexdigest()[:20]  # noqa: S324
 
     instance_name = get_instance_name(name, ProviderError)
 

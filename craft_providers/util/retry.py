@@ -15,6 +15,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 """Helper utilities for craft_providers."""
+
 from __future__ import annotations
 
 import time
@@ -31,7 +32,7 @@ def retry_until_timeout(
     retry_wait: float,
     func: Callable[[float], T],
     *,
-    error: Exception | None = TimeoutError(),
+    error: Exception | None = None,
 ) -> T:
     """Re-run a function until it either succeeds or it times out.
 
@@ -49,7 +50,7 @@ def retry_until_timeout(
     while (now := time.monotonic()) < soft_deadline:
         try:
             return func(deadline - now)
-        except Exception:
+        except Exception:  # noqa: BLE001, PERF203
             if time.monotonic() < soft_deadline:
                 time.sleep(retry_wait)
     try:
