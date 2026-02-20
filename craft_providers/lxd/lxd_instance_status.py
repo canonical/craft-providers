@@ -17,12 +17,43 @@
 
 """LXD Instance Status."""
 
+from __future__ import annotations
+
 from enum import Enum
 
 
 class ProviderInstanceStatus(Enum):
-    """Status of the instance."""
+    """Status of craft-providers setup of a LXD instance.
+
+    This value is controlled by craft-providers and configured under
+    `user.craft-providers.status` in the instance's config.
+
+    This is different from the instance state, which is controlled by LXD.
+    """
 
     PREPARING = "PREPARING"
     FINISHED = "FINISHED"
     STARTING = "STARTING"
+    IN_USE = "IN_USE"
+
+
+class LXDInstanceState(Enum):
+    """State of a LXD instance as reported by LXD.
+
+    The value is displayed either as `State` or `Status`, depending on the
+    command and output format.
+
+    The capitalization also varies. For example, `lxc list --format table`
+    prints uppercase values but `lxc list --format yaml` gives title case values.
+
+    Ref: https://github.com/lxc/lxc/blob/9e95451ecc718b88de46134527b1e46aee2586cd/src/lxc/state.c#L29
+    """
+
+    STOPPED = "STOPPED"
+    STARTING = "STARTING"
+    RUNNING = "RUNNING"
+    STOPPING = "STOPPING"
+    ABORTING = "ABORTING"
+    FREEZING = "FREEZING"
+    FROZEN = "FROZEN"
+    THAWED = "THAWED"

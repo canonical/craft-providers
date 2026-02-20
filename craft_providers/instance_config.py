@@ -17,21 +17,26 @@
 
 """Persistent instance config / datastore resident in provided environment."""
 
+from __future__ import annotations
+
 import io
 import pathlib
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any
 
 import pydantic
 import yaml
+from typing_extensions import Self
 
 from craft_providers.errors import BaseConfigurationError, ProviderError
-from craft_providers.executor import Executor
 from craft_providers.util import temp_paths
+
+if TYPE_CHECKING:
+    from craft_providers.executor import Executor
 
 
 def update_nested_dictionaries(
-    config_data: Dict[str, Any], new_data: Dict[str, Any]
-) -> Dict[str, Any]:
+    config_data: dict[str, Any], new_data: dict[str, Any]
+) -> dict[str, Any]:
     """Recursively update a dictionary containing nested dictionaries.
 
     New values are added and existing values are updated. No data are removed.
@@ -42,7 +47,8 @@ def update_nested_dictionaries(
     for key, value in new_data.items():
         if isinstance(value, dict):
             config_data[key] = update_nested_dictionaries(
-                config_data.get(key, {}), value
+                config_data.get(key, {}),
+                value,  # type: ignore[reportUnknownArgumentType] # the precise dict contents don't matter here
             )
         else:
             config_data[key] = value
@@ -62,12 +68,12 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
           revision: 834
     """
 
-    compatibility_tag: Optional[str] = None
-    setup: Optional[bool] = None
-    snaps: Optional[Dict[str, Dict[str, Any]]] = None
+    compatibility_tag: str | None = None
+    setup: bool | None = None
+    snaps: dict[str, dict[str, Any]] | None = None
 
     @classmethod
-    def unmarshal(cls, data: Dict[str, Any]) -> "InstanceConfiguration":
+    def unmarshal(cls, data: dict[str, Any]) -> Self:
         """Create and populate a new `InstanceConfig` object from dictionary data.
 
         The unmarshal method validates the data in the dictionary and populates
@@ -79,9 +85,9 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
 
         :raise BaseConfigurationError: If validation fails.
         """
-        return InstanceConfiguration(**data)
+        return cls(**data)
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         """Create a dictionary containing the InstanceConfiguration data.
 
         :return: The newly created dictionary.
@@ -92,8 +98,8 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
     def load(
         cls,
         executor: Executor,
-        config_path: pathlib.PurePath = pathlib.PurePath("/etc/craft-instance.conf"),
-    ) -> Optional["InstanceConfiguration"]:
+        config_path: pathlib.PurePath | None = None,
+    ) -> Self | None:
         """Load an instance config file from an environment.
 
         :param executor: Executor for instance.
@@ -106,6 +112,9 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
         :raise BaseConfigurationError: If the file cannot be loaded from
                                        the environment.
         """
+        if config_path is None:
+            config_path = pathlib.PurePath("/etc/craft-instance.conf")
+
         with temp_paths.home_temporary_file() as temp_config_file:
             try:
                 executor.pull_file(source=config_path, destination=temp_config_file)
@@ -118,7 +127,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
                 ) from error
             except FileNotFoundError:
                 return None
-            with open(temp_config_file, encoding="utf8") as file:
+            with temp_config_file.open(encoding="utf8") as file:
                 data = yaml.safe_load(file)
                 if data is None:
                     return None
@@ -128,7 +137,7 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
     def save(
         self,
         executor: Executor,
-        config_path: pathlib.PurePath = pathlib.PurePath("/etc/craft-instance.conf"),
+        config_path: pathlib.PurePath | None = None,
     ) -> None:
         """Save an instance config file to an environment.
 
@@ -137,6 +146,9 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
                             Default is `/etc/craft-instance.conf`.
 
         """
+        if config_path is None:
+            config_path = pathlib.PurePath("/etc/craft-instance.conf")
+
         data = self.marshal()
 
         executor.push_file_io(
@@ -149,9 +161,9 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
     def update(
         cls,
         executor: Executor,
-        data: Dict[str, Any],
-        config_path: pathlib.PurePath = pathlib.PurePath("/etc/craft-instance.conf"),
-    ) -> "InstanceConfiguration":
+        data: dict[str, Any],
+        config_path: pathlib.PurePath | None = None,
+    ) -> InstanceConfiguration:
         """Update an instance config file in an environment.
 
         New values are added and existing values are updated. No data are removed.
@@ -164,6 +176,8 @@ class InstanceConfiguration(pydantic.BaseModel, extra="forbid"):
 
         :return: The updated `InstanceConfiguration` object.
         """
+        if config_path is None:
+            config_path = pathlib.PurePath("/etc/craft-instance.conf")
         config_instance = cls.load(executor=executor, config_path=config_path)
         if config_instance is None:
             updated_config_instance = cls.unmarshal(data)

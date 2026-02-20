@@ -24,6 +24,8 @@ from craft_providers.lxd import LXDError, lxd_instance_status
 
 from . import conftest
 
+pytestmark = [pytest.mark.slow, pytest.mark.lxd_instance]
+
 
 @pytest.fixture
 def instance(instance_name, session_project):
@@ -33,17 +35,7 @@ def instance(instance_name, session_project):
         yield tmp_instance
 
 
-@pytest.fixture
-def instance_alma(instance_name, session_project):
-    with conftest.tmp_instance(
-        name=instance_name,
-        project=session_project,
-        image="almalinux/9",
-        image_remote="images",
-    ) as tmp_instance:
-        yield tmp_instance
-
-
+@pytest.mark.lxd_instance
 def test_launch_default_config(instance, lxc, session_project):
     """Verify default config values when launching."""
     status = lxc.config_get(
@@ -71,6 +63,7 @@ def test_launch_default_config(instance, lxc, session_project):
     int(pid)
 
 
+@pytest.mark.lxd_instance
 def test_exec(instance, lxc, session_project):
     proc = lxc.exec(
         instance_name=instance,
@@ -82,6 +75,7 @@ def test_exec(instance, lxc, session_project):
     assert proc.stdout == b"this is a test\n"
 
 
+@pytest.mark.lxd_instance
 def test_config_get_and_set(instance, instance_name, lxc, session_project):
     """Set and get config key/value pairs."""
     lxc.config_set(
@@ -98,6 +92,7 @@ def test_config_get_and_set(instance, instance_name, lxc, session_project):
     assert value == "test-value"
 
 
+@pytest.mark.lxd_instance
 def test_config_get_non_existent_key(instance, instance_name, lxc, session_project):
     """Get a non-existent key and confirm the value is an empty string."""
     value = lxc.config_get(
@@ -107,6 +102,7 @@ def test_config_get_non_existent_key(instance, instance_name, lxc, session_proje
     assert not value
 
 
+@pytest.mark.lxd_instance
 def test_copy(instance, instance_name, lxc, session_project):
     """Test `copy()` with default arguments."""
     destination_instance_name = instance_name + "-destination"
@@ -124,6 +120,7 @@ def test_copy(instance, instance_name, lxc, session_project):
     assert instances == [instance, destination_instance_name]
 
 
+@pytest.mark.lxd_instance
 def test_copy_error(instance, instance_name, lxc, session_project):
     """Raise a LXDError when the copy command fails."""
     # the source and destination cannot be same, so LXC will fail to copy
@@ -149,6 +146,7 @@ def test_copy_error(instance, instance_name, lxc, session_project):
     )
 
 
+@pytest.mark.lxd_instance
 def test_delete(instance, lxc, session_project):
     with pytest.raises(LXDError):
         lxc.delete(instance_name=instance, force=False, project=session_project)
@@ -157,6 +155,7 @@ def test_delete(instance, lxc, session_project):
     assert instance in instances
 
 
+@pytest.mark.lxd_instance
 def test_delete_force(instance, lxc, session_project):
     lxc.delete(instance_name=instance, force=True, project=session_project)
 
@@ -190,6 +189,7 @@ def test_image_delete(lxc, session_project):
     assert images == []
 
 
+@pytest.mark.lxd_instance
 def test_file_push(instance, lxc, session_project, tmp_path):
     test_file = tmp_path / "test.txt"
     test_file.write_text("this is a test")
@@ -213,6 +213,7 @@ def test_file_push(instance, lxc, session_project, tmp_path):
     assert proc.stdout == b"this is a test"
 
 
+@pytest.mark.lxd_instance
 def test_file_pull(instance, lxc, session_project, tmp_path):
     out_path = tmp_path / "out.txt"
     test_file = tmp_path / "test.txt"
@@ -235,6 +236,7 @@ def test_file_pull(instance, lxc, session_project, tmp_path):
     assert out_path.read_text() == "this is a test"
 
 
+@pytest.mark.lxd_instance
 def test_disk_add_remove(instance, lxc, tmp_path, session_project):
     mount_target = pathlib.PurePosixPath("/mnt")
 
@@ -277,6 +279,7 @@ def test_disk_add_remove(instance, lxc, tmp_path, session_project):
         )
 
 
+@pytest.mark.lxd_instance
 def test_info(instance, lxc, session_project):
     """Test `info()` method works as expected."""
     data = lxc.info(instance_name=instance, project=session_project)

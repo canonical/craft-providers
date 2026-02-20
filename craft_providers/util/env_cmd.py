@@ -16,16 +16,21 @@
 #
 
 """Helper(s) for env command."""
-import pathlib
-from typing import Dict, List, Optional
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pathlib
 
 
 def formulate_command(
-    env: Optional[Dict[str, Optional[str]]] = None,
+    env: dict[str, str | None] | None = None,
     *,
-    chdir: Optional[pathlib.PurePath] = None,
+    chdir: pathlib.PurePath | None = None,
     ignore_environment: bool = False,
-) -> List[str]:
+) -> list[str]:
     """Create an env command with the specified environment.
 
     For each key-value, the env command will include the key=value argument to

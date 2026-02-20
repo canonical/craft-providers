@@ -17,11 +17,15 @@
 
 """Helpers for snap command."""
 
-import pathlib
-from typing import List, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pathlib
 
 
-def formulate_ack_command(snap_assert_path: pathlib.PurePosixPath) -> List[str]:
+def formulate_ack_command(snap_assert_path: pathlib.PurePosixPath) -> list[str]:
     """Formulate snap ack command to add assertions.
 
     :returns: List of ack command parts.
@@ -29,7 +33,7 @@ def formulate_ack_command(snap_assert_path: pathlib.PurePosixPath) -> List[str]:
     return ["snap", "ack", snap_assert_path.as_posix()]
 
 
-def formulate_known_command(query: List[str]) -> List[str]:
+def formulate_known_command(query: list[str]) -> list[str]:
     """Formulate snap known command to retrieve assertions.
 
     :returns: List of ack command parts.
@@ -38,8 +42,11 @@ def formulate_known_command(query: List[str]) -> List[str]:
 
 
 def formulate_local_install_command(
-    classic: bool, dangerous: bool, snap_path: pathlib.PurePosixPath
-) -> List[str]:
+    *,
+    classic: bool,
+    dangerous: bool,
+    snap_path: pathlib.PurePosixPath,
+) -> list[str]:
     """Formulate snap install command.
 
     :param classic: Flag to enable installation of classic snap.
@@ -60,8 +67,8 @@ def formulate_local_install_command(
 
 
 def formulate_pack_command(
-    snap_name: str, output_file_path: Union[str, pathlib.PurePath]
-) -> List[str]:
+    snap_name: str, output_file_path: str | pathlib.PurePath
+) -> list[str]:
     """Formulate the command to pack a snap from a directory.
 
     :param snap_name: The name of the channel.
@@ -78,8 +85,11 @@ def formulate_pack_command(
 
 
 def formulate_remote_install_command(
-    snap_name: str, channel: str, classic: bool
-) -> List[str]:
+    snap_name: str,
+    channel: str,
+    *,
+    classic: bool,
+) -> list[str]:
     """Formulate the command to snap install from Store.
 
     :param snap_name: The name of the channel.
@@ -97,7 +107,7 @@ def formulate_remote_install_command(
     return install_cmd
 
 
-def formulate_refresh_command(snap_name: str, channel: str) -> List[str]:
+def formulate_refresh_command(snap_name: str, channel: str) -> list[str]:
     """Formulate snap refresh command.
 
     :param snap_name: The name of the channel.
@@ -108,7 +118,7 @@ def formulate_refresh_command(snap_name: str, channel: str) -> List[str]:
     return ["snap", "refresh", snap_name, "--channel", channel]
 
 
-def formulate_remove_command(snap_name: str) -> List[str]:
+def formulate_remove_command(snap_name: str) -> list[str]:
     """Formulate snap remove command.
 
     :param snap_name: The name of the channel.

@@ -34,14 +34,24 @@ html_context = {
 
 extensions = [
     "canonical_sphinx",
+    "sphinxext.rediraffe",
 ]
 # end-region
 
 # Ignore the venv created by the linting Makefile
-exclude_patterns = ["venv"]
+exclude_patterns = [
+    "venv",
+
+    # These axes were empty, so hide their scaffolding for now
+    "tutorials",
+    "how-to-guides",
+]
 
 extensions.extend(
     [
         "sphinx.ext.autodoc",
     ]
 )
+
+# Client-side page redirects.
+rediraffe_redirects = "redirects.txt"

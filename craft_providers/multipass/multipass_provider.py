@@ -16,12 +16,15 @@
 
 """Multipass Provider class."""
 
+from __future__ import annotations
+
 import contextlib
 import logging
-import pathlib
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Iterator
+from typing import TYPE_CHECKING
+
+from typing_extensions import override
 
 from craft_providers import Base, Executor, Provider, base
 from craft_providers.bases import ubuntu
@@ -33,6 +36,12 @@ from .errors import MultipassError
 from .installer import install, is_installed
 from .multipass import Multipass
 from .multipass_instance import MultipassInstance
+
+if TYPE_CHECKING:
+    import pathlib
+    from collections.abc import Callable, Iterator
+
+    from craft_providers import Executor
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +95,7 @@ class RemoteImage:
 
 
 # mapping of Provider bases to Multipass remote images
-_BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
+_BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: dict[Enum, RemoteImage] = {
     ubuntu.BuilddBaseAlias.BIONIC: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="18.04"
     ),
@@ -99,8 +108,14 @@ _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
     ubuntu.BuilddBaseAlias.NOBLE: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="24.04"
     ),
-    ubuntu.BuilddBaseAlias.ORACULAR: RemoteImage(
-        remote=Remote.DAILY, image_name="oracular"
+    ubuntu.BuilddBaseAlias.PLUCKY: RemoteImage(
+        remote=Remote.DAILY, image_name="plucky"
+    ),
+    ubuntu.BuilddBaseAlias.QUESTING: RemoteImage(
+        remote=Remote.SNAPCRAFT, image_name="questing"
+    ),
+    ubuntu.BuilddBaseAlias.RESOLUTE: RemoteImage(
+        remote=Remote.DAILY, image_name="resolute"
     ),
     # devel images are not available on macos
     ubuntu.BuilddBaseAlias.DEVEL: RemoteImage(
@@ -109,7 +124,7 @@ _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: Dict[Enum, RemoteImage] = {
 }
 
 
-def _get_remote_image(provider_base: Base) -> RemoteImage:
+def _get_remote_image(provider_base: Base[Enum]) -> RemoteImage:
     """Get a RemoteImage for a particular provider base.
 
     :param provider_base: String containing the provider base.
@@ -139,8 +154,8 @@ class MultipassProvider(Provider):
     :param multipass: Optional Multipass client to use.
     """
 
-    def __init__(self, instance: Multipass = Multipass()) -> None:
-        self.multipass = instance
+    def __init__(self, instance: Multipass | None = None) -> None:
+        self.multipass = instance or Multipass()
 
     @property
     def name(self) -> str:
@@ -181,15 +196,19 @@ class MultipassProvider(Provider):
         """
         return is_installed()
 
+    @override
     @contextlib.contextmanager
     def launched_environment(
         self,
         *,
         project_name: str,
         project_path: pathlib.Path,
-        base_configuration: base.Base,
+        base_configuration: base.Base[Enum],
         instance_name: str,
         allow_unstable: bool = False,
+        shutdown_delay_mins: int | None = None,
+        use_base_instance: bool = False,
+        prepare_instance: Callable[[Executor], None] | None = None,
     ) -> Iterator[Executor]:
         """Configure and launch environment for specified base.
 
@@ -202,9 +221,16 @@ class MultipassProvider(Provider):
         :param base_configuration: Base configuration to apply to instance.
         :param instance_name: Name of the instance to launch.
         :param allow_unstable: If true, allow unstable images to be launched.
+        :param shutdown_delay_mins: Minutes by which to delay shutdown when exiting
+            the instance.
+        :param use_base_instance: Enable base instances for faster setup (not supported
+            by this provider).
+        :param prepare_instance: A callback to perform early instance configuration
+            before the base image setup.
 
         :raises MultipassError: If the instance cannot be launched or configured.
         """
+        shutdown_delay_mins = 0 if shutdown_delay_mins is None else shutdown_delay_mins
         image = _get_remote_image(base_configuration)
 
         # only allow launching unstable images when opted-in with `allow_unstable`
@@ -228,6 +254,7 @@ class MultipassProvider(Provider):
                 disk_gb=64,
                 mem_gb=2,
                 auto_clean=True,
+                prepare_instance=prepare_instance,
             )
         except BaseConfigurationError as error:
             raise MultipassError(str(error)) from error
@@ -237,4 +264,4 @@ class MultipassProvider(Provider):
         finally:
             # Ensure to unmount everything and stop instance upon completion.
             instance.unmount_all()
-            instance.stop()
+            instance.stop(delay_mins=shutdown_delay_mins)

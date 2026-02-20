@@ -16,26 +16,43 @@
 #
 
 """Ubuntu image(s)."""
+
+from __future__ import annotations
+
+import csv
+import datetime
 import enum
+import importlib.resources
 import io
 import logging
+import os
 import pathlib
 import subprocess
+from functools import total_ordering
+from http import HTTPStatus
 from textwrap import dedent
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, cast
 
-from craft_providers.actions.snap_installer import Snap
+import requests
+from typing_extensions import Self, override
+
+from craft_providers import const
 from craft_providers.base import Base
 from craft_providers.errors import (
     BaseCompatibilityError,
     BaseConfigurationError,
     details_from_called_process_error,
 )
-from craft_providers.executor import Executor
+from craft_providers.util import retry
+
+if TYPE_CHECKING:
+    from craft_providers.actions.snap_installer import Snap
+    from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 
 
+@total_ordering
 class BuilddBaseAlias(enum.Enum):
     """Mappings for supported buildd images."""
 
@@ -44,11 +61,20 @@ class BuilddBaseAlias(enum.Enum):
     FOCAL = "20.04"
     JAMMY = "22.04"
     NOBLE = "24.04"
-    ORACULAR = "24.10"
+    PLUCKY = "25.04"
+    QUESTING = "25.10"
+    RESOLUTE = "26.04"
     DEVEL = "devel"
 
+    def __lt__(self, other: Self) -> bool:
+        # Devels are the greatest, luckily 'd' > [0-9]
+        return cast(str, self.value) < cast(str, other.value)
 
-class BuilddBase(Base):
+    def __le__(self, other: Self) -> bool:
+        return cast(str, self.value) <= cast(str, other.value)
+
+
+class BuilddBase(Base[BuilddBaseAlias]):
     """Support for Ubuntu minimal buildd images.
 
     :cvar compatibility_tag: Tag/Version for variant of build configuration and
@@ -78,20 +104,20 @@ class BuilddBase(Base):
 
     compatibility_tag: str = f"buildd-{Base.compatibility_tag}"
 
+    @override
     def __init__(
         self,
         *,
         alias: BuilddBaseAlias,
-        compatibility_tag: Optional[str] = None,
-        environment: Optional[Dict[str, Optional[str]]] = None,
+        compatibility_tag: str | None = None,
+        environment: dict[str, str | None] | None = None,
         hostname: str = "craft-buildd-instance",
-        snaps: Optional[List[Snap]] = None,
-        packages: Optional[List[str]] = None,
+        snaps: list[Snap] | None = None,
+        packages: list[str] | None = None,
         use_default_packages: bool = True,
-        cache_path: Optional[pathlib.Path] = None,
+        cache_path: pathlib.Path | None = None,
     ) -> None:
-        # ignore enum subclass (see https://github.com/microsoft/pyright/issues/6750)
-        self.alias: BuilddBaseAlias = alias  # pyright: ignore
+        self.alias: BuilddBaseAlias = alias
 
         self._cache_path = cache_path
 
@@ -114,7 +140,7 @@ class BuilddBase(Base):
 
         self._set_hostname(hostname)
 
-        self._packages: Optional[List[str]] = []
+        self._packages: list[str] | None = []
         if use_default_packages:
             self._packages.extend(
                 [
@@ -157,9 +183,10 @@ class BuilddBase(Base):
             file_mode="0644",
         )
 
+    @override
     def _ensure_os_compatible(self, executor: Executor) -> None:
         """Ensure OS is compatible with Base."""
-        os_release = self._get_os_release(executor=executor)
+        os_release = self.get_os_release(executor=executor)
 
         os_name = os_release.get("NAME")
         if os_name != "Ubuntu":
@@ -181,21 +208,23 @@ class BuilddBase(Base):
         if version_id != compat_version_id:
             raise BaseCompatibilityError(
                 reason=(
-                    f"Expected OS version {compat_version_id!r},"
-                    f" found {version_id!r}"
+                    f"Expected OS version {compat_version_id!r}, found {version_id!r}"
                 )
             )
 
+    @override
     def _post_setup_os(self, executor: Executor) -> None:
         """Ubuntu specific post-setup OS tasks."""
         self._disable_automatic_apt(executor=executor)
 
+    @override
     def _setup_network(self, executor: Executor) -> None:
         """Set up the basic network with systemd-networkd and systemd-resolved."""
-        self._setup_hostname(executor=executor)
+        self.setup_hostname(executor=executor)
         self._setup_resolved(executor=executor)
         self._setup_networkd(executor=executor)
 
+    @override
     def _pre_setup_packages(self, executor: Executor) -> None:
         """Configure apt, update database."""
         executor.push_file_io(
@@ -210,6 +239,8 @@ class BuilddBase(Base):
             file_mode="0644",
         )
 
+        self._update_eol_sources(executor)
+
         try:
             self._execute_run(
                 ["apt-get", "update"],
@@ -223,8 +254,154 @@ class BuilddBase(Base):
                 details=details_from_called_process_error(error),
             ) from error
 
+    def _update_eol_sources(self, executor: Executor) -> None:
+        """Update sources for EOL (end of life) bases.
+
+        Only updates sources if the base is past its EOL date and is available on https://old-releases.ubuntu.com.
+
+        :param executor: Executor for the instance.
+
+        :raises BaseConfigurationError: If base's EOL status can't be determined.
+        :raises BaseConfigurationError: If the sources can't be updated in the instance.
+        """
+        codename = self._get_codename(executor)
+
+        if not self._is_eol(codename):
+            logger.debug(
+                f"Not updating EOL sources because {self.alias.value} isn't EOL."
+            )
+            return
+
+        if not self._is_old_release(codename):
+            logger.debug(
+                f"Not updating EOL sources because {self.alias.value} isn't on https://old-releases.ubuntu.com."
+            )
+            return
+
+        logger.debug("Updating EOL sources.")
+
+        with importlib.resources.path(
+            "craft_providers.util", "sources.sh"
+        ) as sources_script:
+            executor.push_file(
+                source=sources_script,
+                destination=pathlib.Path("/tmp/craft-sources.sh"),
+            )
+
+        # use a bash script because there isn't an easy way to modify files in an instance (#132)
+        try:
+            self._execute_run(
+                ["bash", "/tmp/craft-sources.sh"],
+                executor=executor,
+                timeout=self._timeout_simple,
+            )
+        except subprocess.CalledProcessError as error:
+            raise BaseConfigurationError(
+                brief="Failed to update EOL sources.",
+                details=details_from_called_process_error(error),
+            ) from error
+
+    def _get_codename(self, executor: Executor) -> str:
+        """Get the codename for an instance.
+
+        :param executor: Executor for the instance.
+
+        :returns: The instance's Ubuntu codename.
+
+        :raises BaseConfigurationError: If the codename can't be determined.
+        """
+        os_release = self.get_os_release(executor=executor)
+        codename = os_release.get("UBUNTU_CODENAME")
+        if not codename:
+            raise BaseConfigurationError(
+                brief="Couldn't find Ubuntu codename in OS release data.",
+                details=f"OS release data: {os_release}.",
+            )
+        return codename
+
+    def _is_old_release(self, codename: str) -> bool:
+        """Check if a base is on the old-releases archive.
+
+        :param codename: The instance's Ubuntu codename.
+
+        :returns: True if the base is on the old-releases archive.
+        """
+        url = "https://old-releases.ubuntu.com"
+        slug = f"/ubuntu/dists/{codename}/"
+
+        def _request(_timeout: float) -> requests.Response:
+            return requests.head(url + slug, allow_redirects=True, timeout=5)
+
+        logger.debug(f"Checking for {self.alias.value} ({codename}) on {url}.")
+        response = retry.retry_until_timeout(
+            timeout=self._timeout_simple or const.TIMEOUT_SIMPLE,
+            retry_wait=self._retry_wait,
+            func=_request,
+            error=BaseConfigurationError(brief=f"Failed to get {url + slug}."),
+        )
+
+        if response.status_code == HTTPStatus.OK:
+            logger.debug(f"{self.alias.value} is available on {url}.")
+            return True
+
+        logger.debug(f"{self.alias.value} isn't available on {url}.")
+        return False
+
+    def _is_eol(self, codename: str) -> bool:
+        """Check if a base is EOL.
+
+        :param codename: The instance's Ubuntu codename.
+
+        :returns: True if the base is EOL.
+
+        :raises BaseConfigurationError: If the EOL data can't be determined.
+        """
+        if self.alias is BuilddBaseAlias.DEVEL:
+            logger.debug("Skipping EOL check for base 'devel'.")
+            return False
+        logger.debug(f"Getting EOL data for {self.alias.value} ({codename}).")
+        with importlib.resources.path(
+            "craft_providers.data", "ubuntu.csv"
+        ) as distro_info_file:
+            reader = csv.DictReader(io.StringIO(distro_info_file.read_text("utf-8")))
+
+        for row in reader:
+            if row.get("series") == codename:
+                eol_date = row["eol"]
+                break
+        else:
+            raise BaseConfigurationError(
+                brief=f"Couldn't get EOL data for {self.alias.value}."
+            )
+
+        current_date = datetime.date.today().isoformat()
+
+        if current_date > eol_date:
+            logger.debug(f"{self.alias.value} is EOL.")
+            return True
+
+        logger.debug(f"{self.alias.value} isn't EOL.")
+        return False
+
+    @override
     def _setup_packages(self, executor: Executor) -> None:
         """Use apt install required packages and user-defined packages."""
+        suppress_upgrade = os.environ.get(
+            "CRAFT_PROVIDERS_EXPERIMENTAL_SUPPRESS_UPGRADE_UNSUPPORTED"
+        )
+        if not suppress_upgrade:
+            try:
+                self._execute_run(
+                    ["apt-get", "-y", "dist-upgrade"],
+                    executor=executor,
+                    verify_network=True,
+                    timeout=self._timeout_unpredictable,
+                )
+            except subprocess.CalledProcessError as error:
+                raise BaseConfigurationError(
+                    brief="Failed to update packages.",
+                    details=details_from_called_process_error(error),
+                ) from error
         if not self._packages:
             return
         try:
@@ -241,6 +418,7 @@ class BuilddBase(Base):
                 details=details_from_called_process_error(error),
             ) from error
 
+    @override
     def _setup_snapd(self, executor: Executor) -> None:
         """Install snapd and dependencies and wait until ready."""
         try:
@@ -256,6 +434,7 @@ class BuilddBase(Base):
                 details=details_from_called_process_error(error),
             ) from error
 
+    @override
     def _clean_up(self, executor: Executor) -> None:
         self._execute_run(
             ["apt-get", "autoremove", "-y"],

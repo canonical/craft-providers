@@ -16,11 +16,16 @@
 #
 
 """Almalinux image(s)."""
+
+from __future__ import annotations
+
 import enum
 import logging
-import pathlib
+import os
 import subprocess
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING
+
+from typing_extensions import override
 
 from craft_providers.actions.snap_installer import Snap
 from craft_providers.base import Base
@@ -29,7 +34,12 @@ from craft_providers.errors import (
     BaseConfigurationError,
     details_from_called_process_error,
 )
-from craft_providers.executor import Executor
+
+if TYPE_CHECKING:
+    import pathlib
+
+    from craft_providers.actions.snap_installer import Snap
+    from craft_providers.executor import Executor
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +50,7 @@ class AlmaLinuxBaseAlias(enum.Enum):
     NINE = "9"
 
 
-class AlmaLinuxBase(Base):
+class AlmaLinuxBase(Base[AlmaLinuxBaseAlias]):
     """Support for AlmaLinux images.
 
     :cvar compatibility_tag: Tag/Version for variant of build configuration and
@@ -70,22 +80,22 @@ class AlmaLinuxBase(Base):
 
     compatibility_tag: str = f"almalinux-{Base.compatibility_tag}"
 
+    @override
     def __init__(
         self,
         *,
         alias: AlmaLinuxBaseAlias,
-        compatibility_tag: Optional[str] = None,
-        environment: Optional[Dict[str, Optional[str]]] = None,
+        compatibility_tag: str | None = None,
+        environment: dict[str, str | None] | None = None,
         hostname: str = "craft-almalinux-instance",
-        snaps: Optional[List[Snap]] = None,
-        packages: Optional[List[str]] = None,
+        snaps: list[Snap] | None = None,
+        packages: list[str] | None = None,
         use_default_packages: bool = True,
-        cache_path: Optional[pathlib.Path] = None,
+        cache_path: pathlib.Path | None = None,
     ) -> None:
         self._cache_path = cache_path
 
-        # ignore enum subclass (see https://github.com/microsoft/pyright/issues/6750)
-        self.alias: AlmaLinuxBaseAlias = alias  # pyright: ignore
+        self.alias: AlmaLinuxBaseAlias = alias
 
         if environment is None:
             self._environment = self.default_command_environment()
@@ -97,7 +107,7 @@ class AlmaLinuxBase(Base):
 
         self._set_hostname(hostname)
 
-        self._packages: Optional[List[str]] = []
+        self._packages: list[str] | None = []
         if use_default_packages:
             self._packages.extend(
                 [
@@ -121,13 +131,14 @@ class AlmaLinuxBase(Base):
 
         self._snaps = snaps
 
+    @override
     def _ensure_os_compatible(self, executor: Executor) -> None:
         """Ensure OS is compatible with Base.
 
         :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.
         """
-        os_release = self._get_os_release(executor=executor)
+        os_release = self.get_os_release(executor=executor)
 
         os_id = os_release.get("ID")
         if os_id != "almalinux":
@@ -142,8 +153,7 @@ class AlmaLinuxBase(Base):
         if version_id != compat_version_id:
             raise BaseCompatibilityError(
                 reason=(
-                    f"Expected OS version {compat_version_id!r},"
-                    f" found {version_id!r}"
+                    f"Expected OS version {compat_version_id!r}, found {version_id!r}"
                 )
             )
 
@@ -166,25 +176,31 @@ class AlmaLinuxBase(Base):
                 details=details_from_called_process_error(error),
             ) from error
 
+    @override
     def _pre_setup_packages(self, executor: Executor) -> None:
         """Configure dnf package manager."""
         self._enable_dnf_extra_repos(executor=executor)
 
+    @override
     def _setup_packages(self, executor: Executor) -> None:
         """Install needed packages using dnf."""
         # update system
-        try:
-            self._execute_run(
-                ["dnf", "update", "-y"],
-                executor=executor,
-                verify_network=True,
-                timeout=self._timeout_unpredictable,
-            )
-        except subprocess.CalledProcessError as error:
-            raise BaseConfigurationError(
-                brief="Failed to update system using dnf.",
-                details=details_from_called_process_error(error),
-            ) from error
+        suppress_upgrade = os.environ.get(
+            "CRAFT_PROVIDERS_EXPERIMENTAL_SUPPRESS_UPGRADE_UNSUPPORTED"
+        )
+        if not suppress_upgrade:
+            try:
+                self._execute_run(
+                    ["dnf", "update", "--refresh", "-y"],
+                    executor=executor,
+                    verify_network=True,
+                    timeout=self._timeout_unpredictable,
+                )
+            except subprocess.CalledProcessError as error:
+                raise BaseConfigurationError(
+                    brief="Failed to update system using dnf.",
+                    details=details_from_called_process_error(error),
+                ) from error
 
         # install required packages and user-defined packages
         if not self._packages:
@@ -203,6 +219,7 @@ class AlmaLinuxBase(Base):
                 details=details_from_called_process_error(error),
             ) from error
 
+    @override
     def _setup_snapd(self, executor: Executor) -> None:
         """Set up snapd using dnf."""
         try:
@@ -218,6 +235,7 @@ class AlmaLinuxBase(Base):
                 details=details_from_called_process_error(error),
             ) from error
 
+    @override
     def _clean_up(self, executor: Executor) -> None:
         """Clean up unused packages and cached package files."""
         self._execute_run(

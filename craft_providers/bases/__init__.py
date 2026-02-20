@@ -17,9 +17,9 @@
 
 """Collection of bases used to configure build environments."""
 
-# Backward compatible, will be removed in 2.0
+from enum import Enum
 import sys
-from typing import Dict, Literal, NamedTuple, Tuple, Type, Union, overload
+from typing import Literal, NamedTuple, overload
 
 from craft_providers.errors import BaseCompatibilityError, BaseConfigurationError
 from craft_providers.base import Base
@@ -27,17 +27,19 @@ from craft_providers.base import Base
 from . import almalinux, centos
 from . import ubuntu
 from . import ubuntu as buildd
+from .checks import ensure_guest_compatible
 from .ubuntu import BuilddBase, BuilddBaseAlias
 
 sys.modules["craft_providers.bases.buildd"] = buildd
 
-BaseAlias = Union[
-    ubuntu.BuilddBaseAlias, almalinux.AlmaLinuxBaseAlias, centos.CentOSBaseAlias
-]
+BaseAlias = (
+    ubuntu.BuilddBaseAlias | almalinux.AlmaLinuxBaseAlias | centos.CentOSBaseAlias
+)
 
 __all__ = [
-    "ubuntu",
     "centos",
+    "ensure_guest_compatible",
+    "ubuntu",
     "BaseAlias",
     "BaseName",
     "BuilddBase",
@@ -54,13 +56,15 @@ class BaseName(NamedTuple):
     version: str
 
 
-BASE_NAME_TO_BASE_ALIAS: Dict[BaseName, BaseAlias] = {
+BASE_NAME_TO_BASE_ALIAS: dict[BaseName, BaseAlias] = {
     BaseName("ubuntu", "16.04"): ubuntu.BuilddBaseAlias.XENIAL,
     BaseName("ubuntu", "18.04"): ubuntu.BuilddBaseAlias.BIONIC,
     BaseName("ubuntu", "20.04"): ubuntu.BuilddBaseAlias.FOCAL,
     BaseName("ubuntu", "22.04"): ubuntu.BuilddBaseAlias.JAMMY,
     BaseName("ubuntu", "24.04"): ubuntu.BuilddBaseAlias.NOBLE,
-    BaseName("ubuntu", "24.10"): ubuntu.BuilddBaseAlias.ORACULAR,
+    BaseName("ubuntu", "25.04"): ubuntu.BuilddBaseAlias.PLUCKY,
+    BaseName("ubuntu", "25.10"): ubuntu.BuilddBaseAlias.QUESTING,
+    BaseName("ubuntu", "26.04"): ubuntu.BuilddBaseAlias.RESOLUTE,
     BaseName("ubuntu", "devel"): ubuntu.BuilddBaseAlias.DEVEL,
     BaseName("centos", "7"): centos.CentOSBaseAlias.SEVEN,
     BaseName("almalinux", "9"): almalinux.AlmaLinuxBaseAlias.NINE,
@@ -69,19 +73,19 @@ BASE_NAME_TO_BASE_ALIAS: Dict[BaseName, BaseAlias] = {
 
 @overload
 def get_base_alias(
-    base_name: Tuple[Literal["ubuntu"], str]
+    base_name: tuple[Literal["ubuntu"], str],
 ) -> ubuntu.BuilddBaseAlias: ...
 @overload
 def get_base_alias(
-    base_name: Tuple[Literal["centos"], str]
+    base_name: tuple[Literal["centos"], str],
 ) -> centos.CentOSBaseAlias: ...
 @overload
 def get_base_alias(
-    base_name: Tuple[Literal["almalinux"], str]
+    base_name: tuple[Literal["almalinux"], str],
 ) -> almalinux.AlmaLinuxBaseAlias: ...
 @overload
 def get_base_alias(base_name: BaseName) -> BaseAlias: ...
-def get_base_alias(base_name):
+def get_base_alias(base_name: tuple[str, str]) -> BaseAlias:
     """Return a Base alias from a base (name, version) tuple."""
     base_name = BaseName(*base_name)
     if base_name.name == "ubuntu" and base_name in BASE_NAME_TO_BASE_ALIAS:
@@ -96,22 +100,21 @@ def get_base_alias(base_name):
 
 
 @overload
-def get_base_from_alias(alias: ubuntu.BuilddBaseAlias) -> Type[ubuntu.BuilddBase]: ...
+def get_base_from_alias(alias: ubuntu.BuilddBaseAlias) -> type[ubuntu.BuilddBase]: ...
 @overload
-def get_base_from_alias(alias: centos.CentOSBaseAlias) -> Type[centos.CentOSBase]: ...
+def get_base_from_alias(alias: centos.CentOSBaseAlias) -> type[centos.CentOSBase]: ...
 @overload
 def get_base_from_alias(
     alias: almalinux.AlmaLinuxBaseAlias,
-) -> Type[almalinux.AlmaLinuxBase]: ...
-def get_base_from_alias(alias: BaseAlias) -> Type[Base]:
+) -> type[almalinux.AlmaLinuxBase]: ...
+def get_base_from_alias(alias: BaseAlias) -> type[Base[Enum]]:
     """Return a Base class from a known base alias."""
-    if isinstance(alias, ubuntu.BuilddBaseAlias):
-        return ubuntu.BuilddBase
-
-    if isinstance(alias, centos.CentOSBaseAlias):
-        return centos.CentOSBase
-
-    if isinstance(alias, almalinux.AlmaLinuxBaseAlias):
-        return almalinux.AlmaLinuxBase
-
-    raise BaseConfigurationError(f"Base not found for alias {alias}")
+    match alias:
+        case ubuntu.BuilddBaseAlias():
+            return ubuntu.BuilddBase
+        case centos.CentOSBaseAlias():
+            return centos.CentOSBase
+        case almalinux.AlmaLinuxBaseAlias():
+            return almalinux.AlmaLinuxBase
+        case _:
+            raise BaseConfigurationError(f"Base not found for alias {alias}")

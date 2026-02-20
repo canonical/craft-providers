@@ -16,7 +16,7 @@
 #
 
 import pytest
-from craft_providers import errors
+import responses
 from craft_providers.lxd import LXD, LXDError
 
 
@@ -60,15 +60,8 @@ def test_init_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to init LXD."):
         LXD().init()
-
-    assert exc_info.value == LXDError(
-        brief="Failed to init LXD.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
 
 
 @pytest.mark.parametrize(
@@ -80,42 +73,57 @@ def test_init_error(fake_process):
         ("4.0", True),
         ("4.1.4", True),
         ("4.10", True),
-        ("5.21.0 LTS", True),
+        ("5.21.0", True),
+        ("6.5", True),
     ],
 )
-def test_is_supported_version(fake_process, version, compatible):
-    fake_process.register_subprocess(
-        [
-            "lxd",
-            "version",
-        ],
-        stdout=version,
-    )
+def test_is_supported_version(mocker, version, compatible):
+    lxd = LXD()
 
-    assert LXD().is_supported_version() == compatible
-    assert len(fake_process.calls) == 1
+    mocker.patch.object(lxd, "version", return_value=version)
+
+    assert lxd.is_supported_version() == compatible
 
 
 @pytest.mark.parametrize("version_data", ["", "invalid"])
-def test_is_supported_version_parse_error(fake_process, version_data):
-    fake_process.register_subprocess(
-        [
-            "lxd",
-            "version",
-        ],
-        stdout=version_data,
+def test_is_supported_version_parse_error_assumes_true(mocker, version_data):
+    lxd = LXD()
+
+    mocker.patch.object(lxd, "version", return_value=version_data)
+
+    assert lxd.is_supported_version()
+
+
+@responses.activate
+def test_version_from_socket(fake_process):  # Error if using subprocess.
+    # Snap socket
+    responses.add(
+        responses.GET,
+        "http+unix://%2Fvar%2Fsnap%2Flxd%2Fcommon%2Flxd%2Funix.socket/1.0",
+        json={
+            "type": "sync",
+            "metadata": {"environment": {"server_version": "test-version"}},
+        },
+        status=200,
+    )
+    # If installed from apt or similar.
+    responses.add(
+        responses.GET,
+        "http+unix://%2Fvar%2Flib%2Flxd%2Funix.socket/1.0",
+        json={
+            "type": "sync",
+            "metadata": {"environment": {"server_version": "test-version"}},
+        },
+        status=200,
     )
 
-    with pytest.raises(LXDError) as exc_info:
-        LXD().is_supported_version()
+    version = LXD().version()
 
-    assert exc_info.value == LXDError(
-        brief="Failed to parse LXD version.",
-        details=f"Version data returned: {version_data!r}",
-    )
+    assert version == "test-version"
 
 
-def test_version(fake_process):
+@responses.activate  # Simply error on any request to the LXD socket.
+def test_version_from_command(fake_process):
     fake_process.register_subprocess(
         [
             "lxd",
@@ -130,6 +138,7 @@ def test_version(fake_process):
     assert version == "test-version"
 
 
+@responses.activate  # Simply error on any request to the LXD socket.
 def test_version_error(fake_process):
     fake_process.register_subprocess(
         [
@@ -139,15 +148,8 @@ def test_version_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to query LXD version."):
         LXD().version()
-
-    assert exc_info.value == LXDError(
-        brief="Failed to query LXD version.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )
 
 
 def test_wait_ready(fake_process):
@@ -190,12 +192,5 @@ def test_wait_ready_error(fake_process):
         returncode=1,
     )
 
-    with pytest.raises(LXDError) as exc_info:
+    with pytest.raises(LXDError, match="Failed to wait for LXD to get ready."):
         LXD().wait_ready()
-
-    assert exc_info.value == LXDError(
-        brief="Failed to wait for LXD to get ready.",
-        details=errors.details_from_called_process_error(
-            exc_info.value.__cause__  # type: ignore
-        ),
-    )

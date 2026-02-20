@@ -17,11 +17,12 @@
 
 import os
 import sys
-from typing import Any, Dict
+from typing import Any, cast
 from unittest import mock
 from unittest.mock import call
 
 import pytest
+import responses
 from craft_providers.errors import ProviderError
 from craft_providers.lxd import (
     LXC,
@@ -106,6 +107,7 @@ def test_install_unsupported_platform(mocker, platform):
     )
 
 
+@responses.activate  # Force fallback to the lxd command.
 def test_install_without_sudo(
     fake_process, mocker, mock_is_user_permitted, mock_os_geteuid
 ):
@@ -145,6 +147,7 @@ def test_install_without_sudo(
     mock_is_user_permitted.assert_called_once()
 
 
+@responses.activate  # Force fallback to the lxd command.
 def test_install_with_sudo(
     fake_process, mocker, mock_is_user_permitted, mock_os_geteuid
 ):
@@ -321,8 +324,8 @@ def test_is_installed(
         def raise_for_status(self) -> None:
             pass
 
-        def json(self) -> Dict[str, Any]:
-            return status
+        def json(self) -> dict[str, Any]:
+            return cast("dict[str, Any]", status)
 
     mock_get = mocker.patch("requests_unixsocket.get", return_value=FakeSnapInfo())
     mocker.patch("pathlib.Path.is_socket", return_value=has_nonsnap_socket)

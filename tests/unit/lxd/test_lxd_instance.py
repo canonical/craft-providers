@@ -26,9 +26,14 @@ import tempfile
 from unittest import mock
 from unittest.mock import call
 
+import pylxd
 import pytest
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, LXDInstance
+from craft_providers.lxd.lxd_instance_status import (
+    LXDInstanceState,
+    ProviderInstanceStatus,
+)
 
 # These names include invalid characters so a lxd-compatible instance_name
 # is generated. This ensures an Instance's `name` and `instance_name` are
@@ -49,6 +54,14 @@ _INVALID_INSTANCE = {
 }
 
 
+pytestmark = [
+    pytest.mark.skipif(
+        sys.platform == "darwin",
+        reason="These tests can't run on MacOS as LXD (and by extension, pylxd) don't work on it.",
+    )
+]
+
+
 @pytest.fixture
 def project_path(tmp_path):
     project_path = tmp_path / "git" / "project"
@@ -60,8 +73,14 @@ def project_path(tmp_path):
 def mock_lxc(project_path):
     with mock.patch("craft_providers.lxd.lxd_instance.LXC", spec=LXC) as lxc:
         lxc.list.return_value = [
-            {"name": _TEST_INSTANCE["instance-name"], "status": "Running"},
-            {"name": _STOPPED_INSTANCE["instance-name"], "status": "Stopped"},
+            {
+                "name": _TEST_INSTANCE["instance-name"],
+                "status": LXDInstanceState.RUNNING.value.title(),
+            },
+            {
+                "name": _STOPPED_INSTANCE["instance-name"],
+                "status": LXDInstanceState.STOPPED.value.title(),
+            },
         ]
         lxc.config_device_show.return_value = {
             "test_mount": {
@@ -103,9 +122,21 @@ def mock_os_unlink():
         yield mock_unlink
 
 
+@pytest.fixture(scope="session")
+def _pylxd_client() -> pylxd.Client:
+    return pylxd.Client()
+
+
 @pytest.fixture
-def instance(mock_lxc):
-    return LXDInstance(name=_TEST_INSTANCE["name"], lxc=mock_lxc)
+def mock_lxd_client(_pylxd_client: pylxd.Client):
+    return mock.Mock(spec=_pylxd_client)
+
+
+@pytest.fixture
+def instance(mock_lxc, mock_lxd_client) -> LXDInstance:
+    return LXDInstance(
+        name=_TEST_INSTANCE["name"], lxc=mock_lxc, client=mock_lxd_client
+    )
 
 
 def test_config_get(mock_lxc, instance):
@@ -443,20 +474,11 @@ def test_execute_run_with_env_unset(mock_lxc, instance):
     ]
 
 
-def test_exists(mock_lxc, instance):
-    assert instance.exists() is True
-    assert mock_lxc.mock_calls == [
-        mock.call.list(project=instance.project, remote=instance.remote)
-    ]
+@pytest.mark.parametrize(("should_exist"), [True, False])
+def test_exists_uses_api(instance: LXDInstance, should_exist: bool) -> None:
+    instance._client.instances.exists.return_value = should_exist  # type: ignore[reportAttributeAccessIssue]
 
-
-def test_exists_false(mock_lxc):
-    instance = LXDInstance(name="does-not-exist", lxc=mock_lxc)
-
-    assert instance.exists() is False
-    assert mock_lxc.mock_calls == [
-        mock.call.list(project=instance.project, remote=instance.remote)
-    ]
+    assert instance.exists() is should_exist
 
 
 def test_get_disk_devices_path_parse_error(mock_lxc, instance):
@@ -596,10 +618,11 @@ def test_launch_all_opts(mock_lxc, instance):
     )
 
     uid = str(os.getuid())
+    gid = str(os.getgid())
     assert mock_lxc.mock_calls == [
         mock.call.info(project=instance.project, remote=instance.remote),
         mock.call.launch(
-            config_keys={"raw.idmap": f"both {uid} 0"},
+            config_keys={"raw.idmap": f"uid {uid} 0\ngid {gid} 0"},
             ephemeral=True,
             instance_name=instance.instance_name,
             image="22.04",
@@ -835,19 +858,105 @@ def test_push_file_no_parent_directory(mock_lxc, instance, tmp_path):
     assert str(exc_info.value) == "Directory not found: '/tmp'"
 
 
-def test_start(mock_lxc, instance):
+def test_start_from_stopped(mock_lxc, instance):
     instance.start()
 
     assert mock_lxc.mock_calls == [
+        mock.call.info(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+        ),
         mock.call.start(
             instance_name=instance.instance_name,
             project=instance.project,
             remote=instance.remote,
-        )
+        ),
+        mock.call.list(
+            project=instance.project,
+            remote=instance.remote,
+        ),
+        mock.call.config_set(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+            key="user.craft_providers.status",
+            value="IN_USE",
+        ),
     ]
 
 
+def test_start_from_running(mock_lxc, instance):
+    mock_lxc.info.return_value = {"Status": LXDInstanceState.RUNNING.value}
+    mock_lxc.config_get.return_value = ProviderInstanceStatus.FINISHED.value
+
+    instance.start()
+
+    assert mock_lxc.mock_calls == [
+        mock.call.info(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+        ),
+        mock.call.config_get(
+            instance_name=instance.instance_name,
+            key="user.craft_providers.status",
+            project=instance.project,
+            remote=instance.remote,
+        ),
+        mock.call.config_set(
+            instance_name=instance.instance_name,
+            key="user.craft_providers.status",
+            value="IN_USE",
+            project=instance.project,
+            remote=instance.remote,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+            command=["shutdown", "-c"],
+            timeout=None,
+            cwd=None,
+            check=False,
+            runner=mock.ANY,
+        ),
+    ]
+
+
+@pytest.mark.usefixtures("instant_sleep")
+@pytest.mark.parametrize("wait_count", list(range(6)))
+def test_start_with_retries(wait_count, mocker, mock_lxc, instance):
+    """Retry while waiting for an instance to start."""
+    mock_is_running = mocker.patch.object(
+        instance,
+        "_get_state",
+        side_effect=[LXDInstanceState.STARTING] * wait_count
+        + [LXDInstanceState.RUNNING],
+    )
+
+    instance.start()
+
+    mock_lxc.start.assert_called_once_with(
+        instance_name=instance.instance_name,
+        project=instance.project,
+        remote=instance.remote,
+    )
+    mock_is_running.assert_has_calls([mock.call()] * (wait_count + 1))
+
+
+@pytest.mark.usefixtures("instant_sleep")
+def test_start_timeout(mocker, mock_lxc, instance):
+    """Timeout if the instance doesn't start."""
+    mocker.patch("craft_providers.lxd.lxd_instance.TIMEOUT_SIMPLE", 0.01)
+    mocker.patch.object(instance, "_get_state", side_effect=LXDInstanceState.STARTING)
+
+    with pytest.raises(LXDError, match="Instance failed to start."):
+        instance.start()
+
+
 def test_restart(mock_lxc, instance):
+    """Restart an instance."""
     instance.restart()
 
     assert mock_lxc.mock_calls == [
@@ -855,11 +964,106 @@ def test_restart(mock_lxc, instance):
             instance_name="test-instance-fa2d407652a1c51f6019",
             project="default",
             remote="local",
-        )
+        ),
+        mock.call.list(
+            project=instance.project,
+            remote=instance.remote,
+        ),
     ]
 
 
-def test_stop(mock_lxc, instance):
+@pytest.mark.usefixtures("instant_sleep")
+@pytest.mark.parametrize("wait_count", list(range(6)))
+def test_restart_with_retries(wait_count, mocker, mock_lxc, instance):
+    """Retry while waiting for an instance to restart."""
+    mock_is_running = mocker.patch.object(
+        instance,
+        "_get_state",
+        side_effect=[LXDInstanceState.STARTING] * wait_count
+        + [LXDInstanceState.RUNNING],
+    )
+
+    instance.restart()
+
+    mock_lxc.restart.assert_called_once_with(
+        instance_name=instance.instance_name,
+        project=instance.project,
+        remote=instance.remote,
+    )
+    mock_is_running.assert_has_calls([mock.call()] * (wait_count + 1))
+
+
+@pytest.mark.usefixtures("instant_sleep")
+def test_restart_timeout(mocker, mock_lxc, instance):
+    """Timeout if the instance doesn't restart."""
+    mocker.patch("craft_providers.lxd.lxd_instance.TIMEOUT_SIMPLE", 0.01)
+    mocker.patch.object(instance, "_get_state", side_effect=LXDInstanceState.STARTING)
+
+    with pytest.raises(LXDError, match="Instance failed to restart."):
+        instance.restart()
+
+
+def test_stop_immediately(mock_lxc, mocker):
+    """Stop an instance."""
+    instance = LXDInstance(name=_STOPPED_INSTANCE["name"], lxc=mock_lxc)
+    mocker.patch.object(instance, "exists", return_value=True)
+
+    instance.stop()
+
+    assert mock_lxc.mock_calls == [
+        mock.call.stop(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+        ),
+        mock.call.list(
+            project=instance.project,
+            remote=instance.remote,
+        ),
+        mock.call.config_set(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+            key="user.craft_providers.status",
+            value=ProviderInstanceStatus.FINISHED.value,
+        ),
+    ]
+
+
+def test_stop_delay(mock_lxc, mocker):
+    """Stop an instance."""
+    instance = LXDInstance(name=_STOPPED_INSTANCE["name"], lxc=mock_lxc)
+    mocker.patch.object(instance, "exists", return_value=True)
+
+    instance.stop(delay_mins=1)
+
+    assert mock_lxc.mock_calls == [
+        mock.call.config_set(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+            key="user.craft_providers.status",
+            value=ProviderInstanceStatus.FINISHED.value,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+            command=["shutdown", "+1", "Shutdown triggered by craft-providers."],
+            runner=mock.ANY,
+            timeout=None,
+            cwd=None,
+            check=True,
+            capture_output=True,
+        ),
+    ]
+
+
+def test_stop_ephemeral(mock_lxc, instance, mocker):
+    """Stop an ephemeral instance."""
+    # ephemeral instances don't exist after stopping
+    mocker.patch.object(instance, "exists", return_value=False)
+
     instance.stop()
 
     assert mock_lxc.mock_calls == [
@@ -869,6 +1073,39 @@ def test_stop(mock_lxc, instance):
             remote=instance.remote,
         )
     ]
+
+
+@pytest.mark.usefixtures("instant_sleep")
+@pytest.mark.parametrize("wait_count", list(range(6)))
+def test_stop_with_retries(wait_count, mocker, mock_lxc, instance):
+    """Retry while waiting for an instance to stop."""
+    mocker.patch.object(instance, "exists", return_value=True)
+    mock_is_running = mocker.patch.object(
+        instance,
+        "_get_state",
+        side_effect=[[LXDInstanceState.STOPPING]] * wait_count
+        + [LXDInstanceState.STOPPED],
+    )
+
+    instance.stop()
+
+    mock_lxc.stop.assert_called_once_with(
+        instance_name=instance.instance_name,
+        project=instance.project,
+        remote=instance.remote,
+    )
+    mock_is_running.assert_has_calls([mock.call()] * (wait_count + 1))
+
+
+@pytest.mark.usefixtures("instant_sleep")
+def test_stop_timeout(mocker, mock_lxc, instance):
+    """Timeout if the instance doesn't stop."""
+    mocker.patch.object(instance, "exists", return_value=True)
+    mocker.patch("craft_providers.lxd.lxd_instance.TIMEOUT_SIMPLE", 0.01)
+    mocker.patch.object(instance, "_get_state", side_effect=[LXDInstanceState.STOPPING])
+
+    with pytest.raises(LXDError, match="Instance failed to stop."):
+        instance.stop()
 
 
 def test_supports_mount(instance):

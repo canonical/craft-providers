@@ -20,6 +20,7 @@ import pathlib
 import re
 import subprocess
 import sys
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -44,7 +45,7 @@ else:
         }
     }
 
-EXAMPLE_INFO = {
+EXAMPLE_INFO: dict[str, Any] = {
     "errors": [],
     "info": {
         "flowing-hawfinch": {
@@ -135,8 +136,8 @@ def test_push_file_io(mock_multipass, instance):
             runner=subprocess.run,
             capture_output=True,
             check=True,
-            text=True,
             timeout=60,
+            text=True,
         ),
         mock.call.exec(
             instance_name="test-instance",
@@ -289,7 +290,6 @@ def test_execute_run(mock_multipass, instance):
             runner=subprocess.run,
             input="foo",
             timeout=None,
-            check=False,
         )
     ]
 
@@ -327,7 +327,6 @@ def test_execute_run_with_cwd(mock_multipass, instance, tmp_path):
             ],
             runner=subprocess.run,
             timeout=None,
-            check=False,
         )
     ]
 
@@ -341,7 +340,6 @@ def test_execute_run_with_env(mock_multipass, instance):
             command=["sudo", "-H", "--", "env", "foo=bar", "test-command", "flags"],
             runner=subprocess.run,
             timeout=None,
-            check=False,
         )
     ]
 
@@ -367,7 +365,6 @@ def test_execute_run_with_env_unset(mock_multipass, instance):
             ],
             runner=subprocess.run,
             timeout=None,
-            check=False,
         )
     ]
 
@@ -579,8 +576,8 @@ def test_push_file(mock_multipass, instance, simple_file):
             instance_name="test-instance",
             command=["sudo", "-H", "--", "test", "-d", "/tmp"],
             runner=subprocess.run,
-            check=False,
             timeout=60,
+            check=False,
         ),
         mock.call.exec(
             instance_name="test-instance",
@@ -588,8 +585,8 @@ def test_push_file(mock_multipass, instance, simple_file):
             runner=subprocess.run,
             capture_output=True,
             check=True,
-            text=True,
             timeout=60,
+            text=True,
         ),
         mock.call.exec(
             instance_name="test-instance",
@@ -652,8 +649,8 @@ def test_push_file_to_directory(mock_multipass, instance, simple_file):
             command=["sudo", "-H", "--", "mktemp"],
             runner=subprocess.run,
             timeout=60,
-            capture_output=True,
             check=True,
+            capture_output=True,
             text=True,
         ),
         mock.call.exec(

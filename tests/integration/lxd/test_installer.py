@@ -20,6 +20,8 @@ import shutil
 import pytest
 from craft_providers import lxd
 
+pytestmark = [pytest.mark.slow]
+
 
 def test_is_initialized(installed_lxd):
     assert lxd.is_initialized(lxc=lxd.LXC(), remote="local") is True

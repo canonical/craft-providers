@@ -17,7 +17,6 @@
 
 import io
 import json
-import os
 import pathlib
 import subprocess
 import sys
@@ -32,6 +31,8 @@ from craft_providers.lxd import project as lxd_project
 from freezegun import freeze_time
 
 from . import conftest
+
+pytestmark = [pytest.mark.slow, pytest.mark.lxd_instance]
 
 
 @pytest.fixture(scope="session")
@@ -48,8 +49,7 @@ def get_base_instance():
             image_remote=image_remote,
             compatibility_tag=compatibility_tag,
         )
-        instance = lxd.LXDInstance(name=base_instance_name, project=project)
-        return instance
+        return lxd.LXDInstance(name=base_instance_name, project=project)
 
     return _base_instance
 
@@ -240,11 +240,12 @@ def test_launch_use_base_instance(
     assert instance.is_running()
 
     # collect the hostname of the instance
-    instance_hostname = (
-        instance.execute_run(["hostname"], check=True, capture_output=True)
-        .stdout.decode()
-        .rstrip("\n")
-    )
+    instance_hostname = instance.execute_run(
+        ["hostname"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.rstrip("\n")
 
     assert instance_hostname == instance.instance_name
 
@@ -544,7 +545,8 @@ def test_launch_map_user_uid_true(base_configuration, instance_name, tmp_path):
         image_name="22.04",
         image_remote="ubuntu",
         map_user_uid=True,
-        uid=os.stat(tmp_path).st_uid,
+        uid=tmp_path.stat().st_uid,
+        gid=tmp_path.stat().st_gid,
     )
 
     try:

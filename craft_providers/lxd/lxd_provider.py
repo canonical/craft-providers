@@ -16,13 +16,17 @@
 
 """LXD Provider class."""
 
+from __future__ import annotations
+
 import contextlib
 import logging
-import pathlib
 from datetime import timedelta
-from typing import Iterator
+from enum import Enum
+from typing import TYPE_CHECKING
 
-from craft_providers import Executor, Provider
+from typing_extensions import override
+
+from craft_providers import Executor, Provider, bases
 from craft_providers.base import Base
 from craft_providers.errors import BaseConfigurationError
 
@@ -32,6 +36,14 @@ from .launcher import launch
 from .lxc import LXC
 from .lxd_instance import LXDInstance
 from .remotes import get_remote_image
+
+if TYPE_CHECKING:
+    import pathlib
+    from collections.abc import Callable, Iterator
+    from enum import Enum
+
+    from craft_providers import Executor
+    from craft_providers.base import Base
 
 logger = logging.getLogger(__name__)
 
@@ -51,12 +63,12 @@ class LXDProvider(Provider):
     def __init__(
         self,
         *,
-        lxc: LXC = LXC(),
+        lxc: LXC | None = None,
         lxd_project: str = "default",
         lxd_remote: str = "local",
         intercept_mknod: bool = True,
     ) -> None:
-        self.lxc = lxc
+        self.lxc = lxc or LXC()
         self.lxd_project = lxd_project
         self.lxd_remote = lxd_remote
         self._intercept_mknod = intercept_mknod
@@ -104,15 +116,19 @@ class LXDProvider(Provider):
             intercept_mknod=self._intercept_mknod,
         )
 
+    @override
     @contextlib.contextmanager
     def launched_environment(
         self,
         *,
         project_name: str,
         project_path: pathlib.Path,
-        base_configuration: Base,
+        base_configuration: Base[Enum],
         instance_name: str,
         allow_unstable: bool = False,
+        shutdown_delay_mins: int | None = None,
+        use_base_instance: bool = True,
+        prepare_instance: Callable[[Executor], None] | None = None,
     ) -> Iterator[Executor]:
         """Configure and launch environment for specified base.
 
@@ -125,6 +141,11 @@ class LXDProvider(Provider):
         :param base_configuration: Base configuration to apply to instance.
         :param instance_name: Name of the instance to launch.
         :param allow_unstable: If true, allow unstable images to be launched.
+        :param use_base_instance: Enable base instances to reduce setup time.
+        :param shutdown_delay_mins: Minutes by which to delay shutdown when exiting
+            the instance.
+        :param prepare_instance: A callback to perform early instance configuration
+            before the base image setup.
 
         :raises LXDError: if instance cannot be configured and launched.
         """
@@ -153,17 +174,27 @@ class LXDProvider(Provider):
                 auto_create_project=True,
                 map_user_uid=True,
                 uid=project_path.stat().st_uid,
-                use_base_instance=True,
+                use_base_instance=use_base_instance,
                 project=self.lxd_project,
                 remote=self.lxd_remote,
                 expiration=expiration,
+                prepare_instance=prepare_instance,
             )
         except BaseConfigurationError as error:
             raise LXDError(str(error)) from error
+
+        # It would be ideal to check if the instance is compatible before creating/launching
+        # it, but unfortunately image_name can be a lot of things, so we have to read the OS
+        # release from the running instance.
+        bases.ensure_guest_compatible(
+            base_configuration,
+            instance,
+            self.lxc.get_server_version(),
+        )
 
         try:
             yield instance
         finally:
             # Ensure to unmount everything and stop instance upon completion.
             instance.unmount_all()
-            instance.stop()
+            instance.stop(delay_mins=shutdown_delay_mins)

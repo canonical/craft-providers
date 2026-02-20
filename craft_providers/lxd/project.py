@@ -16,9 +16,14 @@
 #
 
 """Project helper utilities."""
-import logging
 
-from .lxc import LXC
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .lxc import LXC
 
 logger = logging.getLogger(__name__)
 

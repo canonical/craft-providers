@@ -38,9 +38,7 @@ def test_get_base_from_alias():
 
 
 def test_get_base_from_alias_does_not_exist():
-    with pytest.raises(BaseConfigurationError) as exc_info:
-        get_base_from_alias("ubuntu 8")  # type: ignore
-
-    assert exc_info.value == BaseConfigurationError(
-        brief="Base not found for alias ubuntu 8"
-    )
+    with pytest.raises(
+        BaseConfigurationError, match="Base not found for alias ubuntu 8"
+    ):
+        get_base_from_alias("ubuntu 8")  # type: ignore[reportCallIssue]

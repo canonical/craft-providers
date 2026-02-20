@@ -2,14 +2,17 @@ name: weekly-tests
 on:
   schedule:
     # Every Monday at 00:00 UTC
-    - cron: '0 0 * * 1'
+    - cron: "0 0 * * 1"
+  pull_request:
+    paths:
+      - ".github/workflows/tests-weekly.yaml"
 
   # Allows triggering the workflow manually from the Actions tab
   workflow_dispatch:
     inputs:
       enable_ssh_access:
         type: boolean
-        description: 'Enable ssh access'
+        description: "Enable ssh access"
         required: false
         default: false
 
@@ -18,8 +21,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.11"]
-        os: [macos-13]
+        python: ["3.13"]
+        os: [macos-14-large]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
@@ -28,27 +31,11 @@ jobs:
           brew update
           brew install multipass
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-          cache: 'pip'
-      - name: Configure environment
-        run: |
-          echo "::group::pip install"
-          python -m pip install 'tox>=4.6'
-          echo "::endgroup::"
-          echo "::group::Configure Multipass"
-          while ! multipass version
-          do
-            sleep 1
-          done
-          echo "::endgroup::"
-      - name: Setup Tox environments
-        run: tox run --colored yes -e integration-py${{ matrix.python }} --notest
+      - name: Set up runner
+        uses: canonical/starflow/setup-python-runner@main
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
@@ -56,17 +43,19 @@ jobs:
           limit-access-to-actor: true
       - name: Run integration tests on MacOS
         env:
+          UV_PYTHON: ${{ matrix.python }}
           CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL: 1
           CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL: 1
           PYTEST_ADDOPTS: "--no-header -vv -rN"
         run: |
-          .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies --colored yes -e integration-py${{ matrix.python }}
+          make setup-tests
+          make test-fast
   integration-slow-macos:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.11"]
-        os: [macos-13]
+        python: ["3.13"]
+        os: [macos-14-large]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install Multipass
@@ -74,27 +63,11 @@ jobs:
           brew update
           brew install multipass
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-          cache: 'pip'
-      - name: Configure environment
-        run: |
-          echo "::group::pip install"
-          python -m pip install 'tox>=4.6'
-          echo "::endgroup::"
-          echo "::group::Configure Multipass"
-          while ! multipass version
-          do
-            sleep 1
-          done
-          echo "::endgroup::"
-      - name: Setup Tox environments
-        run: tox run --colored yes -e integration-slow-py${{ matrix.python }} --notest
+      - name: Set up runner
+        uses: canonical/starflow/setup-python-runner@main
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
@@ -102,8 +75,10 @@ jobs:
           limit-access-to-actor: true
       - name: Run integration slow tests on MacOS
         env:
+          UV_PYTHON: ${{ matrix.python }}
           CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL: 1
           CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL: 1
           PYTEST_ADDOPTS: "--no-header -vv -rN"
         run: |
-          .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies --colored yes -e integration-slow-py${{ matrix.python }}
+          make setup-tests
+          make test-slow
