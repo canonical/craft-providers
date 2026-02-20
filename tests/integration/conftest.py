@@ -28,7 +28,6 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Callable, Generator
-from typing import cast
 
 import pytest
 from craft_providers import lxd, multipass
@@ -61,7 +60,7 @@ def snap_exists(snap_name: str) -> bool:
 
 def is_installed_dangerously(snap_name: str) -> bool:
     """Returns true if a snap is installed dangerously."""
-    return cast(str, get_host_snap_info(snap_name)["revision"]).startswith("x")
+    return get_host_snap_info(snap_name).revision.startswith("x")
 
 
 @pytest.fixture
