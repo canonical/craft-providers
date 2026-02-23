@@ -21,11 +21,8 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
-import io
 import logging
-import pathlib
 import re
-import subprocess
 from abc import ABC, abstractmethod
 from os import PathLike
 from typing import (
@@ -40,7 +37,6 @@ from typing import (
 from typing_extensions import Buffer
 
 import craft_providers.util.temp_paths
-from craft_providers.errors import ProviderError
 
 if TYPE_CHECKING:
     import io
@@ -381,8 +377,8 @@ class Executor(ABC):
         self,
         *,
         source: pathlib.PurePath,
-        missing_ok: bool = False,
         pull_file: bool = True,
+        missing_ok: bool = False,
     ) -> Generator[pathlib.Path, None, None]:
         """Edit a file from the environment for modification via context manager.
 
@@ -391,17 +387,16 @@ class Executor(ABC):
         does not exist, a new file will be created.
 
         :param source: Environment file to copy.
-        :param missing_ok: Do not raise an error if the file does not exist in the
-            environment; in this case the target is created as a new file.
+        :param pull_file: If true, pull the file from the environment. If false,
+            edit a new file.
+        :param missing_ok: Create a new file if the file doesn't exist.
 
         :raises FileNotFoundError: If source file or destination's parent
             directory does not exist (and `missing_ok` is False).
         :raises ProviderError: On error copying file content.
         """
-        # Note: This is a convenience function to cache the pro services state in the
-        # environment. However, it may be better to use existing methods to reduce complexity.
         with craft_providers.util.temp_paths.home_temporary_file() as tmp_file:
-            tmp_file.touch()  # ensure the file exists regardless
+            tmp_file.touch()  # ensure the file exists
             if pull_file:
                 try:
                     self.pull_file(source=source, destination=tmp_file)

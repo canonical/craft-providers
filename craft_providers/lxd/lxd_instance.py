@@ -19,16 +19,13 @@
 
 from __future__ import annotations
 
-import io
 import logging
 import os
 import pathlib
 import shutil
 import subprocess
 import tempfile
-import textwrap
 import warnings
-from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, cast
 
 import pylxd  # type: ignore[import-untyped]
@@ -36,7 +33,7 @@ import yaml
 from typing_extensions import override
 
 from craft_providers.const import RETRY_WAIT, TIMEOUT_SIMPLE
-from craft_providers.errors import details_from_called_process_error
+from craft_providers.errors import ProviderError, details_from_called_process_error
 from craft_providers.executor import Executor, get_instance_name
 from craft_providers.lxd.errors import LXDError
 from craft_providers.lxd.lxc import LXC
@@ -48,18 +45,11 @@ from craft_providers.util import env_cmd, retry
 
 if TYPE_CHECKING:
     import io
+    from collections.abc import Iterable
 
 logger = logging.getLogger(__name__)
 
-PRO_SERVICES_YAML = pathlib.Path("/root/pro-services.yaml")
-_FAKE_CLOUD_ID_SCRIPT = textwrap.dedent(
-    """\
-    #!/bin/bash
-    # Since this instance is managed by us, report a fake cloud-id of "lxd" always.
-    echo "lxd"
-    exit 0
-    """
-)
+PRO_SERVICES_YAML = pathlib.PurePosixPath("/root/pro-services.yaml")
 
 
 class LXDInstance(Executor):
@@ -778,7 +768,7 @@ class LXDInstance(Executor):
             remote=self.remote,
         )
 
-    def attach_pro_subscription(self):
+    def attach_pro_subscription(self) -> None:
         """Attach the instance to a Pro subscription."""
         self.lxc.attach_pro_subscription(
             instance_name=self.instance_name,
@@ -802,20 +792,35 @@ class LXDInstance(Executor):
 
     @property
     def pro_services(self) -> set[str] | None:
-        """Get the Pro services enabled on the instance."""
+        """Get the Pro services enabled on the instance.
+
+        :raises ProviderError: If the pro services file in the instance is invalid.
+        """
         # first check if the services are cached in memory
         if hasattr(self, "_pro_services"):
             return self._pro_services
         # then check the instance state
         try:
-            with self.edit_file(
-                source=PRO_SERVICES_YAML,
-            ) as temp_state_path:
-                with temp_state_path.open("r") as fh:
-                    return yaml.safe_load(fh)
-
+            with self.temporarily_pull_file(source=PRO_SERVICES_YAML) as yaml_file:
+                with yaml_file.open("r") as fh:
+                    data = yaml.safe_load(fh)
         except FileNotFoundError:
             return None
+        except yaml.YAMLError as exc:
+            raise ProviderError(
+                brief="Pro services file in instance contains invalid YAML.",
+                details=f"Unexpected data in {PRO_SERVICES_YAML} in instance.",
+            ) from exc
+
+        if isinstance(data, (list, set)) and all(isinstance(x, str) for x in data):  # pyright: ignore[reportUnknownVariableType]
+            return set(data)  # pyright: ignore[reportUnknownArgumentType]
+        if data is None:
+            return None
+
+        raise ProviderError(
+            brief="Pro services file in instance is invalid.",
+            details=f"Unexpected data in {PRO_SERVICES_YAML} in instance.",
+        )
 
     @pro_services.setter
     def pro_services(self, services: set[str]) -> None:
