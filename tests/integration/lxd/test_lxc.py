@@ -35,6 +35,17 @@ def instance(instance_name, session_project):
         yield tmp_instance
 
 
+@pytest.fixture
+def instance_alma(instance_name, session_project):
+    with conftest.tmp_instance(
+        name=instance_name,
+        project=session_project,
+        image="almalinux/9",
+        image_remote="images",
+    ) as tmp_instance:
+        yield tmp_instance
+
+
 @pytest.mark.lxd_instance
 def test_launch_default_config(instance, lxc, session_project):
     """Verify default config values when launching."""
@@ -287,6 +298,7 @@ def test_info(instance, lxc, session_project):
     assert data["Name"] == instance
 
 
+@pytest.mark.lxd_instance
 def test_is_pro_enabled_ubuntu_success(instance, lxc, session_project):
     """Test the scenario where Pro client is installed."""
     result = lxc.is_pro_enabled(
@@ -298,6 +310,7 @@ def test_is_pro_enabled_ubuntu_success(instance, lxc, session_project):
     assert result is False
 
 
+@pytest.mark.lxd_instance
 def test_is_pro_enabled_alma_failure(instance_alma, lxc, session_project):
     """Test the scenario where Pro client is not installed."""
     with pytest.raises(LXDError) as raised:
@@ -311,6 +324,7 @@ def test_is_pro_enabled_alma_failure(instance_alma, lxc, session_project):
     )
 
 
+@pytest.mark.lxd_instance
 def test_attach_pro_subscription_success(instance, lxc, session_project):
     """Test the attachment scenario with a fake Pro token."""
     with pytest.raises(LXDError) as raised:
@@ -324,6 +338,7 @@ def test_attach_pro_subscription_success(instance, lxc, session_project):
     )
 
 
+@pytest.mark.lxd_instance
 def test_attach_pro_subscription_failure(instance_alma, lxc, session_project):
     """Test the attachment scenario with a non Ubuntu instance."""
     with pytest.raises(LXDError) as raised:
@@ -337,6 +352,7 @@ def test_attach_pro_subscription_failure(instance_alma, lxc, session_project):
     )
 
 
+@pytest.mark.lxd_instance
 def test_enable_pro_service_success(instance, lxc, session_project):
     """Test the scenario to enable a Pro service."""
     with pytest.raises(LXDError) as raised:
@@ -351,6 +367,7 @@ def test_enable_pro_service_success(instance, lxc, session_project):
     )
 
 
+@pytest.mark.lxd_instance
 def test_enable_pro_service_failure(instance_alma, lxc, session_project):
     """Test the scenario to enable a Pro service."""
     with pytest.raises(LXDError) as raised:
@@ -361,10 +378,11 @@ def test_enable_pro_service_failure(instance_alma, lxc, session_project):
         )
 
     assert raised.value.brief == (
-        f"Failed to query enabled pro services on {instance_alma!r}."
+        f"Failed to query enabled Pro services on {instance_alma!r}."
     )
 
 
+@pytest.mark.lxd_instance
 def test_install_pro_client(instance, lxc, session_project):
     """Test the scenario of installing the Pro Client."""
     lxc.install_pro_client(
