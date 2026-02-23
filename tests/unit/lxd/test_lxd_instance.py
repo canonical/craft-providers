@@ -28,6 +28,7 @@ from unittest.mock import call
 
 import pylxd
 import pytest
+import yaml
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, LXDInstance
 from craft_providers.lxd.lxd_instance_status import (
@@ -1255,3 +1256,138 @@ def test_install_pro_client(mock_lxc, instance):
             remote=instance.remote,
         )
     ]
+
+
+def test_attach_pro_subscription(mock_lxc, instance):
+    instance.attach_pro_subscription()
+
+    assert mock_lxc.mock_calls == [
+        mock.call.attach_pro_subscription(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+        )
+    ]
+
+
+def test_pro_services_getter_cached(mock_lxc, instance):
+    """Get cached Pro services."""
+    instance._pro_services = {"esm-apps", "esm-infra"}
+
+    result = instance.pro_services
+
+    assert result == {"esm-apps", "esm-infra"}
+    # No lxc calls are made when using cached value
+    assert mock_lxc.mock_calls == []
+
+
+def test_pro_services_getter(mock_lxc, instance, tmp_path):
+    """Get Pro services from the instance."""
+    yaml_file = tmp_path / "pro-services.yaml"
+    with yaml_file.open("w") as fh:
+        yaml.safe_dump({"esm-apps", "esm-infra"}, fh)
+
+    with mock.patch.object(instance, "temporarily_pull_file") as mock_pull:
+        mock_pull.return_value.__enter__.return_value = yaml_file
+        # first call pulls the file, the second uses the cache self._pro_services
+        result1 = instance.pro_services
+        result2 = instance.pro_services
+
+    assert result1 == result2 == {"esm-apps", "esm-infra"}
+    mock_pull.assert_called_once_with(source=pathlib.Path("/root/pro-services.yaml"))
+
+
+def test_pro_services_getter_file_not_found(mock_lxc, instance):
+    """Return None if Pro services file doesn't exist."""
+    with mock.patch.object(instance, "temporarily_pull_file") as mock_pull:
+        mock_pull.return_value.__enter__.side_effect = FileNotFoundError()
+
+        result = instance.pro_services
+
+    assert result is None
+
+
+def test_pro_services_getter_empty_file(mock_lxc, instance, tmp_path):
+    """Return None if Pro services file is empty."""
+    yaml_file = tmp_path / "pro-services.yaml"
+    with yaml_file.open("w") as fh:
+        yaml.safe_dump(None, fh)
+
+    with mock.patch.object(instance, "temporarily_pull_file") as mock_pull:
+        mock_pull.return_value.__enter__.return_value = yaml_file
+
+        result = instance.pro_services
+
+    assert result is None
+
+
+def test_pro_services_getter_invalid_yaml(mock_lxc, instance, tmp_path):
+    """Error if Pro services file contains invalid YAML syntax."""
+    yaml_file = tmp_path / "pro-services.yaml"
+    with yaml_file.open("w") as fh:
+        fh.write("invalid: yaml: syntax: [unclosed")
+
+    with mock.patch.object(instance, "temporarily_pull_file") as mock_pull:
+        mock_pull.return_value.__enter__.return_value = yaml_file
+
+        with pytest.raises(errors.ProviderError) as exc_info:
+            _ = instance.pro_services
+
+    assert (
+        exc_info.value.brief == "Pro services file in instance contains invalid YAML."
+    )
+    assert (
+        exc_info.value.details
+        == "Unexpected data in /root/pro-services.yaml in instance."
+    )
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.param({"key": "value"}, id="not-a-list"),
+        pytest.param([1, 2, True], id="not-a-list-of-strings"),
+    ],
+)
+def test_pro_services_getter_invalid_data(data, mock_lxc, instance, tmp_path):
+    """Error if Pro services file is invalid."""
+    yaml_file = tmp_path / "pro-services.yaml"
+    with yaml_file.open("w") as fh:
+        yaml.safe_dump(data, fh)
+
+    with mock.patch.object(instance, "temporarily_pull_file") as mock_pull:
+        mock_pull.return_value.__enter__.return_value = yaml_file
+
+        with pytest.raises(errors.ProviderError) as exc_info:
+            _ = instance.pro_services
+
+    assert exc_info.value.brief == "Pro services file in instance is invalid."
+    assert (
+        exc_info.value.details
+        == "Unexpected data in /root/pro-services.yaml in instance."
+    )
+
+
+def test_pro_services_setter(mock_lxc, instance, tmp_path):
+    """Test setting Pro services."""
+    services = {"esm-apps", "esm-infra"}
+    yaml_file = tmp_path / "pro-services.yaml"
+    yaml_file.touch()
+
+    def mock_edit_file(source, pull_file):
+        class MockContext:
+            def __enter__(self):
+                return yaml_file
+
+            def __exit__(self, *args):
+                pass
+
+        return MockContext()
+
+    with mock.patch.object(instance, "edit_file", side_effect=mock_edit_file):
+        instance.pro_services = services
+
+    # check it was cached in memory
+    assert instance._pro_services == services
+    # verify content
+    assert yaml.safe_load(yaml_file.read_text()) == services

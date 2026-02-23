@@ -4,6 +4,14 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+(unreleased)
+------------
+
+New features:
+
+- Add Ubuntu Pro support for LXD instances.
+- Add ``edit_file`` context manager to ``Executor`` for editing files in instances.
+
 3.3.0 (2026-02-09)
 ------------------
 
