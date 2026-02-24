@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+from typing import cast
 from datetime import timedelta
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -133,11 +134,11 @@ class LXDProvider(Provider):
     @override
     def delete_instances(self, instances: Collection[Executor], *, force: bool = False) -> None:
         for inst in instances:
-            inst = cast(LXDInstance, inst)
+            lxd_inst = cast(LXDInstance, inst)
             if force:
                 # ensure stopped or force delete if available
-                inst.stop()  # only if required
-            inst.delete()
+                lxd_inst.stop()  # only if required
+        lxd_inst.delete()
 
 
     def create_environment(self, *, instance_name: str) -> Executor:

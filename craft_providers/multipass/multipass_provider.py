@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import contextlib
+from typing import cast
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -207,25 +209,25 @@ class MultipassProvider(Provider):
 
     @override
     def delete_instances(
-        self,
-        instances: Collection[Executor],
-        *,
-        force: bool = False,
+    self,
+    instances: Collection[Executor],
+    *,
+    force: bool = False,
     ) -> None:
-        """Delete the specified Multipass instances."""
-        for inst in instances:
-            mp_inst = cast(MultipassInstance, inst)
+        """Delete the specified Multipass instances.
 
-            # Assuming MultipassInstance has .name and provider has a client with delete().
-            # Adjust these calls to match your multipass client wrapper.
-            if force:
-                try:
-                    self.multipass.stop(mp_inst.name)  # type: ignore[attr-defined]
-                except Exception:
-                    pass
+        :param instances: Instances to delete.
+        :param force: If True, attempt deletion even if instance is running.
+        """
+    for inst in instances:
+        mp_inst = cast(MultipassInstance, inst)
 
-            self.multipass.delete(mp_inst.name, purge=True)  # type: ignore[attr-defined]
+        if force:
+            with contextlib.suppress(Exception):
+                self.multipass.stop(mp_inst.name)  # type: ignore[attr-defined]
 
+        self.multipass.delete(mp_inst.name, purge=True)  # type: ignore[attr-defined] 
+    
     def create_environment(self, *, instance_name: str) -> Executor:
         """Create a bare environment for specified base.
 
