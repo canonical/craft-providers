@@ -21,16 +21,24 @@ from __future__ import annotations
 
 import contextlib
 import enum
+import json
 import logging
 import os
 import pathlib
 import shlex
 import subprocess
+import tempfile
 import threading
 import time
 from collections import deque
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    cast,
+    overload,
+)
 
 import yaml
 
@@ -44,7 +52,7 @@ from .errors import LXDError
 
 if TYPE_CHECKING:
     import builtins
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Iterable, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -1327,6 +1335,386 @@ class LXC:
             time.sleep(3)
 
         raise LXDError(brief="Timed out waiting for instance to be ready.")
+
+    def is_pro_enabled(
+        self,
+        *,
+        instance_name: str,
+        project: str = "default",
+        remote: str = "local",
+    ) -> bool:
+        """Check whether Pro is enabled on the instance.
+
+        :param instance_name: Name of instance.
+
+        :returns: True if instance is attached.
+        """
+        command = [
+            "exec",
+            f"{remote}:{instance_name}",
+            "--",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ]
+
+        try:
+            proc = self._run_lxc(
+                command, capture_output=True, check=False, project=project
+            )
+            if proc.returncode == 0:
+                data = json.loads(proc.stdout)
+                if data.get("result") == "success":
+                    if data.get("data", {}).get("attributes", {}).get("is_attached"):
+                        logger.debug("Managed instance is Pro enabled.")
+                        return True
+                    logger.debug("Managed instance is not Pro enabled.")
+                    return False
+
+                raise LXDError(
+                    brief=f"Failed to get a successful response from `pro` command on {instance_name!r}.",
+                )
+
+            raise LXDError(
+                brief=f"Ubuntu Pro Client is not installed on {instance_name!r}."
+            )
+        except json.JSONDecodeError as error:
+            raise LXDError(
+                brief=f"Failed to parse JSON response of `pro` command on {instance_name!r}.",
+            ) from error
+
+    def attach_pro_subscription(
+        self,
+        *,
+        instance_name: str,
+        project: str = "default",
+        remote: str = "local",
+    ) -> None:
+        """Attach the instance to a managed subscription.
+
+        :param instance_name: Name of instance to attach.
+        :param project: Name of LXD project.
+        :param remote: Name of LXD remote.
+
+        :raises LXDError: on unexpected error.
+        """
+        self._create_fake_cloud_id(
+            instance_name=instance_name, project=project, remote=remote
+        )
+        try:
+            self._auto_attach_pro(
+                instance_name=instance_name, project=project, remote=remote
+            )
+        finally:
+            self._remove_fake_cloud_id(
+                instance_name=instance_name, project=project, remote=remote
+            )
+
+    def enable_pro_service(
+        self,
+        *,
+        instance_name: str,
+        services: Iterable[str],
+        project: str = "default",
+        remote: str = "local",
+    ) -> None:
+        """Enable Pro services on the instance.
+
+        All other services will be disabled.
+
+        :param instance_name: Name of instance.
+        :param services: The services to enable.
+        :param project: Name of LXD project.
+        :param remote: Name of LXD remote.
+
+        :raises LXDError: on unexpected error.
+        """
+        enabled_services = self._get_enabled_pro_services(
+            instance_name=instance_name, project=project, remote=remote
+        )
+
+        requested_services = set(services)
+        services_to_enable = requested_services - enabled_services
+        services_to_disable = enabled_services - requested_services
+
+        for service in sorted(services_to_enable):
+            logger.debug("Enabling Pro service '%s'", service)
+            self._switch_service(
+                service=service,
+                enable=True,
+                instance_name=instance_name,
+                project=project,
+                remote=remote,
+            )
+        for service in sorted(services_to_disable):
+            logger.debug("Disabling Pro service '%s'", service)
+            self._switch_service(
+                service=service,
+                enable=False,
+                instance_name=instance_name,
+                project=project,
+                remote=remote,
+            )
+
+    def _switch_service(
+        self,
+        *,
+        service: str,
+        enable: bool,
+        instance_name: str,
+        project: str = "default",
+        remote: str = "local",
+    ) -> None:
+        endpoint = "u.pro.services.enable.v1" if enable else "u.pro.services.disable.v1"
+        try:
+            self._call_pro_api(
+                endpoint=endpoint,
+                data={"service": service},
+                instance_name=instance_name,
+                project=project,
+                remote=remote,
+            )
+        except subprocess.CalledProcessError as error:
+            action = "enable" if enable else "disable"
+            raise LXDError(
+                brief=f"Failed to {action} Pro service {service!r} on instance {instance_name!r}.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
+    def is_pro_installed(
+        self,
+        *,
+        instance_name: str,
+        project: str = "default",
+        remote: str = "local",
+    ) -> bool:
+        """Check whether Ubuntu Pro Client is installed in the instance.
+
+        :param instance_name: Name of instance.
+        :param project: Name of LXD project.
+        :param remote: Name of LXD remote.
+
+        :raises LXDError: on unexpected error.
+        """
+        command = [
+            "exec",
+            f"{remote}:{instance_name}",
+            "--",
+            "pro",
+            "version",
+        ]
+        try:
+            self._run_lxc(
+                command,
+                capture_output=True,
+                project=project,
+            )
+
+        except subprocess.CalledProcessError:
+            logger.debug(f"Ubuntu Pro Client is not installed on {instance_name!r}.")
+            return False
+        else:
+            logger.debug("Ubuntu Pro Client is installed in managed instance.")
+            return True
+
+    def install_pro_client(
+        self,
+        *,
+        instance_name: str,
+        project: str = "default",
+        remote: str = "local",
+    ) -> None:
+        """Install Ubuntu Pro Client in the instance.
+
+        :param instance_name: Name of instance.
+        :param project: Name of LXD project.
+        :param remote: Name of LXD remote.
+
+        :raises LXDError: on unexpected error.
+        """
+        command = [
+            "exec",
+            f"{remote}:{instance_name}",
+            "--",
+            "apt",
+            "install",
+            "-y",
+            "ubuntu-advantage-tools",
+        ]
+        try:
+            self._run_lxc(
+                command,
+                capture_output=True,
+                project=project,
+            )
+
+            # older Ubuntu releases may have a version of ubuntu-advantage-tools that doesn't have the 'pro' binary
+            # see https://discourse.ubuntu.com/t/ubuntu-pro-client/31027
+            if not self.is_pro_installed(
+                instance_name=instance_name,
+                project=project,
+                remote=remote,
+            ):
+                command = [
+                    "exec",
+                    f"{remote}:{instance_name}",
+                    "--",
+                    "apt",
+                    "install",
+                    "-y",
+                    "ubuntu-advantage-tools=27.11.2~$(lsb_release -rs).1",
+                ]
+                self._run_lxc(
+                    command,
+                    capture_output=True,
+                    project=project,
+                )
+
+            logger.debug(
+                "Ubuntu Pro Client successfully installed in managed instance."
+            )
+        except subprocess.CalledProcessError as error:
+            raise LXDError(
+                brief=f"Failed to install Ubuntu Pro Client in instance {instance_name!r}.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
+    def _auto_attach_pro(
+        self, *, instance_name: str, project: str, remote: str
+    ) -> None:
+        command = [
+            "exec",
+            f"{remote}:{instance_name}",
+            "--",
+            "pro",
+            "auto-attach",
+        ]
+
+        proc = self._run_lxc(
+            command,
+            capture_output=True,
+            check=False,
+            project=project,
+        )
+
+        if proc.returncode == 0:
+            logger.debug(
+                "Managed instance successfully attached to a Pro subscription."
+            )
+        elif proc.returncode == 2:  # noqa: PLR2004 (magic-value-comparison)
+            logger.debug(
+                f"Instance {instance_name!r} is already attached to a Pro subscription."
+            )
+        else:
+            logger.debug("Failed to attach Pro subscription: %s", proc.stdout)
+            raise LXDError(
+                brief=f"Failed to attach {instance_name!r} to a Pro subscription."
+            )
+
+    def _create_fake_cloud_id(
+        self, *, instance_name: str, project: str, remote: str
+    ) -> None:
+        """Create a fake "cloud-id" executable in the instance.
+
+        This is needed for the Ubuntu Pro Client to auto-attach properly in non-cloud-init
+        instances.
+        """
+        with tempfile.NamedTemporaryFile() as temp:
+            temp.write(b"#!/bin/bash\necho 'lxd'\n")
+            temp.flush()
+            self.file_push(
+                instance_name=instance_name,
+                source=pathlib.Path(temp.name),
+                destination=pathlib.PurePath("/usr/local/bin/cloud-id"),
+                mode="0775",
+                project=project,
+                remote=remote,
+            )
+
+    def _remove_fake_cloud_id(
+        self, *, instance_name: str, project: str, remote: str
+    ) -> None:
+        """Clean up the fake "cloud-id" binary created by _create_fake_cloud_id()."""
+        command = [
+            "exec",
+            f"{remote}:{instance_name}",
+            "--",
+            "rm",
+            "-f",
+            "/usr/local/bin/cloud-id",
+        ]
+        self._run_lxc(
+            command,
+            capture_output=True,
+            project=project,
+        )
+
+    def _get_enabled_pro_services(
+        self, *, instance_name: str, project: str, remote: str
+    ) -> set[str]:
+        command = [
+            "exec",
+            f"{remote}:{instance_name}",
+            "--",
+            "pro",
+            "api",
+            "u.pro.status.enabled_services.v1",
+        ]
+        try:
+            proc = self._run_lxc(
+                command,
+                capture_output=True,
+                check=True,
+                project=project,
+            )
+        except subprocess.CalledProcessError as error:
+            raise LXDError(
+                brief=f"Failed to query enabled Pro services on {instance_name!r}.",
+                details=errors.details_from_called_process_error(error),
+            ) from error
+
+        try:
+            data = json.loads(proc.stdout)
+        except json.JSONDecodeError as error:
+            logger.debug("Invalid response from `pro` command: %s", proc.stdout)
+            raise LXDError(
+                brief=f"Failed to query enabled Pro services on {instance_name!r}.",
+            ) from error
+
+        if data.get("result") == "success":
+            enabled_services = data["data"]["attributes"]["enabled_services"]
+            return {service["name"] for service in enabled_services}
+
+        logger.debug("Invalid response from `pro` command: %s", data)
+        raise LXDError(
+            brief=f"Failed to query enabled Pro services on {instance_name!r}.",
+        )
+
+    def _call_pro_api(
+        self,
+        *,
+        endpoint: str,
+        instance_name: str,
+        data: None | dict[Any, Any] = None,
+        project: str = "default",
+        remote: str = "local",
+    ) -> str:
+        command = ["exec", f"{remote}:{instance_name}", "--", "pro", "api", endpoint]
+
+        if data:
+            command += [
+                "--data",
+                json.dumps(data),
+            ]
+
+        proc = self._run_lxc(
+            command,
+            capture_output=True,
+            check=True,
+            project=project,
+        )
+
+        return proc.stdout.decode()
 
     def get_server_version(self, remote: str = "local") -> str:
         """Get the version of the lxd server.
