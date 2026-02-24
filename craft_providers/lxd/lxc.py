@@ -31,7 +31,6 @@ import tempfile
 import threading
 import time
 from collections import deque
-from collections.abc import Callable, Iterable
 from datetime import datetime, timezone
 from typing import (
     TYPE_CHECKING,
@@ -53,7 +52,7 @@ from .errors import LXDError
 
 if TYPE_CHECKING:
     import builtins
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Iterable, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -1353,6 +1352,7 @@ class LXC:
         command = [
             "exec",
             f"{remote}:{instance_name}",
+            "--",
             "pro",
             "api",
             "u.pro.status.is_attached.v1",
@@ -1381,11 +1381,6 @@ class LXC:
         except json.JSONDecodeError as error:
             raise LXDError(
                 brief=f"Failed to parse JSON response of `pro` command on {instance_name!r}.",
-            ) from error
-        except subprocess.CalledProcessError as error:
-            raise LXDError(
-                brief=f"Failed to run `pro` command on {instance_name!r}.",
-                details=errors.details_from_called_process_error(error),
             ) from error
 
     def attach_pro_subscription(
@@ -1423,10 +1418,12 @@ class LXC:
         project: str = "default",
         remote: str = "local",
     ) -> None:
-        """Enable a Pro service on the instance.
+        """Enable Pro services on the instance.
+
+        All other services will be disabled.
 
         :param instance_name: Name of instance.
-        :param services: Name of services to enable.
+        :param services: The services to enable.
         :param project: Name of LXD project.
         :param remote: Name of LXD remote.
 
@@ -1440,7 +1437,7 @@ class LXC:
         services_to_enable = requested_services - enabled_services
         services_to_disable = enabled_services - requested_services
 
-        for service in services_to_enable:
+        for service in sorted(services_to_enable):
             logger.debug("Enabling Pro service '%s'", service)
             self._switch_service(
                 service=service,
@@ -1449,7 +1446,7 @@ class LXC:
                 project=project,
                 remote=remote,
             )
-        for service in services_to_disable:
+        for service in sorted(services_to_disable):
             logger.debug("Disabling Pro service '%s'", service)
             self._switch_service(
                 service=service,
@@ -1502,6 +1499,7 @@ class LXC:
         command = [
             "exec",
             f"{remote}:{instance_name}",
+            "--",
             "pro",
             "version",
         ]
@@ -1550,6 +1548,8 @@ class LXC:
                 project=project,
             )
 
+            # older Ubuntu releases may have a version of ubuntu-advantage-tools that doesn't have the 'pro' binary
+            # see https://discourse.ubuntu.com/t/ubuntu-pro-client/31027
             if not self.is_pro_installed(
                 instance_name=instance_name,
                 project=project,
@@ -1601,9 +1601,9 @@ class LXC:
             logger.debug(
                 "Managed instance successfully attached to a Pro subscription."
             )
-        elif proc.returncode == 2:
+        elif proc.returncode == 2:  # noqa: PLR2004 (magic-value-comparison)
             logger.debug(
-                "Instance {instance_name!r} is already attached to a Pro subscription."
+                f"Instance {instance_name!r} is already attached to a Pro subscription."
             )
         else:
             logger.debug("Failed to attach Pro subscription: %s", proc.stdout)
@@ -1621,6 +1621,7 @@ class LXC:
         """
         with tempfile.NamedTemporaryFile() as temp:
             temp.write(b"#!/bin/bash\necho 'lxd'\n")
+            temp.flush()
             self.file_push(
                 instance_name=instance_name,
                 source=pathlib.Path(temp.name),
@@ -1633,7 +1634,7 @@ class LXC:
     def _remove_fake_cloud_id(
         self, *, instance_name: str, project: str, remote: str
     ) -> None:
-        """Clean up the fake "cloud-id" binary create by _create_fake_cloud_id()."""
+        """Clean up the fake "cloud-id" binary created by _create_fake_cloud_id()."""
         command = [
             "exec",
             f"{remote}:{instance_name}",
@@ -1668,11 +1669,18 @@ class LXC:
             )
         except subprocess.CalledProcessError as error:
             raise LXDError(
-                brief=f"Failed to query enabled pro services on {instance_name!r}.",
+                brief=f"Failed to query enabled Pro services on {instance_name!r}.",
                 details=errors.details_from_called_process_error(error),
-            )
+            ) from error
 
-        data = json.loads(proc.stdout)
+        try:
+            data = json.loads(proc.stdout)
+        except json.JSONDecodeError as error:
+            logger.debug("Invalid response from `pro` command: %s", proc.stdout)
+            raise LXDError(
+                brief=f"Failed to query enabled Pro services on {instance_name!r}.",
+            ) from error
+
         if data.get("result") == "success":
             enabled_services = data["data"]["attributes"]["enabled_services"]
             return {service["name"] for service in enabled_services}
@@ -1706,7 +1714,7 @@ class LXC:
             project=project,
         )
 
-        return proc.stdout
+        return proc.stdout.decode()
 
     def get_server_version(self, remote: str = "local") -> str:
         """Get the version of the lxd server.
