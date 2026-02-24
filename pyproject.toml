@@ -57,19 +57,24 @@ docs = [
     "canonical-sphinx~=0.5.1",
     "sphinxext-rediraffe>=0.2.7",
 ]
-tics = ["flake8", "pylint"]
+tics = [
+    "flake8>=6.0",
+    "pylint>=3.0",
+]
 
 [tool.uv]
 constraint-dependencies = [
     # Basic constraints to allow --resolution=lowest
     "cffi>=1.15",
     "iniconfig>=1.1.0",
+    "html5lib>=1.1",
     "httplib2>=0.20.0",
     "libnacl>=2.0",
     "lxml>=5.0",
     "markdown>=3.0",
     "markupsafe>=2.0",
     "oauthlib>=3.0.0",
+    "pluggy>=1.6",
     "protobuf>=5.0",
     "pynacl>=1.5",
     "pyparsing>=3.0.0",

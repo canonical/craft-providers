@@ -10,6 +10,7 @@ resolution-markers = [
 [manifest]
 constraints = [
     { name = "cffi", specifier = ">=1.15" },
+    { name = "html5lib", specifier = ">=1.1" },
     { name = "httplib2", specifier = ">=0.20.0" },
     { name = "iniconfig", specifier = ">=1.1.0" },
     { name = "libnacl", specifier = ">=2.0" },
@@ -17,6 +18,7 @@ constraints = [
     { name = "markdown", specifier = ">=3.0" },
     { name = "markupsafe", specifier = ">=2.0" },
     { name = "oauthlib", specifier = ">=3.0.0" },
+    { name = "pluggy", specifier = ">=1.6" },
     { name = "protobuf", specifier = ">=5.0" },
     { name = "pynacl", specifier = ">=1.5" },
     { name = "pyparsing", specifier = ">=3.0.0" },
@@ -521,8 +523,8 @@ docs = [
 ]
 lint = [{ name = "codespell", extras = ["toml"], specifier = "~=2.4.1" }]
 tics = [
-    { name = "flake8" },
-    { name = "pylint" },
+    { name = "flake8", specifier = ">=6.0" },
+    { name = "pylint", specifier = ">=3.0" },
 ]
 types = [{ name = "mypy", extras = ["reports"], specifier = "~=1.15" }]
 
