@@ -67,7 +67,6 @@ constraint-dependencies = [
     # Basic constraints to allow --resolution=lowest
     "cffi>=1.15",
     "iniconfig>=1.1.0",
-    "html5lib>=1.1",
     "httplib2>=0.20.0",
     "libnacl>=2.0",
     "lxml>=5.0",

@@ -10,7 +10,6 @@ resolution-markers = [
 [manifest]
 constraints = [
     { name = "cffi", specifier = ">=1.15" },
-    { name = "html5lib", specifier = ">=1.1" },
     { name = "httplib2", specifier = ">=0.20.0" },
     { name = "iniconfig", specifier = ">=1.1.0" },
     { name = "libnacl", specifier = ">=2.0" },
