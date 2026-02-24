@@ -61,6 +61,13 @@ class Provider(ABC):
     @abstractmethod
     def install_recommendation(self) -> str:
         """Recommended way to install the provider."""
+        
+    @abstractmethod
+    def delete_instances(self, instances: Collection[Executor], *, force: bool = False,) -> None:
+        """Delete the specified instances.
+            :param instances: Instances to delete.
+            :param force: If True, attempt deletion even if instance is running.
+        """
 
     def clean_project_environments(self, *, instance_name: str) -> None:
         """Clean the provider environment.
