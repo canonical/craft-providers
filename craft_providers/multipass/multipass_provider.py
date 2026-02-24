@@ -205,6 +205,27 @@ class MultipassProvider(Provider):
 
         return instances
 
+    @override
+    def delete_instances(
+        self,
+        instances: Collection[Executor],
+        *,
+        force: bool = False,
+    ) -> None:
+        """Delete the specified Multipass instances."""
+        for inst in instances:
+            mp_inst = cast(MultipassInstance, inst)
+
+            # Assuming MultipassInstance has .name and provider has a client with delete().
+            # Adjust these calls to match your multipass client wrapper.
+            if force:
+                try:
+                    self.multipass.stop(mp_inst.name)  # type: ignore[attr-defined]
+                except Exception:
+                    pass
+
+            self.multipass.delete(mp_inst.name, purge=True)  # type: ignore[attr-defined]
+
     def create_environment(self, *, instance_name: str) -> Executor:
         """Create a bare environment for specified base.
 
