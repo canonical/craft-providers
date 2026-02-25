@@ -15,6 +15,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 import pathlib
+import re
 import subprocess
 from textwrap import dedent
 from unittest.mock import call
@@ -29,6 +30,22 @@ from freezegun import freeze_time
 @pytest.fixture
 def mock_getpid(mocker):
     return mocker.patch("os.getpid", return_value=123)
+
+
+@pytest.fixture
+def mock_pro_config_handling(mocker, fake_process):
+    """Mock Pro client configuration file handling."""
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "file",
+            fake_process.any(),
+        ],
+        stdout="",
+        occurrences=2,
+    )
 
 
 def test_lxc_run_default(mocker, tmp_path):
@@ -2496,3 +2513,641 @@ def test_yaml_loader_invalid_timestamp():
 
     assert "last_used_at" in obj
     assert isinstance(obj["last_used_at"], str)
+
+
+def test_is_pro_enabled_success_true(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ],
+        stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"contract_remaining_days": 2912917, "contract_status": "active", "is_attached": true, "is_attached_and_contract_valid": true}, "meta": {"environment_vars": []}, "type": "IsAttached"}, "errors": [], "result": "success", "version": "32.3.1~24.04", "warnings": []}""",
+    )
+
+    assert (
+        LXC().is_pro_enabled(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+        is True
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_pro_enabled_success_false(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ],
+        stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"contract_remaining_days": 2912917, "contract_status": "active", "is_attached": false, "is_attached_and_contract_valid": false}, "meta": {"environment_vars": []}, "type": "IsAttached"}, "errors": [], "result": "success", "version": "32.3.1~24.04", "warnings": []}""",
+    )
+
+    assert (
+        LXC().is_pro_enabled(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+        is False
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_pro_enabled_failed(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ],
+        stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"contract_remaining_days": 2912917, "contract_status": "active", "is_attached": true, "is_attached_and_contract_valid": true}, "meta": {"environment_vars": []}, "type": "IsAttached"}, "errors": [], "result": "failure", "version": "32.3.1~24.04", "warnings": []}""",
+        returncode=0,
+    )
+    expected = re.escape(
+        "Failed to get a successful response from `pro` command on 'test-instance'."
+    )
+
+    with pytest.raises(LXDError, match=expected):
+        LXC().is_pro_enabled(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_pro_enabled_json_error(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ],
+        stdout=b"random",
+    )
+    expected = re.escape(
+        "Failed to parse JSON response of `pro` command on 'test-instance'."
+    )
+
+    with pytest.raises(LXDError, match=expected):
+        LXC().is_pro_enabled(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_pro_enabled_process_error(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ],
+        returncode=127,
+    )
+    expected = re.escape("Ubuntu Pro Client is not installed on 'test-instance'.")
+
+    with pytest.raises(LXDError, match=expected):
+        LXC().is_pro_enabled(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert len(fake_process.calls) == 1
+
+
+@pytest.fixture
+def pro_attach_process(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "rm",
+            "-f",
+            "/usr/local/bin/cloud-id",
+        ],
+    )
+    return fake_process
+
+
+@pytest.mark.usefixtures("mock_pro_config_handling")
+def test_attach_pro_subscription_success(pro_attach_process):
+    pro_attach_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "auto-attach",
+        ],
+    )
+
+    LXC().attach_pro_subscription(
+        instance_name="test-instance",
+        project="test-project",
+        remote="test-remote",
+    )
+
+    assert len(pro_attach_process.calls) == 3
+
+
+@pytest.mark.usefixtures("mock_pro_config_handling")
+def test_attach_pro_subscription_failed(pro_attach_process):
+    pro_attach_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "auto-attach",
+        ],
+        returncode=1,
+    )
+    expected = re.escape("Failed to attach 'test-instance' to a Pro subscription.")
+
+    with pytest.raises(LXDError, match=expected):
+        LXC().attach_pro_subscription(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert len(pro_attach_process.calls) == 3
+
+
+@pytest.mark.usefixtures("mock_pro_config_handling")
+def test_attach_pro_subscription_already_attached(pro_attach_process):
+    pro_attach_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "auto-attach",
+        ],
+        returncode=2,
+    )
+
+    LXC().attach_pro_subscription(
+        instance_name="test-instance",
+        project="test-project",
+        remote="test-remote",
+    )
+
+    assert len(pro_attach_process.calls) == 3
+
+
+@pytest.mark.usefixtures("mock_pro_config_handling")
+def test_attach_pro_subscription_process_error(pro_attach_process):
+    pro_attach_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "auto-attach",
+        ],
+        returncode=127,
+    )
+    expected = re.escape("Failed to attach 'test-instance' to a Pro subscription.")
+
+    with pytest.raises(LXDError, match=expected):
+        LXC().attach_pro_subscription(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert len(pro_attach_process.calls) == 3
+
+
+@pytest.fixture
+def fake_services_process(fake_process):
+    """Factory fixture for mocking enabled Pro services."""
+
+    def _make_process(enabled_services=None):
+        services_json = [{"name": service} for service in enabled_services or []]
+        fake_process.register_subprocess(
+            [
+                "lxc",
+                "--project",
+                "test-project",
+                "exec",
+                "test-remote:test-instance",
+                "--",
+                "pro",
+                "api",
+                "u.pro.status.enabled_services.v1",
+            ],
+            stdout=f'{{"_schema_version": "v1", "data": {{"attributes": {{"enabled_services": {services_json}}}, "meta": {{"environment_vars": []}}, "type": "EnabledServices"}}, "errors": [], "result": "success", "version": "37.1ubuntu0~24.04", "warnings": []}}'.replace(
+                "'", '"'
+            ).encode(),
+        )
+        return fake_process
+
+    return _make_process
+
+
+def _register_enable_service(fake_process, service):
+    """Helper to register a service enable call."""
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.services.enable.v1",
+            "--data",
+            f'{{"service": "{service}"}}',
+        ],
+        stdout=f'{{"_schema_version": "v1", "data": {{"attributes": {{"disabled": [], "enabled": ["{service}"], "messages": [], "reboot_required": false}}, "meta": {{"environment_vars": []}}, "type": "EnableService"}}, "errors": [], "result": "success", "version": "32.3.1~24.04", "warnings": []}}'.encode(),
+    )
+
+
+def _register_disable_service(fake_process, service):
+    """Helper to register a service disable call."""
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.services.disable.v1",
+            "--data",
+            f'{{"service": "{service}"}}',
+        ],
+        stdout=f'{{"_schema_version": "v1", "data": {{"attributes": {{"disabled": ["{service}"], "enabled": [], "messages": [], "reboot_required": false}}, "meta": {{"environment_vars": []}}, "type": "DisableService"}}, "errors": [], "result": "success", "version": "32.3.1~24.04", "warnings": []}}'.encode(),
+    )
+
+
+def test_enable_pro_service_success(fake_services_process):
+    """Enable a set of services."""
+    fake_process = fake_services_process([])
+    _register_enable_service(fake_process, "esm-infra")
+    _register_enable_service(fake_process, "esm-apps")
+
+    LXC().enable_pro_service(
+        instance_name="test-instance",
+        services=["esm-infra", "esm-apps"],
+        project="test-project",
+        remote="test-remote",
+    )
+
+    assert len(fake_process.calls) == 3
+
+
+def test_enable_pro_service_disables_others(fake_services_process):
+    """Enabling a set of services disables other enabled services."""
+    fake_process = fake_services_process(["livepatch"])
+    _register_disable_service(fake_process, "livepatch")
+    _register_enable_service(fake_process, "esm-apps")
+    _register_enable_service(fake_process, "esm-infra")
+
+    LXC().enable_pro_service(
+        instance_name="test-instance",
+        services=["esm-infra", "esm-apps"],
+        project="test-project",
+        remote="test-remote",
+    )
+
+    assert len(fake_process.calls) == 4
+
+
+def test_enable_pro_service_failed(fake_services_process):
+    fake_process = fake_services_process([])
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.services.enable.v1",
+            "--data",
+            '{"service": "invalid"}',
+        ],
+        stdout=b"""{"_schema_version": "v1", "data": {"meta": {"environment_vars": []}}, "errors": [{"code": "entitlement-not-found", "meta": {"entitlement_name": "invalid"}, "title": "could not find entitlement named \"invalid\""}], "result": "failure", "version": "32.3.1~24.04", "warnings": []}""",
+        returncode=1,
+    )
+    expected = re.escape(
+        "Failed to enable Pro service 'invalid' on instance 'test-instance'."
+    )
+
+    with pytest.raises(LXDError, match=expected):
+        LXC().enable_pro_service(
+            instance_name="test-instance",
+            services=["invalid"],
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert len(fake_process.calls) == 2
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.param("invalid json {[}", id="invalid-json"),
+        pytest.param("{'hello': 'world'}", id="invalid-data"),
+    ],
+)
+def test_enable_pro_service_invalid_data(data, fake_process):
+    """Error when the list of pro services is invalid."""
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.status.enabled_services.v1",
+        ],
+        stdout=data.encode(),
+    )
+    expected = re.escape("Failed to query enabled Pro services on 'test-instance'.")
+
+    with pytest.raises(LXDError, match=expected):
+        LXC().enable_pro_service(
+            instance_name="test-instance",
+            services=["esm-infra"],
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_pro_installed_success(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "version",
+        ],
+        stdout="32.3.1~22.04",
+    )
+
+    assert (
+        LXC().is_pro_installed(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+        is True
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_pro_installed_failure(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "version",
+        ],
+        returncode=127,
+    )
+
+    assert (
+        LXC().is_pro_installed(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+        is False
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_install_pro_client_success(fake_process):
+    """Install ubuntu-advantage-tools."""
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "apt",
+            "install",
+            "-y",
+            "ubuntu-advantage-tools",
+        ],
+        stdout="placeholder",
+    )
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "version",
+        ],
+        stdout="32.3.1~22.04",
+    )
+
+    assert (
+        LXC().install_pro_client(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+        is None
+    )
+
+    assert len(fake_process.calls) == 2
+
+
+def test_install_pro_client_success_fallback(fake_process):
+    """Fallback to a specific version of ubuntu-advantage-tools."""
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "apt",
+            "install",
+            "-y",
+            "ubuntu-advantage-tools",
+        ],
+        stdout="placeholder",
+    )
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "version",
+        ],
+        returncode=127,
+    )
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "apt",
+            "install",
+            "-y",
+            "ubuntu-advantage-tools=27.11.2~$(lsb_release -rs).1",
+        ],
+        stdout="placeholder",
+    )
+
+    LXC().install_pro_client(
+        instance_name="test-instance",
+        project="test-project",
+        remote="test-remote",
+    )
+
+    assert len(fake_process.calls) == 3
+
+
+def test_install_pro_client_process_error(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "apt",
+            "install",
+            "-y",
+            "ubuntu-advantage-tools",
+        ],
+        returncode=99,
+    )
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "version",
+        ],
+        returncode=127,
+    )
+
+    with pytest.raises(LXDError):
+        LXC().install_pro_client(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert (
+        LXC().is_pro_installed(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+        is False
+    )
+
+    assert len(fake_process.calls) == 2
