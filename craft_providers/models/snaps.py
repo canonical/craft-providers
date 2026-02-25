@@ -35,5 +35,5 @@ class SnapInfo(pydantic.BaseModel, extra="ignore"):
     channel: str | None = None
     confinement: str | None = None
     revision: str
-    publisher: SnapPublisher
+    publisher: SnapPublisher | None = None
     base: str | None = None

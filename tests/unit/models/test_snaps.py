@@ -92,6 +92,7 @@ def test_full_real_snapd_response_validates():
 
     assert snap.id == "vMTKRaLjnOJQetI78HjntT37VuoyssFE"
     assert snap.revision == "16570"
+    assert snap.publisher is not None
     assert snap.publisher.id == "canonical"
     assert snap.base == "core24"
 
@@ -102,7 +103,7 @@ def test_snap_info_rejects_real_error_response():
         SnapInfo.model_validate(SNAPD_ERROR_RESPONSE)
 
 
-@pytest.mark.parametrize("missing_key", ["id", "revision", "publisher"])
+@pytest.mark.parametrize("missing_key", ["id", "revision"])
 def test_snap_info_missing_required_field(missing_key):
     """Missing required fields should raise ValidationError."""
     base = SNAPD_RESPONSE["result"]
@@ -112,28 +113,22 @@ def test_snap_info_missing_required_field(missing_key):
         SnapInfo.model_validate(data)
 
 
-def test_snap_info_invalid_publisher_structure():
-    """Publisher without required id should fail validation."""
-    data = SNAPD_RESPONSE["result"].copy()
-    data["publisher"] = {}
-
-    with pytest.raises(pydantic.ValidationError, match="id"):
-        SnapInfo.model_validate(data)
-
-
 def test_snap_info_optional_fields_can_be_omitted():
     """Optional fields should not be required for validation."""
     minimal_data = {
         "id": "abc",
         "revision": "1",
-        "publisher": {"id": "canonical"},
     }
 
     snap = SnapInfo.model_validate(minimal_data)
 
     assert snap.name is None
-    assert snap.base is None
+    assert snap.type is None
     assert snap.version is None
+    assert snap.channel is None
+    assert snap.confinement is None
+    assert snap.publisher is None
+    assert snap.base is None
 
 
 def test_snap_info_ignores_extra_fields():
@@ -141,7 +136,6 @@ def test_snap_info_ignores_extra_fields():
     data = {
         "id": "abc",
         "revision": "1",
-        "publisher": {"id": "canonical"},
         "future-field": "something-new",
     }
 

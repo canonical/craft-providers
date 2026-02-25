@@ -294,6 +294,9 @@ def _add_assertions_from_host(executor: Executor, snap_name: str) -> None:
     target_assert_path = pathlib.PurePosixPath(f"/tmp/{snap_name.split('_')[0]}.assert")
     snap_info = get_host_snap_info(snap_name)
 
+    if not snap_info.publisher:
+        raise ProviderError("Can't get assertion for snap with no publisher info.")
+
     try:
         with _get_assertions_file(
             snap_name=snap_name,
