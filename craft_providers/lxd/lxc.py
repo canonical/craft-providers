@@ -1555,6 +1555,21 @@ class LXC:
                 project=project,
                 remote=remote,
             ):
+                # get the Ubuntu release version
+                release_command = [
+                    "exec",
+                    f"{remote}:{instance_name}",
+                    "--",
+                    "lsb_release",
+                    "-rs",
+                ]
+                result = self._run_lxc(
+                    release_command,
+                    capture_output=True,
+                    project=project,
+                )
+                release_version = result.stdout.decode().strip()
+
                 command = [
                     "exec",
                     f"{remote}:{instance_name}",
@@ -1562,7 +1577,7 @@ class LXC:
                     "apt",
                     "install",
                     "-y",
-                    "ubuntu-advantage-tools=27.11.2~$(lsb_release -rs).1",
+                    f"ubuntu-advantage-tools=27.11.2~{release_version}.1",
                 ]
                 self._run_lxc(
                     command,

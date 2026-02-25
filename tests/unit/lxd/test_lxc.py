@@ -3086,10 +3086,24 @@ def test_install_pro_client_success_fallback(fake_process):
             "exec",
             "test-remote:test-instance",
             "--",
+            "lsb_release",
+            "-rs",
+        ],
+        stdout="20.04",
+    )
+
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
             "apt",
             "install",
             "-y",
-            "ubuntu-advantage-tools=27.11.2~$(lsb_release -rs).1",
+            "ubuntu-advantage-tools=27.11.2~20.04.1",
         ],
         stdout="placeholder",
     )
@@ -3100,7 +3114,7 @@ def test_install_pro_client_success_fallback(fake_process):
         remote="test-remote",
     )
 
-    assert len(fake_process.calls) == 3
+    assert len(fake_process.calls) == 4
 
 
 def test_install_pro_client_process_error(fake_process):
