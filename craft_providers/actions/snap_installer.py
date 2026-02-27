@@ -27,7 +27,7 @@ import shlex
 import subprocess
 import urllib.parse
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 import pydantic
 import requests
@@ -40,6 +40,7 @@ from craft_providers.errors import (
     details_from_called_process_error,
 )
 from craft_providers.instance_config import InstanceConfiguration
+from craft_providers.models import SnapInfo
 from craft_providers.util import snap_cmd, temp_paths
 
 if TYPE_CHECKING:
@@ -126,7 +127,7 @@ def _pack_host_snap(*, snap_name: str, output: pathlib.Path) -> None:
     )
 
 
-def get_host_snap_info(snap_name: str) -> dict[str, Any]:
+def get_host_snap_info(snap_name: str) -> SnapInfo:
     """Get info about a snap installed on the host."""
     quoted_name = urllib.parse.quote(snap_name, safe="")
     url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}"
@@ -137,7 +138,8 @@ def get_host_snap_info(snap_name: str) -> dict[str, Any]:
             brief="Unable to connect to snapd service."
         ) from error
     snap_info.raise_for_status()
-    return cast("dict[str, Any]", snap_info.json()["result"])
+    result = snap_info.json()["result"]
+    return SnapInfo.model_validate(result)
 
 
 def _get_target_snap_revision_from_snapd(
@@ -294,12 +296,15 @@ def _add_assertions_from_host(executor: Executor, snap_name: str) -> None:
     )
     snap_info = get_host_snap_info(snap_name)
 
+    if not snap_info.publisher:
+        raise ProviderError("Can't get assertion for snap with no publisher info.")
+
     try:
         with _get_assertions_file(
             snap_name=snap_name,
-            snap_id=snap_info["id"],
-            snap_revision=snap_info["revision"],
-            snap_publisher_id=snap_info["publisher"]["id"],
+            snap_id=snap_info.id,
+            snap_revision=snap_info.revision,
+            snap_publisher_id=snap_info.publisher.id,
         ) as host_assert_path:
             executor.push_file(
                 source=host_assert_path,
@@ -352,14 +357,14 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
         )
 
     host_snap_info = get_host_snap_info(snap_name)
-    host_snap_base = host_snap_info.get("base", None)
+    host_snap_base = host_snap_info.base
     if host_snap_base:
         logger.debug(
             "Installing base snap %r for %r from host", host_snap_base, snap_name
         )
         inject_from_host(executor=executor, snap_name=host_snap_base, classic=False)
 
-    host_revision = host_snap_info["revision"]
+    host_revision = host_snap_info.revision
     target_revision = _get_snap_revision_ensuring_source(
         snap_name=snap_store_name,
         source=SNAP_SRC_HOST,
