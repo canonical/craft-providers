@@ -31,6 +31,7 @@ from craft_providers.errors import (
     ProviderError,
 )
 from craft_providers.instance_config import InstanceConfiguration
+from craft_providers.models import SnapInfo, SnapPublisher
 from logassert import Exact
 
 
@@ -65,7 +66,9 @@ def config_fixture(fake_home_temporary_file, request):
     fake_home_temporary_file.write_text(config_content)
 
 
-@pytest.fixture(params=[{"revision": "2", "id": "3", "publisher": {"id": "4"}}])
+@pytest.fixture(
+    params=[SnapInfo(id="3", revision="2", publisher=SnapPublisher(id="4"))]
+)
 def mock_get_host_snap_info(request, mocker):
     """Mocks the get_host_snap_revision() function
 
@@ -293,48 +296,48 @@ def test_inject_from_host_snap_name_with_base(
     mocker.patch(
         "craft_providers.actions.snap_installer.get_host_snap_info",
         side_effect=[
-            {
-                "id": "",
-                "name": "test-name",
-                "type": "app",
-                "base": "coreXX",
-                "version": "0.1",
-                "channel": "",
-                "revision": "2",
-                "publisher": {"id": ""},
-                "confinement": "classic",
-            },
-            {
-                "id": "",
-                "name": "coreXX",
-                "type": "base",
-                "version": "0.1",
-                "channel": "latest/stable",
-                "revision": "1",
-                "publisher": {"id": ""},
-                "confinement": "strict",
-            },
-            {
-                "id": "",
-                "name": "coreXX",
-                "type": "base",
-                "version": "0.1",
-                "channel": "latest/stable",
-                "revision": "1",
-                "publisher": {"id": ""},
-                "confinement": "strict",
-            },
-            {
-                "id": "",
-                "name": "test-name",
-                "type": "app",
-                "base": "coreXX",
-                "version": "0.1",
-                "channel": "",
-                "revision": "2",
-                "publisher": {"id": ""},
-                "confinement": "classic",
-            },
+            SnapInfo(
+                id="",
+                name="test-name",
+                type="app",
+                base="coreXX",
+                version="0.1",
+                channel="",
+                revision="2",
+                publisher=SnapPublisher(id=""),
+                confinement="classic",
+            ),
+            SnapInfo(
+                id="",
+                name="coreXX",
+                type="base",
+                version="0.1",
+                channel="latest/stable",
+                revision="1",
+                publisher=SnapPublisher(id=""),
+                confinement="strict",
+            ),
+            SnapInfo(
+                id="",
+                name="coreXX",
+                type="base",
+                version="0.1",
+                channel="latest/stable",
+                revision="1",
+                publisher=SnapPublisher(id=""),
+                confinement="strict",
+            ),
+            SnapInfo(
+                id="",
+                name="test-name",
+                type="app",
+                base="coreXX",
+                version="0.1",
+                channel="",
+                revision="2",
+                publisher=SnapPublisher(id=""),
+                confinement="classic",
+            ),
         ],
     )
 
@@ -357,7 +360,11 @@ def test_inject_from_host_snap_name_with_base(
     )
 
 
-@pytest.mark.parametrize("mock_get_host_snap_info", [{"revision": "x3"}], indirect=True)
+@pytest.mark.parametrize(
+    "mock_get_host_snap_info",
+    [SnapInfo(id="", revision="x3", publisher=SnapPublisher(id=""))],
+    indirect=True,
+)
 def test_inject_from_host_dangerous(
     config_fixture,
     mock_get_host_snap_info,
@@ -508,7 +515,11 @@ def test_inject_from_host_not_dangerous(
 
 
 @pytest.mark.parametrize("config_fixture", ["10"], indirect=True)
-@pytest.mark.parametrize("mock_get_host_snap_info", [{"revision": "10"}], indirect=True)
+@pytest.mark.parametrize(
+    "mock_get_host_snap_info",
+    [SnapInfo(id="", revision="10", publisher=SnapPublisher(id=""))],
+    indirect=True,
+)
 def test_inject_from_host_matching_revision_no_op(
     config_fixture,
     mock_get_host_snap_info,
@@ -550,15 +561,16 @@ def test_inject_from_host_push_error(mock_requests, fake_executor, mocker):
     mocker.patch(
         "craft_providers.actions.snap_installer.get_host_snap_info",
         side_effect=[
-            {
-                "id": "",
-                "name": "test-name",
-                "type": "app",
-                "version": "0.1",
-                "channel": "",
-                "revision": "x1",
-                "confinement": "classic",
-            },
+            SnapInfo(
+                id="",
+                name="test-name",
+                type="app",
+                version="0.1",
+                channel="",
+                publisher=SnapPublisher(id=""),
+                revision="x1",
+                confinement="classic",
+            ),
         ],
     )
 
@@ -581,25 +593,26 @@ def test_inject_from_host_with_base_push_error(mock_requests, fake_executor, moc
     mocker.patch(
         "craft_providers.actions.snap_installer.get_host_snap_info",
         side_effect=[
-            {
-                "id": "",
-                "name": "test-name",
-                "type": "app",
-                "base": "coreXX",
-                "version": "0.1",
-                "channel": "",
-                "revision": "x1",
-                "confinement": "classic",
-            },
-            {
-                "id": "",
-                "name": "coreXX",
-                "type": "base",
-                "version": "0.1",
-                "channel": "",
-                "revision": "x1",
-                "confinement": "strict",
-            },
+            SnapInfo(
+                id="",
+                name="test-name",
+                type="app",
+                publisher=SnapPublisher(id=""),
+                base="coreXX",
+                version="0.1",
+                channel="",
+                revision="x1",
+                confinement="classic",
+            ),
+            SnapInfo(
+                id="",
+                name="coreXX",
+                type="base",
+                publisher=SnapPublisher(id=""),
+                version="0.1",
+                revision="x1",
+                confinement="strict",
+            ),
         ],
     )
 
@@ -731,15 +744,16 @@ def test_inject_from_host_install_failure(
     mocker.patch(
         "craft_providers.actions.snap_installer.get_host_snap_info",
         side_effect=[
-            {
-                "id": "",
-                "name": "test-name",
-                "type": "app",
-                "version": "0.1",
-                "channel": "",
-                "revision": "x1",
-                "confinement": "classic",
-            },
+            SnapInfo(
+                id="",
+                name="test-name",
+                type="app",
+                version="0.1",
+                channel="",
+                revision="x1",
+                publisher=SnapPublisher(id=""),
+                confinement="classic",
+            ),
         ],
     )
 
@@ -986,13 +1000,21 @@ def test_install_from_store_trim_suffix(
 
 def test_get_host_snap_info_ok(responses):
     """Revision retrieved ok."""
-    snap_info = {"result": {"revision": "15"}}
+    snap_info = {
+        "result": {
+            "id": "snap-id",
+            "name": "test-snap",
+            "type": "app",
+            "revision": "15",
+            "publisher": {"id": "publisher-id"},
+        }
+    }
     responses.add(
         responses.GET,
         "http+unix://%2Frun%2Fsnapd.socket/v2/snaps/test-snap",
         json=snap_info,
     )
-    result = snap_installer.get_host_snap_info("test-snap")["revision"]
+    result = snap_installer.get_host_snap_info("test-snap").revision
     assert result == "15"
 
 
@@ -1035,6 +1057,17 @@ def test_add_assertions_from_host_error_on_push(
     mock_executor = mock.Mock(spec=fake_executor, wraps=fake_executor)
     mock_executor.push_file.side_effect = ProviderError(brief="foo")
 
+    mocker.patch(
+        "craft_providers.actions.snap_installer.get_host_snap_info",
+        return_value=SnapInfo(
+            id="",
+            name="test-name",
+            type="app",
+            revision="1",
+            publisher=SnapPublisher(id=""),
+        ),
+    )
+
     # register 'snap known' calls
     for _ in range(4):
         fake_process.register_subprocess(["snap", "known", fake_process.any()])
@@ -1054,9 +1087,21 @@ def test_add_assertions_from_host_error_on_push(
 
 
 def test_add_assertions_from_host_error_on_ack(
-    fake_executor, fake_process, mock_requests
+    fake_executor, fake_process, mock_requests, mocker
 ):
     """Raise SnapInstallationError when 'snap ack' fails."""
+
+    mocker.patch(
+        "craft_providers.actions.snap_installer.get_host_snap_info",
+        return_value=SnapInfo(
+            id="",
+            name="test-name",
+            type="app",
+            revision="1",
+            publisher=SnapPublisher(id=""),
+        ),
+    )
+
     fake_process.register_subprocess(
         ["fake-executor", "snap", "ack", "/tmp/test-name.assert"],
         stdout="snap error",
