@@ -93,7 +93,7 @@ def test_launched_environment(
         pytest.param(
             "armhf",
             marks=pytest.mark.skipif(
-                platform.machine() != "arm64",
+                platform.machine() != "aarch64",
                 reason="Not running on a compatible host architecture.",
             ),
         ),
