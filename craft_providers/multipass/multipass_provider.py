@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
-from craft_providers import Base, Executor, Provider, base
+from craft_providers import Base, Executor, Provider, ProviderError, base
 from craft_providers.bases import ubuntu
 from craft_providers.errors import BaseConfigurationError
 
@@ -209,6 +209,7 @@ class MultipassProvider(Provider):
         shutdown_delay_mins: int | None = None,
         use_base_instance: bool = False,
         prepare_instance: Callable[[Executor], None] | None = None,
+        instance_architecture: str | None = None,
     ) -> Iterator[Executor]:
         """Configure and launch environment for specified base.
 
@@ -227,9 +228,18 @@ class MultipassProvider(Provider):
             by this provider).
         :param prepare_instance: A callback to perform early instance configuration
             before the base image setup.
+        :param instance_architecture: A string representing the architecture to request.
+            Cannot be used with the Multipass provider.
 
         :raises MultipassError: If the instance cannot be launched or configured.
         """
+        if instance_architecture is not None:
+            raise ProviderError(
+                brief="the Multipass provider cannot use non-host architectures.",
+                details=f"Architecture {instance_architecture!r} was requested.",
+                resolution="Unset the CRAFT_BUILD_ON environment variable.",
+            )
+
         shutdown_delay_mins = 0 if shutdown_delay_mins is None else shutdown_delay_mins
         image = _get_remote_image(base_configuration)
 

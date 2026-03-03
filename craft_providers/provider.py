@@ -30,6 +30,8 @@ from collections.abc import Generator
 from enum import Enum
 from typing import TYPE_CHECKING
 
+import typing_extensions
+
 from .base import Base
 
 if TYPE_CHECKING:
@@ -105,6 +107,7 @@ class Provider(ABC):
 
     @abstractmethod
     @contextlib.contextmanager
+    @typing_extensions.override
     def launched_environment(
         self,
         *,
@@ -116,6 +119,7 @@ class Provider(ABC):
         shutdown_delay_mins: int | None = None,
         use_base_instance: bool = True,
         prepare_instance: Callable[[Executor], None] | None = None,
+        instance_architecture: str | None = None,
     ) -> Generator[Executor, None, None]:
         """Configure and launch environment for specified base.
 
@@ -133,4 +137,6 @@ class Provider(ABC):
         :param use_base_instance: Enable base instances if supported by the provider.
         :param prepare_instance: A callback to perform early instance configuration
             before the base image setup.
+        :param instance_architecture: A string representing the architecture to request
+            if the provider allows selecting the architecture.
         """

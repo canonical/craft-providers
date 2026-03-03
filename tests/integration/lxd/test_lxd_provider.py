@@ -15,9 +15,11 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
+import pathlib
+import platform
 
 import pytest
-from craft_providers.bases import almalinux, get_base_from_alias
+from craft_providers.bases import BuilddBaseAlias, almalinux, get_base_from_alias
 from craft_providers.lxd import LXDProvider, is_installed
 
 from .conftest import UBUNTU_BASES_PARAM
@@ -82,3 +84,49 @@ def test_launched_environment(
 
     assert test_instance.exists() is True
     assert test_instance.is_running() is False
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(
+    ("container_arch"),
+    [
+        pytest.param(
+            "armhf",
+            marks=pytest.mark.skipif(
+                platform.machine() != "arm64",
+                reason="Not running on a compatible host architecture.",
+            ),
+        ),
+    ],
+)
+def test_foreign_arch_success(
+    tmp_path: pathlib.Path,
+    installed_lxd,
+    instance_name,
+    session_provider: LXDProvider,
+    container_arch: str,
+):
+    cache_path = tmp_path / "cache"
+    project_path = tmp_path / "project"
+    cache_path.mkdir()
+    project_path.mkdir()
+
+    base_configuration = get_base_from_alias(BuilddBaseAlias.FOCAL)(
+        alias=BuilddBaseAlias.FOCAL, cache_path=cache_path
+    )
+
+    with session_provider.launched_environment(
+        project_name="test-project",
+        project_path=project_path,
+        base_configuration=base_configuration,
+        instance_name=instance_name,
+        allow_unstable=True,
+        instance_architecture=container_arch,
+        prepare_instance=lambda _: None,
+        use_base_instance=False,
+    ) as instance:
+        uname_result = instance.execute_run(
+            ["uname", "-m"], text=True, capture_output=True
+        )
+
+    assert uname_result.stdout.strip() == container_arch

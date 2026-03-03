@@ -289,7 +289,9 @@ def _add_assertions_from_host(executor: Executor, snap_name: str) -> None:
     :param snap_name: Name of snap to inject
     """
     # trim the `_name` suffix, if present
-    target_assert_path = pathlib.PurePosixPath(f"/tmp/{snap_name.split('_')[0]}.assert")
+    target_assert_path = pathlib.PurePosixPath(
+        f"/tmp/{snap_name.split('_', maxsplit=1)[0]}.assert"
+    )
     snap_info = get_host_snap_info(snap_name)
 
     try:
@@ -338,7 +340,7 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
     :raises SnapInstallationError: on failure to inject snap
     """
     # the local snap name may have a suffix if it was installed with `--name`
-    snap_store_name = snap_name.split("_")[0]
+    snap_store_name = snap_name.split("_", maxsplit=1)[0]
     if snap_name == snap_store_name:
         logger.debug("Installing snap %r from host (classic=%s)", snap_name, classic)
     else:
@@ -430,7 +432,7 @@ def install_from_store(
     :raises SnapInstallationError: on unexpected error.
     """
     # trim the `_name` suffix, if present
-    snap_store_name = snap_name.split("_")[0]
+    snap_store_name = snap_name.split("_", maxsplit=1)[0]
     if snap_name == snap_store_name:
         logger.debug(
             "Installing snap %r from store (channel=%r, classic=%s).",
