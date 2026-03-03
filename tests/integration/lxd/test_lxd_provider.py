@@ -87,6 +87,7 @@ def test_launched_environment(
 
 
 @pytest.mark.slow
+@pytest.mark.lxd_instance
 @pytest.mark.parametrize(
     ("container_arch", "expected_arch"),
     [

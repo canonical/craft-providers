@@ -30,8 +30,6 @@ from collections.abc import Generator
 from enum import Enum
 from typing import TYPE_CHECKING
 
-import typing_extensions
-
 from .base import Base
 
 if TYPE_CHECKING:
@@ -125,8 +123,7 @@ class Provider(ABC):
 
     @abstractmethod
     @contextlib.contextmanager
-    @typing_extensions.override
-    def launched_environment(
+    def launched_environment(  # noqa: PLR0913 (too many arguments)
         self,
         *,
         project_name: str,
