@@ -88,10 +88,11 @@ def test_launched_environment(
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
-    ("container_arch"),
+    ("container_arch", "expected_arch"),
     [
         pytest.param(
             "armhf",
+            "armv8l",
             marks=pytest.mark.skipif(
                 platform.machine() != "aarch64",
                 reason="Not running on a compatible host architecture.",
@@ -105,6 +106,7 @@ def test_foreign_arch_success(
     instance_name,
     session_provider: LXDProvider,
     container_arch: str,
+    expected_arch,
 ):
     cache_path = tmp_path / "cache"
     project_path = tmp_path / "project"
@@ -129,4 +131,4 @@ def test_foreign_arch_success(
             ["uname", "-m"], text=True, capture_output=True
         )
 
-    assert uname_result.stdout.strip() == container_arch
+    assert uname_result.stdout.strip() == expected_arch
