@@ -13,11 +13,11 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+import pathlib
 from unittest.mock import call
 
 import pytest
-from craft_providers import Executor
+from craft_providers import Executor, ProviderError
 from craft_providers.bases import ubuntu
 from craft_providers.errors import BaseConfigurationError
 from craft_providers.multipass import MultipassError, MultipassProvider
@@ -354,3 +354,19 @@ def test_multipass_install_recommendation():
         provider.install_recommendation
         == "Visit https://multipass.run/install for instructions to install Multipass."
     )
+
+
+def test_multipass_cannot_override_architecture(mock_buildd_base_configuration):
+    provider = MultipassProvider()
+
+    with pytest.raises(
+        ProviderError, match="the Multipass provider cannot use non-host architectures"
+    ):
+        with provider.launched_environment(
+            project_name="anything",
+            project_path=pathlib.Path(),
+            base_configuration=mock_buildd_base_configuration,
+            instance_name="ope",
+            instance_architecture="Any string!",
+        ) as _:
+            pass
