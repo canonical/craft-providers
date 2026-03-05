@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
-from craft_providers import Base, Executor, Provider, ProviderError, base
+from craft_providers import Base, Executor, Provider, base
 from craft_providers.bases import ubuntu
 from craft_providers.errors import BaseConfigurationError
 
@@ -260,7 +260,7 @@ class MultipassProvider(Provider):
         :raises MultipassError: If the instance cannot be launched or configured.
         """
         if instance_architecture is not None:
-            raise ProviderError(
+            raise MultipassError(
                 brief="the Multipass provider cannot use non-host architectures.",
                 details=f"Architecture {instance_architecture!r} was requested.",
                 resolution="Unset the CRAFT_BUILD_ON environment variable.",
