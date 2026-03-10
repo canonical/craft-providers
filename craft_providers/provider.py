@@ -61,7 +61,7 @@ class Provider(ABC):
     @abstractmethod
     def install_recommendation(self) -> str:
         """Recommended way to install the provider."""
-        
+
     @abstractmethod
     def delete_instances(
         self, instances: Collection[Executor], *, force: bool = False

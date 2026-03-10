@@ -20,11 +20,9 @@ from __future__ import annotations
 
 import contextlib
 import logging
-import contextlib
-from typing import cast
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from typing_extensions import override
 
@@ -210,7 +208,7 @@ class MultipassProvider(Provider):
     @override
     def delete_instances(
         self,
-        instances,
+        instances: Collection[Executor],
         *,
         force: bool = False,
     ) -> None:
@@ -227,7 +225,7 @@ class MultipassProvider(Provider):
                     self.multipass.stop(mp_inst.name)  # type: ignore[attr-defined]
 
             self.multipass.delete(mp_inst.name, purge=True)  # type: ignore[attr-defined]
-    
+
     def create_environment(self, *, instance_name: str) -> Executor:
         """Create a bare environment for specified base.
 
