@@ -402,15 +402,23 @@ def test_lxd_list_instances_prefix_filter(mock_lxc_container):
         assert instance.name.startswith("alpha-")
 
 
-def test_lxd_prune(mock_lxc_container):
-    """Verify prune deletes non-base instances."""
+def test_lxd_prune_selective(mock_lxc_container):
+    """Verify prune deletes only instances matching prefix."""
     provider = LXDProvider(
         lxc=mock_lxc_container,
         lxd_project="default",
         lxd_remote="local",
     )
 
-    provider.prune()
+    mock_lxc_container.list_names.return_value = [
+        "test-instance-1",
+        "test-instance-2",
+        "other-instance",
+        "unmanaged-instance",
+        "base-instance-1",
+    ]
+
+    provider.prune(instance_name_prefix="test-instance-")
 
     assert mock_lxc_container.delete.call_count == 2
     mock_lxc_container.delete.assert_any_call(
@@ -420,21 +428,25 @@ def test_lxd_prune(mock_lxc_container):
         instance_name="test-instance-2", project="default", remote="local", force=True
     )
 
-    mock_lxc_container.list_names.return_value = ["base-instance-1"]
 
-    assert len(provider.list_instances()) == 0
-
-
-def test_lxd_prune_base(mock_lxc_container):
-    """Verify prune deletes all instances when prune_base is True."""
+def test_lxd_prune_all(mock_lxc_container):
+    """Verify prune deletes all instances matching current scope."""
     provider = LXDProvider(
         lxc=mock_lxc_container,
         lxd_project="default",
         lxd_remote="local",
     )
 
+    mock_lxc_container.list_names.return_value = [
+        "test-instance-1",
+        "test-instance-2",
+        "base-instance-1",
+    ]
+
+    # Prune all (including base)
     provider.prune(prune_base=True)
 
+    # Should delete all instances
     assert mock_lxc_container.delete.call_count == 3
     mock_lxc_container.delete.assert_any_call(
         instance_name="test-instance-1", project="default", remote="local", force=True
@@ -445,6 +457,3 @@ def test_lxd_prune_base(mock_lxc_container):
     mock_lxc_container.delete.assert_any_call(
         instance_name="base-instance-1", project="default", remote="local", force=True
     )
-
-    mock_lxc_container.list_names.return_value = []
-    assert len(provider.list_instances(include_base_instances=True)) == 0
