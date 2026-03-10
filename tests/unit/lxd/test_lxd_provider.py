@@ -443,10 +443,8 @@ def test_lxd_prune_all(mock_lxc_container):
         "base-instance-1",
     ]
 
-    # Prune all (including base)
     provider.prune(prune_base=True)
 
-    # Should delete all instances
     assert mock_lxc_container.delete.call_count == 3
     mock_lxc_container.delete.assert_any_call(
         instance_name="test-instance-1", project="default", remote="local", force=True
