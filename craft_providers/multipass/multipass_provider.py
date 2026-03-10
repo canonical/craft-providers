@@ -209,24 +209,24 @@ class MultipassProvider(Provider):
 
     @override
     def delete_instances(
-    self,
-    instances: Collection[Executor],
-    *,
-    force: bool = False,
+        self,
+        instances,
+        *,
+        force: bool = False,
     ) -> None:
         """Delete the specified Multipass instances.
 
         :param instances: Instances to delete.
         :param force: If True, attempt deletion even if instance is running.
         """
-    for inst in instances:
-        mp_inst = cast(MultipassInstance, inst)
+        for inst in instances:
+            mp_inst = cast(MultipassInstance, inst)
 
-        if force:
-            with contextlib.suppress(Exception):
-                self.multipass.stop(mp_inst.name)  # type: ignore[attr-defined]
+            if force:
+                with contextlib.suppress(Exception):
+                    self.multipass.stop(mp_inst.name)  # type: ignore[attr-defined]
 
-        self.multipass.delete(mp_inst.name, purge=True)  # type: ignore[attr-defined] 
+            self.multipass.delete(mp_inst.name, purge=True)  # type: ignore[attr-defined]
     
     def create_environment(self, *, instance_name: str) -> Executor:
         """Create a bare environment for specified base.

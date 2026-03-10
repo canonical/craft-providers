@@ -20,10 +20,9 @@ from __future__ import annotations
 
 import contextlib
 import logging
-from typing import cast
 from datetime import timedelta
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from typing_extensions import override
 
