@@ -400,3 +400,51 @@ def test_lxd_list_instances_prefix_filter(mock_lxc_container):
 
     for instance in instances:
         assert instance.name.startswith("alpha-")
+
+
+def test_lxd_prune(mock_lxc_container):
+    """Verify prune deletes non-base instances."""
+    provider = LXDProvider(
+        lxc=mock_lxc_container,
+        lxd_project="default",
+        lxd_remote="local",
+    )
+
+    provider.prune()
+
+    assert mock_lxc_container.delete.call_count == 2
+    mock_lxc_container.delete.assert_any_call(
+        instance_name="test-instance-1", project="default", remote="local", force=True
+    )
+    mock_lxc_container.delete.assert_any_call(
+        instance_name="test-instance-2", project="default", remote="local", force=True
+    )
+
+    mock_lxc_container.list_names.return_value = ["base-instance-1"]
+
+    assert len(provider.list_instances()) == 0
+
+
+def test_lxd_prune_base(mock_lxc_container):
+    """Verify prune deletes all instances when prune_base is True."""
+    provider = LXDProvider(
+        lxc=mock_lxc_container,
+        lxd_project="default",
+        lxd_remote="local",
+    )
+
+    provider.prune(prune_base=True)
+
+    assert mock_lxc_container.delete.call_count == 3
+    mock_lxc_container.delete.assert_any_call(
+        instance_name="test-instance-1", project="default", remote="local", force=True
+    )
+    mock_lxc_container.delete.assert_any_call(
+        instance_name="test-instance-2", project="default", remote="local", force=True
+    )
+    mock_lxc_container.delete.assert_any_call(
+        instance_name="base-instance-1", project="default", remote="local", force=True
+    )
+
+    mock_lxc_container.list_names.return_value = []
+    assert len(provider.list_instances(include_base_instances=True)) == 0
