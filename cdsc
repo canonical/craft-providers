@@ -1,0 +1,1005 @@
+[1mdiff --git a/craft_providers/actions/snap_installer.py b/craft_providers/actions/snap_installer.py[m
+[1mindex fb94508..c29b5ed 100644[m
+[1m--- a/craft_providers/actions/snap_installer.py[m
+[1m+++ b/craft_providers/actions/snap_installer.py[m
+[36m@@ -1,500 +1,500 @@[m
+[31m-#[m
+[31m-# Copyright 2021-2023 Canonical Ltd.[m
+[31m-#[m
+[31m-# This program is free software; you can redistribute it and/or[m
+[31m-# modify it under the terms of the GNU Lesser General Public[m
+[31m-# License version 3 as published by the Free Software Foundation.[m
+[31m-#[m
+[31m-# This program is distributed in the hope that it will be useful,[m
+[31m-# but WITHOUT ANY WARRANTY; without even the implied warranty of[m
+[31m-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU[m
+[31m-# Lesser General Public License for more details.[m
+[31m-#[m
+[31m-# You should have received a copy of the GNU Lesser General Public License[m
+[31m-# along with this program; if not, write to the Free Software Foundation,[m
+[31m-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.[m
+[31m-#[m
+[31m-[m
+[31m-"""Helpers for snap commands."""[m
+[31m-[m
+[31m-from __future__ import annotations[m
+[31m-[m
+[31m-import contextlib[m
+[31m-import json[m
+[31m-import logging[m
+[31m-import pathlib[m
+[31m-import shlex[m
+[31m-import subprocess[m
+[31m-import urllib.parse[m
+[31m-from http import HTTPStatus[m
+[31m-from typing import TYPE_CHECKING, Any, cast[m
+[31m-[m
+[31m-import pydantic[m
+[31m-import requests[m
+[31m-import requests_unixsocket  # type: ignore[import][m
+[31m-[m
+[31m-from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE[m
+[31m-from craft_providers.errors import ([m
+[31m-    BaseConfigurationError,[m
+[31m-    ProviderError,[m
+[31m-    details_from_called_process_error,[m
+[31m-)[m
+[31m-from craft_providers.instance_config import InstanceConfiguration[m
+[31m-from craft_providers.util import snap_cmd, temp_paths[m
+[31m-[m
+[31m-if TYPE_CHECKING:[m
+[31m-    from collections.abc import Iterator[m
+[31m-[m
+[31m-    from craft_providers.executor import Executor[m
+[31m-[m
+[31m-logger = logging.getLogger(__name__)[m
+[31m-[m
+[31m-[m
+[31m-# possible sources for the snap (using these two constants instead[m
+[31m-# of an enum because the values are persisted with JSON)[m
+[31m-SNAP_SRC_HOST = "host"[m
+[31m-SNAP_SRC_STORE = "store"[m
+[31m-[m
+[31m-[m
+[31m-class SnapInstallationError(ProviderError):[m
+[31m-    """Unexpected error during snap installation."""[m
+[31m-[m
+[31m-[m
+[31m-class Snap(pydantic.BaseModel, extra="forbid"):[m
+[31m-    """Details of snap to install in the base.[m
+[31m-[m
+[31m-    :param name: name of snap[m
+[31m-    :param channel: snap store channel to install from (default is stable)[m
+[31m-      If channel is `None`, then the snap is injected from the host instead[m
+[31m-      of being installed from the store.[m
+[31m-    :param classic: true if snap is a classic snap (default is false)[m
+[31m-    """[m
+[31m-[m
+[31m-    name: str[m
+[31m-    channel: str | None = "stable"[m
+[31m-    classic: bool = False[m
+[31m-[m
+[31m-    @pydantic.field_validator("channel")[m
+[31m-    @classmethod[m
+[31m-    def validate_channel(cls, channel: str | None) -> str | None:[m
+[31m-        """Validate that channel is not an empty string.[m
+[31m-[m
+[31m-        :raises BaseConfigurationError: if channel is empty[m
+[31m-        """[m
+[31m-        if channel is not None and not channel:[m
+[31m-            raise BaseConfigurationError([m
+[31m-                brief="channel cannot be empty",[m
+[31m-                resolution="set channel to a non-empty string or `None`",[m
+[31m-            )[m
+[31m-        return channel[m
+[31m-[m
+[31m-[m
+[31m-def _download_host_snap([m
+[31m-    *, snap_name: str, output: pathlib.Path, chunk_size: int = 64 * 1024[m
+[31m-) -> None:[m
+[31m-    """Download the current host snap using snapd's APIs."""[m
+[31m-    quoted_name = urllib.parse.quote(snap_name, safe="")[m
+[31m-    url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}/file"[m
+[31m-    try:[m
+[31m-        resp = requests_unixsocket.get(url)  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types[m
+[31m-    except requests.ConnectionError as error:[m
+[31m-        raise SnapInstallationError([m
+[31m-            brief="Unable to connect to snapd service."[m
+[31m-        ) from error[m
+[31m-[m
+[31m-    try:[m
+[31m-        resp.raise_for_status()[m
+[31m-    except requests.HTTPError as error:[m
+[31m-        raise SnapInstallationError([m
+[31m-            brief=f"Unable to download snap {snap_name!r} from snapd."[m
+[31m-        ) from error[m
+[31m-[m
+[31m-    with output.open("wb") as stream:[m
+[31m-        for chunk in resp.iter_content(chunk_size):[m
+[31m-            stream.write(chunk)[m
+[31m-[m
+[31m-[m
+[31m-def _pack_host_snap(*, snap_name: str, output: pathlib.Path) -> None:[m
+[31m-    """Pack the current host snap."""[m
+[31m-    command = snap_cmd.formulate_pack_command(snap_name, output)[m
+[31m-[m
+[31m-    logger.debug("Executing command on host: %s", shlex.join(command))[m
+[31m-    subprocess.run([m
+[31m-        command,[m
+[31m-        capture_output=True,[m
+[31m-        check=True,[m
+[31m-    )[m
+[31m-[m
+[31m-[m
+[31m-def get_host_snap_info(snap_name: str) -> dict[str, Any]:[m
+[31m-    """Get info about a snap installed on the host."""[m
+[31m-    quoted_name = urllib.parse.quote(snap_name, safe="")[m
+[31m-    url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}"[m
+[31m-    try:[m
+[31m-        snap_info = requests_unixsocket.get(url)  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types[m
+[31m-    except requests.ConnectionError as error:[m
+[31m-        raise SnapInstallationError([m
+[31m-            brief="Unable to connect to snapd service."[m
+[31m-        ) from error[m
+[31m-    snap_info.raise_for_status()[m
+[31m-    return cast("dict[str, Any]", snap_info.json()["result"])[m
+[31m-[m
+[31m-[m
+[31m-def _get_target_snap_revision_from_snapd([m
+[31m-    snap_name: str, executor: Executor[m
+[31m-) -> str | None:[m
+[31m-    """Get the revision of the snap on the target."""[m
+[31m-    quoted_name = urllib.parse.quote(snap_name, safe="")[m
+[31m-    url = f"http://localhost/v2/snaps/{quoted_name}"[m
+[31m-    cmd = ["curl", "--silent", "--unix-socket", "/run/snapd.socket", url][m
+[31m-    try:[m
+[31m-        proc = executor.execute_run([m
+[31m-            cmd, check=True, capture_output=True, text=True, timeout=TIMEOUT_SIMPLE[m
+[31m-        )[m
+[31m-    except subprocess.CalledProcessError as error:[m
+[31m-        raise SnapInstallationError([m
+[31m-            brief="Unable to get target snap revision.",[m
+[31m-            details=details_from_called_process_error(error),[m
+[31m-        ) from error[m
+[31m-[m
+[31m-    result = json.loads(proc.stdout)[m
+[31m-    if result["status-code"] == HTTPStatus.NOT_FOUND:[m
+[31m-        # snap not found[m
+[31m-        return None[m
+[31m-    if result["status-code"] == HTTPStatus.OK:[m
+[31m-        # Note: cast can be removed if Pydantic model is made for this response[m
+[31m-        return cast("str", result["result"]["revision"])[m
+[31m-    raise SnapInstallationError(f"Unknown response from snapd: {result!r}")[m
+[31m-[m
+[31m-[m
+[31m-def _get_snap_revision_ensuring_source([m
+[31m-    snap_name: str, source: str, executor: Executor[m
+[31m-) -> str | None:[m
+[31m-    """Get revision of snap on target and ensure the installation source."""[m
+[31m-    instance_config = InstanceConfiguration.load(executor=executor)[m
+[31m-    if instance_config is None or instance_config.snaps is None:[m
+[31m-        return None[m
+[31m-[m
+[31m-    config = instance_config.snaps.get(snap_name)[m
+[31m-    if config is None:[m
+[31m-        # not installed before[m
+[31m-        return None[m
+[31m-[m
+[31m-    # use 'get' to retrieve the source to support configs[m
+[31m-    # saved by previous versions of the lib[m
+[31m-    if config.get("source") == source:[m
+[31m-        # previously installed from specified source: ok[m
+[31m-        # Note: cast can be removed if the Pydantic model is improved[m
+[31m-        return cast("str", config["revision"])[m
+[31m-[m
+[31m-    # installed from other source: remove it[m
+[31m-    logger.debug([m
+[31m-        "Snap %r installed from other source (%s), removing", snap_name, config[m
+[31m-    )[m
+[31m-    cmd = snap_cmd.formulate_remove_command(snap_name)[m
+[31m-    try:[m
+[31m-        executor.execute_run([m
+[31m-            cmd, check=True, capture_output=True, timeout=TIMEOUT_SIMPLE[m
+[31m-        )[m
+[31m-    except subprocess.CalledProcessError as error:[m
+[31m-        raise SnapInstallationError([m
+[31m-            brief=f"Failed to remove snap {snap_name!r}.",[m
+[31m-            details=details_from_called_process_error(error),[m
+[31m-        ) from error[m
+[31m-    return None[m
+[31m-[m
+[31m-[m
+[31m-@contextlib.contextmanager[m
+[31m-def _get_host_snap(snap_name: str) -> Iterator[pathlib.Path]:[m
+[31m-    """Get snap installed on host containing the config.[m
+[31m-[m
+[31m-    Snapd provides an API to fetch a snap. First use that to fetch a snap.[m
+[31m-    If the snap is installed using `snap try`, it may fail to download. In[m
+[31m-    that case, attempt to construct the snap by packing it ourselves.[m
+[31m-[m
+[31m-    :yields: context manager that sets the temporary snap installation file[m
+[31m-      as the target[m
+[31m-    """[m
+[31m-    with temp_paths.home_temporary_directory() as tmp_dir:[m
+[31m-        snap_path = tmp_dir / f"{snap_name}.snap"[m
+[31m-        try:[m
+[31m-            _download_host_snap(snap_name=snap_name, output=snap_path)[m
+[31m-        except SnapInstallationError:[m
+[31m-            logger.debug([m
+[31m-                "Failed to fetch snap from snapd,"[m
+[31m-                " falling back to `snap pack` to recreate"[m
+[31m-            )[m
+[31m-            _pack_host_snap(snap_name=snap_name, output=snap_path)[m
+[31m-[m
+[31m-        yield snap_path[m
+[31m-[m
+[31m-[m
+[31m-def _get_assertion(query: list[str]) -> bytes:[m
+[31m-    """Get an assertion from snapd.[m
+[31m-[m
+[31m-    :param query: assertion query to pass to `snap known`[m
+[31m-    :returns: assertion data[m
+[31m-    :raises SnapInstallationError: if 'snap known' call fails[m
+[31m-    """[m
+[31m-    command = snap_cmd.formulate_known_command(query=query)[m
+[31m-    logger.debug("Executing command on host: %s", command)[m
+[31m-    try:[m
+[31m-        return subprocess.run(command, capture_output=True, check=True).stdout[m
+[31m-    except subprocess.CalledProcessError as error:[m
+[31m-        raise SnapInstallationError([m
+[31m-            brief="failed to get assertions for snap",[m
+[31m-            details=details_from_called_process_error(error),[m
+[31m-        ) from error[m
+[31m-[m
+[31m-[m
+[31m-@contextlib.contextmanager[m
+[31m-def _get_assertions_file([m
+[31m-    snap_name: str, snap_id: str, snap_revision: str, snap_publisher_id: str[m
+[31m-) -> Iterator[pathlib.Path]:[m
+[31m-    """Get an assertion file for a snap.[m
+[31m-[m
+[31m-    :param snap_name: Name of snap to inject[m
+[31m-    :param snap_id: ID of the snap[m
+[31m-    :param snap_revision: Revision of the snap[m
+[31m-    :param snap_publisher_id: The ID of the snap's publisher's account[m
+[31m-[m
+[31m-    :yields: context manager that will set the temporary snap assertion file[m
+[31m-      as the target[m
+[31m-    """[m
+[31m-    logger.debug("Creating an assert file for snap %r", snap_name)[m
+[31m-    assertion_queries = [[m
+[31m-        [[m
+[31m-            "account-key",[m
+[31m-            "public-key-sha3-384=BWDEoaqyr25nF5SNCvEv2v"[m
+[31m-            "7QnM9QsfCc0PBMYD_i2NGSQ32EF2d4D0hqUel3m8ul",[m
+[31m-        ],[m
+[31m-        ["snap-declaration", f"snap-name={snap_name.partition('_')[0]}"],[m
+[31m-        ["snap-revision", f"snap-revision={snap_revision}", f"snap-id={snap_id}"],[m
+[31m-        ["account", f"account-id={snap_publisher_id}"],[m
+[31m-    ][m
+[31m-[m
+[31m-    with temp_paths.home_temporary_file() as assert_file_path:[m
+[31m-        with assert_file_path.open("wb") as assert_file:[m
+[31m-            for query in assertion_queries:[m
+[31m-                assert_file.write(_get_assertion(query))[m
+[31m-                assert_file.write(b"\n")[m
+[31m-            assert_file.flush()[m
+[31m-            yield assert_file_path[m
+[31m-[m
+[31m-[m
+[31m-def _add_assertions_from_host(executor: Executor, snap_name: str) -> None:[m
+[31m-    """Add assertions from the host into the target for a snap.[m
+[31m-[m
+[31m-    :param executor: Executor for target[m
+[31m-    :param snap_name: Name of snap to inject[m
+[31m-    """[m
+[31m-    # trim the `_name` suffix, if present[m
+[31m-    target_assert_path = pathlib.PurePosixPath(f"/tmp/{snap_name.split('_')[0]}.assert")[m
+[31m-    snap_info = get_host_snap_info(snap_name)[m
+[31m-[m
+[31m-    try:[m
+[31m-        with _get_assertions_file([m
+[31m-            snap_name=snap_name,[m
+[31m-            snap_id=snap_info["id"],[m
+[31m-            snap_revision=snap_info["revision"],[m
+[31m-            snap_publisher_id=snap_info["publisher"]["id"],[m
+[31m-        ) as host_assert_path:[m
+[31m-            executor.push_file([m
+[31m-                source=host_assert_path,[m
+[31m-                destination=target_assert_path,[m
+[31m-            )[m
+[31m-    except ProviderError as error:[m
+[31m-        raise SnapInstallationError([m
+[31m-            brief=f"failed to copy assert file for snap {snap_name!r}",[m
+[31m-            details="error copying snap assert file into target environment",[m
+[31m-        ) from error[m
+[31m-[m
+[31m-    try:[m
+[31m-        executor.execute_run([m
+[31m-            snap_cmd.formulate_ack_command(snap_assert_path=target_assert_path),[m
+[31m-            check=True,[m
+[31m-            capture_output=True,[m
+[31m-            timeout=TIMEOUT_COMPLEX,[m
+[31m-        )[m
+[31m-    except subprocess.CalledProcessError as error:[m
+[31m-        raise SnapInstallationError([m
+[31m-            brief=f"failed to add assertions for snap {snap_name!r}",[m
+[31m-            details=details_from_called_process_error(error),[m
+[31m-        ) from error[m
+[31m-[m
+[31m-[m
+[31m-def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> None:[m
+[31m-    """Inject snap from host snap.[m
+[31m-[m
+[31m-    If the snap on the host was installed with the `--name` parameter, the host snap's[m
+[31m-    name will be formatted as `<snap_name>_<name>`. The `--name` parameter is not[m
+[31m-    used when the snap is installed inside the instance, so the instance's snap[m
+[31m-    name will just be `<snap_name>` (no suffix).[m
+[31m-[m
+[31m-    :param executor: Executor for target[m
+[31m-    :param snap_name: Name of snap to inject[m
+[31m-    :param classic: Install in classic mode[m
+[31m-[m
+[31m-    :raises SnapInstallationError: on failure to inject snap[m
+[31m-    """[m
+[31m-    # the local snap name may have a suffix if it was installed with `--name`[m
+[31m-    snap_store_name = snap_name.split("_")[0][m
+[31m-    if snap_name == snap_store_name:[m
+[31m-        logger.debug("Installing snap %r from host (classic=%s)", snap_name, classic)[m
+[31m-    else:[m
+[31m-        logger.debug([m
+[31m-            "Installing snap %r from host as %r in instance (classic=%s).",[m
+[31m-            snap_name,[m
+[31m-            snap_store_name,[m
+[31m-            classic,[m
+[31m-        )[m
+[31m-[m
+[31m-    host_snap_info = get_host_snap_info(snap_name)[m
+[31m-    host_snap_base = host_snap_info.get("base", None)[m
+[31m-    if host_snap_base:[m
+[31m-        logger.debug([m
+[31m-            "Installing base snap %r for %r from host", host_snap_base, snap_name[m
+[31m-        )[m
+[31m-        inject_from_host(executor=executor, snap_name=host_snap_base, classic=False)[m
+[31m-[m
+[31m-    host_revision = host_snap_info["revision"][m
+[31m-    target_revision = _get_snap_revision_ensuring_source([m
+[31m-        snap_name=snap_store_name,[m
+[31m-        source=SNAP_SRC_HOST,[m
+[31m-        executor=executor,[m
+[31m-    )[m
+[31m-    logger.debug("Revisions found: host=%r, target=%r", host_revision, target_revision)[m
+[31m-[m
+[31m-    if target_revision is not None and target_revision == host_revision:[m
+[31m-        logger.debug([m
+[31m-            "Skipping snap injection:"[m
+[31m-            " target is already up-to-date with revision on host"[m
+[31m-        )[m
+[31m-        return[m
+[31m-[m
+[31m-    target_snap_path = pathlib.PurePosixPath(f"/tmp/{snap_store_name}.snap")[m
+[31m-    is_dangerous = host_revision.startswith("x")[m
+[31m-[m
+[31m-    if not is_dangerous:[m
+[31m-        _add_assertions_from_host(executor=executor, snap_name=snap_name)[m
+[31m-[m
+[31m-    with _get_host_snap(snap_name) as host_snap_path:[m
+[31m-        try:[m
+[31m-            executor.push_file([m
+[31m-                source=host_snap_path,[m
+[31m-                destination=target_snap_path,[m
+[31m-            )[m
+[31m-        except ProviderError as error:[m
+[31m-            raise SnapInstallationError([m
+[31m-                brief=f"failed to copy snap file for snap {snap_name!r}",[m
+[31m-                details="error copying snap file into target environment",[m
+[31m-            ) from error[m
+[31m-[m
+[31m-    try:[m
+[31m-        executor.execute_run([m
+[31m-            snap_cmd.formulate_local_install_command([m
+[31m-                classic=classic, dangerous=is_dangerous, snap_path=target_snap_path[m
+[31m-            ),[m
+[31m-            check=True,[m
+[31m-            capture_output=True,[m
+[31m-            timeout=TIMEOUT_COMPLEX,[m
+[31m-        )[m
+[31m-    except subprocess.CalledProcessError as error:[m
+[31m-        raise SnapInstallationError([m
+[31m-            brief=f"failed to install snap {snap_store_name!r}",[m
+[31m-            details=details_from_called_process_error(error),[m
+[31m-        ) from error[m
+[31m-[m
+[31m-    InstanceConfiguration.update([m
+[31m-        executor=executor,[m
+[31m-        data={[m
+[31m-            "snaps": {[m
+[31m-                snap_store_name: {"revision": host_revision, "source": SNAP_SRC_HOST}[m
+[31m-            }[m
+[31m-        },[m
+[31m-    )[m
+[31m-[m
+[31m-[m
+[31m-def install_from_store([m
+[31m-    *, executor: Executor, snap_name: str, channel: str, classic: bool[m
+[31m-) -> None:[m
+[31m-    """Install snap from store into target.[m
+[31m-[m
+[31m-    Perform installation using method which prevents refreshing.[m
+[31m-[m
+[31m-    :param executor: Executor for target.[m
+[31m-    :param snap_name: Name of snap to install.[m
+[31m-    :param channel: Channel to install from.[m
+[31m-    :param classic: Install in classic mode.[m
+[31m-[m
+[31m-    :raises SnapInstallationError: on unexpected error.[m
+[31m-    """[m
+[31m-    # trim the `_name` suffix, if present[m
+[31m-    snap_store_name = snap_name.split("_")[0][m
+[31m-    if snap_name == snap_store_name:[m
+[31m-        logger.debug([m
+[31m-            "Installing snap %r from store (channel=%r, classic=%s).",[m
+[31m-            snap_name,[m
+[31m-            channel,[m
+[31m-            classic,[m
+[31m-        )[m
+[31m-    else:[m
+[31m-        logger.debug([m
+[31m-            "Installing snap %r as %r from store (channel=%r, classic=%s).",[m
+[31m-            snap_name,[m
+[31m-            snap_store_name,[m
+[31m-            channel,[m
+[31m-            classic,[m
+[31m-        )[m
+[31m-[m
+[31m-    target_revision = _get_snap_revision_ensuring_source([m
+[31m-        snap_name=snap_store_name,[m
+[31m-        source=SNAP_SRC_STORE,[m
+[31m-        executor=executor,[m
+[31m-    )[m
+[31m-    logger.debug("Revision found in target: %r", target_revision)[m
+[31m-[m
+[31m-    if target_revision is None:[m
+[31m-        # no snap present in the target environment, just install it[m
+[31m-        cmd = snap_cmd.formulate_remote_install_command([m
+[31m-            snap_name=snap_store_name,[m
+[31m-            channel=channel,[m
+[31m-            classic=classic,[m
+[31m-        )[m
+[31m-    else:[m
+[31m-        # refresh the already installed snap[m
+[31m-        cmd = snap_cmd.formulate_refresh_command([m
+[31m-            snap_name=snap_store_name,[m
+[31m-            channel=channel,[m
+[31m-        )[m
+[31m-[m
+[31m-    try:[m
+[31m-        executor.execute_run([m
+[31m-            cmd,[m
+[31m-            check=True,[m
+[31m-            capture_output=True,[m
+[31m-            timeout=TIMEOUT_COMPLEX,[m
+[31m-        )[m
+[31m-    except subprocess.CalledProcessError as error:[m
+[31m-        raise SnapInstallationError([m
+[31m-            brief=f"Failed to install/refresh snap {snap_store_name!r}.",[m
+[31m-            details=details_from_called_process_error(error),[m
+[31m-        ) from error[m
+[31m-[m
+[31m-    new_target_revision = _get_target_snap_revision_from_snapd([m
+[31m-        snap_name=snap_store_name,[m
+[31m-        executor=executor,[m
+[31m-    )[m
+[31m-    logger.debug("Revision after install/refresh: %r", new_target_revision)[m
+[31m-[m
+[31m-    InstanceConfiguration.update([m
+[31m-        executor=executor,[m
+[31m-        data={[m
+[31m-            "snaps": {[m
+[31m-                snap_store_name: {[m
+[31m-                    "revision": new_target_revision,[m
+[31m-                    "source": SNAP_SRC_STORE,[m
+[31m-                }[m
+[31m-            }[m
+[31m-        },[m
+[31m-    )[m
+[32m+[m[32m#[m[41m[m
+[32m+[m[32m# Copyright 2021-2023 Canonical Ltd.[m[41m[m
+[32m+[m[32m#[m[41m[m
+[32m+[m[32m# This program is free software; you can redistribute it and/or[m[41m[m
+[32m+[m[32m# modify it under the terms of the GNU Lesser General Public[m[41m[m
+[32m+[m[32m# License version 3 as published by the Free Software Foundation.[m[41m[m
+[32m+[m[32m#[m[41m[m
+[32m+[m[32m# This program is distributed in the hope that it will be useful,[m[41m[m
+[32m+[m[32m# but WITHOUT ANY WARRANTY; without even the implied warranty of[m[41m[m
+[32m+[m[32m# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU[m[41m[m
+[32m+[m[32m# Lesser General Public License for more details.[m[41m[m
+[32m+[m[32m#[m[41m[m
+[32m+[m[32m# You should have received a copy of the GNU Lesser General Public License[m[41m[m
+[32m+[m[32m# along with this program; if not, write to the Free Software Foundation,[m[41m[m
+[32m+[m[32m# Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.[m[41m[m
+[32m+[m[32m#[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m"""Helpers for snap commands."""[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mfrom __future__ import annotations[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mimport contextlib[m[41m[m
+[32m+[m[32mimport json[m[41m[m
+[32m+[m[32mimport logging[m[41m[m
+[32m+[m[32mimport pathlib[m[41m[m
+[32m+[m[32mimport shlex[m[41m[m
+[32m+[m[32mimport subprocess[m[41m[m
+[32m+[m[32mimport urllib.parse[m[41m[m
+[32m+[m[32mfrom http import HTTPStatus[m[41m[m
+[32m+[m[32mfrom typing import TYPE_CHECKING, Any, cast[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mimport pydantic[m[41m[m
+[32m+[m[32mimport requests[m[41m[m
+[32m+[m[32mimport requests_unixsocket  # type: ignore[import][m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mfrom craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE[m[41m[m
+[32m+[m[32mfrom craft_providers.errors import ([m[41m[m
+[32m+[m[32m    BaseConfigurationError,[m[41m[m
+[32m+[m[32m    ProviderError,[m[41m[m
+[32m+[m[32m    details_from_called_process_error,[m[41m[m
+[32m+[m[32m)[m[41m[m
+[32m+[m[32mfrom craft_providers.instance_config import InstanceConfiguration[m[41m[m
+[32m+[m[32mfrom craft_providers.util import snap_cmd, temp_paths[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mif TYPE_CHECKING:[m[41m[m
+[32m+[m[32m    from collections.abc import Iterator[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    from craft_providers.executor import Executor[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mlogger = logging.getLogger(__name__)[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m# possible sources for the snap (using these two constants instead[m[41m[m
+[32m+[m[32m# of an enum because the values are persisted with JSON)[m[41m[m
+[32m+[m[32mSNAP_SRC_HOST = "host"[m[41m[m
+[32m+[m[32mSNAP_SRC_STORE = "store"[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mclass SnapInstallationError(ProviderError):[m[41m[m
+[32m+[m[32m    """Unexpected error during snap installation."""[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mclass Snap(pydantic.BaseModel, extra="forbid"):[m[41m[m
+[32m+[m[32m    """Details of snap to install in the base.[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    :param name: name of snap[m[41m[m
+[32m+[m[32m    :param channel: snap store channel to install from (default is stable)[m[41m[m
+[32m+[m[32m      If channel is `None`, then the snap is injected from the host instead[m[41m[m
+[32m+[m[32m      of being installed from the store.[m[41m[m
+[32m+[m[32m    :param classic: true if snap is a classic snap (default is false)[m[41m[m
+[32m+[m[32m    """[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    name: str[m[41m[m
+[32m+[m[32m    channel: str | None = "stable"[m[41m[m
+[32m+[m[32m    classic: bool = False[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    @pydantic.field_validator("channel")[m[41m[m
+[32m+[m[32m    @classmethod[m[41m[m
+[32m+[m[32m    def validate_channel(cls, channel: str | None) -> str | None:[m[41m[m
+[32m+[m[32m        """Validate that channel is not an empty string.[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        :raises BaseConfigurationError: if channel is empty[m[41m[m
+[32m+[m[32m        """[m[41m[m
+[32m+[m[32m        if channel is not None and not channel:[m[41m[m
+[32m+[m[32m            raise BaseConfigurationError([m[41m[m
+[32m+[m[32m                brief="channel cannot be empty",[m[41m[m
+[32m+[m[32m                resolution="set channel to a non-empty string or `None`",[m[41m[m
+[32m+[m[32m            )[m[41m[m
+[32m+[m[32m        return channel[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mdef _download_host_snap([m[41m[m
+[32m+[m[32m    *, snap_name: str, output: pathlib.Path, chunk_size: int = 64 * 1024[m[41m[m
+[32m+[m[32m) -> None:[m[41m[m
+[32m+[m[32m    """Download the current host snap using snapd's APIs."""[m[41m[m
+[32m+[m[32m    quoted_name = urllib.parse.quote(snap_name, safe="")[m[41m[m
+[32m+[m[32m    url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}/file"[m[41m[m
+[32m+[m[32m    try:[m[41m[m
+[32m+[m[32m        resp = requests_unixsocket.get(url)  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types[m[41m[m
+[32m+[m[32m    except requests.ConnectionError as error:[m[41m[m
+[32m+[m[32m        raise SnapInstallationError([m[41m[m
+[32m+[m[32m            brief="Unable to connect to snapd service."[m[41m[m
+[32m+[m[32m        ) from error[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    try:[m[41m[m
+[32m+[m[32m        resp.raise_for_status()[m[41m[m
+[32m+[m[32m    except requests.HTTPError as error:[m[41m[m
+[32m+[m[32m        raise SnapInstallationError([m[41m[m
+[32m+[m[32m            brief=f"Unable to download snap {snap_name!r} from snapd."[m[41m[m
+[32m+[m[32m        ) from error[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    with output.open("wb") as stream:[m[41m[m
+[32m+[m[32m        for chunk in resp.iter_content(chunk_size):[m[41m[m
+[32m+[m[32m            stream.write(chunk)[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mdef _pack_host_snap(*, snap_name: str, output: pathlib.Path) -> None:[m[41m[m
+[32m+[m[32m    """Pack the current host snap."""[m[41m[m
+[32m+[m[32m    command = snap_cmd.formulate_pack_command(snap_name, output)[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    logger.debug("Executing command on host: %s", shlex.join(command))[m[41m[m
+[32m+[m[32m    subprocess.run([m[41m[m
+[32m+[m[32m        command,[m[41m[m
+[32m+[m[32m        capture_output=True,[m[41m[m
+[32m+[m[32m        check=True,[m[41m[m
+[32m+[m[32m    )[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mdef get_host_snap_info(snap_name: str) -> dict[str, Any]:[m[41m[m
+[32m+[m[32m    """Get info about a snap installed on the host."""[m[41m[m
+[32m+[m[32m    quoted_name = urllib.parse.quote(snap_name, safe="")[m[41m[m
+[32m+[m[32m    url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}"[m[41m[m
+[32m+[m[32m    try:[m[41m[m
+[32m+[m[32m        snap_info = requests_unixsocket.get(url)  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types[m[41m[m
+[32m+[m[32m    except requests.ConnectionError as error:[m[41m[m
+[32m+[m[32m        raise SnapInstallationError([m[41m[m
+[32m+[m[32m            brief="Unable to connect to snapd service."[m[41m[m
+[32m+[m[32m        ) from error[m[41m[m
+[32m+[m[32m    snap_info.raise_for_status()[m[41m[m
+[32m+[m[32m    return cast("dict[str, Any]", snap_info.json()["result"])[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mdef _get_target_snap_revision_from_snapd([m[41m[m
+[32m+[m[32m    snap_name: str, executor: Executor[m[41m[m
+[32m+[m[32m) -> str | None:[m[41m[m
+[32m+[m[32m    """Get the revision of the snap on the target."""[m[41m[m
+[32m+[m[32m    quoted_name = urllib.parse.quote(snap_name, safe="")[m[41m[m
+[32m+[m[32m    url = f"http://localhost/v2/snaps/{quoted_name}"[m[41m[m
+[32m+[m[32m    cmd = ["curl", "--silent", "--unix-socket", "/run/snapd.socket", url][m[41m[m
+[32m+[m[32m    try:[m[41m[m
+[32m+[m[32m        proc = executor.execute_run([m[41m[m
+[32m+[m[32m            cmd, check=True, capture_output=True, text=True, timeout=TIMEOUT_SIMPLE[m[41m[m
+[32m+[m[32m        )[m[41m[m
+[32m+[m[32m    except subprocess.CalledProcessError as error:[m[41m[m
+[32m+[m[32m        raise SnapInstallationError([m[41m[m
+[32m+[m[32m            brief="Unable to get target snap revision.",[m[41m[m
+[32m+[m[32m            details=details_from_called_process_error(error),[m[41m[m
+[32m+[m[32m        ) from error[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    result = json.loads(proc.stdout)[m[41m[m
+[32m+[m[32m    if result["status-code"] == HTTPStatus.NOT_FOUND:[m[41m[m
+[32m+[m[32m        # snap not found[m[41m[m
+[32m+[m[32m        return None[m[41m[m
+[32m+[m[32m    if result["status-code"] == HTTPStatus.OK:[m[41m[m
+[32m+[m[32m        # Note: cast can be removed if Pydantic model is made for this response[m[41m[m
+[32m+[m[32m        return cast("str", result["result"]["revision"])[m[41m[m
+[32m+[m[32m    raise SnapInstallationError(f"Unknown response from snapd: {result!r}")[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mdef _get_snap_revision_ensuring_source([m[41m[m
+[32m+[m[32m    snap_name: str, source: str, executor: Executor[m[41m[m
+[32m+[m[32m) -> str | None:[m[41m[m
+[32m+[m[32m    """Get revision of snap on target and ensure the installation source."""[m[41m[m
+[32m+[m[32m    instance_config = InstanceConfiguration.load(executor=executor)[m[41m[m
+[32m+[m[32m    if instance_config is None or instance_config.snaps is None:[m[41m[m
+[32m+[m[32m        return None[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    config = instance_config.snaps.get(snap_name)[m[41m[m
+[32m+[m[32m    if config is None:[m[41m[m
+[32m+[m[32m        # not installed before[m[41m[m
+[32m+[m[32m        return None[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    # use 'get' to retrieve the source to support configs[m[41m[m
+[32m+[m[32m    # saved by previous versions of the lib[m[41m[m
+[32m+[m[32m    if config.get("source") == source:[m[41m[m
+[32m+[m[32m        # previously installed from specified source: ok[m[41m[m
+[32m+[m[32m        # Note: cast can be removed if the Pydantic model is improved[m[41m[m
+[32m+[m[32m        return cast("str", config["revision"])[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    # installed from other source: remove it[m[41m[m
+[32m+[m[32m    logger.debug([m[41m[m
+[32m+[m[32m        "Snap %r installed from other source (%s), removing", snap_name, config[m[41m[m
+[32m+[m[32m    )[m[41m[m
+[32m+[m[32m    cmd = snap_cmd.formulate_remove_command(snap_name)[m[41m[m
+[32m+[m[32m    try:[m[41m[m
+[32m+[m[32m        executor.execute_run([m[41m[m
+[32m+[m[32m            cmd, check=True, capture_output=True, timeout=TIMEOUT_SIMPLE[m[41m[m
+[32m+[m[32m        )[m[41m[m
+[32m+[m[32m    except subprocess.CalledProcessError as error:[m[41m[m
+[32m+[m[32m        raise SnapInstallationError([m[41m[m
+[32m+[m[32m            brief=f"Failed to remove snap {snap_name!r}.",[m[41m[m
+[32m+[m[32m            details=details_from_called_process_error(error),[m[41m[m
+[32m+[m[32m        ) from error[m[41m[m
+[32m+[m[32m    return None[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m@contextlib.contextmanager[m[41m[m
+[32m+[m[32mdef _get_host_snap(snap_name: str) -> Iterator[pathlib.Path]:[m[41m[m
+[32m+[m[32m    """Get snap installed on host containing the config.[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    Snapd provides an API to fetch a snap. First use that to fetch a snap.[m[41m[m
+[32m+[m[32m    If the snap is installed using `snap try`, it may fail to download. In[m[41m[m
+[32m+[m[32m    that case, attempt to construct the snap by packing it ourselves.[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    :yields: context manager that sets the temporary snap installation file[m[41m[m
+[32m+[m[32m      as the target[m[41m[m
+[32m+[m[32m    """[m[41m[m
+[32m+[m[32m    with temp_paths.home_temporary_directory() as tmp_dir:[m[41m[m
+[32m+[m[32m        snap_path = tmp_dir / f"{snap_name}.snap"[m[41m[m
+[32m+[m[32m        try:[m[41m[m
+[32m+[m[32m            _download_host_snap(snap_name=snap_name, output=snap_path)[m[41m[m
+[32m+[m[32m        except SnapInstallationError:[m[41m[m
+[32m+[m[32m            logger.debug([m[41m[m
+[32m+[m[32m                "Failed to fetch snap from snapd,"[m[41m[m
+[32m+[m[32m                " falling back to `snap pack` to recreate"[m[41m[m
+[32m+[m[32m            )[m[41m[m
+[32m+[m[32m            _pack_host_snap(snap_name=snap_name, output=snap_path)[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        yield snap_path[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mdef _get_assertion(query: list[str]) -> bytes:[m[41m[m
+[32m+[m[32m    """Get an assertion from snapd.[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    :param query: assertion query to pass to `snap known`[m[41m[m
+[32m+[m[32m    :returns: assertion data[m[41m[m
+[32m+[m[32m    :raises SnapInstallationError: if 'snap known' call fails[m[41m[m
+[32m+[m[32m    """[m[41m[m
+[32m+[m[32m    command = snap_cmd.formulate_known_command(query=query)[m[41m[m
+[32m+[m[32m    logger.debug("Executing command on host: %s", command)[m[41m[m
+[32m+[m[32m    try:[m[41m[m
+[32m+[m[32m        return subprocess.run(command, capture_output=True, check=True).stdout[m[41m[m
+[32m+[m[32m    except subprocess.CalledProcessError as error:[m[41m[m
+[32m+[m[32m        raise SnapInstallationError([m[41m[m
+[32m+[m[32m            brief="failed to get assertions for snap",[m[41m[m
+[32m+[m[32m            details=details_from_called_process_error(error),[m[41m[m
+[32m+[m[32m        ) from error[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m@contextlib.contextmanager[m[41m[m
+[32m+[m[32mdef _get_assertions_file([m[41m[m
+[32m+[m[32m    snap_name: str, snap_id: str, snap_revision: str, snap_publisher_id: str[m[41m[m
+[32m+[m[32m) -> Iterator[pathlib.Path]:[m[41m[m
+[32m+[m[32m    """Get an assertion file for a snap.[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    :param snap_name: Name of snap to inject[m[41m[m
+[32m+[m[32m    :param snap_id: ID of the snap[m[41m[m
+[32m+[m[32m    :param snap_revision: Revision of the snap[m[41m[m
+[32m+[m[32m    :param snap_publisher_id: The ID of the snap's publisher's account[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    :yields: context manager that will set the temporary snap assertion file[m[41m[m
+[32m+[m[32m      as the target[m[41m[m
+[32m+[m[32m    """[m[41m[m
+[32m+[m[32m    logger.debug("Creating an assert file for snap %r", snap_name)[m[41m[m
+[32m+[m[32m    assertion_queries = [[m[41m[m
+[32m+[m[32m        [[m[41m[m
+[32m+[m[32m            "account-key",[m[41m[m
+[32m+[m[32m            "public-key-sha3-384=BWDEoaqyr25nF5SNCvEv2v"[m[41m[m
+[32m+[m[32m            "7QnM9QsfCc0PBMYD_i2NGSQ32EF2d4D0hqUel3m8ul",[m[41m[m
+[32m+[m[32m        ],[m[41m[m
+[32m+[m[32m        ["snap-declaration", f"snap-name={snap_name.partition('_')[0]}"],[m[41m[m
+[32m+[m[32m        ["snap-revision", f"snap-revision={snap_revision}", f"snap-id={snap_id}"],[m[41m[m
+[32m+[m[32m        ["account", f"account-id={snap_publisher_id}"],[m[41m[m
+[32m+[m[32m    ][m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    with temp_paths.home_temporary_file() as assert_file_path:[m[41m[m
+[32m+[m[32m        with assert_file_path.open("wb") as assert_file:[m[41m[m
+[32m+[m[32m            for query in assertion_queries:[m[41m[m
+[32m+[m[32m                assert_file.write(_get_assertion(query))[m[41m[m
+[32m+[m[32m                assert_file.write(b"\n")[m[41m[m
+[32m+[m[32m            assert_file.flush()[m[41m[m
+[32m+[m[32m            yield assert_file_path[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mdef _add_assertions_from_host(executor: Executor, snap_name: str) -> None:[m[41m[m
+[32m+[m[32m    """Add assertions from the host into the target for a snap.[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    :param executor: Executor for target[m[41m[m
+[32m+[m[32m    :param snap_name: Name of snap to inject[m[41m[m
+[32m+[m[32m    """[m[41m[m
+[32m+[m[32m    # trim the `_name` suffix, if present[m[41m[m
+[32m+[m[32m    target_assert_path = pathlib.PurePosixPath(f"/tmp/{snap_name.split('_')[0]}.assert")[m[41m[m
+[32m+[m[32m    snap_info = get_host_snap_info(snap_name)[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    try:[m[41m[m
+[32m+[m[32m        with _get_assertions_file([m[41m[m
+[32m+[m[32m            snap_name=snap_name,[m[41m[m
+[32m+[m[32m            snap_id=snap_info["id"],[m[41m[m
+[32m+[m[32m            snap_revision=snap_info["revision"],[m[41m[m
+[32m+[m[32m            snap_publisher_id=snap_info["publisher"]["id"],[m[41m[m
+[32m+[m[32m        ) as host_assert_path:[m[41m[m
+[32m+[m[32m            executor.push_file([m[41m[m
+[32m+[m[32m                source=host_assert_path,[m[41m[m
+[32m+[m[32m                destination=target_assert_path,[m[41m[m
+[32m+[m[32m            )[m[41m[m
+[32m+[m[32m    except ProviderError as error:[m[41m[m
+[32m+[m[32m        raise SnapInstallationError([m[41m[m
+[32m+[m[32m            brief=f"failed to copy assert file for snap {snap_name!r}",[m[41m[m
+[32m+[m[32m            details="error copying snap assert file into target environment",[m[41m[m
+[32m+[m[32m        ) from error[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    try:[m[41m[m
+[32m+[m[32m        executor.execute_run([m[41m[m
+[32m+[m[32m            snap_cmd.formulate_ack_command(snap_assert_path=target_assert_path),[m[41m[m
+[32m+[m[32m            check=True,[m[41m[m
+[32m+[m[32m            capture_output=True,[m[41m[m
+[32m+[m[32m            timeout=TIMEOUT_COMPLEX,[m[41m[m
+[32m+[m[32m        )[m[41m[m
+[32m+[m[32m    except subprocess.CalledProcessError as error:[m[41m[m
+[32m+[m[32m        raise SnapInstallationError([m[41m[m
+[32m+[m[32m            brief=f"failed to add assertions for snap {snap_name!r}",[m[41m[m
+[32m+[m[32m            details=details_from_called_process_error(error),[m[41m[m
+[32m+[m[32m        ) from error[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mdef inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> None:[m[41m[m
+[32m+[m[32m    """Inject snap from host snap.[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    If the snap on the host was installed with the `--name` parameter, the host snap's[m[41m[m
+[32m+[m[32m    name will be formatted as `<snap_name>_<name>`. The `--name` parameter is not[m[41m[m
+[32m+[m[32m    used when the snap is installed inside the instance, so the instance's snap[m[41m[m
+[32m+[m[32m    name will just be `<snap_name>` (no suffix).[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    :param executor: Executor for target[m[41m[m
+[32m+[m[32m    :param snap_name: Name of snap to inject[m[41m[m
+[32m+[m[32m    :param classic: Install in classic mode[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    :raises SnapInstallationError: on failure to inject snap[m[41m[m
+[32m+[m[32m    """[m[41m[m
+[32m+[m[32m    # the local snap name may have a suffix if it was installed with `--name`[m[41m[m
+[32m+[m[32m    snap_store_name = snap_name.split("_")[0][m[41m[m
+[32m+[m[32m    if snap_name == snap_store_name:[m[41m[m
+[32m+[m[32m        logger.debug("Installing snap %r from host (classic=%s)", snap_name, classic)[m[41m[m
+[32m+[m[32m    else:[m[41m[m
+[32m+[m[32m        logger.debug([m[41m[m
+[32m+[m[32m            "Installing snap %r from host as %r in instance (classic=%s).",[m[41m[m
+[32m+[m[32m            snap_name,[m[41m[m
+[32m+[m[32m            snap_store_name,[m[41m[m
+[32m+[m[32m            classic,[m[41m[m
+[32m+[m[32m        )[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    host_snap_info = get_host_snap_info(snap_name)[m[41m[m
+[32m+[m[32m    host_snap_base = host_snap_info.get("base", None)[m[41m[m
+[32m+[m[32m    if host_snap_base:[m[41m[m
+[32m+[m[32m        logger.debug([m[41m[m
+[32m+[m[32m            "Installing base snap %r for %r from host", host_snap_base, snap_name[m[41m[m
+[32m+[m[32m        )[m[41m[m
+[32m+[m[32m        inject_from_host(executor=executor, snap_name=host_snap_base, classic=False)[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    host_revision = host_snap_info["revision"][m[41m[m
+[32m+[m[32m    target_revision = _get_snap_revision_ensuring_source([m[41m[m
+[32m+[m[32m        snap_name=snap_store_name,[m[41m[m
+[32m+[m[32m        source=SNAP_SRC_HOST,[m[41m[m
+[32m+[m[32m        executor=executor,[m[41m[m
+[32m+[m[32m    )[m[41m[m
+[32m+[m[32m    logger.debug("Revisions found: host=%r, target=%r", host_revision, target_revision)[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    if target_revision is not None and target_revision == host_revision:[m[41m[m
+[32m+[m[32m        logger.debug([m[41m[m
+[32m+[m[32m            "Skipping snap injection:"[m[41m[m
+[32m+[m[32m            " target is already up-to-date with revision on host"[m[41m[m
+[32m+[m[32m        )[m[41m[m
+[32m+[m[32m        return[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    target_snap_path = pathlib.PurePosixPath(f"/tmp/{snap_store_name}.snap")[m[41m[m
+[32m+[m[32m    is_dangerous = host_revision.startswith("x")[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    if not is_dangerous:[m[41m[m
+[32m+[m[32m        _add_assertions_from_host(executor=executor, snap_name=snap_name)[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    with _get_host_snap(snap_name) as host_snap_path:[m[41m[m
+[32m+[m[32m        try:[m[41m[m
+[32m+[m[32m            executor.push_file([m[41m[m
+[32m+[m[32m                source=host_snap_path,[m[41m[m
+[32m+[m[32m                destination=target_snap_path,[m[41m[m
+[32m+[m[32m            )[m[41m[m
+[32m+[m[32m        except ProviderError as error:[m[41m[m
+[32m+[m[32m            raise SnapInstallationError([m[41m[m
+[32m+[m[32m                brief=f"failed to copy snap file for snap {snap_name!r}",[m[41m[m
+[32m+[m[32m                details="error copying snap file into target environment",[m[41m[m
+[32m+[m[32m            ) from error[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    try:[m[41m[m
+[32m+[m[32m        executor.execute_run([m[41m[m
+[32m+[m[32m            snap_cmd.formulate_local_install_command([m[41m[m
+[32m+[m[32m                classic=classic, dangerous=is_dangerous, snap_path=target_snap_path[m[41m[m
+[32m+[m[32m            ),[m[41m[m
+[32m+[m[32m            check=True,[m[41m[m
+[32m+[m[32m            capture_output=True,[m[41m[m
+[32m+[m[32m            timeout=TIMEOUT_COMPLEX,[m[41m[m
+[32m+[m[32m        )[m[41m[m
+[32m+[m[32m    except subprocess.CalledProcessError as error:[m[41m[m
+[32m+[m[32m        raise SnapInstallationError([m[41m[m
+[32m+[m[32m            brief=f"failed to install snap {snap_store_name!r}",[m[41m[m
+[32m+[m[32m            details=details_from_called_process_error(error),[m[41m[m
+[32m+[m[32m        ) from error[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    InstanceConfiguration.update([m[41m[m
+[32m+[m[32m        executor=executor,[m[41m[m
+[32m+[m[32m        data={[m[41m[m
+[32m+[m[32m            "snaps": {[m[41m[m
+[32m+[m[32m                snap_store_name: {"revision": host_revision, "source": SNAP_SRC_HOST}[m[41m[m
+[32m+[m[32m            }[m[41m[m
+[32m+[m[32m        },[m[41m[m
+[32m+[m[32m    )[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mdef install_from_store([m[41m[m
+[32m+[m[32m    *, executor: Executor, snap_name: str, channel: str, classic: bool[m[41m[m
+[32m+[m[32m) -> None:[m[41m[m
+[32m+[m[32m    """Install snap from store into target.[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    Perform installation using method which prevents refreshing.[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    :param executor: Executor for target.[m[41m[m
+[32m+[m[32m    :param snap_name: Name of snap to install.[m[41m[m
+[32m+[m[32m    :param channel: Channel to install from.[m[41m[m
+[32m+[m[32m    :param classic: Install in classic mode.[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    :raises SnapInstallationError: on unexpected error.[m[41m[m
+[32m+[m[32m    """[m[41m[m
+[32m+[m[32m    # trim the `_name` suffix, if present[m[41m[m
+[32m+[m[32m    snap_store_name = snap_name.split("_")[0][m[41m[m
+[32m+[m[32m    if snap_name == snap_store_name:[m[41m[m
+[32m+[m[32m        logger.debug([m[41m[m
+[32m+[m[32m            "Installing snap %r from store (channel=%r, classic=%s).",[m[41m[m
+[32m+[m[32m            snap_name,[m[41m[m
+[32m+[m[32m            channel,[m[41m[m
+[32m+[m[32m            classic,[m[41m[m
+[32m+[m[32m        )[m[41m[m
+[32m+[m[32m    else:[m[41m[m
+[32m+[m[32m        logger.debug([m[41m[m
+[32m+[m[32m            "Installing snap %r as %r from store (channel=%r, classic=%s).",[m[41m[m
+[32m+[m[32m            snap_name,[m[41m[m
+[32m+[m[32m            snap_store_name,[m[41m[m
+[32m+[m[32m            channel,[m[41m[m
+[32m+[m[32m            classic,[m[41m[m
+[32m+[m[32m        )[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    target_revision = _get_snap_revision_ensuring_source([m[41m[m
+[32m+[m[32m        snap_name=snap_store_name,[m[41m[m
+[32m+[m[32m        source=SNAP_SRC_STORE,[m[41m[m
+[32m+[m[32m        executor=executor,[m[41m[m
+[32m+[m[32m    )[m[41m[m
+[32m+[m[32m    logger.debug("Revision found in target: %r", target_revision)[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    if target_revision is None:[m[41m[m
+[32m+[m[32m        # no snap present in the target environment, just install it[m[41m[m
+[32m+[m[32m        cmd = snap_cmd.formulate_remote_install_command([m[41m[m
+[32m+[m[32m            snap_name=snap_store_name,[m[41m[m
+[32m+[m[32m            channel=channel,[m[41m[m
+[32m+[m[32m            classic=classic,[m[41m[m
+[32m+[m[32m        )[m[41m[m
+[32m+[m[32m    else:[m[41m[m
+[32m+[m[32m        # refresh the already installed snap[m[41m[m
+[32m+[m[32m        cmd = snap_cmd.formulate_refresh_command([m[41m[m
+[32m+[m[32m            snap_name=snap_store_name,[m[41m[m
+[32m+[m[32m            channel=channel,[m[41m[m
+[32m+[m[32m        )[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    try:[m[41m[m
+[32m+[m[32m        executor.execute_run([m[41m[m
+[32m+[m[32m            cmd,[m[41m[m
+[32m+[m[32m            check=True,[m[41m[m
+[32m+[m[32m            capture_output=True,[m[41m[m
+[32m+[m[32m            timeout=TIMEOUT_COMPLEX,[m[41m[m
+[32m+[m[32m        )[m[41m[m
+[32m+[m[32m    except subprocess.CalledProcessError as error:[m[41m[m
+[32m+[m[32m        raise SnapInstallationError([m[41m[m
+[32m+[m[32m            brief=f"Failed to install/refresh snap {snap_store_name!r}.",[m[41m[m
+[32m+[m[32m            details=details_from_called_process_error(error),[m[41m[m
+[32m+[m[32m        ) from error[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    new_target_revision = _get_target_snap_revision_from_snapd([m[41m[m
+[32m+[m[32m        snap_name=snap_store_name,[m[41m[m
+[32m+[m[32m        executor=executor,[m[41m[m
+[32m+[m[32m    )[m[41m[m
+[32m+[m[32m    logger.debug("Revision after install/refresh: %r", new_target_revision)[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    InstanceConfiguration.update([m[41m[m
+[32m+[m[32m        executor=executor,[m[41m[m
+[32m+[m[32m        data={[m[41m[m
+[32m+[m[32m            "snaps": {[m[41m[m
+[32m+[m[32m                snap_store_name: {[m[41m[m
+[32m+[m[32m                    "revision": new_target_revision,[m[41m[m
+[32m+[m[32m                    "source": SNAP_SRC_STORE,[m[41m[m
+[32m+[m[32m                }[m[41m[m
+[32m+[m[32m            }[m[41m[m
+[32m+[m[32m        },[m[41m[m
+[32m+[m[32m    )[m[41m[m
