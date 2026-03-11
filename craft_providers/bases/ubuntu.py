@@ -264,6 +264,12 @@ class BuilddBase(Base[BuilddBaseAlias]):
         :raises BaseConfigurationError: If base's EOL status can't be determined.
         :raises BaseConfigurationError: If the sources can't be updated in the instance.
         """
+        if os.environ.get("CRAFT_PROVIDERS_DISABLE_EOL_SOURCES_CHECK"):
+            logger.debug(
+                "Skipping old-releases check because CRAFT_PROVIDERS_DISABLE_EOL_SOURCES_CHECK is set."
+            )
+            return
+
         codename = self._get_codename(executor)
 
         if not self._is_eol(codename):

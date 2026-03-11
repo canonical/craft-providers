@@ -1822,6 +1822,29 @@ def test_base_not_on_old_releases(
 
 
 @freeze_time("2027-01-01")
+def test_disable_eol_sources_check(
+    fake_process, fake_executor, mock_requests_head, monkeypatch, logs
+):
+    """Skip the old-releases network check when CRAFT_PROVIDERS_DISABLE_EOL_SOURCES_CHECK is set."""
+    monkeypatch.setenv("CRAFT_PROVIDERS_DISABLE_EOL_SOURCES_CHECK", "1")
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout="UBUNTU_CODENAME=plucky",
+    )
+
+    base_config._update_eol_sources(fake_executor)
+
+    assert (
+        re.escape(
+            "Skipping old-releases check because CRAFT_PROVIDERS_DISABLE_EOL_SOURCES_CHECK is set."
+        )
+        in logs.debug
+    )
+    mock_requests_head.assert_not_called()
+
+
+@freeze_time("2027-01-01")
 def test_get_old_releases_retry(fake_process, fake_executor, mock_requests_head, logs):
     """Retry requests to https://old-releases.ubuntu.com."""
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
