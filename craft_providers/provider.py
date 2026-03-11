@@ -100,7 +100,9 @@ class Provider(ABC):
     ) -> None:
         """Remove instances of a provider.
 
-        :param prune_base: Optional option to prune the base instances.
+        :param project_name: Optional string to prune only instances with the project
+        name
+        :param prune_templates: Optional option to prune the base instances.
         """
 
     @abstractmethod

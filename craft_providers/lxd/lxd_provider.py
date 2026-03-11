@@ -108,7 +108,12 @@ class LXDProvider(Provider):
         project_name: str | None = None,
         prune_templates: bool = False,
     ) -> None:
-        """Remove instances for a LXD project."""
+        """Remove instances for a LXD project.
+
+        :param project_name: Optional string to prune only instances with the project
+        name
+        :param prune_templates: Optional option to prune the base instances.
+        """
         project = project_name or self.lxd_project
         instances = self.list_instances(
             project_name=project,

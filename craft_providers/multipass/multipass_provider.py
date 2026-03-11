@@ -184,7 +184,9 @@ class MultipassProvider(Provider):
     ) -> None:
         """Remove all instances of the provider.
 
-        :param prune_base: Optional flag on whether to prune base instances.
+        :param project_name: Optional string to prune only instances with the project
+        name
+        :param prune_templates: Optional option to prune the base instances.
         """
 
     @override
