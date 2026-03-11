@@ -188,6 +188,12 @@ class MultipassProvider(Provider):
         name
         :param prune_templates: Optional option to prune the base instances.
         """
+        multipass_name = project_name or self.name
+        instances = self.list_instances(
+            include_base_instances=prune_templates, project_name=multipass_name
+        )
+        for instance in instances:
+            instance.delete()
 
     @override
     def list_instances(
