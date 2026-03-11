@@ -4,6 +4,13 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+3.5.0 (unreleased)
+------------------
+
+New features:
+
+- Add ``CRAFT_PROVIDERS_DISABLE_EOL_SOURCES_CHECK`` support to skip EOL sources checks
+
 3.4.0 (2026-02-25)
 ------------------
 
