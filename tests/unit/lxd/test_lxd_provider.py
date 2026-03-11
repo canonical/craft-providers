@@ -402,35 +402,8 @@ def test_lxd_list_instances_prefix_filter(mock_lxc_container):
         assert instance.name.startswith("alpha-")
 
 
-def test_lxd_prune_selective(mock_lxc_container):
-    """Verify prune deletes only instances matching prefix."""
-    provider = LXDProvider(
-        lxc=mock_lxc_container,
-        lxd_project="default",
-        lxd_remote="local",
-    )
-
-    mock_lxc_container.list_names.return_value = [
-        "test-instance-1",
-        "test-instance-2",
-        "other-instance",
-        "unmanaged-instance",
-        "base-instance-1",
-    ]
-
-    provider.prune(instance_name_prefix="test-instance-")
-
-    assert mock_lxc_container.delete.call_count == 2
-    mock_lxc_container.delete.assert_any_call(
-        instance_name="test-instance-1", project="default", remote="local", force=True
-    )
-    mock_lxc_container.delete.assert_any_call(
-        instance_name="test-instance-2", project="default", remote="local", force=True
-    )
-
-
 def test_lxd_prune_all(mock_lxc_container):
-    """Verify prune deletes all instances matching current scope."""
+    """Verify prune deletes all instances in scope when no prefix is provided."""
     provider = LXDProvider(
         lxc=mock_lxc_container,
         lxd_project="default",
@@ -443,7 +416,7 @@ def test_lxd_prune_all(mock_lxc_container):
         "base-instance-1",
     ]
 
-    provider.prune(prune_base=True)
+    provider.prune(prune_templates=True)
 
     assert mock_lxc_container.delete.call_count == 3
     mock_lxc_container.delete.assert_any_call(

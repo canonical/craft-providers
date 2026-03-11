@@ -179,18 +179,10 @@ class MultipassProvider(Provider):
             install()
         ensure_multipass_is_ready()
 
-    def prune(
-        self, *, project_name: str | None = None, prune_templates: bool = False
-    ) -> None:
-        """Remove all instances of the provider.
-
-        :param project_name: Optional string to prune only instances with the project
-        name
-        :param prune_templates: Optional option to prune the base instances.
-        """
-        multipass_name = project_name or self.name
+    def prune(self, *, prune_templates: bool = False) -> None:
+        """Remove all instances of the provider."""
         instances = self.list_instances(
-            include_base_instances=prune_templates, project_name=multipass_name
+            include_base_instances=prune_templates, project_name=self.name
         )
         for instance in instances:
             instance.delete()
