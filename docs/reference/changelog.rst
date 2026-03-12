@@ -4,12 +4,13 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
-3.5.0 (unreleased)
+3.5.0 (2026-03-12)
 ------------------
 
 New features:
 
-- Add ``CRAFT_PROVIDERS_DISABLE_EOL_SOURCES_CHECK`` support to skip EOL sources checks
+- Add ``CRAFT_PROVIDERS_DISABLE_EOL_SOURCES_CHECK`` support to skip EOL sources checks.
+- ``get_host_snap_info()`` now returns a ``SnapInfo`` model.
 
 3.4.0 (2026-02-25)
 ------------------
