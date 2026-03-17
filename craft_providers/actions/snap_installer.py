@@ -290,7 +290,7 @@ def _add_assertions_from_host(executor: Executor, snap_name: str) -> None:
     """
     # trim the `_name` suffix, if present
     target_assert_path = pathlib.PurePosixPath(
-    f"/tmp/{snap_name.split('_', 1)[0]}.assert"
+        f"/tmp/{snap_name.split('_', 1)[0]}.assert"
     )
 
     snap_info = get_host_snap_info(snap_name)

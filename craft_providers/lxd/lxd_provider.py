@@ -131,14 +131,15 @@ class LXDProvider(Provider):
         return instances
 
     @override
-    def delete_instances(self, instances: Collection[Executor], *, force: bool = False) -> None:
+    def delete_instances(
+        self, instances: Collection[Executor], *, force: bool = False
+    ) -> None:
         for inst in instances:
             lxd_inst = cast(LXDInstance, inst)
             if force:
                 # ensure stopped or force delete if available
                 lxd_inst.stop()  # only if required
         lxd_inst.delete()
-
 
     def create_environment(self, *, instance_name: str) -> Executor:
         """Create a bare environment for specified base.
