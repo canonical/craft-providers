@@ -354,3 +354,46 @@ def test_multipass_install_recommendation():
         provider.install_recommendation
         == "Visit https://multipass.run/install for instructions to install Multipass."
     )
+
+
+def test_list_instances(mock_multipass, mocker):
+    """Verify MultipassProvider's list_instances() function."""
+    mock_multipass_instance = mocker.patch(
+        "craft_providers.multipass.multipass_provider.MultipassInstance"
+    )
+    mock_multipass_obj = mock_multipass.return_value
+    mock_multipass_obj.list.return_value = [
+        "base-instance-1",
+        "test-instance-1",
+        "other-instance",
+    ]
+    provider = MultipassProvider(instance=mock_multipass_obj)
+
+    instances = provider.list_instances()
+
+    assert len(instances) == 2
+    mock_multipass_instance.assert_has_calls(
+        [
+            call(name="test-instance-1", multipass=mock_multipass_obj),
+            call(name="other-instance", multipass=mock_multipass_obj),
+        ],
+    )
+
+
+def test_list_instances_filtering(mock_multipass, mocker):
+    """Verify MultipassProvider's list_instances() filtering."""
+    mocker.patch("craft_providers.multipass.multipass_provider.MultipassInstance")
+    mock_multipass_obj = mock_multipass.return_value
+    mock_multipass_obj.list.return_value = [
+        "base-instance-1",
+        "test-instance-1",
+        "test-instance-2",
+        "other-instance",
+    ]
+    provider = MultipassProvider(instance=mock_multipass_obj)
+
+    instances = provider.list_instances(include_base_instances=True)
+    assert len(instances) == 4
+
+    instances = provider.list_instances(instance_name_prefix="test-")
+    assert len(instances) == 2
