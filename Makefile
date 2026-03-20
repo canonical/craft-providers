@@ -48,7 +48,7 @@ endif
 
 # Used for installing build dependencies in CI.
 .PHONY: install-build-deps
-install-build-deps: install-lint-build-deps
+install-build-deps: install-lint-build-deps free-disk-space
 ifeq ($(APT_PACKAGES),)
 else ifeq ($(shell which apt-get),)
 	$(warning Cannot install build dependencies without apt.)
@@ -57,8 +57,6 @@ else
 	sudo $(APT) install $(APT_PACKAGES)
 endif
 ifeq ($(CI)_$(OS),true_Linux)  # Only do this in CI on Linux
-	# In CI, delete the android SDK if it's installed. It's kinda huge!
-	sudo rm -rf /usr/local/lib/android/
 	# Likewise, configure LXD in CI
 	echo "::group::Configure LXD"
 	sudo groupadd --force --system lxd
@@ -83,6 +81,25 @@ else ifeq ($(CI)_$(OS),true_Darwin)  # Only do this in CI on macOS
 	sudo mdutil -a -i off
 endif
 
+.PHONY: free-disk-space
+free-disk-space:
+ifeq ($(CI),true)
+	@echo "::group::Free disk space"
+	@df -h
+ifeq ($(OS),Linux)
+	sudo rm -rf /usr/local/lib/android/
+endif
+ifeq ($(OS),Darwin)
+	sudo rm -rf /usr/local/lib/android
+	sudo rm -rf /usr/local/share/dotnet
+	CURRENT_XCODE=$$(xcode-select -p | sed 's|/Contents/Developer||') && \
+	echo "Keeping $$CURRENT_XCODE, removing others..." && \
+	sudo find /Applications -name "Xcode_*.app" -maxdepth 1 -not -path "*$$CURRENT_XCODE*" -exec rm -rf {} +
+	brew cleanup
+endif
+	@df -h
+	@echo "::endgroup::"
+endif
 
 # If additional build dependencies need installing in order to build the linting env.
 .PHONY: install-lint-build-deps
