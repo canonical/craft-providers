@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  #  lint:
-  #    uses: canonical/starflow/.github/workflows/lint-python.yaml@main
+  lint:
+    uses: canonical/starflow/.github/workflows/lint-python.yaml@main
   #  test-basic:
   #    uses: canonical/starflow/.github/workflows/test-python.yaml@main
   #    with:
@@ -44,11 +44,23 @@ jobs:
     with:
       # All fast tests run in the basic job
       fast-test-platforms: "[]"
-      slow-test-platforms: '["ubuntu-24.04", "self-hosted-linux-amd64-noble-medium"]'
+      slow-test-platforms: '["ubuntu-24.04"]'
       slow-test-python-versions: '["3.14"]'
       lowest-python-platform: ""
       use-lxd: true
       pytest-markers: multipass_instance
+  test-multipass-direct:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up runner
+        uses: canonical/starflow/setup-python-runner@main
+      - name: Configure and Test
+        run: |
+          make setup-tests
+          sg kvm -c "sg adm -c 'make test-slow'"
+
 #  macos-smoketest:
 #    uses: canonical/starflow/.github/workflows/test-python.yaml@main
 #    with:
