@@ -400,3 +400,28 @@ def test_lxd_list_instances_prefix_filter(mock_lxc_container):
 
     for instance in instances:
         assert instance.name.startswith("alpha-")
+        
+        
+def test_lxd_delete_instances_no_force(mocker):
+    provider = LXDProvider()
+
+    instance_1 = mocker.Mock()
+    instance_2 = mocker.Mock()
+
+    provider.delete_instances([instance_1, instance_2], force=False)
+
+    instance_1.stop.assert_not_called()
+    instance_2.stop.assert_not_called()
+    instance_1.delete.assert_called_once_with()
+    instance_2.delete.assert_called_once_with()
+
+
+def test_lxd_delete_instances_force(mocker):
+    provider = LXDProvider()
+
+    instance = mocker.Mock()
+
+    provider.delete_instances([instance], force=True)
+
+    instance.stop.assert_called_once_with()
+    instance.delete.assert_called_once_with()
