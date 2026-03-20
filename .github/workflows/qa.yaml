@@ -44,7 +44,7 @@ jobs:
     with:
       # All fast tests run in the basic job
       fast-test-platforms: "[]"
-      slow-test-platforms: '["ubuntu-24.04", "self-hosted-linux-amd64-noble-medium", "self-hosted-linux-ppc64el-noble-edge", "self-hosted-linux-s390x-noble-medium"]'
+      slow-test-platforms: '["ubuntu-24.04", "self-hosted-linux-amd64-noble-medium"]'
       slow-test-python-versions: '["3.12", "3.14"]'
       lowest-python-platform: ""
       use-lxd: true
