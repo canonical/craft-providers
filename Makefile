@@ -98,3 +98,12 @@ else ifneq ($(shell which snap),)
 else ifneq ($(shell which uv),)
 	uv tool install ty
 endif
+
+# Temporary overrides to run only the requested test
+.PHONY: test-fast
+test-fast:
+	uv run pytest tests/integration/multipass/test_launch.py::test_launch
+
+.PHONY: test-slow
+test-slow:
+	uv run pytest tests/integration/multipass/test_launch.py::test_launch
