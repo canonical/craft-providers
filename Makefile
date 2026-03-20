@@ -82,8 +82,9 @@ else ifeq ($(CI)_$(OS),true_Darwin)  # Only do this in CI on macOS
 endif
 
 .PHONY: free-disk-space
-free-disk-space:
+free-disk-space:  ##- Free up disk space in CI
 ifeq ($(CI),true)
+	# This target is only ever intended to run in CI, and is a no-op otherwise.
 	@echo "::group::Free disk space"
 	@df -h
 ifeq ($(OS),Linux)
