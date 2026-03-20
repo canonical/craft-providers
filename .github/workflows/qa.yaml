@@ -44,7 +44,7 @@ jobs:
     with:
       # All fast tests run in the basic job
       fast-test-platforms: "[]"
-      slow-test-platforms: '["ubuntu-24.04"]'
+      slow-test-platforms: '["ubuntu-24.04", "macos-15-intel"]'
       slow-test-python-versions: '["3.12", "3.14"]'
       lowest-python-platform: ""
       use-lxd: true
