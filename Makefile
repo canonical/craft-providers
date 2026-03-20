@@ -73,7 +73,9 @@ ifeq ($(CI)_$(OS),true_Linux)  # Only do this in CI on Linux
 	echo "::endgroup::"
 else ifeq ($(CI)_$(OS),true_Darwin)  # Only do this in CI on macOS
 	brew install multipass
-	multipass set local.driver=qemu
+	# Wait for the socket to appear and ensure multipassd is ready
+	for i in $$(seq 1 60); do [ -S /var/run/multipass_socket ] && sudo multipass version && break || sleep 2; done
+	sudo multipass set local.driver=qemu || true
 	(brew cleanup --prune=all > /dev/null 2>&1 &)
 	# Disable spotlight because it tries to index the multipass images, crashing
 	# macOS 14+ runners. Thapple.
@@ -87,14 +89,14 @@ ifeq ($(CI),true)
 	@echo "::group::Free disk space"
 	@df -h
 ifeq ($(OS),Linux)
-	sudo rm -rf /usr/local/lib/android/
+	sudo rm -rf /usr/local/lib/android || true
 endif
 ifeq ($(OS),Darwin)
-	sudo rm -rf /usr/local/lib/android
-	sudo rm -rf /usr/local/share/dotnet
+	sudo rm -rf /usr/local/lib/android || true
+	sudo rm -rf /usr/local/share/dotnet || true
 	CURRENT_XCODE=$$(xcode-select -p | sed 's|/Contents/Developer||') && \
 	echo "Keeping $$CURRENT_XCODE, removing others..." && \
-	sudo find /Applications -name "Xcode_*.app" -maxdepth 1 -not -path "*$$CURRENT_XCODE*" -exec rm -rf {} +
+	sudo find /Applications -name "Xcode_*.app" -maxdepth 1 -not -path "*$$CURRENT_XCODE*" -exec rm -rf {} + || true
 endif
 	@df -h
 	@echo "::endgroup::"
