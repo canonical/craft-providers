@@ -65,7 +65,14 @@ ifeq ($(CI)_$(OS),true_Linux)  # Only do this in CI on Linux
 	sudo usermod --append --groups lxd $(USER)
 	echo "::endgroup::"
 	# Install multipass in CI
+	echo "::group::Configure Multipass"
 	sudo snap install multipass
+	sudo groupadd --force --system kvm
+	sudo usermod --append --groups kvm $(USER)
+	echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+	sudo udevadm control --reload-rules
+	sudo udevadm trigger
+	echo "::endgroup::"
 else ifeq ($(CI)_$(OS),true_Darwin)  # Only do this in CI on macOS
 	brew install multipass
 	# Disable spotlight because it tries to index the multipass images, crashing
