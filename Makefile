@@ -101,19 +101,3 @@ else ifneq ($(shell which snap),)
 else ifneq ($(shell which uv),)
 	uv tool install ty
 endif
-
-# Temporary overrides to run only the requested test
-.PHONY: test-fast
-test-fast:
-	uv run pytest tests/integration/multipass/test_launch.py::test_launch
-
-.PHONY: test-slow
-test-slow:
-	uv run pytest tests/integration/multipass/test_launch.py::test_launch
-
-.PHONY: test-coverage
-test-coverage:
-	uv run coverage run --source $(PROJECT),tests -m pytest tests/integration/multipass/test_launch.py::test_launch
-	uv run coverage xml -o results/coverage.xml
-	cp results/coverage.xml coverage.xml
-	uv run coverage report -m
