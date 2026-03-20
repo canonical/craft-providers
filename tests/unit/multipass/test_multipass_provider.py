@@ -368,15 +368,14 @@ def test_delete_instances_no_force(mocker):
     provider.multipass.stop.assert_not_called()
     provider.multipass.delete.assert_called_once_with("test-instance", purge=True)
     
-    
-def test_delete_instances_no_force(mocker):
+def test_delete_instances_force(mocker):
     provider = MultipassProvider()
     provider.multipass = mocker.Mock()
 
     instance = mocker.Mock(spec=MultipassInstance)
     instance.name = "test-instance"
 
-    provider.delete_instances([instance], force=False)
+    provider.delete_instances([instance], force=True)
 
-    provider.multipass.stop.assert_not_called()
+    provider.multipass.stop.assert_called_once_with("test-instance")
     provider.multipass.delete.assert_called_once_with("test-instance", purge=True)
