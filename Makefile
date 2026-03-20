@@ -66,10 +66,7 @@ ifeq ($(CI)_$(OS),true_Linux)  # Only do this in CI on Linux
 	echo "::group::Configure Multipass"
 	sudo snap install multipass
 	sudo groupadd --force --system kvm
-	sudo usermod --append --groups kvm,adm $(USER)
-	echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-	sudo udevadm control --reload-rules
-	sudo udevadm trigger
+	sudo usermod --append --groups kvm $(USER)
 	# Wait for the socket to appear and make it accessible
 	for i in $$(seq 1 30); do [ -S /var/snap/multipass/common/multipass_socket ] && break || sleep 1; done
 	sudo chmod 666 /var/snap/multipass/common/multipass_socket || true
