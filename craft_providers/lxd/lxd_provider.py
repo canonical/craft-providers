@@ -139,7 +139,7 @@ class LXDProvider(Provider):
             if force:
                 # ensure stopped or force delete if available
                 lxd_inst.stop()  # only if required
-        lxd_inst.delete()
+            lxd_inst.delete()
 
     def create_environment(self, *, instance_name: str) -> Executor:
         """Create a bare environment for specified base.
