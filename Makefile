@@ -64,6 +64,8 @@ ifeq ($(CI)_$(OS),true_Linux)  # Only do this in CI on Linux
 	sudo groupadd --force --system lxd
 	sudo usermod --append --groups lxd $(USER)
 	echo "::endgroup::"
+	# Install multipass in CI
+	sudo snap install multipass
 else ifeq ($(CI)_$(OS),true_Darwin)  # Only do this in CI on macOS
 	brew install multipass
 	# Disable spotlight because it tries to index the multipass images, crashing
