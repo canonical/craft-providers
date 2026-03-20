@@ -379,3 +379,17 @@ def test_delete_instances_force(mocker):
 
     provider.multipass.stop.assert_called_once_with("test-instance")
     provider.multipass.delete.assert_called_once_with("test-instance", purge=True)
+
+def test_delete_instances_force_stop_failure_still_deletes(mocker):
+    provider = MultipassProvider()
+    provider.multipass = mocker.Mock()
+    provider.multipass.stop.side_effect = RuntimeError("stop failed")
+
+    instance = mocker.Mock(spec=MultipassInstance)
+    instance.name = "test-instance"
+
+    provider.delete_instances([instance], force=True)
+
+    provider.multipass.stop.assert_called_once_with("test-instance")
+    provider.multipass.delete.assert_called_once_with("test-instance", purge=True)
+    
