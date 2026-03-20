@@ -107,3 +107,10 @@ test-fast:
 .PHONY: test-slow
 test-slow:
 	uv run pytest tests/integration/multipass/test_launch.py::test_launch
+
+.PHONY: test-coverage
+test-coverage:
+	uv run coverage run --source $(PROJECT),tests -m pytest tests/integration/multipass/test_launch.py::test_launch
+	uv run coverage xml -o results/coverage.xml
+	cp results/coverage.xml coverage.xml
+	uv run coverage report -m
