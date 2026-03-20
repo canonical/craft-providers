@@ -32,10 +32,9 @@ jobs:
     with:
       # All fast tests run in the basic job
       fast-test-platforms: "[]"
-      fast-test-python-versions: "[]"
       slow-test-platforms: '["ubuntu-24.04", "macos-14-large"]'
       slow-test-python-versions: '["3.12", "3.14"]'
-      lowest-python-platform: ""
+      lowest-python-platform: "ubuntu-24.04"
       use-lxd: true
       pytest-markers: multipass_instance
   macos-smoketest:
@@ -43,9 +42,8 @@ jobs:
     with:
       # All fast tests run in the basic job
       fast-test-platforms: "[]"
-      fast-test-python-versions: "[]"
       slow-test-platforms: '["macos-14-large"]'
       slow-test-python-versions: '["3.12", "3.14"]'
-      lowest-python-platform: ""
+      lowest-python-platform: "macos-14-large"
       use-lxd: false
       pytest-markers: smoketest
