@@ -76,6 +76,7 @@ ifeq ($(CI)_$(OS),true_Linux)  # Only do this in CI on Linux
 	echo "::endgroup::"
 else ifeq ($(CI)_$(OS),true_Darwin)  # Only do this in CI on macOS
 	brew install multipass
+	(brew cleanup --prune=all > /dev/null 2>&1 &)
 	# Disable spotlight because it tries to index the multipass images, crashing
 	# macOS 14+ runners. Thapple.
 	sudo mdutil -a -i off
@@ -96,7 +97,6 @@ ifeq ($(OS),Darwin)
 	CURRENT_XCODE=$$(xcode-select -p | sed 's|/Contents/Developer||') && \
 	echo "Keeping $$CURRENT_XCODE, removing others..." && \
 	sudo find /Applications -name "Xcode_*.app" -maxdepth 1 -not -path "*$$CURRENT_XCODE*" -exec rm -rf {} +
-	brew cleanup
 endif
 	@df -h
 	@echo "::endgroup::"
