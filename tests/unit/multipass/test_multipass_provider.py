@@ -21,6 +21,7 @@ from craft_providers import Executor
 from craft_providers.bases import ubuntu
 from craft_providers.errors import BaseConfigurationError
 from craft_providers.multipass import MultipassError, MultipassProvider
+from craft_providers.multipass.multipass_instance import MultipassInstance
 from craft_providers.multipass.multipass_provider import (
     _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE,
     Remote,
@@ -354,3 +355,15 @@ def test_multipass_install_recommendation():
         provider.install_recommendation
         == "Visit https://multipass.run/install for instructions to install Multipass."
     )
+
+def test_delete_instances_no_force(mocker):
+    provider = MultipassProvider()
+    provider.multipass = mocker.Mock()
+
+    instance = mocker.Mock(spec=MultipassInstance)
+    instance.name = "test-instance"
+
+    provider.delete_instances([instance], force=False)
+
+    provider.multipass.stop.assert_not_called()
+    provider.multipass.delete.assert_called_once_with("test-instance", purge=True)
