@@ -48,7 +48,7 @@ endif
 
 # Used for installing build dependencies in CI.
 .PHONY: install-build-deps
-install-build-deps: install-lint-build-deps
+install-build-deps: install-lint-build-deps free-disk-space
 ifeq ($(APT_PACKAGES),)
 else ifeq ($(shell which apt-get),)
 	$(warning Cannot install build dependencies without apt.)
@@ -57,20 +57,50 @@ else
 	sudo $(APT) install $(APT_PACKAGES)
 endif
 ifeq ($(CI)_$(OS),true_Linux)  # Only do this in CI on Linux
-	# In CI, delete the android SDK if it's installed. It's kinda huge!
-	sudo rm -rf /usr/local/lib/android/
 	# Likewise, configure LXD in CI
 	echo "::group::Configure LXD"
 	sudo groupadd --force --system lxd
 	sudo usermod --append --groups lxd $(USER)
 	echo "::endgroup::"
+	# Install multipass in CI
+	echo "::group::Configure Multipass"
+	sudo snap install multipass
+	sudo groupadd --force --system kvm
+	sudo usermod --append --groups kvm $(USER)
+	# Wait for the socket to appear and make it accessible
+	for i in $$(seq 1 30); do [ -S /var/snap/multipass/common/multipass_socket ] && break || sleep 1; done
+	sudo chmod 666 /var/snap/multipass/common/multipass_socket || true
+	echo "::endgroup::"
 else ifeq ($(CI)_$(OS),true_Darwin)  # Only do this in CI on macOS
 	brew install multipass
+	# Wait for the socket to appear and ensure multipassd is ready
+	for i in $$(seq 1 60); do [ -S /var/run/multipass_socket ] && sudo multipass version && break || sleep 2; done
+	sudo multipass set local.driver=qemu || true
+	(brew cleanup --prune=all > /dev/null 2>&1 &)
 	# Disable spotlight because it tries to index the multipass images, crashing
 	# macOS 14+ runners. Thapple.
 	sudo mdutil -a -i off
 endif
 
+.PHONY: free-disk-space
+free-disk-space:  ##- Free up disk space in CI
+ifeq ($(CI),true)
+	# This target is only ever intended to run in CI, and is a no-op otherwise.
+	@echo "::group::Free disk space"
+	@df -h
+ifeq ($(OS),Linux)
+	sudo rm -rf /usr/local/lib/android || true
+endif
+ifeq ($(OS),Darwin)
+	sudo rm -rf /usr/local/lib/android || true
+	sudo rm -rf /usr/local/share/dotnet || true
+	CURRENT_XCODE=$$(xcode-select -p | sed 's|/Contents/Developer||') && \
+	echo "Keeping $$CURRENT_XCODE, removing others..." && \
+	sudo find /Applications -name "Xcode_*.app" -maxdepth 1 -not -path "*$$CURRENT_XCODE*" -exec rm -rf {} + || true
+endif
+	@df -h
+	@echo "::endgroup::"
+endif
 
 # If additional build dependencies need installing in order to build the linting env.
 .PHONY: install-lint-build-deps
