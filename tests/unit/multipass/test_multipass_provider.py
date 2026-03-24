@@ -433,8 +433,42 @@ def test_multipass_prune_all(mocker):
     provider.prune(prune_templates=True)
 
     assert mock_instance_class.call_count == 3
-    mock_instance_class.assert_called_with(
-        name="Multipass", multipass=mock_multipass_client
+    mock_instance_class.assert_has_calls(
+        [
+            call(name="test-instance-1", multipass=mock_multipass_client),
+            call(name="test-instance-2", multipass=mock_multipass_client),
+            call(name="base-instance-1", multipass=mock_multipass_client),
+        ],
+        any_order=True,
     )
 
     assert mock_instance_class.return_value.delete.call_count == 3
+
+
+def test_multipass_prune_except_templates(mocker):
+    """Verify prune removes all instances using MultipassInstance."""
+    mock_multipass_client = mocker.Mock()
+    mock_multipass_client.list.return_value = [
+        "test-instance-1",
+        "test-instance-2",
+        "base-instance-1",
+    ]
+
+    mock_instance_class = mocker.patch(
+        "craft_providers.multipass.multipass_provider.MultipassInstance",
+        autospec=True,
+    )
+
+    provider = MultipassProvider(instance=mock_multipass_client)
+    provider.prune(prune_templates=False)
+
+    assert mock_instance_class.call_count == 2
+    mock_instance_class.assert_has_calls(
+        [
+            call(name="test-instance-1", multipass=mock_multipass_client),
+            call(name="test-instance-2", multipass=mock_multipass_client),
+        ],
+        any_order=True,
+    )
+
+    assert mock_instance_class.return_value.delete.call_count == 2
