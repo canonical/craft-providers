@@ -38,6 +38,21 @@ def fake_executor_local_pull(fake_executor):
 
 
 @pytest.fixture
+def fake_executor_edit_file(fake_executor, tmp_path):
+    """Provide an executor that simulates pull and push for edit_file."""
+
+    def pull_file(source, destination):
+        shutil.copy(source, destination)
+
+    def push_file(source, destination):
+        shutil.copy(source, destination)
+
+    fake_executor.pull_file = pull_file
+    fake_executor.push_file = push_file
+    return fake_executor
+
+
+@pytest.fixture
 def mock_home_temp_file(mocker, tmp_path):
     """Mock `home_temporary_file()`."""
 
@@ -108,6 +123,92 @@ def test_temporarypull_temp_file_cleaned(
 
     # file is removed afterwards
     assert not localfilepath.exists()
+
+
+def test_edit_file_ok(mock_home_temp_file, fake_executor_edit_file, tmp_path):
+    """Edit an existing file."""
+    source = tmp_path / "source.txt"
+    source.write_text("original content")
+
+    with fake_executor_edit_file.edit_file(source=source) as local_file:
+        assert local_file.read_text() == "original content"
+        local_file.write_text("modified content")
+
+    assert source.read_text() == "modified content"
+    assert not local_file.exists()
+    mock_home_temp_file.assert_called_once()
+
+
+def test_edit_file_do_not_pull(mock_home_temp_file, fake_executor_edit_file, tmp_path):
+    """Overwrite an existing file with 'pull_file=False'."""
+    source = tmp_path / "source.txt"
+    source.write_text("original content")
+
+    with fake_executor_edit_file.edit_file(
+        source=source, pull_file=False
+    ) as local_file:
+        assert local_file.stat().st_size == 0
+        local_file.write_text("modified content")
+
+    assert source.read_text() == "modified content"
+    assert not local_file.exists()
+    mock_home_temp_file.assert_called_once()
+
+
+def test_edit_file_missing_ok(mock_home_temp_file, fake_executor_edit_file, tmp_path):
+    """Don't error if the file doesn't exist and 'missing_ok=True'."""
+    source = tmp_path / "source.txt"
+
+    with fake_executor_edit_file.edit_file(
+        source=source,
+        pull_file=True,
+        missing_ok=True,
+    ) as local_file:
+        assert local_file.stat().st_size == 0
+        local_file.write_text("modified content")
+
+    assert source.read_text() == "modified content"
+    assert not local_file.exists()
+    mock_home_temp_file.assert_called_once()
+
+
+def test_edit_file_missing_error(
+    mock_home_temp_file, fake_executor_edit_file, tmp_path
+):
+    """Error if the file doesn't exist and 'missing_ok=False'."""
+    source = tmp_path / "source.txt"
+
+    with pytest.raises(FileNotFoundError):
+        with fake_executor_edit_file.edit_file(
+            source=source,
+            pull_file=True,
+            missing_ok=False,
+        ):
+            pass
+
+
+def test_edit_file_pushes_on_error(
+    mock_home_temp_file, fake_executor_edit_file, tmp_path
+):
+    """File is still pushed back even when an error occurs in the context."""
+    source = tmp_path / "source.txt"
+    source.write_text("original content")
+
+    def modify_and_error(file_path):
+        file_path.write_text("modified content")
+        raise ValueError("boom")
+
+    with (
+        pytest.raises(ValueError, match="boom"),
+        fake_executor_edit_file.edit_file(source=source) as local_file,
+    ):
+        modify_and_error(local_file)
+
+    # File should still be pushed back despite the error
+    assert source.read_text() == "modified content"
+    # Temp file should be cleaned up
+    assert not local_file.exists()
+    mock_home_temp_file.assert_called_once()
 
 
 @pytest.mark.parametrize(

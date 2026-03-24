@@ -42,9 +42,9 @@ dev = [
     "pytest-subprocess~=1.5.3",
     "pytest-xdist~=3.6",
     "pytest-time~=0.4.1",
-    "responses~=0.25.7",
+    "responses~=0.26.0",
     "types-requests~=2.32",
-    "types-setuptools~=80.9",
+    "types-setuptools~=82.0",
     "types-pyyaml~=6.0",
 ]
 lint = ["codespell[toml]~=2.4.1"]
@@ -54,7 +54,7 @@ docs = [
     "sphinx-autobuild~=2024.10",
     "sphinx-lint~=1.0",
     "sphinx-tabs~=3.4",
-    "canonical-sphinx~=0.5.1",
+    "canonical-sphinx~=0.6.0",
     "sphinxext-rediraffe>=0.2.7",
 ]
 tics = ["flake8", "pylint"]
@@ -87,7 +87,7 @@ constraint-dependencies = [
 
 
 [build-system]
-requires = ["setuptools==80.10.2", "setuptools_scm[toml]>=7.1"]
+requires = ["setuptools==82.0.1", "setuptools_scm[toml]>=7.1"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]

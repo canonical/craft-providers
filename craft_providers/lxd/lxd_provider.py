@@ -172,6 +172,7 @@ class LXDProvider(Provider):
         shutdown_delay_mins: int | None = None,
         use_base_instance: bool = True,
         prepare_instance: Callable[[Executor], None] | None = None,
+        instance_architecture: str | None = None,
     ) -> Iterator[Executor]:
         """Configure and launch environment for specified base.
 
@@ -189,6 +190,8 @@ class LXDProvider(Provider):
             the instance.
         :param prepare_instance: A callback to perform early instance configuration
             before the base image setup.
+        :param instance_architecture: A string representing the architecture to request.
+            For example, on amd64 both ``amd64`` and ``i386`` are valid.
 
         :raises LXDError: if instance cannot be configured and launched.
         """
@@ -207,11 +210,17 @@ class LXDProvider(Provider):
         # unstable images should be refreshed more often
         expiration = timedelta(days=90) if image.is_stable else timedelta(days=14)
 
+        image_name = (
+            image.image_name
+            if instance_architecture is None
+            else f"{image.image_name}/{instance_architecture}"
+        )
+
         try:
             instance = launch(
                 name=instance_name,
                 base_configuration=base_configuration,
-                image_name=image.image_name,
+                image_name=image_name,
                 image_remote=image.remote_name,
                 auto_clean=True,
                 auto_create_project=True,

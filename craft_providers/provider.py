@@ -134,7 +134,7 @@ class Provider(ABC):
 
     @abstractmethod
     @contextlib.contextmanager
-    def launched_environment(
+    def launched_environment(  # noqa: PLR0913 (too many arguments)
         self,
         *,
         project_name: str,
@@ -145,6 +145,7 @@ class Provider(ABC):
         shutdown_delay_mins: int | None = None,
         use_base_instance: bool = True,
         prepare_instance: Callable[[Executor], None] | None = None,
+        instance_architecture: str | None = None,
     ) -> Generator[Executor, None, None]:
         """Configure and launch environment for specified base.
 
@@ -162,4 +163,6 @@ class Provider(ABC):
         :param use_base_instance: Enable base instances if supported by the provider.
         :param prepare_instance: A callback to perform early instance configuration
             before the base image setup.
+        :param instance_architecture: A string representing the architecture to request
+            if the provider allows selecting the architecture.
         """
