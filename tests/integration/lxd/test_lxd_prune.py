@@ -24,13 +24,7 @@ from craft_providers.lxd import project as lxc_project
 @pytest.mark.slow
 @pytest.mark.lxd_instance
 def test_prune(lxc, project):
-    """Verify prune deletes instances in a project.
-
-    Criteria:
-    1. Create multiple instances in the project.
-    2. run prune, check all instances were destroyed.
-    3. Ensure that you do not delete instances from another project.
-    """
+    """Verify prune deletes instances in a project."""
     provider = LXDProvider(lxd_project=project)
 
     instance_name_1 = "test-instance-1"
@@ -63,10 +57,9 @@ def test_prune(lxc, project):
         assert instance_name_1 not in remaining_names
         assert instance_name_2 not in remaining_names
 
-        assert other_instance not in lxc.list_names(project=other_project)
+        assert other_instance in lxc.list_names(project=other_project)
 
     finally:
-        # Cleanup
         for name, proj in [
             (instance_name_1, project),
             (instance_name_2, project),
