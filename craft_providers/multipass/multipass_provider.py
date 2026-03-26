@@ -183,11 +183,13 @@ class MultipassProvider(Provider):
         self, *, project_name: str | None = None, prune_templates: bool = False
     ) -> None:
         """Remove all instances of the provider."""
+        logger.debug(f"Pruning {self.name} instances")
         _ = project_name
         instances = self.list_instances(
             include_base_instances=prune_templates, project_name=self.name
         )
         for instance in instances:
+            logger.debug(f"Pruning {instance.name}")
             instance.delete()
 
     @override
