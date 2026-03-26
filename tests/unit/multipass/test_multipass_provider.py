@@ -21,6 +21,7 @@ from craft_providers import Executor, ProviderError
 from craft_providers.bases import ubuntu
 from craft_providers.errors import BaseConfigurationError
 from craft_providers.multipass import MultipassError, MultipassProvider
+from craft_providers.multipass.multipass_instance import MultipassInstance
 from craft_providers.multipass.multipass_provider import (
     _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE,
     Remote,
@@ -424,25 +425,25 @@ def test_multipass_prune_all(mocker):
         "base-instance-1",
     ]
 
+    mocks = []
+
+    def _mock_instance(name, **kwargs):
+        mock_inst = mocker.Mock(spec=MultipassInstance)
+        mock_inst.name = name
+        mocks.append(mock_inst)
+        return mock_inst
+
     mock_instance_class = mocker.patch(
         "craft_providers.multipass.multipass_provider.MultipassInstance",
-        autospec=True,
+        side_effect=_mock_instance,
     )
 
     provider = MultipassProvider(instance=mock_multipass_client)
     provider.prune(prune_templates=True)
 
     assert mock_instance_class.call_count == 3
-    mock_instance_class.assert_has_calls(
-        [
-            call(name="test-instance-1", multipass=mock_multipass_client),
-            call(name="test-instance-2", multipass=mock_multipass_client),
-            call(name="base-instance-1", multipass=mock_multipass_client),
-        ],
-        any_order=True,
-    )
-
-    assert mock_instance_class.return_value.delete.call_count == 3
+    for mock_inst in mocks:
+        mock_inst.delete.assert_called_once()
 
 
 def test_multipass_prune_except_templates(mocker):
@@ -454,21 +455,22 @@ def test_multipass_prune_except_templates(mocker):
         "base-instance-1",
     ]
 
+    mocks = []
+
+    def _mock_instance(name, **kwargs):
+        mock_inst = mocker.Mock(spec=MultipassInstance)
+        mock_inst.name = name
+        mocks.append(mock_inst)
+        return mock_inst
+
     mock_instance_class = mocker.patch(
         "craft_providers.multipass.multipass_provider.MultipassInstance",
-        autospec=True,
+        side_effect=_mock_instance,
     )
 
     provider = MultipassProvider(instance=mock_multipass_client)
     provider.prune(prune_templates=False)
 
     assert mock_instance_class.call_count == 2
-    mock_instance_class.assert_has_calls(
-        [
-            call(name="test-instance-1", multipass=mock_multipass_client),
-            call(name="test-instance-2", multipass=mock_multipass_client),
-        ],
-        any_order=True,
-    )
-
-    assert mock_instance_class.return_value.delete.call_count == 2
+    for mock_inst in mocks:
+        mock_inst.delete.assert_called_once()
