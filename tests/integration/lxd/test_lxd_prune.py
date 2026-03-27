@@ -34,6 +34,8 @@ def test_prune(lxc, project):
     lxc_project.create_with_default_profile(lxc=lxc, project=other_project)
     other_instance = "other-instance"
 
+    base_instance = "base-instance-testcraft-buildd-base-v71--7ecce73048d4fe6c4262"
+
     def launch_instance(name, proj):
         lxc.launch(
             instance_name=name,
@@ -45,17 +47,28 @@ def test_prune(lxc, project):
     try:
         launch_instance(instance_name_1, project)
         launch_instance(instance_name_2, project)
+        launch_instance(base_instance, project)
         launch_instance(other_instance, other_project)
 
         assert instance_name_1 in lxc.list_names(project=project)
         assert instance_name_2 in lxc.list_names(project=project)
+        assert base_instance in lxc.list_names(project=project)
         assert other_instance in lxc.list_names(project=other_project)
 
         provider.prune()
 
-        remaining_names = lxc.list_names(project=project)
-        assert instance_name_1 not in remaining_names
-        assert instance_name_2 not in remaining_names
+        assert instance_name_1 not in lxc.list_names(project=project)
+        assert instance_name_2 not in lxc.list_names(project=project)
+
+        assert base_instance in lxc.list_names(project=project)
+        assert other_instance in lxc.list_names(project=other_project)
+
+        provider.prune(prune_templates=True)
+
+        assert instance_name_1 not in lxc.list_names(project=project)
+        assert instance_name_2 not in lxc.list_names(project=project)
+
+        assert base_instance not in lxc.list_names(project=project)
 
         assert other_instance in lxc.list_names(project=other_project)
 
@@ -63,6 +76,7 @@ def test_prune(lxc, project):
         for name, proj in [
             (instance_name_1, project),
             (instance_name_2, project),
+            (base_instance, project),
             (other_instance, other_project),
         ]:
             if name in lxc.list_names(project=proj):
