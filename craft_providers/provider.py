@@ -95,7 +95,9 @@ class Provider(ABC):
         """
 
     @abstractmethod
-    def prune(self, *, prune_templates: bool = False) -> None:
+    def prune(
+        self, *, project_name: str | None = None, prune_templates: bool = False
+    ) -> None:
         """Remove instances of a provider.
 
         :param prune_templates: Optional option to prune the base instances.
