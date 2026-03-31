@@ -422,7 +422,7 @@ def test_multipass_prune_all(mocker):
     mock_multipass_client.list.return_value = [
         "test-instance-1",
         "test-instance-2",
-        "base-instance-1",
+        "test-instance-3",
     ]
 
     mocks = []
@@ -439,7 +439,7 @@ def test_multipass_prune_all(mocker):
     )
 
     provider = MultipassProvider(instance=mock_multipass_client)
-    provider.prune(prune_templates=True)
+    provider.prune(project_name="test-instance", prune_templates=True)
 
     assert mock_instance_class.call_count == 3
     for mock_inst in mocks:
@@ -469,7 +469,7 @@ def test_multipass_prune_except_templates(mocker):
     )
 
     provider = MultipassProvider(instance=mock_multipass_client)
-    provider.prune(prune_templates=False)
+    provider.prune(project_name="test-instance", prune_templates=False)
 
     assert mock_instance_class.call_count == 2
     for mock_inst in mocks:

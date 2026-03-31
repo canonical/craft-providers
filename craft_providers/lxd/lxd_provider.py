@@ -105,7 +105,7 @@ class LXDProvider(Provider):
     def prune(
         self,
         *,
-        project_name: str | None = None,
+        project_name: str,
         prune_templates: bool = False,
     ) -> None:
         """Remove instances for a LXD project."""

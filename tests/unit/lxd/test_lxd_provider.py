@@ -416,7 +416,7 @@ def test_lxd_prune_all(mock_lxc_container):
         "base-instance-1",
     ]
 
-    provider.prune(prune_templates=True)
+    provider.prune(project_name="default", prune_templates=True)
 
     assert mock_lxc_container.delete.call_count == 3
     mock_lxc_container.delete.assert_any_call(

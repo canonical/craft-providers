@@ -55,7 +55,7 @@ def test_prune(lxc, project):
         assert base_instance in lxc.list_names(project=project)
         assert other_instance in lxc.list_names(project=other_project)
 
-        provider.prune()
+        provider.prune(project_name=project)
 
         assert instance_name_1 not in lxc.list_names(project=project)
         assert instance_name_2 not in lxc.list_names(project=project)
@@ -63,7 +63,7 @@ def test_prune(lxc, project):
         assert base_instance in lxc.list_names(project=project)
         assert other_instance in lxc.list_names(project=other_project)
 
-        provider.prune(prune_templates=True)
+        provider.prune(project_name=project, prune_templates=True)
 
         assert instance_name_1 not in lxc.list_names(project=project)
         assert instance_name_2 not in lxc.list_names(project=project)

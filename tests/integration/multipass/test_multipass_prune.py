@@ -51,7 +51,7 @@ def test_prune(installed_multipass):
         assert instance_name_1 in instance_names
         assert instance_name_2 in instance_names
 
-        provider.prune()
+        provider.prune(project_name="instance-test-prune")
 
         # Verify instances are gone
         proc = subprocess.run(
