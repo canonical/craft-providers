@@ -416,13 +416,15 @@ def test_list_instances_filtering(mock_multipass, mocker):
     assert len(instances) == 2
 
 
-def test_multipass_prune_all(mocker):
+@pytest.mark.parametrize("prune_templates", [True, False])
+def test_multipass_prune_all(mocker, prune_templates):
     """Verify prune removes all instances using MultipassInstance."""
     mock_multipass_client = mocker.Mock()
     mock_multipass_client.list.return_value = [
         "test-instance-1",
         "test-instance-2",
         "test-instance-3",
+        "other-instance-4",
     ]
 
     mocks = []
@@ -439,38 +441,8 @@ def test_multipass_prune_all(mocker):
     )
 
     provider = MultipassProvider(instance=mock_multipass_client)
-    provider.prune(project_name="test-instance", prune_templates=True)
+    provider.prune(project_name="test-instance", prune_templates=prune_templates)
 
     assert mock_instance_class.call_count == 3
-    for mock_inst in mocks:
-        mock_inst.delete.assert_called_once()
-
-
-def test_multipass_prune_except_templates(mocker):
-    """Verify prune removes all instances using MultipassInstance."""
-    mock_multipass_client = mocker.Mock()
-    mock_multipass_client.list.return_value = [
-        "test-instance-1",
-        "test-instance-2",
-        "base-instance-1",
-    ]
-
-    mocks = []
-
-    def _mock_instance(name, **kwargs):
-        mock_inst = mocker.Mock(spec=MultipassInstance)
-        mock_inst.name = name
-        mocks.append(mock_inst)
-        return mock_inst
-
-    mock_instance_class = mocker.patch(
-        "craft_providers.multipass.multipass_provider.MultipassInstance",
-        side_effect=_mock_instance,
-    )
-
-    provider = MultipassProvider(instance=mock_multipass_client)
-    provider.prune(project_name="test-instance", prune_templates=False)
-
-    assert mock_instance_class.call_count == 2
     for mock_inst in mocks:
         mock_inst.delete.assert_called_once()
