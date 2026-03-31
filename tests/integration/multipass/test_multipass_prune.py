@@ -33,10 +33,12 @@ def test_prune(installed_multipass):
 
     instance_name_1 = "instance-test-prune-1"
     instance_name_2 = "instance-test-prune-2"
+    instance_name_3 = "other-instance-test-prune-3"
 
     with (
         tmp_instance(instance_name=instance_name_1),
         tmp_instance(instance_name=instance_name_2),
+        tmp_instance(instance_name=instance_name_3),
     ):
         # Verify instances exist
         proc = subprocess.run(
@@ -50,6 +52,7 @@ def test_prune(installed_multipass):
         instance_names = [i["name"] for i in instances]
         assert instance_name_1 in instance_names
         assert instance_name_2 in instance_names
+        assert instance_name_3 in instance_names
 
         provider.prune(project_name="instance-test-prune")
 
@@ -64,3 +67,4 @@ def test_prune(installed_multipass):
         instance_names = [i["name"] for i in instances]
         assert instance_name_1 not in instance_names
         assert instance_name_2 not in instance_names
+        assert instance_name_3 in instance_names
