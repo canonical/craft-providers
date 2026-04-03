@@ -295,7 +295,7 @@ class LXDInstance(Executor):
         """
         return cast(
             bool,
-            self._client.instances.exists(self.instance_name),  # type: ignore[reportUnknownVariableType]
+            self._client.instances.exists(self.instance_name),  # type: ignore[reportUnknownVariableType]  # ty: ignore[unresolved-attribute]
         )
 
     def _get_disk_devices(self) -> dict[str, Any]:
