@@ -428,3 +428,27 @@ def test_lxd_prune_all(mock_lxc_container):
     mock_lxc_container.delete.assert_any_call(
         instance_name="base-instance-1", project="default", remote="local", force=True
     )
+
+
+def test_lxd_prune_all_without_pruning_templates(mock_lxc_container):
+    """Verify prune does not delete base instances by default."""
+    provider = LXDProvider(
+        lxc=mock_lxc_container,
+        lxd_project="default",
+        lxd_remote="local",
+    )
+    mock_lxc_container.list_names.return_value = [
+        "test-instance-1",
+        "test-instance-2",
+        "base-instance-1",
+    ]
+
+    provider.prune(project_name="default", prune_templates=False)
+    # Only the non-base instances should be deleted.
+    assert mock_lxc_container.delete.call_count == 2
+    mock_lxc_container.delete.assert_any_call(
+        instance_name="test-instance-1", project="default", remote="local", force=True
+    )
+    mock_lxc_container.delete.assert_any_call(
+        instance_name="test-instance-2", project="default", remote="local", force=True
+    )
