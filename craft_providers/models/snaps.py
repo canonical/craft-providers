@@ -37,3 +37,12 @@ class SnapInfo(pydantic.BaseModel, extra="ignore"):
     revision: str
     publisher: SnapPublisher | None = None
     base: str | None = None
+
+
+class SnapdResponse(pydantic.BaseModel):
+    """Response returned by snapd."""
+
+    type: str | None = None
+    status_code: int = pydantic.Field(alias="status-code")
+    status: str | None = None
+    result: SnapInfo | None = None

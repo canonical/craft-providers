@@ -40,7 +40,7 @@ from craft_providers.errors import (
     details_from_called_process_error,
 )
 from craft_providers.instance_config import InstanceConfiguration
-from craft_providers.models import SnapInfo
+from craft_providers.models import SnapdResponse, SnapInfo
 from craft_providers.util import snap_cmd, temp_paths
 
 if TYPE_CHECKING:
@@ -159,14 +159,16 @@ def _get_target_snap_revision_from_snapd(
             details=details_from_called_process_error(error),
         ) from error
 
-    result = json.loads(proc.stdout)
-    if result["status-code"] == HTTPStatus.NOT_FOUND:
+    result_json = json.loads(proc.stdout)
+    result = SnapdResponse.model_validate(result_json)
+    if result.status_code == HTTPStatus.NOT_FOUND:
         # snap not found
         return None
-    if result["status-code"] == HTTPStatus.OK:
-        # Note: cast can be removed if Pydantic model is made for this response
-        return cast("str", result["result"]["revision"])
-    raise SnapInstallationError(f"Unknown response from snapd: {result!r}")
+    if result.status_code == HTTPStatus.OK:
+        if not result.result:
+            raise SnapInstallationError(f"Invalid response from snapd: {result_json!r}")
+        return result.result.revision
+    raise SnapInstallationError(f"Unknown response from snapd: {result_json!r}")
 
 
 def _get_snap_revision_ensuring_source(
