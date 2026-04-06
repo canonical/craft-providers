@@ -477,7 +477,7 @@ def test_execute_run_with_env_unset(mock_lxc, instance):
 
 @pytest.mark.parametrize(("should_exist"), [True, False])
 def test_exists_uses_api(instance: LXDInstance, should_exist: bool) -> None:
-    instance._client.instances.exists.return_value = should_exist  # type: ignore[reportAttributeAccessIssue]
+    instance._client.instances.exists.return_value = should_exist  # type: ignore[reportAttributeAccessIssue]  # ty: ignore[unresolved-attribute]
 
     assert instance.exists() is should_exist
 

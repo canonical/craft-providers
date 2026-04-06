@@ -176,7 +176,7 @@ def test_get_image_remote_xenial_error():
 
 def test_get_image_remote_error():
     """Raise an error for an unknown provider base."""
-    base = ubuntu.BuilddBase(alias=-1)  # type: ignore[reportArgumentType]
+    base = ubuntu.BuilddBase(alias=-1)  # type: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
     with pytest.raises(
         lxd.LXDError, match="could not find a lxd remote image for the provider base"
     ):
