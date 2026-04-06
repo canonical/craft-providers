@@ -21,6 +21,7 @@ from craft_providers import Executor, ProviderError
 from craft_providers.bases import ubuntu
 from craft_providers.errors import BaseConfigurationError
 from craft_providers.multipass import MultipassError, MultipassProvider
+from craft_providers.multipass.multipass_instance import MultipassInstance
 from craft_providers.multipass.multipass_provider import (
     _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE,
     Remote,
@@ -413,3 +414,35 @@ def test_list_instances_filtering(mock_multipass, mocker):
 
     instances = provider.list_instances(instance_name_prefix="test-")
     assert len(instances) == 2
+
+
+@pytest.mark.parametrize("prune_templates", [True, False])
+def test_multipass_prune_all(mocker, prune_templates):
+    """Verify prune removes all instances using MultipassInstance."""
+    mock_multipass_client = mocker.Mock()
+    mock_multipass_client.list.return_value = [
+        "test-instance-1",
+        "test-instance-2",
+        "test-instance-3",
+        "other-instance-4",
+    ]
+
+    mocks = []
+
+    def _mock_instance(name, **kwargs):
+        mock_inst = mocker.Mock(spec=MultipassInstance)
+        mock_inst.name = name
+        mocks.append(mock_inst)
+        return mock_inst
+
+    mock_instance_class = mocker.patch(
+        "craft_providers.multipass.multipass_provider.MultipassInstance",
+        side_effect=_mock_instance,
+    )
+
+    provider = MultipassProvider(instance=mock_multipass_client)
+    provider.prune(project_name="test-instance", prune_templates=prune_templates)
+
+    assert mock_instance_class.call_count == 3
+    for mock_inst in mocks:
+        mock_inst.delete.assert_called_once()
