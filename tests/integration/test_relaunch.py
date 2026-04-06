@@ -58,7 +58,7 @@ def test_relaunch(
         )
 
     base_cls = bases.get_base_from_alias(base_alias)
-    base = base_cls(alias=base_alias)  # type: ignore[reportArgumentType, arg-type]
+    base = base_cls(alias=base_alias)  # type: ignore[reportArgumentType, arg-type]  # ty: ignore[invalid-argument-type]
     project_name = f"relaunch-{base_alias.name}"
 
     try:
