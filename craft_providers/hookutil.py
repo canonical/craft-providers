@@ -76,7 +76,7 @@ class LXDInstance:
     ) -> Self:
         """Use this rather than init - the lxc output has a lot of extra fields."""
         return cls(
-            **{  # type: ignore[arg-type]
+            **{  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
                 k: v
                 for k, v in src.items()
                 if k in {f.name for f in dataclasses.fields(cls)}

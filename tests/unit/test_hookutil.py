@@ -40,7 +40,7 @@ def test_no_projects(monkeypatch: pytest.MonkeyPatch):
             return []
         return original_lxc_func(*args, **kwargs)
 
-    HookHelper.lxc = fake_lxc  # type: ignore[reportAttributeAccessIssue]
+    HookHelper.lxc = fake_lxc  # type: ignore[reportAttributeAccessIssue]  # ty: ignore[invalid-assignment]
 
     with pytest.raises(HookError) as e:
         HookHelper(project_name=PROJECT_NAME, simulate=False, debug=True)
