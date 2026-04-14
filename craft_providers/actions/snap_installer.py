@@ -160,7 +160,7 @@ def _get_target_snap_revision_from_snapd(
         ) from error
 
     result_json = json.loads(proc.stdout)
-    result = SnapdResponse.model_validate(result_json)
+    result = SnapdResponse[SnapInfo].model_validate(result_json)
     if result.status_code == HTTPStatus.NOT_FOUND:
         # snap not found
         return None

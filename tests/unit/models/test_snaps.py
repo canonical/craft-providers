@@ -147,7 +147,7 @@ def test_snap_info_ignores_extra_fields():
 
 def test_snapd_response_validates():
     """A full snapd response should validate correctly."""
-    response = SnapdResponse.model_validate(SNAPD_RESPONSE)
+    response = SnapdResponse[SnapInfo].model_validate(SNAPD_RESPONSE)
 
     assert response.status_code == 200
     assert response.result is not None
@@ -162,7 +162,7 @@ def test_snapd_response_minimal_validates():
         "result": {"id": "", "revision": "17"},
     }
 
-    response = SnapdResponse.model_validate(data)
+    response = SnapdResponse[SnapInfo].model_validate(data)
 
     assert response.status_code == 200
     assert response.result is not None
@@ -173,7 +173,7 @@ def test_snapd_response_not_found():
     """A 404 response should validate with no result."""
     data = {"status-code": 404}
 
-    response = SnapdResponse.model_validate(data)
+    response = SnapdResponse[SnapInfo].model_validate(data)
 
     assert response.status_code == 404
     assert response.result is None
