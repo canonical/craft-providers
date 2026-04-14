@@ -16,6 +16,6 @@
 #
 """Models representing application states."""
 
-from craft_providers.models.snaps import SnapInfo, SnapPublisher
+from craft_providers.models.snaps import SnapInfo, SnapdResponse, SnapPublisher
 
-__all__ = ["SnapInfo", "SnapPublisher"]
+__all__ = ["SnapInfo", "SnapdResponse", "SnapPublisher"]

@@ -16,6 +16,8 @@
 #
 """Pydantic models for snap metadata returned by snapd."""
 
+from typing import Generic, TypeVar
+
 import pydantic
 
 
@@ -25,7 +27,11 @@ class SnapPublisher(pydantic.BaseModel, extra="ignore"):
     id: str
 
 
-class SnapInfo(pydantic.BaseModel, extra="ignore"):
+class SnapdResult(pydantic.BaseModel):
+    """Base class for snapd result."""
+
+
+class SnapInfo(SnapdResult, extra="ignore"):
     """Information about an installed snap returned by snapd."""
 
     id: str
@@ -37,3 +43,15 @@ class SnapInfo(pydantic.BaseModel, extra="ignore"):
     revision: str
     publisher: SnapPublisher | None = None
     base: str | None = None
+
+
+T = TypeVar("T", bound=SnapdResult)
+
+
+class SnapdResponse(pydantic.BaseModel, Generic[T]):
+    """Response returned by snapd."""
+
+    type: str | None = None
+    status_code: int = pydantic.Field(alias="status-code")
+    status: str | None = None
+    result: T | None = None
