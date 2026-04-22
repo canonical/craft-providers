@@ -1674,6 +1674,67 @@ def test_execute_run_bad_check_verifynetwork_combination(fake_executor):
         )
 
 
+def test_execute_run_logs_output_at_debug(fake_executor, fake_process, logs):
+    """_execute_run() should log command stdout at debug level.
+
+    When craft-providers runs commands inside an instance (apt-get, systemctl,
+    etc.) the output is currently silently discarded on success.  Operators
+    running with debug/trace logging expect to see that output so they can
+    diagnose problems without having to reproduce a full failure.
+
+    Regression test for https://github.com/canonical/craft-providers/issues/250
+    """
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    command = ["the", "command"]
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, *command],
+        returncode=0,
+        stdout=b"important command output",
+    )
+
+    base_config._execute_run(command, executor=fake_executor)
+
+    assert "important command output" in logs.debug
+
+
+def test_execute_run_output_included_in_error_details(fake_executor, fake_process):
+    """When a subprocess fails, its stdout must appear in the error details.
+
+    For example, when `apt-get update` returns exit code 100, the apt output
+    contains the specific mirror/package that caused the failure.  Without it
+    the user sees only "Failed to update apt cache" with no actionable detail.
+
+    The test registers a subprocess that produces stdout and fails, then
+    checks that a higher-level caller wraps the error with those details
+    visible — using _pre_setup_packages (apt-get update) as a representative
+    caller.
+
+    Regression test for https://github.com/canonical/craft-providers/issues/250
+    """
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout="UBUNTU_CODENAME=jammy",
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "apt-get", "update"],
+        returncode=100,
+        stdout=b"Err:1 http://archive.ubuntu.com/ubuntu jammy InRelease\n  Connection refused",
+    )
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "bash", "-c", "exec 3<> /dev/tcp/snapcraft.io/443"],
+    )
+
+    with pytest.raises(BaseConfigurationError) as exc_info:
+        base_config._pre_setup_packages(executor=fake_executor)
+
+    assert "Connection refused" in str(exc_info.value), (
+        "stdout from the failed subprocess must appear in the error details "
+        "so the user knows why apt-get update failed"
+    )
+
+
 @pytest.mark.usefixtures("stub_verify_network")
 def test_network_connectivity_yes(fake_executor, fake_process):
     """Connectivity is ok."""
