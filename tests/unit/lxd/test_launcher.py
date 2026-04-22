@@ -24,6 +24,7 @@ from unittest.mock import MagicMock, Mock, call
 
 import pytest
 from craft_providers import Base, Executor, ProviderError, bases, lxd
+from craft_providers.errors import BaseConfigurationError
 from craft_providers.lxd import LXDError, lxd_instance_status
 from freezegun import freeze_time
 from logassert import Exact  # type: ignore[import-untyped]
@@ -1472,3 +1473,74 @@ def test_wait_for_instance_pid_inactive(fake_instance, mocker):
         "Instance 'test-instance-fa2d407652a1c51f6019' is not ready and "
         "the process (pid 123) that created the instance is inactive."
     )
+
+
+# Regression tests for:
+# https://github.com/canonical/craft-providers/issues/447
+# https://github.com/canonical/craft-providers/issues/757
+
+
+def test_instance_stopped_when_setup_fails(
+    fake_instance,
+    mock_base_configuration,
+    mock_lxc,
+    mock_lxd_instance,
+    mock_platform,
+    mock_timezone,
+):
+    """Instance must be stopped when base_configuration.setup() raises an error.
+
+    Regression test for https://github.com/canonical/craft-providers/issues/757
+    """
+    fake_instance.config_get.return_value = "PREPARING"
+    mock_base_configuration.setup.side_effect = BaseConfigurationError(
+        brief="setup failed"
+    )
+
+    with pytest.raises(BaseConfigurationError):
+        lxd.launch(
+            name=fake_instance.name,
+            base_configuration=mock_base_configuration,
+            image_name="image-name",
+            image_remote="image-remote",
+            use_base_instance=False,
+            lxc=mock_lxc,
+        )
+
+    # Bug: stop() is not called when setup() raises, leaving the instance running.
+    fake_instance.stop.assert_called_once()
+
+
+def test_base_instance_stopped_when_setup_fails(
+    fake_instance,
+    fake_base_instance,
+    mock_base_configuration,
+    mock_is_valid,
+    mock_lxc,
+    mock_lxd_instance,
+    mock_platform,
+    mock_timezone,
+):
+    """Base instance must be stopped when base_configuration.setup() raises an error.
+
+    Regression test for https://github.com/canonical/craft-providers/issues/447
+    """
+    mock_base_configuration.setup.side_effect = BaseConfigurationError(
+        brief="setup failed"
+    )
+
+    with pytest.raises(BaseConfigurationError):
+        lxd.launch(
+            name=fake_instance.name,
+            base_configuration=mock_base_configuration,
+            image_name="image-name",
+            image_remote="image-remote",
+            use_base_instance=True,
+            project="test-project",
+            remote="test-remote",
+            lxc=mock_lxc,
+        )
+
+    # Bug: base_instance.stop() is not called when setup() raises,
+    # leaving the base instance running.
+    fake_base_instance.stop.assert_called_once()
