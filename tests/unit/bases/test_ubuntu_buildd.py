@@ -1934,3 +1934,24 @@ def test_update_eol_sources_error(
         brief="Failed to update EOL sources.",
         details="* Command that failed: 'error'\n* Command exit code: 100",
     )
+
+
+def test_default_compat_tag_logs_warning(logs):
+    """BuilddBase must warn when no custom compatibility_tag is provided.
+
+    When two different applications create BuilddBase without a custom
+    compatibility_tag they both get tag "buildd-base-v7", which means the
+    resulting base instance has the same LXD name in every project.  LXD
+    then refuses to start the second base instance with:
+
+        Error: Failed start validation for device "eth0":
+        Instance DNS name "base-instance-buildd-base-v3-..." already used on network
+
+    The quick fix (per the issue) is to log a warning so the developer knows
+    they should pass a custom compatibility_tag.
+
+    Regression test for https://github.com/canonical/craft-providers/issues/454
+    """
+    ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+
+    assert "compatibility_tag" in logs.warning
