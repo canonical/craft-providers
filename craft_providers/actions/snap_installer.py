@@ -249,6 +249,18 @@ def _get_assertion(query: list[str]) -> bytes:
         ) from error
 
 
+def _get_developer_id_from_snap_revision(snap_revision_assertion: bytes) -> str | None:
+    """Parse the developer-id field from a snap-revision assertion.
+
+    :param snap_revision_assertion: raw bytes of the snap-revision assertion
+    :returns: the developer-id value, or None if not present
+    """
+    for line in snap_revision_assertion.splitlines():
+        if line.startswith(b"developer-id:"):
+            return line.split(b":", 1)[1].strip().decode()
+    return None
+
+
 @contextlib.contextmanager
 def _get_assertions_file(
     snap_name: str, snap_id: str, snap_revision: str, snap_publisher_id: str
@@ -264,22 +276,40 @@ def _get_assertions_file(
       as the target
     """
     logger.debug("Creating an assert file for snap %r", snap_name)
-    assertion_queries = [
+
+    snap_revision_assertion = _get_assertion(
+        ["snap-revision", f"snap-revision={snap_revision}", f"snap-id={snap_id}"]
+    )
+
+    developer_id = _get_developer_id_from_snap_revision(snap_revision_assertion)
+
+    assertion_queries: list[list[str]] = [
         [
             "account-key",
             "public-key-sha3-384=BWDEoaqyr25nF5SNCvEv2v"
             "7QnM9QsfCc0PBMYD_i2NGSQ32EF2d4D0hqUel3m8ul",
         ],
         ["snap-declaration", f"snap-name={snap_name.partition('_')[0]}"],
-        ["snap-revision", f"snap-revision={snap_revision}", f"snap-id={snap_id}"],
         ["account", f"account-id={snap_publisher_id}"],
     ]
+
+    if developer_id and developer_id != snap_publisher_id:
+        logger.debug(
+            "Snap %r has developer-id %r different from publisher-id %r,"
+            " fetching developer account assertion",
+            snap_name,
+            developer_id,
+            snap_publisher_id,
+        )
+        assertion_queries.append(["account", f"account-id={developer_id}"])
 
     with temp_paths.home_temporary_file() as assert_file_path:
         with assert_file_path.open("wb") as assert_file:
             for query in assertion_queries:
                 assert_file.write(_get_assertion(query))
                 assert_file.write(b"\n")
+            assert_file.write(snap_revision_assertion)
+            assert_file.write(b"\n")
             assert_file.flush()
             yield assert_file_path
 
