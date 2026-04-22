@@ -257,7 +257,13 @@ def _get_developer_id_from_snap_revision(snap_revision_assertion: bytes) -> str 
     """
     for line in snap_revision_assertion.splitlines():
         if line.startswith(b"developer-id:"):
-            return line.split(b":", 1)[1].strip().decode()
+            try:
+                return line.split(b":", 1)[1].strip().decode()
+            except UnicodeDecodeError:
+                logger.warning(
+                    "Failed to decode developer-id from snap-revision assertion"
+                )
+                return None
     return None
 
 
