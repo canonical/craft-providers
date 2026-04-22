@@ -1290,3 +1290,95 @@ def test_snaps_no_channel_raises_errors(fake_executor):
         brief="channel cannot be empty",
         resolution="set channel to a non-empty string or `None`",
     )
+
+
+# Regression test for:
+# https://github.com/canonical/craft-providers/issues/445
+
+
+def test_assertions_include_developer_account_when_different_from_publisher(
+    fake_executor,
+    fake_process,
+    mocker,
+):
+    """Assertion file must include the developer account when it differs from publisher.
+
+    When a snap changes ownership (e.g. transferred from a personal account to an org),
+    the snap-revision assertion contains a ``developer-id`` that is different from the
+    current publisher's account. Without asserting the developer account, ``snap ack``
+    fails with: 'cannot resolve prerequisite assertion: account (<developer-id>)'.
+
+    Regression test for https://github.com/canonical/craft-providers/issues/445
+    """
+    publisher_id = "canonical-account-id"
+    developer_id = "original-developer-id"  # Different from publisher_id!
+
+    mocker.patch(
+        "craft_providers.actions.snap_installer.get_host_snap_info",
+        return_value=SnapInfo(
+            id="snap-id-abc123",
+            name="rockcraft",
+            revision="1194",
+            publisher=SnapPublisher(id=publisher_id),
+        ),
+    )
+
+    # The snap-revision assertion contains a developer-id that differs from publisher.
+    snap_revision_assertion = (
+        b"type: snap-revision\n"
+        b"authority-id: canonical\n"
+        b"snap-sha3-384: abc123\n"
+        b"developer-id: " + developer_id.encode() + b"\n"
+        b"snap-id: snap-id-abc123\n"
+        b"snap-revision: 1194\n"
+        b"snap-size: 12345678\n"
+        b"timestamp: 2023-11-08T00:00:00Z\n"
+        b"\n"
+    )
+
+    # Register the four standard 'snap known' calls:
+    fake_process.register_subprocess(
+        ["snap", "known", "account-key", fake_process.any()]
+    )
+    fake_process.register_subprocess(
+        ["snap", "known", "snap-declaration", fake_process.any()]
+    )
+    fake_process.register_subprocess(
+        [
+            "snap",
+            "known",
+            "snap-revision",
+            "snap-revision=1194",
+            "snap-id=snap-id-abc123",
+        ],
+        stdout=snap_revision_assertion,
+    )
+    fake_process.register_subprocess(
+        ["snap", "known", "account", f"account-id={publisher_id}"]
+    )
+
+    # Bug: the developer's account is NOT fetched even though it's needed.
+    # After the fix, this call should also be registered.
+    fake_process.register_subprocess(
+        ["snap", "known", "account", f"account-id={developer_id}"]
+    )
+
+    fake_process.register_subprocess(
+        ["fake-executor", "snap", "ack", "/tmp/rockcraft.assert"]
+    )
+
+    snap_installer._add_assertions_from_host(
+        executor=fake_executor,
+        snap_name="rockcraft",
+    )
+
+    # Verify that the developer account assertion was fetched.
+    developer_account_calls = [
+        call for call in fake_process.calls if f"account-id={developer_id}" in str(call)
+    ]
+    assert len(developer_account_calls) == 1, (
+        f"Expected 1 call to fetch developer account '{developer_id}', "
+        f"got {len(developer_account_calls)}. "
+        "The developer's account assertion is required when developer-id "
+        "differs from the publisher-id in the snap-revision assertion."
+    )
