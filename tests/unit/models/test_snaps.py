@@ -170,10 +170,7 @@ def test_snapd_response_minimal_validates():
 
 
 def test_snapd_response_not_found():
-    """A 404 response should validate with no result."""
-    data = {"status-code": 404}
-
-    response = SnapdResponse[SnapInfo].model_validate(data)
-
+    """A 404 error response with snapd error details should still validate."""
+    response = SnapdResponse[SnapInfo].model_validate(SNAPD_ERROR_RESPONSE)
     assert response.status_code == 404
     assert response.result is None
