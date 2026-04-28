@@ -4,6 +4,13 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+3.5.1 (upcoming)
+----------------
+
+New features:
+
+- Add support for Ubuntu 26.10 (Stonking)
+
 3.5.0 (2026-03-12)
 ------------------
 

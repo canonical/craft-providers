@@ -168,6 +168,12 @@ _PROVIDER_BASE_TO_LXD_REMOTE_IMAGE: dict[Enum, RemoteImage] = {
         remote_address=BUILDD_DAILY_REMOTE_ADDRESS,
         remote_protocol=ProtocolType.SIMPLESTREAMS,
     ),
+    ubuntu.BuilddBaseAlias.STONKING: RemoteImage(
+        image_name="stonking",
+        remote_name=BUILDD_DAILY_REMOTE_NAME,
+        remote_address=BUILDD_DAILY_REMOTE_ADDRESS,
+        remote_protocol=ProtocolType.SIMPLESTREAMS,
+    ),
     ubuntu.BuilddBaseAlias.DEVEL: RemoteImage(
         image_name="devel",
         remote_name=BUILDD_DAILY_REMOTE_NAME,
