@@ -18,7 +18,7 @@ from typing import Any
 
 import pydantic
 import pytest
-from craft_providers.models.snaps import SnapInfo
+from craft_providers.models.snaps import SnapdResponse, SnapInfo
 
 SNAPD_RESPONSE: dict[str, Any] = {
     "type": "sync",
@@ -143,3 +143,34 @@ def test_snap_info_ignores_extra_fields():
 
     assert snap.id == "abc"
     assert "future-field" not in snap.model_dump()
+
+
+def test_snapd_response_validates():
+    """A full snapd response should validate correctly."""
+    response = SnapdResponse[SnapInfo].model_validate(SNAPD_RESPONSE)
+
+    assert response.status_code == 200
+    assert response.result is not None
+    assert response.result.id == "vMTKRaLjnOJQetI78HjntT37VuoyssFE"
+    assert response.result.revision == "16570"
+
+
+def test_snapd_response_minimal_validates():
+    """Minimal snapd response should validate correctly."""
+    data = {
+        "status-code": 200,
+        "result": {"id": "", "revision": "17"},
+    }
+
+    response = SnapdResponse[SnapInfo].model_validate(data)
+
+    assert response.status_code == 200
+    assert response.result is not None
+    assert response.result.revision == "17"
+
+
+def test_snapd_response_not_found():
+    """A 404 error response with snapd error details should still validate."""
+    response = SnapdResponse[SnapInfo].model_validate(SNAPD_ERROR_RESPONSE)
+    assert response.status_code == 404
+    assert response.result is None
