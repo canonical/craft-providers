@@ -12,7 +12,7 @@ New features:
 - Add a ``prune`` method to the ``Provider`` to remove instances related to a project.
 - Ubuntu 26.04 (Resolute) images now use the Release remotes instead of the Daily ones.
 
-Bug Fixes:
+Bug fixes:
 
 - Fix using the wrong instance name in ``MultipassProvider.list_instances``.
 
