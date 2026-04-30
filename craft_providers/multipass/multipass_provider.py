@@ -115,7 +115,7 @@ _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: dict[Enum, RemoteImage] = {
         remote=Remote.SNAPCRAFT, image_name="questing"
     ),
     ubuntu.BuilddBaseAlias.RESOLUTE: RemoteImage(
-        remote=Remote.DAILY, image_name="resolute"
+        remote=Remote.SNAPCRAFT, image_name="resolute"
     ),
     ubuntu.BuilddBaseAlias.STONKING: RemoteImage(
         remote=Remote.DAILY, image_name="stonking"
