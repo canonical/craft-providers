@@ -64,6 +64,7 @@ class BuilddBaseAlias(enum.Enum):
     PLUCKY = "25.04"
     QUESTING = "25.10"
     RESOLUTE = "26.04"
+    STONKING = "26.10"
     DEVEL = "devel"
 
     def __lt__(self, other: Self) -> bool:
