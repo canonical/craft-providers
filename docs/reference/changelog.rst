@@ -4,6 +4,18 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+3.6.0 (2026-04-30)
+------------------
+
+New features:
+
+- Add a ``prune`` method to the ``Provider`` to remove instances related to a project.
+- Ubuntu 26.04 (Resolute) images now use the Release remotes instead of the Daily ones.
+
+Bug fixes:
+
+- Fix using the wrong instance name in ``MultipassProvider.list_instances``.
+
 3.5.0 (2026-03-12)
 ------------------
 
