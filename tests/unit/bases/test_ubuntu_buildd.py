@@ -1700,15 +1700,6 @@ def test_execute_run_logs_output_at_debug(fake_executor, fake_process, logs):
 def test_execute_run_output_included_in_error_details(fake_executor, fake_process):
     """When a subprocess fails, its stdout must appear in the error details.
 
-    For example, when `apt-get update` returns exit code 100, the apt output
-    contains the specific mirror/package that caused the failure.  Without it
-    the user sees only "Failed to update apt cache" with no actionable detail.
-
-    The test registers a subprocess that produces stdout and fails, then
-    checks that a higher-level caller wraps the error with those details
-    visible — using _pre_setup_packages (apt-get update) as a representative
-    caller.
-
     Regression test for https://github.com/canonical/craft-providers/issues/250
     """
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
