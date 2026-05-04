@@ -249,15 +249,6 @@ def test_is_supported_version_error(fake_process, mock_details_from_process_erro
 def test_is_supported_version_no_dots_does_not_loop_forever(monkeypatch):
     """is_supported_version() must not hang when version has no dots at all.
 
-    The while loop that strips trailing dot-components to find a PEP 440
-    compliant version calls ``version.rpartition(".")``.  On a dotless string
-    that rpartition returns ``("", "", version)``, so ``[0]`` is ``""``.
-    The next iteration strips ``""`` the same way, producing ``""`` again —
-    an infinite loop.
-
-    The fix is to stop stripping and raise MultipassError once there are no
-    more dots to remove (i.e. the version cannot be made PEP 440 compliant).
-
     Regression test for https://github.com/canonical/craft-providers/issues/661
     """
     monkeypatch.setattr(Multipass, "version", lambda self: ("INVALID", "INVALID"))
