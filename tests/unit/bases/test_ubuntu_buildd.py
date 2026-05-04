@@ -1677,11 +1677,6 @@ def test_execute_run_bad_check_verifynetwork_combination(fake_executor):
 def test_execute_run_logs_output_at_debug(fake_executor, fake_process, logs):
     """_execute_run() should log command stdout at debug level.
 
-    When craft-providers runs commands inside an instance (apt-get, systemctl,
-    etc.) the output is currently silently discarded on success.  Operators
-    running with debug/trace logging expect to see that output so they can
-    diagnose problems without having to reproduce a full failure.
-
     Regression test for https://github.com/canonical/craft-providers/issues/250
     """
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
