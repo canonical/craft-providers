@@ -170,7 +170,6 @@ def test_snapd_response_minimal_validates():
 
 
 def test_snapd_response_not_found():
-    """A 404 error response with snapd error details should still validate."""
-    response = SnapdResponse[SnapInfo].model_validate(SNAPD_ERROR_RESPONSE)
-    assert response.status_code == 404
-    assert response.result is None
+    """A snapd error payload should not validate as SnapInfo."""
+    with pytest.raises(pydantic.ValidationError):
+        SnapdResponse[SnapInfo].model_validate(SNAPD_ERROR_RESPONSE)

@@ -160,7 +160,12 @@ def _get_target_snap_revision_from_snapd(
         ) from error
 
     result_json = json.loads(proc.stdout)
-    result = SnapdResponse[SnapInfo].model_validate(result_json)
+    try:
+        result = SnapdResponse[SnapInfo].model_validate(result_json)
+    except pydantic.ValidationError as error:
+        raise SnapInstallationError(
+            f"Unknown response from snapd: {result_json!r}"
+        ) from error
     if result.status_code == HTTPStatus.NOT_FOUND:
         # snap not found
         return None
