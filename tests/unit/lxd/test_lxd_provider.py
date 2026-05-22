@@ -21,7 +21,12 @@ import pytest
 from craft_providers import Executor
 from craft_providers.bases import ubuntu
 from craft_providers.errors import BaseConfigurationError
-from craft_providers.lxd import LXDError, LXDProvider, LXDUnstableImageError
+from craft_providers.lxd import (
+    LXDError,
+    LXDProvider,
+    LXDUnstableImageError,
+    LXDVMProvider,
+)
 
 
 @pytest.fixture
@@ -89,12 +94,27 @@ def mock_launch(mocker):
     return mocker.patch("craft_providers.lxd.lxd_provider.launch", autospec=True)
 
 
+@pytest.fixture(params=[LXDProvider, LXDVMProvider], ids=["container", "vm"])
+def provider_class(request):
+    return request.param
+
+
+@pytest.fixture
+def expected_instance_type(provider_class):
+    return "virtual-machine" if provider_class is LXDVMProvider else "container"
+
+
+@pytest.fixture
+def expected_provider_name(provider_class):
+    return "LXD VM" if provider_class is LXDVMProvider else "LXD"
+
+
 def test_ensure_provider_is_available_installed(
-    mock_is_installed, mock_install, mock_ensure_lxd_is_ready
+    mock_is_installed, mock_install, mock_ensure_lxd_is_ready, provider_class
 ):
     """Verify LXD is installed if it is not already installed."""
     mock_is_installed.return_value = True
-    provider = LXDProvider()
+    provider = provider_class()
 
     provider.ensure_provider_is_available()
 
@@ -103,11 +123,11 @@ def test_ensure_provider_is_available_installed(
 
 
 def test_ensure_provider_is_available_not_installed(
-    mock_is_installed, mock_install, mock_ensure_lxd_is_ready
+    mock_is_installed, mock_install, mock_ensure_lxd_is_ready, provider_class
 ):
     """Verify LXD is not re-installed if it is already installed."""
     mock_is_installed.return_value = False
-    provider = LXDProvider()
+    provider = provider_class()
 
     provider.ensure_provider_is_available()
 
@@ -124,14 +144,18 @@ def test_is_provider_installed(is_installed, mock_is_installed):
     assert provider.is_provider_installed() == is_installed
 
 
-def test_create_environment(mocker):
+def test_create_environment(mocker, provider_class, expected_instance_type):
     mock_lxd_instance = mocker.patch("craft_providers.lxd.lxd_provider.LXDInstance")
 
-    provider = LXDProvider()
+    provider = provider_class()
     provider.create_environment(instance_name="test-name")
 
     mock_lxd_instance.assert_called_once_with(
-        name="test-name", project="default", remote="local", intercept_mknod=True
+        name="test-name",
+        project="default",
+        remote="local",
+        intercept_mknod=True,
+        instance_type=expected_instance_type,
     )
 
 
@@ -152,10 +176,12 @@ def test_launched_environment(
     mock_remote_image,
     mock_launch,
     mock_lxc,
+    provider_class,
+    expected_instance_type,
     tmp_path,
 ):
     mock_remote_image.is_stable = is_stable
-    provider = LXDProvider(lxc=mock_lxc)
+    provider = provider_class(lxc=mock_lxc)
 
     # set the expected expiration time
     expiration = timedelta(days=90) if is_stable else timedelta(days=14)
@@ -184,6 +210,7 @@ def test_launched_environment(
                 project="default",
                 remote="local",
                 expiration=expiration,
+                instance_type=expected_instance_type,
                 prepare_instance=None,
             ),
         ]
@@ -202,9 +229,11 @@ def test_launched_environment_prepare_instance(
     mock_remote_image,
     mock_launch,
     mock_lxc,
+    provider_class,
+    expected_instance_type,
     tmp_path,
 ):
-    provider = LXDProvider(lxc=mock_lxc)
+    provider = provider_class(lxc=mock_lxc)
     expiration = timedelta(days=90)
 
     def _prepare_instance(instance: Executor) -> None:
@@ -234,6 +263,7 @@ def test_launched_environment_prepare_instance(
                 project="default",
                 remote="local",
                 expiration=expiration,
+                instance_type=expected_instance_type,
                 prepare_instance=_prepare_instance,
             ),
         ]
@@ -251,11 +281,12 @@ def test_launched_environment_launch_base_configuration_error(
     mock_get_remote_image,
     mock_remote_image,
     mock_launch,
+    provider_class,
     tmp_path,
 ):
     error = BaseConfigurationError(brief="fail")
     mock_launch.side_effect = error
-    provider = LXDProvider()
+    provider = provider_class()
 
     with (
         pytest.raises(LXDError, match="fail") as raised,
@@ -276,11 +307,12 @@ def test_launched_environment_unstable_error(
     mock_get_remote_image,
     mock_remote_image,
     mock_launch,
+    provider_class,
     tmp_path,
 ):
     """Raise an Exception when an unstable image is used with opting in."""
     mock_remote_image.is_stable = False
-    provider = LXDProvider()
+    provider = provider_class()
 
     with (
         pytest.raises(LXDUnstableImageError) as raised,
@@ -299,16 +331,16 @@ def test_launched_environment_unstable_error(
     )
 
 
-def test_lxd_name():
+def test_lxd_name(provider_class, expected_provider_name):
     """Verify LXDProvider's name."""
-    provider = LXDProvider()
+    provider = provider_class()
 
-    assert provider.name == "LXD"
+    assert provider.name == expected_provider_name
 
 
-def test_lxd_install_recommendation():
+def test_lxd_install_recommendation(provider_class):
     """Verify LXDProvider's install recommendation."""
-    provider = LXDProvider()
+    provider = provider_class()
 
     assert (
         provider.install_recommendation
@@ -316,9 +348,9 @@ def test_lxd_install_recommendation():
     )
 
 
-def test_lxd_list_instances(mock_lxc_container):
+def test_lxd_list_instances(mock_lxc_container, provider_class):
     """Verify LXDProvider's instances"""
-    provider = LXDProvider(
+    provider = provider_class(
         lxc=mock_lxc_container,
         lxd_project="default",
         lxd_remote="local",
@@ -337,9 +369,9 @@ def test_lxd_list_instances(mock_lxc_container):
     assert instances[1].remote == "local"
 
 
-def test_lxd_list_instances_include_base(mock_lxc_container):
+def test_lxd_list_instances_include_base(mock_lxc_container, provider_class):
     """Verify list instance filters on base instances"""
-    provider = LXDProvider(
+    provider = provider_class(
         lxc=mock_lxc_container,
         lxd_project="default",
         lxd_remote="local",
@@ -362,8 +394,8 @@ def test_lxd_list_instances_include_base(mock_lxc_container):
     assert instances[2].remote == "local"
 
 
-def test_lxd_list_instances_project_override(mock_lxc_container):
-    provider = LXDProvider(
+def test_lxd_list_instances_project_override(mock_lxc_container, provider_class):
+    provider = provider_class(
         lxc=mock_lxc_container,
         lxd_project="default",
         lxd_remote="local",
@@ -377,7 +409,7 @@ def test_lxd_list_instances_project_override(mock_lxc_container):
     )
 
 
-def test_lxd_list_instances_prefix_filter(mock_lxc_container):
+def test_lxd_list_instances_prefix_filter(mock_lxc_container, provider_class):
     mock_lxc_container.list_names.return_value.append(
         "alpha-1",
     )
@@ -388,7 +420,7 @@ def test_lxd_list_instances_prefix_filter(mock_lxc_container):
         "alpha-2",
     )
 
-    provider = LXDProvider(
+    provider = provider_class(
         lxc=mock_lxc_container,
         lxd_project="default",
         lxd_remote="local",
@@ -402,9 +434,9 @@ def test_lxd_list_instances_prefix_filter(mock_lxc_container):
         assert instance.name.startswith("alpha-")
 
 
-def test_lxd_prune_all(mock_lxc_container):
+def test_lxd_prune_all(mock_lxc_container, provider_class):
     """Verify prune deletes all instances in scope when no prefix is provided."""
-    provider = LXDProvider(
+    provider = provider_class(
         lxc=mock_lxc_container,
         lxd_project="default",
         lxd_remote="local",
@@ -430,9 +462,9 @@ def test_lxd_prune_all(mock_lxc_container):
     )
 
 
-def test_lxd_prune_all_without_pruning_templates(mock_lxc_container):
+def test_lxd_prune_all_without_pruning_templates(mock_lxc_container, provider_class):
     """Verify prune does not delete base instances by default."""
-    provider = LXDProvider(
+    provider = provider_class(
         lxc=mock_lxc_container,
         lxd_project="default",
         lxd_remote="local",

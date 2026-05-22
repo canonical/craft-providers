@@ -22,7 +22,7 @@ import contextlib
 import logging
 from datetime import timedelta
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from typing_extensions import override
 
@@ -59,6 +59,8 @@ class LXDProvider(Provider):
     :param lxd_remote: LXD remote to use (default is local).
     :param intercept_mknod: If the host can, tell LXD instance to intercept mknod
     """
+
+    _instance_type: Literal["container", "virtual-machine"] = "container"
 
     def __init__(
         self,
@@ -158,6 +160,7 @@ class LXDProvider(Provider):
             project=self.lxd_project,
             remote=self.lxd_remote,
             intercept_mknod=self._intercept_mknod,
+            instance_type=self._instance_type,
         )
 
     @override
@@ -231,6 +234,7 @@ class LXDProvider(Provider):
                 project=self.lxd_project,
                 remote=self.lxd_remote,
                 expiration=expiration,
+                instance_type=self._instance_type,
                 prepare_instance=prepare_instance,
             )
         except BaseConfigurationError as error:

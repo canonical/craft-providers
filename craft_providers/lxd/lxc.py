@@ -32,13 +32,7 @@ import threading
 import time
 from collections import deque
 from datetime import datetime, timezone
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Literal,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import yaml
 
@@ -715,6 +709,7 @@ class LXC:
         instance_name: str,
         image: str,
         image_remote: str,
+        instance_type: Literal["container", "virtual-machine"] = "container",
         config_keys: dict[str, str] | None = None,
         ephemeral: bool = False,
         project: str = "default",
@@ -725,6 +720,7 @@ class LXC:
         :param instance_name: Name of instance to launch.
         :param image: Name of image to use.
         :param image_remote: Name of image's remote.
+        :param instance_type: Whether to launch a container or virtual machine.
         :param config_keys: Configuration keys to set.
         :param ephemeral: Use ephemeral instance.
         :param project: Name of LXD project.
@@ -745,6 +741,9 @@ class LXC:
             config_keys = _default_instance_metadata
 
         command = ["launch", f"{image_remote}:{image}", f"{remote}:{instance_name}"]
+
+        if instance_type == "virtual-machine":
+            command.append("--vm")
 
         if ephemeral:
             command.append("--ephemeral")

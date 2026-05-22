@@ -30,6 +30,7 @@ from .lxc import LXC
 from .lxd import LXD
 from .lxd_instance import LXDInstance
 from .lxd_provider import LXDProvider
+from .lxd_vm_provider import LXDVMProvider
 from .remotes import get_remote_image
 
 __all__ = [
@@ -40,6 +41,7 @@ __all__ = [
     "LXDInstallationError",
     "LXDUnstableImageError",
     "LXDProvider",
+    "LXDVMProvider",
     "get_remote_image",
     "install",
     "is_installed",

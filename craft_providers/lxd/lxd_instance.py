@@ -26,7 +26,7 @@ import shutil
 import subprocess
 import tempfile
 import warnings
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pylxd  # type: ignore[import-untyped]
 import yaml
@@ -74,6 +74,7 @@ class LXDInstance(Executor):
         remote: str = "local",
         lxc: LXC | None = None,
         intercept_mknod: bool = True,
+        instance_type: Literal["container", "virtual-machine"] = "container",
         client: pylxd.Client | None = None,
     ) -> None:
         """Create an LXD executor.
@@ -87,6 +88,7 @@ class LXDInstance(Executor):
         :param remote: The name of the LXD remote.
         :param lxc: The LXC wrapper to use.
         :param intercept_mknod: If the host can, tell LXD instance to intercept mknod
+        :param instance_type: Whether to launch as a container or virtual machine.
         :param client: The pylxd client to use.
 
         :raises LXDError: If the name is invalid.
@@ -103,6 +105,7 @@ class LXDInstance(Executor):
         self.project = project
         self.remote = remote
         self._intercept_mknod = intercept_mknod
+        self._instance_type = instance_type
 
         if lxc is None:
             self.lxc = LXC()
@@ -424,6 +427,7 @@ class LXDInstance(Executor):
             instance_name=self.instance_name,
             image=image,
             image_remote=image_remote,
+            instance_type=self._instance_type,
             project=self.project,
             remote=self.remote,
         )

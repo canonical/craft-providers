@@ -20,30 +20,30 @@ import platform
 
 import pytest
 from craft_providers.bases import BuilddBaseAlias, almalinux, get_base_from_alias
-from craft_providers.lxd import LXDProvider, is_installed
+from craft_providers.lxd import LXDProvider, LXDVMProvider, is_installed
 
 from .conftest import UBUNTU_BASES_PARAM
 
 
 @pytest.mark.slow
-def test_ensure_provider_is_available_not_installed(uninstalled_lxd):
+def test_ensure_provider_is_available_not_installed(uninstalled_lxd, provider_class):
     """Verify lxd is installed and configured."""
     assert is_installed() is False
-    provider = LXDProvider()
+    provider = provider_class()
     provider.ensure_provider_is_available()
 
 
 @pytest.mark.slow
-def test_ensure_provider_is_available_installed(installed_lxd):
+def test_ensure_provider_is_available_installed(installed_lxd, provider_class):
     """Verify lxd is installed and configured."""
     assert is_installed() is True
-    provider = LXDProvider()
+    provider = provider_class()
     provider.ensure_provider_is_available()
 
 
 @pytest.mark.slow
-def test_create_environment(installed_lxd, instance_name):
-    provider = LXDProvider()
+def test_create_environment(installed_lxd, instance_name, provider_class):
+    provider = provider_class()
     test_instance = provider.create_environment(instance_name=instance_name)
     assert test_instance.exists() is False
 
@@ -105,7 +105,7 @@ def test_foreign_arch_success(
     tmp_path: pathlib.Path,
     installed_lxd,
     instance_name,
-    session_provider: LXDProvider,
+    session_provider: LXDProvider | LXDVMProvider,
     container_arch: str,
     expected_arch,
 ):

@@ -1171,6 +1171,39 @@ def test_launch_all_opts(fake_process):
 
 
 @pytest.mark.usefixtures("mock_getpid")
+def test_launch_virtual_machine(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "launch",
+            "test-image-remote:test-image",
+            "test-remote:test-instance",
+            "--vm",
+            "--config",
+            "user.craft_providers.status=STARTING",
+            "--config",
+            "user.craft_providers.timer=2023-01-01T00:00:00+00:00",
+            "--config",
+            "user.craft_providers.pid=123",
+        ]
+    )
+
+    with freeze_time("2023-01-01"):
+        LXC().launch(
+            instance_name="test-instance",
+            image="test-image",
+            image_remote="test-image-remote",
+            project="test-project",
+            remote="test-remote",
+            instance_type="virtual-machine",
+        )
+
+    assert len(fake_process.calls) == 1
+
+
+@pytest.mark.usefixtures("mock_getpid")
 def test_launch_error(fake_process, mocker):
     fake_process.register_subprocess(
         [

@@ -18,15 +18,15 @@ import sys
 
 import pytest
 from craft_providers import ProviderError
-from craft_providers.lxd import LXDError, LXDProvider
+from craft_providers.lxd import LXDError, LXDProvider, LXDVMProvider
 from craft_providers.multipass import MultipassError, MultipassProvider
 
-known_provider_classes = [LXDProvider, MultipassProvider]
+known_provider_classes = [LXDProvider, LXDVMProvider, MultipassProvider]
 
 
 @pytest.fixture(params=known_provider_classes)
 def provider_class(request):
-    if sys.platform == "darwin" and request.param is LXDProvider:
+    if sys.platform == "darwin" and request.param in {LXDProvider, LXDVMProvider}:
         pytest.skip(
             reason="These tests can't run on MacOS as LXD (and by extension, pylxd) don't work on it."
         )

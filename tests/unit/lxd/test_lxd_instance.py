@@ -603,6 +603,7 @@ def test_launch(mock_lxc, instance):
             instance_name=instance.instance_name,
             image="22.04",
             image_remote="ubuntu",
+            instance_type="container",
             project=instance.project,
             remote=instance.remote,
         ),
@@ -628,6 +629,7 @@ def test_launch_all_opts(mock_lxc, instance):
             instance_name=instance.instance_name,
             image="22.04",
             image_remote="ubuntu",
+            instance_type="container",
             project=instance.project,
             remote=instance.remote,
         ),
@@ -654,6 +656,32 @@ def test_launch_with_mknod(mock_lxc, instance):
             instance_name=instance.instance_name,
             image="22.04",
             image_remote="ubuntu",
+            instance_type="container",
+            project=instance.project,
+            remote=instance.remote,
+        ),
+    ]
+
+
+def test_launch_virtual_machine(mock_lxc):
+    instance = LXDInstance(
+        name=_TEST_INSTANCE["name"], lxc=mock_lxc, instance_type="virtual-machine"
+    )
+
+    instance.launch(
+        image="22.04",
+        image_remote="ubuntu",
+    )
+
+    assert mock_lxc.mock_calls == [
+        mock.call.info(project=instance.project, remote=instance.remote),
+        mock.call.launch(
+            config_keys={},
+            ephemeral=False,
+            instance_name=instance.instance_name,
+            image="22.04",
+            image_remote="ubuntu",
+            instance_type="virtual-machine",
             project=instance.project,
             remote=instance.remote,
         ),

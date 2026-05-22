@@ -42,6 +42,7 @@ from .project import create_with_default_profile
 if TYPE_CHECKING:
     from collections.abc import Callable
     from enum import Enum
+    from typing import Literal
 
     from craft_providers import Executor
 
@@ -282,7 +283,11 @@ def _ensure_project_exists(
 
 
 def _formulate_base_instance_name(
-    *, image_name: str, image_remote: str, compatibility_tag: str
+    *,
+    image_name: str,
+    image_remote: str,
+    compatibility_tag: str,
+    instance_type: Literal["container", "virtual-machine"] = "container",
 ) -> str:
     """Compute the base instance name.
 
@@ -295,7 +300,11 @@ def _formulate_base_instance_name(
 
     :returns: Name of (compatible) base instance.
     """
-    return f"base-instance-{compatibility_tag}-{image_remote}-{image_name}"
+    instance_type_suffix = "-vm" if instance_type == "virtual-machine" else ""
+    return (
+        f"base-instance-{compatibility_tag}-{image_remote}-{image_name}"
+        f"{instance_type_suffix}"
+    )
 
 
 def _is_valid(*, instance: LXDInstance, expiration: timedelta) -> bool:
@@ -708,6 +717,7 @@ def launch(  # noqa: PLR0913, too many arguments
     remote: str = "local",
     lxc: LXC | None = None,
     expiration: timedelta = timedelta(days=90),
+    instance_type: Literal["container", "virtual-machine"] = "container",
     prepare_instance: Callable[[Executor], None] | None = None,
 ) -> LXDInstance:
     """Create, start, and configure an instance.
@@ -745,6 +755,7 @@ def launch(  # noqa: PLR0913, too many arguments
     :param remote: LXD remote to create instance on.
     :param lxc: LXC client.
     :param expiration: How long a base instance will be valid from its creation date.
+    :param instance_type: Whether to launch a container or virtual machine.
     :param prepare_instance: A callback to perform early instance configuration
     before the base image setup.
 
@@ -761,12 +772,16 @@ def launch(  # noqa: PLR0913, too many arguments
     _ensure_project_exists(
         create=auto_create_project, project=project, remote=remote, lxc=lxc
     )
-    instance = LXDInstance(
-        name=name,
-        project=project,
-        remote=remote,
-        default_command_environment=base_configuration.get_command_environment(),
-    )
+    instance_kwargs: dict[str, str | dict[str, str | None]] = {
+        "name": name,
+        "project": project,
+        "remote": remote,
+        "default_command_environment": base_configuration.get_command_environment(),
+    }
+    if instance_type != "container":
+        instance_kwargs["instance_type"] = instance_type
+
+    instance = LXDInstance(**instance_kwargs)
 
     # If the existing instance could not be launched, then continue on so a new
     # instance can be created (this can occur when `auto_clean` triggers the
@@ -816,13 +831,18 @@ def launch(  # noqa: PLR0913, too many arguments
         image_name=image_name,
         image_remote=image_remote,
         compatibility_tag=base_configuration.compatibility_tag,
+        instance_type=instance_type,
     )
-    base_instance = LXDInstance(
-        name=base_instance_name,
-        project=project,
-        remote=remote,
-        default_command_environment=base_configuration.get_command_environment(),
-    )
+    base_instance_kwargs: dict[str, str | dict[str, str | None]] = {
+        "name": base_instance_name,
+        "project": project,
+        "remote": remote,
+        "default_command_environment": base_configuration.get_command_environment(),
+    }
+    if instance_type != "container":
+        base_instance_kwargs["instance_type"] = instance_type
+
+    base_instance = LXDInstance(**base_instance_kwargs)
     logger.debug(
         "Checking for base instance %r in project %r in remote %r",
         base_instance.instance_name,

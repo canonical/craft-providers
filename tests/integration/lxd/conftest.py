@@ -31,6 +31,7 @@ from craft_providers.lxd import LXC
 from craft_providers.lxd import project as lxc_project
 from craft_providers.lxd.lxd_instance import LXDInstance
 from craft_providers.lxd.lxd_provider import LXDProvider
+from craft_providers.lxd.lxd_vm_provider import LXDVMProvider
 
 _xfail_bases = {
     ubuntu.BuilddBaseAlias.XENIAL: "Fails to setup snapd (#582)",
@@ -48,6 +49,11 @@ UBUNTU_BASES_PARAM = [
     for base in ubuntu.BuilddBaseAlias
 ]
 """List of testable Ubuntu bases."""
+
+
+@pytest.fixture(params=[LXDProvider, LXDVMProvider], ids=["lxd", "lxd-vm"])
+def provider_class(request):
+    return request.param
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -200,6 +206,10 @@ def session_project(installed_lxd):
     lxc_project.purge(lxc=lxc, project=project_name)
 
 
-@pytest.fixture(scope="session")
-def session_provider(session_lxd_project):
-    return LXDProvider(lxd_project=session_lxd_project)
+@pytest.fixture(
+    scope="session",
+    params=[LXDProvider, LXDVMProvider],
+    ids=["lxd", "lxd-vm"],
+)
+def session_provider(session_lxd_project, request):
+    return request.param(lxd_project=session_lxd_project)

@@ -17,15 +17,14 @@
 #
 
 import pytest
-from craft_providers.lxd import LXDProvider
 from craft_providers.lxd import project as lxc_project
 
 
 @pytest.mark.slow
 @pytest.mark.lxd_instance
-def test_prune(lxc, project):
+def test_prune(lxc, project, provider_class):
     """Verify prune deletes instances in a project."""
-    provider = LXDProvider(lxd_project=project)
+    provider = provider_class(lxd_project=project)
 
     instance_name_1 = "test-instance-1"
     instance_name_2 = "test-instance-2"

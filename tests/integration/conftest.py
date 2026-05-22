@@ -372,6 +372,7 @@ def session_lxd_project(installed_lxd):
     scope="session",
     params=[
         pytest.param("lxd", marks=[pytest.mark.lxd_instance]),
+        pytest.param("lxd-vm", marks=[pytest.mark.lxd_instance]),
         pytest.param("multipass", marks=[pytest.mark.multipass_instance]),
     ],
 )
@@ -379,6 +380,10 @@ def session_provider(request: pytest.FixtureRequest) -> Provider:
     match request.param:
         case "lxd":
             return lxd.LXDProvider(
+                lxd_project=request.getfixturevalue("session_lxd_project")
+            )
+        case "lxd-vm":
+            return lxd.LXDVMProvider(
                 lxd_project=request.getfixturevalue("session_lxd_project")
             )
         case "multipass":
