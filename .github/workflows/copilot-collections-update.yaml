@@ -6,6 +6,6 @@ on:
 
 jobs:
   check-update:
-    # Pinned to @main to get the latest logic, but the content version is controlled by .github/copilot-collections.yaml
+    # Tracks @main to get the latest logic, while the content version is controlled by .github/.copilot-collections.yaml
     uses: canonical/copilot-collections/.github/workflows/auto_update_collections.yaml@main
     secrets: inherit
