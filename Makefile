@@ -32,7 +32,7 @@ SHELL:=$(ROOT_DIR)tools/ci-shell.sh
 endif
 
 .PHONY: format
-format: format-ruff format-codespell format-prettier format-pre-commit  ## Run all automatic formatters
+format: format-ruff format-codespell format-prettier  ## Run all automatic formatters
 
 .PHONY: lint
 lint: lint-ruff lint-ty lint-codespell lint-mypy lint-prettier lint-pyright lint-shellcheck lint-docs lint-twine  ## Run all linters
