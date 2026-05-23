@@ -703,7 +703,7 @@ class LXC:
                 ),
             ) from error
 
-    def launch(
+    def launch(  # noqa: PLR0912
         self,
         *,
         instance_name: str,
@@ -782,6 +782,24 @@ class LXC:
                         for state in ('"create"', '"start"')
                     )
                 ):
+                    if instance_type == "virtual-machine" and error.stderr:
+                        stderr = error.stderr.decode()
+                        if "virtual-machine" in stderr and (
+                            "KVM support is missing" in stderr or "/dev/kvm" in stderr
+                        ):
+                            raise LXDError(
+                                brief=(
+                                    f"Failed to launch LXD virtual machine "
+                                    f"{instance_name!r}."
+                                ),
+                                details=errors.details_from_called_process_error(error),
+                                resolution=(
+                                    "Enable KVM support on the host (for example, "
+                                    "ensure /dev/kvm exists and nested virtualization "
+                                    "is available) and try again."
+                                ),
+                            ) from error
+
                     raise LXDError(
                         brief=f"Failed to launch instance {instance_name!r}.",
                         details=errors.details_from_called_process_error(error),

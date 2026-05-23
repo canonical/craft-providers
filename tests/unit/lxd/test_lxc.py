@@ -1204,6 +1204,53 @@ def test_launch_virtual_machine(fake_process):
 
 
 @pytest.mark.usefixtures("mock_getpid")
+def test_launch_virtual_machine_kvm_missing(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "launch",
+            "test-image-remote:test-image",
+            "test-remote:test-instance",
+            "--vm",
+            "--config",
+            "user.craft_providers.status=STARTING",
+            "--config",
+            "user.craft_providers.timer=2023-01-01T00:00:00+00:00",
+            "--config",
+            "user.craft_providers.pid=123",
+        ],
+        returncode=1,
+        stderr=(
+            b"Error: Failed instance creation: Failed creating instance record: "
+            b'Instance type "virtual-machine" is not supported on this server: '
+            b"KVM support is missing (no /dev/kvm)"
+        ),
+    )
+
+    with pytest.raises(LXDError) as exc_info:
+        with freeze_time("2023-01-01"):
+            LXC().launch(
+                instance_name="test-instance",
+                image="test-image",
+                image_remote="test-image-remote",
+                project="test-project",
+                remote="test-remote",
+                instance_type="virtual-machine",
+            )
+
+    assert (
+        exc_info.value.brief == "Failed to launch LXD virtual machine 'test-instance'."
+    )
+    assert "KVM support is missing (no /dev/kvm)" in (exc_info.value.details or "")
+    assert exc_info.value.resolution == (
+        "Enable KVM support on the host (for example, ensure /dev/kvm exists and "
+        "nested virtualization is available) and try again."
+    )
+
+
+@pytest.mark.usefixtures("mock_getpid")
 def test_launch_error(fake_process, mocker):
     fake_process.register_subprocess(
         [
