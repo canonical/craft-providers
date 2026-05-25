@@ -48,7 +48,7 @@ dev = [
     "types-pyyaml~=6.0",
 ]
 lint = ["codespell[toml]~=2.4.1"]
-types = ["mypy[reports]~=1.15"]
+types = ["mypy[reports]~=2.1"]
 docs = [
     "pyspelling~=2.10",
     "sphinx-autobuild~=2024.10",
