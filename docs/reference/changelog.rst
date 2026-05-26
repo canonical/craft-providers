@@ -4,6 +4,13 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+3.7.0 (unreleased)
+------------------
+
+New features:
+
+- Add support for Ubuntu 26.10 (Stonking)
+
 3.6.0 (2026-04-30)
 ------------------
 
