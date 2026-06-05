@@ -79,6 +79,7 @@ constraint-dependencies = [
     "regex>=2021.11.10",
     "setuptools>=50",
     "sphinx-basic-ng>=1.0.0b1",
+    "starlette>=1.0.1",
     "tornado>=4.0",
     "urllib3>=2.0",
     "webencodings>=0.4.0",
@@ -181,6 +182,7 @@ strict_equality = true
 extra_checks = true
 warn_return_any = true
 disallow_subclassing_any = true
+no_implicit_reexport = true
 disallow_untyped_decorators = true
 disallow_any_generics = true
 

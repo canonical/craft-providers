@@ -1157,7 +1157,9 @@ def test_get_target_snap_revision_from_snapd_ok(fake_process, fake_executor):
         "/run/snapd.socket",
         "http://localhost/v2/snaps/test-snap",
     ]
-    fake_snapd_response = json.dumps({"status-code": 200, "result": {"revision": "17"}})
+    fake_snapd_response = json.dumps(
+        {"status-code": 200, "result": {"id": "", "revision": "17"}}
+    )
     fake_process.register_subprocess(expected_cmd, stdout=fake_snapd_response)
 
     result = snap_installer._get_target_snap_revision_from_snapd(

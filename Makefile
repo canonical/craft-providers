@@ -20,6 +20,12 @@ UV_TICS_GROUPS := "--group=tics"
 
 include common.mk
 
+# instructions and skills are imported from canonical/copilot-collections
+PRETTIER_IGNORE_DIRS := .github/instructions .github/skills
+
+# this extends PRETTIER_FILES from common .mk
+PRETTIER_FILES += $(foreach dir,$(PRETTIER_IGNORE_DIRS),"!$(dir)/**")
+
 ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 ifeq ($(CI)_$(OS),true_Linux)
 SHELL:=$(ROOT_DIR)tools/ci-shell.sh

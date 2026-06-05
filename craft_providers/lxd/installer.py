@@ -29,7 +29,7 @@ import sys
 import requests
 import requests_unixsocket
 
-from craft_providers.errors import details_from_called_process_error
+from craft_providers.errors import ProviderError, details_from_called_process_error
 
 from . import errors
 from .lxc import LXC
@@ -123,9 +123,7 @@ def is_installed() -> bool:
     try:
         snap_info = requests_unixsocket.get(url=url, params={"select": "enabled"})  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types
     except requests.ConnectionError as error:
-        raise errors.ProviderError(
-            brief="Unable to connect to snapd service."
-        ) from error
+        raise ProviderError(brief="Unable to connect to snapd service.") from error
 
     try:
         snap_info.raise_for_status()
@@ -138,7 +136,7 @@ def is_installed() -> bool:
     try:
         status = snap_info.json()["result"]["status"]
     except (TypeError, KeyError):
-        raise errors.ProviderError(brief="Unexpected response from snapd service.")
+        raise ProviderError(brief="Unexpected response from snapd service.")
 
     logger.debug(f"LXD snap status: {status}")
     # snap status can be "installed" or "active" - "installed" revisions
