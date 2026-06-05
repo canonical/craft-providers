@@ -1,7 +1,13 @@
+.. meta::
+    :description: The explanatory documentation for Craft Providers. These explanations aid in understanding the concepts and relationships of Craft Providers as a complete system.
+
 .. _explanation:
 
 Explanation
 ===========
+
+Explanations provide a wider perspective of Craft Providers. They aid in understanding the
+concepts and relationships of Starcraft as a complete system.
 
 .. toctree::
    :maxdepth: 1
@@ -11,7 +17,7 @@ Explanation
 .. _network-error:
 
 Failure to properly execute commands that depend on network access
-==================================================================
+------------------------------------------------------------------
 
 A common problem that can occur when running the setup or warmup of an instance
 is a failure associated with different processes (e.g. ``apt``) not being able

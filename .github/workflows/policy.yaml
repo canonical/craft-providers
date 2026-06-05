@@ -14,4 +14,4 @@ jobs:
     name: Security scan
     uses: canonical/starflow/.github/workflows/scan-python.yaml@main
     with:
-      requirements-find-args: "! -path './docs/*' -prune"
+      requirements-find-args: "! -path './docs/*' -prune -a ! -path '*/tests/integration/*'"
