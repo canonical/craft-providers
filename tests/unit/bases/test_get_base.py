@@ -24,6 +24,10 @@ def test_get_base_alias():
     assert get_base_alias(("ubuntu", "22.04")) == ubuntu.BuilddBaseAlias.JAMMY
 
 
+def test_get_base_alias_stonking():
+    assert get_base_alias(("ubuntu", "26.10")) == ubuntu.BuilddBaseAlias.STONKING
+
+
 def test_get_base_alias_does_not_exist():
     with pytest.raises(BaseConfigurationError) as exc_info:
         get_base_alias(("ubuntu", "8.04"))
