@@ -9,7 +9,7 @@ included in each version.
 
 New features:
 
-- Add support for Ubuntu 26.10 (Stonking)
+- Add support for Ubuntu 26.10 (Stonking).
 
 3.6.0 (2026-04-30)
 ------------------
