@@ -4,6 +4,13 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+3.7.1 (unreleased)
+------------------
+
+Bug fixes:
+
+- Don't fail if the guest instance is an unknown Ubuntu release.
+
 3.6.0 (2026-04-30)
 ------------------
 
