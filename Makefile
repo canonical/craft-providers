@@ -75,9 +75,6 @@ else ifeq ($(CI)_$(OS),true_Darwin)  # Only do this in CI on macOS
 	# Disable spotlight because it tries to index the multipass images, crashing
 	# macOS 14+ runners. Thapple.
 	sudo mdutil -a -i off
-	# Disable Application Firewall and Packet Filter on macOS 15 to allow VM networking
-	sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off || true
-	sudo pfctl -d || true
 endif
 
 
