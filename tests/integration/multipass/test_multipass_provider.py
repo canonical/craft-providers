@@ -61,7 +61,7 @@ def test_launched_environment(alias, installed_multipass, instance_name, tmp_pat
         pytest.skip(reason="Noble on MacOS are not available")
 
     if sys.platform == "darwin" and alias == BuilddBaseAlias.DEVEL:
-        pytest.skip(reason="snapcraft:devel is not working on MacOS (LP #2007419)")
+        pytest.skip(reason="devel image is not working on MacOS (LP #2007419)")
 
     project_path = tmp_path / "project"
     cache_path = tmp_path / "cache"

@@ -253,7 +253,7 @@ def test_launch(instance_name):
     assert instance.exists() is False
 
     instance.launch(
-        image="snapcraft:core22",
+        image="release:22.04",
         cpus=4,
         disk_gb=16,
         mem_gb=1,

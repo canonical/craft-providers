@@ -53,7 +53,7 @@ def launch(
 
     :param name: Name of instance.
     :param base_configuration: Base configuration to apply to instance.
-    :param image_name: Multipass image to use, e.g. snapcraft:core22.
+    :param image_name: Multipass image to use, e.g. release:22.04.
     :param cpus: Number of CPUs.
     :param disk_gb: Disk allocation in gigabytes.
     :param mem_gb: Memory allocation in gigabytes.
