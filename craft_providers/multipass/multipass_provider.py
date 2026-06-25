@@ -49,8 +49,7 @@ logger = logging.getLogger(__name__)
 class Remote(Enum):
     """Enumeration of Multipass remotes.
 
-    Multipass uses the name 'snapcraft' for the Ubuntu buildd remote at
-    https://cloud-images.ubuntu.com/buildd/.
+    Multipass uses the 'release' and 'daily' remotes for Ubuntu cloud images.
     """
 
     RELEASE = "release"
@@ -97,33 +96,31 @@ class RemoteImage:
 # mapping of Provider bases to Multipass remote images
 _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: dict[Enum, RemoteImage] = {
     ubuntu.BuilddBaseAlias.BIONIC: RemoteImage(
-        remote=Remote.SNAPCRAFT, image_name="18.04"
+        remote=Remote.RELEASE, image_name="18.04"
     ),
     ubuntu.BuilddBaseAlias.FOCAL: RemoteImage(
-        remote=Remote.SNAPCRAFT, image_name="20.04"
+        remote=Remote.RELEASE, image_name="20.04"
     ),
     ubuntu.BuilddBaseAlias.JAMMY: RemoteImage(
-        remote=Remote.SNAPCRAFT, image_name="22.04"
+        remote=Remote.RELEASE, image_name="22.04"
     ),
     ubuntu.BuilddBaseAlias.NOBLE: RemoteImage(
-        remote=Remote.SNAPCRAFT, image_name="24.04"
+        remote=Remote.RELEASE, image_name="24.04"
     ),
     ubuntu.BuilddBaseAlias.PLUCKY: RemoteImage(
         remote=Remote.DAILY, image_name="plucky"
     ),
     ubuntu.BuilddBaseAlias.QUESTING: RemoteImage(
-        remote=Remote.SNAPCRAFT, image_name="questing"
+        remote=Remote.RELEASE, image_name="questing"
     ),
     ubuntu.BuilddBaseAlias.RESOLUTE: RemoteImage(
-        remote=Remote.SNAPCRAFT, image_name="resolute"
+        remote=Remote.RELEASE, image_name="resolute"
     ),
     ubuntu.BuilddBaseAlias.STONKING: RemoteImage(
         remote=Remote.DAILY, image_name="stonking"
     ),
     # devel images are not available on macos
-    ubuntu.BuilddBaseAlias.DEVEL: RemoteImage(
-        remote=Remote.SNAPCRAFT, image_name="devel"
-    ),
+    ubuntu.BuilddBaseAlias.DEVEL: RemoteImage(remote=Remote.DAILY, image_name="devel"),
 }
 
 

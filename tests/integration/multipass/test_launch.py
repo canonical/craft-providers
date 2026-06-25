@@ -44,7 +44,7 @@ def core22_instance(instance_name):
     """
     with conftest.tmp_instance(
         instance_name=instance_name,
-        image_name="snapcraft:core22",
+        image_name="release:22.04",
     ) as tmp_instance:
         instance = multipass.MultipassInstance(name=tmp_instance)
 
@@ -71,7 +71,7 @@ def test_launch(instance_name):
     instance = multipass.launch(
         name=instance_name,
         base_configuration=base_configuration,
-        image_name="snapcraft:core22",
+        image_name="release:22.04",
         disk_gb=16,
     )
 
@@ -93,7 +93,7 @@ def test_launch_existing_instance(core22_instance):
     instance = multipass.launch(
         name=core22_instance.name,
         base_configuration=base_configuration,
-        image_name="snapcraft:core22",
+        image_name="release:22.04",
         disk_gb=16,
     )
 
@@ -120,7 +120,7 @@ def test_launch_os_incompatible_instance(core22_instance):
         multipass.launch(
             name=core22_instance.name,
             base_configuration=base_configuration,
-            image_name="snapcraft:core22",
+            image_name="release:22.04",
         )
 
     assert (
@@ -132,7 +132,7 @@ def test_launch_os_incompatible_instance(core22_instance):
     multipass.launch(
         name=core22_instance.name,
         base_configuration=base_configuration,
-        image_name="snapcraft:core22",
+        image_name="release:22.04",
         disk_gb=16,
         auto_clean=True,
     )
@@ -155,7 +155,7 @@ def test_launch_instance_config_incompatible_instance(core22_instance):
         multipass.launch(
             name=core22_instance.name,
             base_configuration=base_configuration,
-            image_name="snapcraft:core22",
+            image_name="release:22.04",
         )
 
     assert exc_info.value.brief == (
@@ -167,7 +167,7 @@ def test_launch_instance_config_incompatible_instance(core22_instance):
     multipass.launch(
         name=core22_instance.name,
         base_configuration=base_configuration,
-        image_name="snapcraft:core22",
+        image_name="release:22.04",
         disk_gb=16,
         auto_clean=True,
     )
@@ -191,7 +191,7 @@ def test_launch_instance_not_setup_without_auto_clean(core22_instance):
         multipass.launch(
             name=core22_instance.name,
             base_configuration=base_configuration,
-            image_name="snapcraft:core22",
+            image_name="release:22.04",
             auto_clean=False,
         )
 
@@ -212,7 +212,7 @@ def test_launch_instance_not_setup_with_auto_clean(core22_instance):
     multipass.launch(
         name=core22_instance.name,
         base_configuration=base_configuration,
-        image_name="snapcraft:core22",
+        image_name="release:22.04",
         disk_gb=16,
         auto_clean=True,
     )

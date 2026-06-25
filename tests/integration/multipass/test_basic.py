@@ -36,8 +36,8 @@ def simple_file(home_tmp_path):
 @pytest.mark.parametrize(
     ("image_name", "base_alias"),
     [
-        ("snapcraft:core22", ubuntu.BuilddBaseAlias.JAMMY),
-        ("snapcraft:core24", ubuntu.BuilddBaseAlias.NOBLE),
+        ("release:22.04", ubuntu.BuilddBaseAlias.JAMMY),
+        ("release:24.04", ubuntu.BuilddBaseAlias.NOBLE),
     ],
 )
 @pytest.mark.smoketest
