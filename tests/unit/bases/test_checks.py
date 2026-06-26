@@ -205,8 +205,9 @@ def test_ensure_guest_compatible_unknown_guest_ubuntu(
 
         yield Fake()
 
-    with patch.object(os_release.Path, "open", fake_open):
-        ensure_guest_compatible(guest_base, fake_executor, "6.0")
+    mocker.patch.object(os_release.Path, "open", fake_open)
+
+    ensure_guest_compatible(guest_base, fake_executor, "6.0")
 
 
 @pytest.mark.parametrize(
