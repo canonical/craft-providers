@@ -775,7 +775,7 @@ class LXDInstance(Executor):
     def attach_pro_subscription(self) -> None:
         """Attach the instance to a Pro subscription.
 
-        :raises LXDError: on unexpected error.
+        :raises LXDError: On unexpected error.
         """
         self.push_file_io(
             destination=pathlib.Path("/usr/local/bin/cloud-id"),
@@ -808,11 +808,11 @@ class LXDInstance(Executor):
             )
 
     def enable_pro_service(self, services: Iterable[str]) -> None:
-        """Enable Pro services on the instance.
+        """Enable a Pro service on the instance.
 
         All other services will be disabled.
 
-        :param services: The services to enable.
+        :param service: The service to enable.
         :raises LXDError: on unexpected error.
         """
         try:
@@ -943,7 +943,7 @@ class LXDInstance(Executor):
     def install_pro_client(self) -> None:
         """Install Ubuntu Pro Client in the instance.
 
-        :raises LXDError: on unexpected error.
+        :raises LXDError: On unexpected error.
         """
         try:
             self.execute_run(
