@@ -4,6 +4,13 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+3.8.0 (unreleased)
+------------------
+
+Bug fixes:
+
+- Fix Pro methods not forwarding environment to LXD instances.
+
 3.7.0 (2026-06-24)
 ------------------
 

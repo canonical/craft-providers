@@ -1233,41 +1233,301 @@ def test_is_pro_enabled(mock_lxc, instance):
     ]
 
 
-def test_enable_pro_service(mock_lxc, instance):
-    instance.enable_pro_service(["esm-apps"])
-
-    assert mock_lxc.mock_calls == [
-        mock.call.enable_pro_service(
-            instance_name=instance.instance_name,
-            services=["esm-apps"],
-            project=instance.project,
-            remote=instance.remote,
-        )
-    ]
-
-
-def test_install_pro_client(mock_lxc, instance):
-    instance.install_pro_client()
-
-    assert mock_lxc.mock_calls == [
-        mock.call.install_pro_client(
-            instance_name=instance.instance_name,
-            project=instance.project,
-            remote=instance.remote,
-        )
-    ]
-
-
-def test_attach_pro_subscription(mock_lxc, instance):
+def test_attach_pro_subscription_success(mock_lxc, instance):
+    mock_lxc.exec.return_value = mock.Mock(returncode=0)
     instance.attach_pro_subscription()
 
     assert mock_lxc.mock_calls == [
-        mock.call.attach_pro_subscription(
+        mock.call.file_push(
+            instance_name=instance.instance_name,
+            source=mock.ANY,
+            destination=pathlib.Path("/usr/local/bin/cloud-id"),
+            mode="0775",
+            project=instance.project,
+            remote=instance.remote,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["chown", "root:root", "/usr/local/bin/cloud-id"],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=60,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["pro", "auto-attach"],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=False,
+            timeout=None,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["rm", "-f", "/usr/local/bin/cloud-id"],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=None,
+        ),
+    ]
+
+
+def test_attach_pro_subscription_failed(mock_lxc, instance):
+    mock_lxc.exec.side_effect = [
+        mock.Mock(returncode=0),
+        mock.Mock(returncode=1),
+        mock.Mock(returncode=0),
+    ]
+
+    expected = f"Failed to attach {instance.instance_name!r} to a Pro subscription."
+
+    with pytest.raises(LXDError, match=expected):
+        instance.attach_pro_subscription()
+    assert len(mock_lxc.exec.mock_calls) == 3
+
+
+def test_attach_pro_subscription_already_attached(mock_lxc, instance):
+    mock_lxc.exec.return_value = mock.Mock(returncode=2)
+    instance.attach_pro_subscription()
+    assert len(mock_lxc.mock_calls) == 4
+
+
+def test_attach_pro_subscription_process_error(mock_lxc, instance):
+    mock_lxc.exec.side_effect = [
+        mock.Mock(returncode=0),
+        mock.Mock(returncode=127),
+        mock.Mock(returncode=0),
+    ]
+
+    expected = f"Failed to attach {instance.instance_name!r} to a Pro subscription."
+
+    with pytest.raises(LXDError, match=expected):
+        instance.attach_pro_subscription()
+    assert len(mock_lxc.exec.mock_calls) == 3
+
+
+def test_enable_pro_service_success(mock_lxc, instance):
+    mock_lxc.exec.side_effect = [
+        mock.Mock(
+            returncode=0,
+            stdout=b'{"result": "success", "data": {"attributes": {"enabled_services":[]}}}',
+        ),
+        mock.Mock(returncode=0),
+    ]
+    instance.enable_pro_service(["esm-apps"])
+
+    assert mock_lxc.mock_calls == [
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["pro", "api", "u.pro.status.enabled_services.v1"],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=None,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=[
+                "pro",
+                "api",
+                "u.pro.services.enable.v1",
+                "--data",
+                '{"service": "esm-apps"}',
+            ],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=None,
+        ),
+    ]
+
+
+def test_enable_pro_service_disables_others(mock_lxc, instance):
+    mock_lxc.exec.return_value = mock.Mock(
+        stdout=b'{"result": "success", "data": {"attributes": {"enabled_services":[{"name": "livepatch"}]}}}'
+    )
+    instance.enable_pro_service(["esm-apps"])
+
+    assert mock_lxc.mock_calls == [
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["pro", "api", "u.pro.status.enabled_services.v1"],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=None,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=[
+                "pro",
+                "api",
+                "u.pro.services.enable.v1",
+                "--data",
+                '{"service": "esm-apps"}',
+            ],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=None,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=[
+                "pro",
+                "api",
+                "u.pro.services.disable.v1",
+                "--data",
+                '{"service": "livepatch"}',
+            ],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=None,
+        ),
+    ]
+
+
+def test_enable_pro_service_failed(mock_lxc, instance):
+    mock_lxc.exec.side_effect = [
+        mock.Mock(
+            returncode=0,
+            stdout=b'{"result": "success", "data": {"attributes": {"enabled_services":[]}}}',
+        ),
+        subprocess.CalledProcessError(1, []),
+    ]
+
+    expected = (
+        f"Failed to enable Pro service 'invalid' on instance {instance.instance_name!r}"
+    )
+
+    with pytest.raises(LXDError, match=expected):
+        instance.enable_pro_service(["invalid"])
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.param("invalid json {[}", id="invalid-json"),
+        pytest.param("{'hello': 'world'}", id="invalid-data"),
+    ],
+)
+def test_enable_pro_service_invalid_data(mock_lxc, instance, data):
+    mock_lxc.exec.return_value = mock.Mock(returncode=0, stdout=data.encode())
+    expected = f"Failed to query enabled Pro services on {instance.instance_name!r}"
+    with pytest.raises(LXDError, match=expected):
+        instance.enable_pro_service(["esm-apps"])
+
+
+def test_install_pro_client_success(mock_lxc, instance):
+    mock_lxc.is_pro_installed.return_value = True
+
+    instance.install_pro_client()
+
+    assert mock_lxc.mock_calls == [
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["apt", "install", "-y", "ubuntu-advantage-tools"],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=None,
+        ),
+        mock.call.is_pro_installed(
             instance_name=instance.instance_name,
             project=instance.project,
             remote=instance.remote,
-        )
+        ),
     ]
+
+
+def test_install_pro_client_success_fallback(mock_lxc, instance):
+    mock_lxc.exec.side_effect = [
+        mock.Mock(returncode=0),
+        mock.Mock(returncode=0, stdout=b"20.04\n"),
+        mock.Mock(returncode=0),
+    ]
+    mock_lxc.is_pro_installed.return_value = False
+    instance.install_pro_client()
+
+    assert mock_lxc.mock_calls == [
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["apt", "install", "-y", "ubuntu-advantage-tools"],
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            timeout=None,
+            cwd=None,
+            check=True,
+            capture_output=True,
+        ),
+        mock.call.is_pro_installed(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["lsb_release", "-rs"],
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            timeout=None,
+            cwd=None,
+            check=True,
+            capture_output=True,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["apt", "install", "-y", "ubuntu-advantage-tools=27.11.2~20.04.1"],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            timeout=None,
+            check=True,
+            capture_output=True,
+        ),
+    ]
+
+
+def test_install_pro_client_process_error(mock_lxc, instance):
+    mock_lxc.exec.side_effect = subprocess.CalledProcessError(99, [])
+
+    expected = (
+        f"Failed to install Ubuntu Pro Client in instance {instance.instance_name!r}"
+    )
+    with pytest.raises(LXDError, match=expected):
+        instance.install_pro_client()
 
 
 def test_pro_services_getter_cached(mock_lxc, instance):
