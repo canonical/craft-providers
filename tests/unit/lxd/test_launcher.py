@@ -1261,7 +1261,34 @@ def test_set_id_map_all_options(fake_base_instance, mock_lxc, mocker):
     ]
 
 
+# Regression tests for:
+# https://github.com/canonical/craft-providers/issues/259
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="unsupported on windows")
+@pytest.mark.parametrize("high_uid", [65536, 100000, 200000, 1_000_000])
+def test_set_id_map_raises_for_high_uid(fake_base_instance, mock_lxc, high_uid):
+    """_set_id_map() must raise a clear error when uid > 65535.
+
+    Enterprise systems using NIS, SSSD, or Active Directory commonly assign UIDs
+    above 65535. LXD rejects these with 'Host id is in the range of subids',
+    which is cryptic. craft-providers should detect this and raise a descriptive
+    ProviderError before calling LXD.
+
+    Regression test for https://github.com/canonical/craft-providers/issues/259
+    """
+    with pytest.raises(ProviderError, match="uid"):
+        lxd.launcher._set_id_map(
+            instance=fake_base_instance,
+            lxc=mock_lxc,
+            uid=high_uid,
+            gid=high_uid,
+        )
+
+    # The error must be raised BEFORE calling LXD (not after LXD silently fails).
+    mock_lxc.config_set.assert_not_called()
+
+
 @pytest.mark.parametrize(
     (
         "map_user_uid",
