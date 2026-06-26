@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.13"]
+        python: ["3.14"]
         os: [macos-14-large]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
@@ -54,7 +54,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.13"]
+        python: ["3.14"]
         os: [macos-14-large]
     runs-on: ${{ matrix.os }}
     steps:
