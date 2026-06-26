@@ -810,10 +810,9 @@ class LXDInstance(Executor):
     def enable_pro_service(self, services: Iterable[str]) -> None:
         """Enable a Pro service on the instance.
 
-        All other services will be disabled.
+        :param services: Pro services to enable.
 
-        :param service: The service to enable.
-        :raises LXDError: on unexpected error.
+        :raises LXDError: On unexpected error.
         """
         try:
             proc = self.execute_run(
