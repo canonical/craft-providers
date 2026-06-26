@@ -1478,8 +1478,6 @@ def test_install_pro_client_success_fallback(mock_lxc, instance):
     mock_lxc.is_pro_installed.return_value = False
     instance.install_pro_client()
 
-    print(mock_lxc.mock_calls)
-
     assert mock_lxc.mock_calls == [
         mock.call.exec(
             instance_name=instance.instance_name,

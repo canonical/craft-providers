@@ -886,7 +886,7 @@ class LXDInstance(Executor):
                 )
             except subprocess.CalledProcessError as error:
                 raise LXDError(
-                    brief=f"Failed to enable Pro service {service!r} on instance {self.instance_name!r}.",
+                    brief=f"Failed to disable Pro service {service!r} on instance {self.instance_name!r}.",
                     details=details_from_called_process_error(error),
                 ) from error
 
