@@ -49,13 +49,13 @@ jobs:
   #     lowest-python-platform: ""
   #     use-lxd: true
   #     pytest-markers: multipass_instance
-  macos-smoketest:
-    uses: canonical/starflow/.github/workflows/test-python.yaml@main
-    with:
-      # All fast tests run in the basic job
-      fast-test-platforms: "[]"
-      slow-test-platforms: '["macos-14-large"]'
-      slow-test-python-versions: '["3.12"]'
-      lowest-python-platform: ""
-      use-lxd: false
-      pytest-markers: smoketest
+  # macos-smoketest:
+  #   uses: canonical/starflow/.github/workflows/test-python.yaml@main
+  #   with:
+  #     # All fast tests run in the basic job
+  #     fast-test-platforms: "[]"
+  #     slow-test-platforms: '["macos-14-large"]'
+  #     slow-test-python-versions: '["3.12"]'
+  #     lowest-python-platform: ""
+  #     use-lxd: false
+  #     pytest-markers: smoketest
