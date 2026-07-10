@@ -51,7 +51,7 @@ lint = [
     "codespell[toml]~=2.4.1"
 ]
 types = [
-    "mypy[reports]~=1.15",
+    "mypy[reports]~=2.2",
     "types-Pygments",
     "types-colorama",
     "types-setuptools",
