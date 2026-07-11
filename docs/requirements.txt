@@ -24,6 +24,10 @@ sphinx-youtube-links~=0.1
 
 # Other dependencies
 packaging~=26.1
+# Security floors for transitive dependencies flagged by OSV scan
+gitpython>=3.1.50
+h11>=0.16.0
+idna>=3.15
 sphinxcontrib-svg2pdfconverter[CairoSVG]~=2.1
 sphinx-last-updated-by-git~=0.3
 sphinx-sitemap~=2.9

@@ -45,7 +45,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-
 T = TypeVar("T")
 
 
@@ -143,7 +142,7 @@ class Multipass:
 
         # Only subprocess.run supports timeout
         if runner is subprocess.run:
-            return runner(final_cmd, timeout=timeout, check=check, **kwargs)
+            return runner(final_cmd, timeout=timeout, check=check, **kwargs)  # type: ignore[return-value]
 
         return runner(final_cmd, **kwargs)
 

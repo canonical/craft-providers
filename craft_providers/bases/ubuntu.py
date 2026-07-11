@@ -31,7 +31,7 @@ import subprocess
 from functools import total_ordering
 from http import HTTPStatus
 from textwrap import dedent
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import requests
 from typing_extensions import Self, override
@@ -69,10 +69,10 @@ class BuilddBaseAlias(enum.Enum):
 
     def __lt__(self, other: Self) -> bool:
         # Devels are the greatest, luckily 'd' > [0-9]
-        return cast(str, self.value) < cast(str, other.value)
+        return str(self.value) < str(other.value)
 
     def __le__(self, other: Self) -> bool:
-        return cast(str, self.value) <= cast(str, other.value)
+        return str(self.value) <= str(other.value)
 
 
 class BuilddBase(Base[BuilddBaseAlias]):
