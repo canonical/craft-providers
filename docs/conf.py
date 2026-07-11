@@ -270,15 +270,7 @@ rst_prolog = """
     :class: vale-ignore
 """
 
-# Add configuration for intersphinx mapping
-intersphinx_mapping = {
-    "python": ("https://docs.python.org/3", None),
-    "starflow": ("https://documentation.ubuntu.com/starflow/latest", None),
-}
-
-# Block Intersphinx from looking up external sources with internal references. In other
-# words, only :external+<project>... will search in other projects.
-intersphinx_disabled_reftypes = ["std:*"]
+# Rely on canonical_sphinx defaults for intersphinx mappings.
 
 
 ##############################
