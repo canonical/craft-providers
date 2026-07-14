@@ -20,12 +20,6 @@ UV_TICS_GROUPS := "--group=tics"
 
 include common.mk
 
-# The TICS workflow (.github/workflows/tics.yaml) runs `make test-coverage` directly
-# on a runner without LXD or Multipass installed, unlike qa.yaml's test-python.yaml
-# jobs, which already set PYTEST_ADDOPTS with their own marker filters. Default to
-# skipping instance tests that need that tooling unless PYTEST_ADDOPTS is already set.
-test-coverage: export PYTEST_ADDOPTS ?= -m 'not lxd_instance and not multipass_instance'
-
 # instructions and skills are imported from canonical/copilot-collections
 PRETTIER_IGNORE_DIRS := .github/instructions .github/skills
 
@@ -100,4 +94,25 @@ else ifneq ($(shell which snap),)
 	sudo snap alias astral-ty.ty ty
 else ifneq ($(shell which uv),)
 	uv tool install ty
+endif
+
+# TICS runs the full test suite (including Multipass integration tests) via
+# `make test-coverage`, unlike the qa.yaml jobs, which filter those out with
+# PYTEST_ADDOPTS. Install Multipass on Linux so those tests can run there too.
+.PHONY: install-multipass
+install-multipass:
+ifeq ($(shell which multipass),)
+ifeq ($(OS),Linux)
+	sudo snap install multipass
+else ifeq ($(OS),Darwin)
+	brew install multipass
+endif
+endif
+
+.PHONY: setup-tics
+setup-tics: install-uv install-build-deps install-multipass ##- Set up a testing environment for Tiobe TICS
+	uv venv
+	uv sync $(UV_TEST_GROUPS) $(UV_LINT_GROUPS) $(UV_TICS_GROUPS)
+ifneq ($(CI),)
+	echo $(PWD)/.venv/bin >> $(GITHUB_PATH)
 endif
