@@ -598,7 +598,7 @@ dev = [
     { name = "freezegun", specifier = "~=1.5" },
     { name = "logassert", specifier = "~=8.1" },
     { name = "pyfakefs", specifier = "~=6.2.0" },
-    { name = "pytest", specifier = "~=9.0" },
+    { name = "pytest", specifier = ">=9.0.3,<10" },
     { name = "pytest-cov", specifier = "~=7.0" },
     { name = "pytest-mock", specifier = "~=3.14" },
     { name = "pytest-rerunfailures", specifier = "~=16.0" },
