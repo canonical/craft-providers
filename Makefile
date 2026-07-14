@@ -4,7 +4,7 @@ PROJECT=craft_providers
 # COVERAGE_SOURCE="starcraft"
 UV_TEST_GROUPS := "--group=dev"
 UV_DOCS_GROUPS := "--group=docs"
-UV_LINT_GROUPS := "--group=lint" "--group=types"
+UV_LINT_GROUPS := "--group=lint" "--group=types" $(UV_DOCS_GROUPS)
 UV_TICS_GROUPS := "--group=tics"
 
 # If you have dev dependencies that depend on your distro version, uncomment these:
@@ -20,6 +20,12 @@ UV_TICS_GROUPS := "--group=tics"
 
 include common.mk
 
+# instructions and skills are imported from canonical/copilot-collections
+PRETTIER_IGNORE_DIRS := .github/instructions .github/skills
+
+# this extends PRETTIER_FILES from common .mk
+PRETTIER_FILES += $(foreach dir,$(PRETTIER_IGNORE_DIRS),"!$(dir)/**")
+
 ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 ifeq ($(CI)_$(OS),true_Linux)
 SHELL:=$(ROOT_DIR)tools/ci-shell.sh
@@ -29,7 +35,7 @@ endif
 format: format-ruff format-codespell format-prettier  ## Run all automatic formatters
 
 .PHONY: lint
-lint: lint-ruff lint-ty lint-codespell lint-mypy lint-prettier lint-pyright lint-shellcheck lint-docs lint-twine  ## Run all linters
+lint: lint-ruff lint-codespell lint-mypy lint-prettier lint-pyright lint-shellcheck lint-docs lint-twine lint-uv-lockfile lint-actions  ## Run all linters
 
 .PHONY: pack
 pack: pack-pip  ## Build all packages

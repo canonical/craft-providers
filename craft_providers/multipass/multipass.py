@@ -183,8 +183,12 @@ class Multipass:
                 parsed_version = packaging.version.parse(version)
             except packaging.version.InvalidVersion:  # noqa: PERF203
                 # This catches versions such as: 1.15.0-dev.2929.pr661, which are
-                # compliant, but not pep440 compliant. We can lob off sections until
-                # we get a pep440 cempliant version.
+                # semver compliant, but not pep440 compliant. We can lob off sections
+                # until we get a pep440 compliant version.
+                if "." not in version:
+                    raise MultipassError(
+                        brief=f"Unable to parse Multipass version: {version!r}",
+                    )
                 version = version.rpartition(".")[0]
 
         return parsed_version >= minimum_version
