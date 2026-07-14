@@ -20,6 +20,12 @@ UV_TICS_GROUPS := "--group=tics"
 
 include common.mk
 
+# The TICS workflow (.github/workflows/tics.yaml) runs `make test-coverage` directly
+# on a runner without LXD or Multipass installed, unlike qa.yaml's test-python.yaml
+# jobs, which already set PYTEST_ADDOPTS with their own marker filters. Default to
+# skipping instance tests that need that tooling unless PYTEST_ADDOPTS is already set.
+test-coverage: export PYTEST_ADDOPTS ?= -m 'not lxd_instance and not multipass_instance'
+
 # instructions and skills are imported from canonical/copilot-collections
 PRETTIER_IGNORE_DIRS := .github/instructions .github/skills
 
