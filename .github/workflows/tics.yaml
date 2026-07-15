@@ -6,6 +6,12 @@ on:
       # For troubleshooting
       - "work/tiobe**"
 
+# Ensure only one TICS run is ever active at a time. Queue new runs instead of
+# cancelling in-progress ones, since a run publishes analysis results upstream.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
   TICS:
     uses: canonical/starflow/.github/workflows/tics.yaml@main
