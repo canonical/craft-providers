@@ -164,20 +164,22 @@ def _create_instance(  # noqa: PLR0913, too many arguments
 
             # The base configuration shouldn't mount cache directories because if
             # they get deleted, copying the base instance will fail.
-            base_configuration.setup(executor=base_instance, mount_cache=False)
-            _set_timezone(
-                base_instance,
-                base_instance.project,
-                base_instance.remote,
-                base_instance.lxc,
-            )
-            # set the full instance name as image description
-            base_instance.config_set("image.description", base_instance.name)
-            base_instance.config_set(
-                "user.craft_providers.status", ProviderInstanceStatus.FINISHED.value
-            )
-            config_timer.stop()
-            base_instance.stop()
+            try:
+                base_configuration.setup(executor=base_instance, mount_cache=False)
+                _set_timezone(
+                    base_instance,
+                    base_instance.project,
+                    base_instance.remote,
+                    base_instance.lxc,
+                )
+                # set the full instance name as image description
+                base_instance.config_set("image.description", base_instance.name)
+                base_instance.config_set(
+                    "user.craft_providers.status", ProviderInstanceStatus.FINISHED.value
+                )
+                config_timer.stop()
+            finally:
+                base_instance.stop()
 
         # Copy the base instance to the instance.
         logger.info("Creating new instance from base instance")
@@ -223,12 +225,16 @@ def _create_instance(  # noqa: PLR0913, too many arguments
             if prepare_instance:
                 prepare_instance(instance)
 
-            base_configuration.setup(executor=instance)
-            _set_timezone(instance, project, remote, instance.lxc)
-            instance.config_set(
-                "user.craft_providers.status", ProviderInstanceStatus.FINISHED.value
-            )
-            config_timer.stop()
+            try:
+                base_configuration.setup(executor=instance)
+                _set_timezone(instance, project, remote, instance.lxc)
+                instance.config_set(
+                    "user.craft_providers.status", ProviderInstanceStatus.FINISHED.value
+                )
+                config_timer.stop()
+            except Exception:
+                instance.stop()
+                raise
             if not ephemeral:
                 # stop ephemeral instances will delete them immediately
                 instance.stop()
