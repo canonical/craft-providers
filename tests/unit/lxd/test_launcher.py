@@ -1507,7 +1507,8 @@ def test_instance_stopped_when_setup_fails(
             lxc=mock_lxc,
         )
 
-    # Bug: stop() is not called when setup() raises, leaving the instance running.
+    # Assert the instance is stopped even though setup() raised, preventing it
+    # from being left running.
     fake_instance.stop.assert_called_once()
 
 
@@ -1541,6 +1542,6 @@ def test_base_instance_stopped_when_setup_fails(
             lxc=mock_lxc,
         )
 
-    # Bug: base_instance.stop() is not called when setup() raises,
-    # leaving the base instance running.
+    # Assert the base instance is stopped even though setup() raised, preventing
+    # it from being left running.
     fake_base_instance.stop.assert_called_once()

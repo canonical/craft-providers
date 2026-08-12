@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import re
@@ -90,7 +91,7 @@ class InstanceTimer(threading.Thread):
         self.__active = False
 
 
-def _create_instance(  # noqa: PLR0913, PLR0915, too many arguments/statements
+def _create_instance(  # noqa: PLR0912, PLR0913, PLR0915, too many branches/arguments/statements
     *,
     instance: LXDInstance,
     base_instance: LXDInstance | None,
@@ -177,8 +178,15 @@ def _create_instance(  # noqa: PLR0913, PLR0915, too many arguments/statements
                 base_instance.config_set(
                     "user.craft_providers.status", ProviderInstanceStatus.FINISHED.value
                 )
+            except BaseException:
                 config_timer.stop()
-            finally:
+                # Best-effort cleanup: don't let a failure here mask the
+                # original setup error.
+                with contextlib.suppress(Exception):
+                    base_instance.stop()
+                raise
+            else:
+                config_timer.stop()
                 base_instance.stop()
 
         # Copy the base instance to the instance.
@@ -231,13 +239,18 @@ def _create_instance(  # noqa: PLR0913, PLR0915, too many arguments/statements
                 instance.config_set(
                     "user.craft_providers.status", ProviderInstanceStatus.FINISHED.value
                 )
+            except BaseException:
                 config_timer.stop()
-            except Exception:
-                instance.stop()
+                # Best-effort cleanup: don't let a failure here mask the
+                # original setup error.
+                with contextlib.suppress(Exception):
+                    instance.stop()
                 raise
-            if not ephemeral:
-                # stop ephemeral instances will delete them immediately
-                instance.stop()
+            else:
+                config_timer.stop()
+                if not ephemeral:
+                    # stop ephemeral instances will delete them immediately
+                    instance.stop()
 
     # after creating the base instance, the id map can be set
     if map_user_uid:
