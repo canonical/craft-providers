@@ -1475,9 +1475,6 @@ def test_wait_for_instance_pid_inactive(fake_instance, mocker):
     )
 
 
-# Regression tests for:
-# https://github.com/canonical/craft-providers/issues/447
-# https://github.com/canonical/craft-providers/issues/757
 
 
 def test_instance_stopped_when_setup_fails(

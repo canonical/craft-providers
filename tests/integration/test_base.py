@@ -47,8 +47,8 @@ def test_ubuntu_eol_sources(installed_lxd, instance_name, session_lxd_project, m
 
     finally:
         # The instance is ephemeral, so it's automatically deleted by LXD when
-        # stopped. Since setup() failing now correctly stops (and thus deletes)
-        # the instance, it may no longer exist here.
+        # stopped. Since setup() failing stops (and deletes) the instance, it
+        # may no longer exist here.
         if instance.exists():
             instance.delete(force=True)
 
