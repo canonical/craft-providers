@@ -1475,8 +1475,6 @@ def test_wait_for_instance_pid_inactive(fake_instance, mocker):
     )
 
 
-
-
 def test_instance_stopped_when_setup_fails(
     fake_instance,
     mock_base_configuration,
