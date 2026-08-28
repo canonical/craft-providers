@@ -25,8 +25,8 @@ import subprocess
 from typing import cast
 
 import packaging.version
-import pylxd  # type: ignore[import-untyped]
-from pylxd.exceptions import ClientConnectionFailed  # type: ignore[import-untyped]
+import pylxd
+from pylxd.exceptions import ClientConnectionFailed
 
 from craft_providers.errors import details_from_called_process_error
 
@@ -119,7 +119,7 @@ class LXD:
             return self._version_cmd()
 
         try:
-            return cast(str, client.host_info["environment"]["server_version"])  # pyright: ignore[reportUnknownMemberType]
+            return cast(str, client.host_info["environment"]["server_version"])
         except KeyError:
             logger.warning(
                 "LXD API returned invalid structure. Falling back to command."
