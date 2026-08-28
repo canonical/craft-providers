@@ -1190,13 +1190,30 @@ def test_ensure_config_compatible_validation_error(
         base_config._ensure_instance_config_compatible(executor=fake_executor)
 
 
-def test_ensure_config_compatible_empty_config_returns_none(fake_executor, mock_load):
+def test_ensure_config_compatible_empty_config(fake_executor, mock_load):
     mock_load.return_value = None
 
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
-    assert (
-        base_config._ensure_instance_config_compatible(executor=fake_executor) is None
+    with pytest.raises(BaseCompatibilityError) as raised:
+        base_config._ensure_instance_config_compatible(executor=fake_executor)
+
+    assert raised.value == BaseCompatibilityError("instance config is empty")
+
+
+@pytest.mark.parametrize("compatibility_tag", [None, ""])
+def test_ensure_config_compatible_missing_tag(
+    compatibility_tag, fake_executor, mock_load
+):
+    mock_load.return_value = InstanceConfiguration(compatibility_tag=compatibility_tag)
+
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+
+    with pytest.raises(BaseCompatibilityError) as raised:
+        base_config._ensure_instance_config_compatible(executor=fake_executor)
+
+    assert raised.value == BaseCompatibilityError(
+        "instance config has no compatibility tag"
     )
 
 
@@ -1227,14 +1244,14 @@ def test_ensure_setup_completed_validation_error(
 
 def test_ensure_setup_completed_file_not_found_error(fake_executor, mock_load):
     """Raise an error when the instance config cannot be loaded."""
-    mock_load.side_effect = FileNotFoundError
+    mock_load.return_value = None
 
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
     with pytest.raises(BaseCompatibilityError) as raised:
         base_config._ensure_setup_completed(executor=fake_executor)
 
-    assert raised.value == BaseCompatibilityError("failed to find instance config file")
+    assert raised.value == BaseCompatibilityError("instance config is empty")
 
 
 def test_ensure_setup_completed_empty_config(fake_executor, mock_load):
