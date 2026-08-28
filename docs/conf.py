@@ -172,7 +172,7 @@ if os.environ.get("READTHEDOCS"):
 # Whole sites and individuals URLs to ignore
 linkcheck_ignore = [
     # Ignore releases, since we'll include the next release before it exists.
-    r"^https://github.com/canonical/craft-providers/releases/.*",
+    r"^https://github.com/canonical/[a-z]*craft[a-z-]*/releases/.*",
     # Entire domains to ignore due to flakiness or issues
     r"^https://www.gnu.org/",
     r"^https://crates.io/",
