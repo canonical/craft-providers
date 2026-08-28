@@ -45,7 +45,7 @@ def test_no_projects(monkeypatch: pytest.MonkeyPatch):
 
     with pytest.raises(HookError) as e:
         HookHelper._check_project_exists(helper)
-    assert f"Project {PROJECT_NAME} does not exist in LXD" in str(e)
+    assert f"Project {PROJECT_NAME} does not exist in LXD" in str(e.value)
 
 
 @pytest.mark.parametrize(
