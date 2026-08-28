@@ -51,9 +51,10 @@ def test_no_projects(monkeypatch: pytest.MonkeyPatch):
 @pytest.mark.parametrize(
     ("method_name", "invoke"),
     [
-        ("delete", lambda h: h.delete_instance(
-            LXDInstance(name="i", expanded_config={})
-        )),
+        (
+            "delete",
+            lambda h: h.delete_instance(LXDInstance(name="i", expanded_config={})),
+        ),
         ("image_list", lambda h: h.delete_all_images()),
         ("project_delete", lambda h: h.delete_project()),
         ("list", lambda h: h.list_instances()),
@@ -90,9 +91,7 @@ def test_check_project_exists_file_not_found(monkeypatch: pytest.MonkeyPatch):
 @pytest.fixture
 def fake_hookhelper(monkeypatch: pytest.MonkeyPatch):
     def fake_hookhelper(instance_list):
-        monkeypatch.setattr(
-            HookHelper, "_check_project_exists", MagicMock()
-        )
+        monkeypatch.setattr(HookHelper, "_check_project_exists", MagicMock())
         monkeypatch.setattr(HookHelper, "_check_has_lxd", MagicMock())
         helper = HookHelper(project_name=PROJECT_NAME, simulate=False, debug=True)
 

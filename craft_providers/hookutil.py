@@ -187,7 +187,9 @@ class HookHelper:
         except FileNotFoundError as e:
             raise HookError("LXD is not installed.") from e
         except LXDError as e:
-            raise HookError(f"Failed to delete project {self._project_name}: {e}") from e
+            raise HookError(
+                f"Failed to delete project {self._project_name}: {e}"
+            ) from e
 
     def list_instances(self) -> list[LXDInstance]:
         """Return a list of all instance objects for the project."""
@@ -198,10 +200,7 @@ class HookHelper:
         except LXDError as e:
             raise HookError(f"Failed to list instances: {e}") from e
 
-        return [
-            LXDInstance.unmarshal(instance)
-            for instance in instances
-        ]
+        return [LXDInstance.unmarshal(instance) for instance in instances]
 
     def list_base_instances(self) -> list[LXDInstance]:
         """Return a list of all base instance objects for the project."""
