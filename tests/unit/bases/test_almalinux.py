@@ -1119,18 +1119,6 @@ def test_ensure_setup_completed_validation_error(
     )
 
 
-def test_ensure_setup_completed_file_not_found_error(fake_executor, mock_load):
-    """Raise an error when the instance config cannot be loaded."""
-    mock_load.return_value = None
-
-    base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
-
-    with pytest.raises(BaseCompatibilityError) as raised:
-        base_config._ensure_setup_completed(executor=fake_executor)
-
-    assert raised.value == BaseCompatibilityError("instance config is empty")
-
-
 def test_ensure_setup_completed_empty_config(fake_executor, mock_load):
     """Raise an error if the instance config is empty."""
     mock_load.return_value = None
