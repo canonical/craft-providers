@@ -225,8 +225,9 @@ class Base(ABC, Generic[_T_enum_co]):
         :param executor: Executor for target container.
         :param invalid_config_error: Error to raise if the config cannot be parsed.
 
-        :raises BaseCompatibilityError: If the config is missing or empty.
-        :raises BaseConfigurationError: If the config cannot be parsed and
+        :raises BaseCompatibilityError: If the config is missing or empty, or if the config cannot be parsed and
+            ``invalid_config_error`` is a compatibility error.
+        :raises BaseConfigurationError: If the config cannot be loaded from the environment, or if the config cannot be parsed and
             ``invalid_config_error`` is a configuration error.
         """
         try:
