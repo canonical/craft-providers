@@ -180,7 +180,9 @@ class Base(ABC, Generic[_T_enum_co]):
         )
 
         if not config.compatibility_tag:
-            raise BaseCompatibilityError(reason="instance config has no compatibility tag")
+            raise BaseCompatibilityError(
+                reason="instance config has no compatibility tag"
+            )
 
         if config.compatibility_tag != self.compatibility_tag:
             raise BaseCompatibilityError(
