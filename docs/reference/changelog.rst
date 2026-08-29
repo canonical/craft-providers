@@ -1,8 +1,7 @@
 Changelog
 *********
 
-See the `Releases page`_ on GitHub for a complete list of commits that are
-included in each version.
+.. _release-3.7.1:
 
 3.7.1 (2026-07-02)
 ------------------
@@ -10,6 +9,10 @@ included in each version.
 Bug fixes:
 
 - Fix Pro methods not forwarding environment to LXD instances.
+
+For a complete list of commits, check out the `3.7.1`_ release on GitHub.
+
+.. _release-3.7.0:
 
 3.7.0 (2026-06-29)
 ------------------
@@ -21,6 +24,10 @@ New features:
 Bug fixes:
 
 - Don't fail if the guest instance is an unknown Ubuntu release.
+
+For a complete list of commits, check out the `3.7.0`_ release on GitHub.
+
+.. _release-3.6.0:
 
 3.6.0 (2026-04-30)
 ------------------
@@ -34,6 +41,10 @@ Bug fixes:
 
 - Fix using the wrong instance name in ``MultipassProvider.list_instances``.
 
+For a complete list of commits, check out the `3.6.0`_ release on GitHub.
+
+.. _release-3.5.0:
+
 3.5.0 (2026-03-12)
 ------------------
 
@@ -42,6 +53,10 @@ New features:
 - Add ``CRAFT_PROVIDERS_DISABLE_EOL_SOURCES_CHECK`` support to skip EOL sources checks.
 - ``get_host_snap_info()`` now returns a ``SnapInfo`` model.
 
+For a complete list of commits, check out the `3.5.0`_ release on GitHub.
+
+.. _release-3.4.0:
+
 3.4.0 (2026-02-25)
 ------------------
 
@@ -49,6 +64,10 @@ New features:
 
 - Add Ubuntu Pro support for LXD instances.
 - Add ``edit_file`` context manager to ``Executor`` for editing files in instances.
+
+For a complete list of commits, check out the `3.4.0`_ release on GitHub.
+
+.. _release-3.3.0:
 
 3.3.0 (2026-02-09)
 ------------------
@@ -62,6 +81,10 @@ Bug fixes:
 - Do not fail if the build host is an unknown Ubuntu release.
 - Fix a bug where snapd would fail while waiting for snap refreshes to complete.
 
+For a complete list of commits, check out the `3.3.0`_ release on GitHub.
+
+.. _release-3.2.0:
+
 3.2.0 (2025-11-13)
 ------------------
 
@@ -73,6 +96,10 @@ New features:
 Bug fixes:
 
 - Do not check whether the "devel" base is end-of-life.
+
+For a complete list of commits, check out the `3.2.0`_ release on GitHub.
+
+.. _release-3.1.0:
 
 3.1.0 (2025-09-08)
 ------------------
@@ -86,6 +113,10 @@ Bug fixes:
 - Fix the permissions of the ``/root`` directory so that non-root users can access
   project directories.
 
+For a complete list of commits, check out the `3.1.0`_ release on GitHub.
+
+.. _release-3.0.0:
+
 3.0.0 (2025-08-15)
 ------------------
 
@@ -97,12 +128,20 @@ Breaking changes:
 
 - Removed support for Windows hosts
 
+For a complete list of commits, check out the `3.0.0`_ release on GitHub.
+
+.. _release-2.4.0:
+
 2.4.0 (2025-07-11)
 ------------------
 
 New features:
 
 - Add opt-in shutdown delay for a launched environment.
+
+For a complete list of commits, check out the `2.4.0`_ release on GitHub.
+
+.. _release-2.3.1:
 
 2.3.1 (2025-06-19)
 ------------------
@@ -112,6 +151,10 @@ Bug fixes:
 - Warn, but don't fail, on failures to mount a shared cache.
 - Fix issue where LXD failed to launch on non-Ubuntu distributions because
   all OS identities were interpreted as Ubuntu versions.
+
+For a complete list of commits, check out the `2.3.1`_ release on GitHub.
+
+.. _release-2.3.0:
 
 2.3.0 (2025-05-09)
 ------------------
@@ -125,6 +168,10 @@ Bug fixes:
 
 - Fix a race condition where multiple processes would fail to launch LXD
   instances at the same time.
+
+For a complete list of commits, check out the `2.3.0`_ release on GitHub.
+
+.. _release-2.2.0:
 
 2.2.0 (2025-02-11)
 ------------------
@@ -141,52 +188,97 @@ Bug fixes:
 - Fix a bug where LXD instances would fail during setup, due to a race
   condition where the setup began before the instance had started.
 
+For a complete list of commits, check out the `2.2.0`_ release on GitHub.
+
+.. _release-2.1.1:
+
 2.1.1 (2025-02-11)
 ------------------
+
 - Fix a bug where instances with underscores in their names would fail to
   launch.
 
+For a complete list of commits, check out the `2.1.1`_ release on GitHub.
+
+.. _release-2.1.0:
+
 2.1.0 (2025-01-10)
 ------------------
+
 - Require Multipass>=1.14.1
 - Use Multipass-compatible instance names
 
+For a complete list of commits, check out the `2.1.0`_ release on GitHub.
+
+.. _release-2.0.4:
+
 2.0.4 (2024-10-03)
 ------------------
+
 - ``requests-unixsocket`` dependency is replaced with ``requests-unixsocket2``
+
+For a complete list of commits, check out the `2.0.4`_ release on GitHub.
+
+.. _release-2.0.3:
 
 2.0.3 (2024-10-02)
 ------------------
+
 - Fix a bug where signed aliased snaps couldn't be injected into the build
   environment.
 
+For a complete list of commits, check out the `2.0.3`_ release on GitHub.
+
+.. _release-1.20.4:
+
 1.20.4 (2024-09-27)
 -------------------
+
 - ``requests-unixsocket`` dependency is replaced with ``requests-unixsocket2``
 - Fix a bug where signed aliased snaps couldn't be injected into the build
   environment.
 
+For a complete list of commits, check out the `1.20.4`_ release on GitHub.
+
+.. _release-2.0.2:
+
 2.0.2 (2024-09-26)
 ------------------
+
 - Improve multipass version parsing
+
+For a complete list of commits, check out the `2.0.2`_ release on GitHub.
+
+.. _release-2.0.1:
 
 2.0.1 (2024-08-28)
 ------------------
+
 - Require Multipass>=1.14.1 when launching Ubuntu 24.04 (Noble) VMs, which
   adds support for the 24.04 buildd image
 
-- .. note::
+.. note::
 
    2.0.1 includes changes from the 1.24.2 release.
 
+For a complete list of commits, check out the `2.0.1`_ release on GitHub.
+
+.. _release-1.24.2:
+
 1.24.2 (2024-08-27)
 -------------------
+
 - Remove Ubuntu 23.10 (Mantic) support
 - Require Multipass>=1.14.1 when launching Ubuntu 24.04 (Noble) VMs, which
   adds support for the 24.04 buildd image
 
+For a complete list of commits, check out the `1.24.2`_ release on GitHub.
+
+.. _release-2.0.0:
+
 2.0.0 (2024-08-09)
 ------------------
+
 Breaking changes:
 
 - Set minimum Python version to 3.10
@@ -199,95 +291,185 @@ Removal of deprecated features:
  - parameter ``use_snapshots`` in ``lxd.launcher.launch()``
  - ``configure_buildd_image_remote()`` in ``lxd.remotes``
 
+For a complete list of commits, check out the `2.0.0`_ release on GitHub.
+
+.. _release-1.25.0:
+
 1.25.0 (2024-07-24)
 -------------------
+
 - Use Ubuntu 24.04 buildd image for Multipass
 - Remove Ubuntu 23.10 (Mantic) support
 
+For a complete list of commits, check out the `1.25.0`_ release on GitHub.
+
+.. _release-1.24.0:
+
 1.24.0 (2024-06-18)
 -------------------
+
 - Add support for Ubuntu 24.10 (Oracular)
+
+For a complete list of commits, check out the `1.24.0`_ release on GitHub.
+
+.. _release-1.20.3:
 
 1.20.3 (2024-04-11)
 -------------------
+
 - Do not mount cache directories in LXD base instances.
 - Update base compatibility tag from ``base-v4`` to ``base-v8``
 
+For a complete list of commits, check out the `1.20.3`_ release on GitHub.
+
+.. _release-1.23.1:
+
 1.23.1 (2024-03-15)
 -------------------
+
 - Parse LXD versions with "LTS" suffix
+
+For a complete list of commits, check out the `1.23.1`_ release on GitHub.
+
+.. _release-1.20.2:
 
 1.20.2 (2024-03-15)
 -------------------
+
 - Parse LXD versions with "LTS" suffix
+
+For a complete list of commits, check out the `1.20.2`_ release on GitHub.
+
+.. _release-1.23.0:
 
 1.23.0 (2024-02-28)
 -------------------
+
 - Update base compatibility tag to ``base-v7``
 - Use ``buildd`` daily for Ubuntu 24.04 (Noble) and Ubuntu devel images
 - Ensure apt installs non-interactively
 
+For a complete list of commits, check out the `1.23.0`_ release on GitHub.
+
+.. _release-1.24.1:
+
 1.24.1 (2024-02-07)
 -------------------
+
 - Improve detection of installed LXD
 - Update the link to the network troubleshooting docs
 
+For a complete list of commits, check out the `1.24.1`_ release on GitHub.
+
+.. _release-1.22.0:
+
 1.22.0 (2024-01-30)
 -------------------
+
 - Do not update apt sources for Ubuntu devel images
+
+For a complete list of commits, check out the `1.22.0`_ release on GitHub.
+
+.. _release-1.21.0:
 
 1.21.0 (2024-01-17)
 -------------------
+
 - Update base compatibility tag to ``base-v6``
 - Add Ubuntu 24.04 (Noble) support
 - Remove Ubuntu 23.04 (Lunar) support
 
+For a complete list of commits, check out the `1.21.0`_ release on GitHub.
+
+.. _release-1.19.3:
+
 1.19.3 (2023-12-01)
 -------------------
+
 - Update base compatibility tag to ``base-v5``.
 - Do not mount cache directories in LXD base instances.
 
+For a complete list of commits, check out the `1.19.3`_ release on GitHub.
+
+.. _release-1.20.1:
+
 1.20.1 (2023-11-30)
 -------------------
+
 - Update base compatibility tag to ``base-v4``
 - If an existing base instance is not setup, then it is auto-cleaned.
   If the process that created the not setup base instance is inactive, then
   ``craft-providers`` will immediately auto-clean the instance.
 
+For a complete list of commits, check out the `1.20.1`_ release on GitHub.
+
+.. _release-1.20.0:
+
 1.20.0 (2023-11-10)
 -------------------
+
 - Snaps injected from the host will have their base snap injected into
   the instance.
 
+For a complete list of commits, check out the `1.20.0`_ release on GitHub.
+
+.. _release-1.19.2:
+
 1.19.2 (2023-11-02)
 -------------------
+
 - Update base compatibility tag from ``base-v2`` to ``base-v3``
   This fixes an issue where LXD instances created with
   ``craft-providers==1.16.0`` may fail to start with
   ``craft-providers>=1.17.0``.
 
+For a complete list of commits, check out the `1.19.2`_ release on GitHub.
+
+.. _release-1.19.1:
+
 1.19.1 (2023-10-26)
 -------------------
+
 - Require a disk device in the default LXD profile
+
+For a complete list of commits, check out the `1.19.1`_ release on GitHub.
+
+.. _release-1.19.0:
 
 1.19.0 (2023-10-23)
 -------------------
+
 - Add Ubuntu 23.10 (Mantic) support
+
+For a complete list of commits, check out the `1.19.0`_ release on GitHub.
+
+.. _release-1.18.0:
 
 1.18.0 (2023-09-28)
 -------------------
+
 - Check if base instance status before copying
 - Fail quickly when LXD errors do not involve instance creation
 - Add ``check`` parameter to ``execute_run``
 
+For a complete list of commits, check out the `1.18.0`_ release on GitHub.
+
+.. _release-1.17.0:
+
 1.17.0 (2023-09-22)
 -------------------
+
 - Use a shared pip cache across instances
 - Remove Ubuntu 22.10 (Kinetic) support
 - Capture details for snap errors
 
+For a complete list of commits, check out the `1.17.0`_ release on GitHub.
+
+.. _release-1.16.0:
+
 1.16.0 (2023-08-25)
 -------------------
+
 - Improve LXD instance creation process to avoid race conditions. The base
   instance is now created first and copied to an instance. Retry, timeout,
   and locking mechanisms prevent multiple processes from creating the
@@ -295,8 +477,13 @@ Removal of deprecated features:
 - Add LXD functions ``check_instance_status()``, ``config_set()``,
   ``config_get()``, and ``restart()``
 
+For a complete list of commits, check out the `1.16.0`_ release on GitHub.
+
+.. _release-1.15.0:
+
 1.15.0 (2023-08-21)
 -------------------
+
 - Update base compatibility tag from ``base-v1`` to ``base-v2``
 - Use ``snap refresh --hold`` inside instances
 - Re-level log messages
@@ -305,19 +492,34 @@ Removal of deprecated features:
 - Set timezone of LXD instances to match host's timezone
 - Add name and install recommendations to Providers
 
+For a complete list of commits, check out the `1.15.0`_ release on GitHub.
+
+.. _release-1.14.1:
+
 1.14.1 (2023-07-24)
 -------------------
+
 - Prevent race when two processes try to create the same project
   at the same time
 
+For a complete list of commits, check out the `1.14.1`_ release on GitHub.
+
+.. _release-1.10.1:
+
 1.10.1 (2023-06-29)
 -------------------
+
 - Set hostname when launching LXD instances
 - Update Lunar image for Multipass to stable image
 - Pin dependency urllib3<2
 
+For a complete list of commits, check out the `1.10.1`_ release on GitHub.
+
+.. _release-1.14.0:
+
 1.14.0 (2023-06-28)
 -------------------
+
 - Update Lunar image for Multipass to stable image
 - Install common packages and clean up package cache on bases
 - Push files to any location in Multipass instances
@@ -328,8 +530,13 @@ Removal of deprecated features:
 - Refactor base classes
 - Improve operability with Python 3.12
 
+For a complete list of commits, check out the `1.14.0`_ release on GitHub.
+
+.. _release-1.13.0:
+
 1.13.0 (2023-05-31)
 -------------------
+
 - Push files to any location in Multipass instances
 - Refactor base setup and warmup
 - Replace timeout for entire base setup with granular per-step timeouts
@@ -337,16 +544,26 @@ Removal of deprecated features:
 - Install build-essentials and python3 in CentOS and AlmaLinux
 - Update PATH for CentOS
 
+For a complete list of commits, check out the `1.13.0`_ release on GitHub.
+
+.. _release-1.12.0:
+
 1.12.0 (2023-05-18)
 -------------------
+
 - Add AlmaLinux 9 base
 - Add stricter typing for base names
 - Refactor CI workflow
 - Refactor Multipass ``push_file_io``
 - Pin dependency urllib3<2
 
+For a complete list of commits, check out the `1.12.0`_ release on GitHub.
+
+.. _release-1.11.0:
+
 1.11.0 (2023-04-19)
 -------------------
+
 - Move Snap pydantic model from ``bases.buildd`` to ``actions.snap_installer``
 - Rename ``bases.buildd`` module to ``bases.ubuntu``
 - Determine base alias from base configuration in
@@ -356,26 +573,46 @@ Removal of deprecated features:
 - Add default for ``launched_environment()`` parameter ``allow_unstable=False``
 - Trim suffixes from snap names when installing snaps.
 
+For a complete list of commits, check out the `1.11.0`_ release on GitHub.
+
+.. _release-1.10.0:
+
 1.10.0 (2023-03-31)
 -------------------
+
 - Add support for kinetic, lunar, and devel images with Multipass
 - Remove unused import suppressions in init files
 - Update github actions
 
+For a complete list of commits, check out the `1.10.0`_ release on GitHub.
+
+.. _release-1.9.0:
+
 1.9.0 (2023-03-20)
 ------------------
+
 - Set cloud.cfg to not reset apt's source list for buildd bases
 - Store LXD instance's full name in the config's description
 - Add ``allow_unstable`` parameter to ``Provider.launched_environment()``
 
+For a complete list of commits, check out the `1.9.0`_ release on GitHub.
+
+.. _release-1.8.1:
+
 1.8.1 (2023-03-10)
 ------------------
+
 - Add new base alias ``BuilddBaseAlias.DEVEL``
 - Expire unstable base instances every 14 days
 - Refactor tests such that all base aliases are tested by default
 
+For a complete list of commits, check out the `1.8.1`_ release on GitHub.
+
+.. _release-1.8.0:
+
 1.8.0 (2023-03-01)
 ------------------
+
 - Track if instances are properly setup when launching. If the instance did not
   fully complete setup and auto-clean is enabled, the instance will be cleaned
   and recreated.
@@ -398,20 +635,35 @@ Removal of deprecated features:
 - Use new ``use_base_instance`` parameter when launching LXD instances from
   LXDProvider
 
+For a complete list of commits, check out the `1.8.0`_ release on GitHub.
+
+.. _release-1.7.2:
+
 1.7.2 (2023-02-06)
 ------------------
+
 - Check LXD id map before starting an existing instance.
   If the id map does not match, the instance will be auto cleaned
   or an error will be raised.
 - Add ``lxc.config_get()`` method to retrieve config values
 
+For a complete list of commits, check out the `1.7.2`_ release on GitHub.
+
+.. _release-1.7.1:
+
 1.7.1 (2023-01-23)
 ------------------
+
 - Set LXD id maps after launching or copying an instance
 - Raise BaseConfigurationError for snap refresh failures
 
+For a complete list of commits, check out the `1.7.1`_ release on GitHub.
+
+.. _release-1.7.0:
+
 1.7.0 (2023-01-11)
 ------------------
+
 - LXD instances launch from a cached base instance rather than a base image.
   This reduces disk usage and launch time.
 - For the LXD launch function ``launched_environment``, the parameter
@@ -425,17 +677,32 @@ Removal of deprecated features:
 - Update ``MultipassInstance.push_file_io()`` to work regardless of the
   host's working directory
 
+For a complete list of commits, check out the `1.7.0`_ release on GitHub.
+
+.. _release-1.6.2:
+
 1.6.2 (2022-12-08)
 ------------------
+
 - Disable automatic snap refreshes inside instances.
+
+For a complete list of commits, check out the `1.6.2`_ release on GitHub.
+
+.. _release-1.6.1:
 
 1.6.1 (2022-10-31)
 ------------------
+
 - Store temporary files in the home directory
 - Fix typos
 
+For a complete list of commits, check out the `1.6.1`_ release on GitHub.
+
+.. _release-1.6.0:
+
 1.6.0 (2022-10-06)
 ------------------
+
 - Add is_running method to base Executor class
 - Add new classes Provider, LXDProvider, and MultipassProvider
 
@@ -447,13 +714,23 @@ Note: The new Provider classes are used to encapsulate LXD and Multipass,
       They will be stable and recommended for use in the release of
       craft-providers 2.0.
 
+For a complete list of commits, check out the `1.6.0`_ release on GitHub.
+
+.. _release-1.5.1:
+
 1.5.1 (2022-09-29)
 ------------------
+
 - When injecting a snap, assert the snap's publisher's account
 - Avoid race condition when multiple processes add a LXD remote at the same time
 
+For a complete list of commits, check out the `1.5.1`_ release on GitHub.
+
+.. _release-1.5.0:
+
 1.5.0 (2022-09-23)
 ------------------
+
 - Add mount method to Executor base class
 - LXDInstance's mount method signature has changed - The optional parameter
   ``device_name`` has been deprecated. It now matches MultipassInstance's
@@ -461,19 +738,34 @@ Note: The new Provider classes are used to encapsulate LXD and Multipass,
 - Signed snaps injected into a provider are asserted
 - Existing .snap files are not removed before overwriting with a new .snap file
 
+For a complete list of commits, check out the `1.5.0`_ release on GitHub.
+
+.. _release-1.4.2:
+
 1.4.2 (2022-09-09)
 ------------------
+
 - Set snapd http-proxy and https-proxy
 - Pass on snapd no-CDN configuration
 
+For a complete list of commits, check out the `1.4.2`_ release on GitHub.
+
+.. _release-1.4.1:
+
 1.4.1 (2022-08-30)
 ------------------
+
 - Fix bug in BuilddBase where hostnames longer than 64 characters may
   not having trailing hyphens removed.
 - Allow overriding of compatibility tag in Bases
 
+For a complete list of commits, check out the `1.4.1`_ release on GitHub.
+
+.. _release-1.4.0:
+
 1.4.0 (2022-08-22)
 ------------------
+
 - Use LXD-compatible instance names
 - Add optional list of snaps to install in bases
 - Add optional list of system packages to install in bases
@@ -493,10 +785,18 @@ Note: The provided name for a LXD executor object is converted to comply with
       If a provided name already complies with LXD naming conventions, it is
       not modified.
 
+For a complete list of commits, check out the `1.4.0`_ release on GitHub.
+
+.. _release-1.3.1:
+
 1.3.1 (2022-06-09)
 ------------------
 
 - Add stdin parameter for LXC commands (default: null)
+
+For a complete list of commits, check out the `1.3.1`_ release on GitHub.
+
+.. _release-1.3.0:
 
 1.3.0 (2022-05-21)
 ------------------
@@ -504,6 +804,10 @@ Note: The provided name for a LXD executor object is converted to comply with
 - Refactor snap injection logic
 - Always check multipass command execution results
 - Update tests and documentation
+
+For a complete list of commits, check out the `1.3.0`_ release on GitHub.
+
+.. _release-1.2.0:
 
 1.2.0 (2022-04-07)
 ------------------
@@ -513,20 +817,36 @@ Note: The provided name for a LXD executor object is converted to comply with
 - Warm-start existing instances instead of rerunning full setup
 - Don't reinstall snaps already installed on target
 
+For a complete list of commits, check out the `1.2.0`_ release on GitHub.
+
+.. _release-1.1.1:
+
 1.1.1 (2022-03-30)
 ------------------
 
 - Fix LXD user permission verification
+
+For a complete list of commits, check out the `1.1.1`_ release on GitHub.
+
+.. _release-1.1.0:
 
 1.1.0 (2022-03-16)
 ------------------
 
 - Add buildd base alias for Jammy
 
+For a complete list of commits, check out the `1.1.0`_ release on GitHub.
+
+.. _release-1.0.5:
+
 1.0.5 (2022-03-09)
 ------------------
 
 - Fix uid mapping in lxd host mounts
+
+For a complete list of commits, check out the `1.0.5`_ release on GitHub.
+
+.. _release-1.0.4:
 
 1.0.4 (2022-03-02)
 ------------------
@@ -536,4 +856,74 @@ Note: The provided name for a LXD executor object is converted to comply with
 - Address linter issues
 - Update documentation
 
-.. _Releases page: https://github.com/canonical/craft-providers/releases
+For a complete list of commits, check out the `1.0.4`_ release on GitHub.
+
+.. _1.0.4: https://github.com/canonical/craft-providers/releases/tag/1.0.4
+.. _1.0.5: https://github.com/canonical/craft-providers/releases/tag/1.0.5
+.. _1.1.0: https://github.com/canonical/craft-providers/releases/tag/1.1.0
+.. _1.1.1: https://github.com/canonical/craft-providers/releases/tag/1.1.1
+.. _1.2.0: https://github.com/canonical/craft-providers/releases/tag/1.2.0
+.. _1.3.0: https://github.com/canonical/craft-providers/releases/tag/1.3.0
+.. _1.3.1: https://github.com/canonical/craft-providers/releases/tag/1.3.1
+.. _1.4.0: https://github.com/canonical/craft-providers/releases/tag/1.4.0
+.. _1.4.1: https://github.com/canonical/craft-providers/releases/tag/1.4.1
+.. _1.4.2: https://github.com/canonical/craft-providers/releases/tag/1.4.2
+.. _1.5.0: https://github.com/canonical/craft-providers/releases/tag/1.5.0
+.. _1.5.1: https://github.com/canonical/craft-providers/releases/tag/1.5.1
+.. _1.6.0: https://github.com/canonical/craft-providers/releases/tag/1.6.0
+.. _1.6.1: https://github.com/canonical/craft-providers/releases/tag/1.6.1
+.. _1.6.2: https://github.com/canonical/craft-providers/releases/tag/1.6.2
+.. _1.7.0: https://github.com/canonical/craft-providers/releases/tag/1.7.0
+.. _1.7.1: https://github.com/canonical/craft-providers/releases/tag/1.7.1
+.. _1.7.2: https://github.com/canonical/craft-providers/releases/tag/1.7.2
+.. _1.8.0: https://github.com/canonical/craft-providers/releases/tag/1.8.0
+.. _1.8.1: https://github.com/canonical/craft-providers/releases/tag/1.8.1
+.. _1.9.0: https://github.com/canonical/craft-providers/releases/tag/1.9.0
+.. _1.10.0: https://github.com/canonical/craft-providers/releases/tag/1.10.0
+.. _1.10.1: https://github.com/canonical/craft-providers/releases/tag/1.10.1
+.. _1.11.0: https://github.com/canonical/craft-providers/releases/tag/1.11.0
+.. _1.12.0: https://github.com/canonical/craft-providers/releases/tag/1.12.0
+.. _1.13.0: https://github.com/canonical/craft-providers/releases/tag/1.13.0
+.. _1.14.0: https://github.com/canonical/craft-providers/releases/tag/1.14.0
+.. _1.14.1: https://github.com/canonical/craft-providers/releases/tag/1.14.1
+.. _1.15.0: https://github.com/canonical/craft-providers/releases/tag/1.15.0
+.. _1.16.0: https://github.com/canonical/craft-providers/releases/tag/1.16.0
+.. _1.17.0: https://github.com/canonical/craft-providers/releases/tag/1.17.0
+.. _1.18.0: https://github.com/canonical/craft-providers/releases/tag/1.18.0
+.. _1.19.0: https://github.com/canonical/craft-providers/releases/tag/1.19.0
+.. _1.19.1: https://github.com/canonical/craft-providers/releases/tag/1.19.1
+.. _1.19.2: https://github.com/canonical/craft-providers/releases/tag/1.19.2
+.. _1.19.3: https://github.com/canonical/craft-providers/releases/tag/1.19.3
+.. _1.20.0: https://github.com/canonical/craft-providers/releases/tag/1.20.0
+.. _1.20.1: https://github.com/canonical/craft-providers/releases/tag/1.20.1
+.. _1.20.2: https://github.com/canonical/craft-providers/releases/tag/1.20.2
+.. _1.20.3: https://github.com/canonical/craft-providers/releases/tag/1.20.3
+.. _1.20.4: https://github.com/canonical/craft-providers/releases/tag/1.20.4
+.. _1.21.0: https://github.com/canonical/craft-providers/releases/tag/1.21.0
+.. _1.22.0: https://github.com/canonical/craft-providers/releases/tag/1.22.0
+.. _1.23.0: https://github.com/canonical/craft-providers/releases/tag/1.23.0
+.. _1.23.1: https://github.com/canonical/craft-providers/releases/tag/1.23.1
+.. _1.24.0: https://github.com/canonical/craft-providers/releases/tag/1.24.0
+.. _1.24.1: https://github.com/canonical/craft-providers/releases/tag/1.24.1
+.. _1.24.2: https://github.com/canonical/craft-providers/releases/tag/1.24.2
+.. _1.25.0: https://github.com/canonical/craft-providers/releases/tag/1.25.0
+.. _2.0.0: https://github.com/canonical/craft-providers/releases/tag/2.0.0
+.. _2.0.1: https://github.com/canonical/craft-providers/releases/tag/2.0.1
+.. _2.0.2: https://github.com/canonical/craft-providers/releases/tag/2.0.2
+.. _2.0.3: https://github.com/canonical/craft-providers/releases/tag/2.0.3
+.. _2.0.4: https://github.com/canonical/craft-providers/releases/tag/2.0.4
+.. _2.1.0: https://github.com/canonical/craft-providers/releases/tag/2.1.0
+.. _2.1.1: https://github.com/canonical/craft-providers/releases/tag/2.1.1
+.. _2.2.0: https://github.com/canonical/craft-providers/releases/tag/2.2.0
+.. _2.3.0: https://github.com/canonical/craft-providers/releases/tag/2.3.0
+.. _2.3.1: https://github.com/canonical/craft-providers/releases/tag/2.3.1
+.. _2.4.0: https://github.com/canonical/craft-providers/releases/tag/2.4.0
+.. _3.0.0: https://github.com/canonical/craft-providers/releases/tag/3.0.0
+.. _3.1.0: https://github.com/canonical/craft-providers/releases/tag/3.1.0
+.. _3.2.0: https://github.com/canonical/craft-providers/releases/tag/3.2.0
+.. _3.3.0: https://github.com/canonical/craft-providers/releases/tag/3.3.0
+.. _3.4.0: https://github.com/canonical/craft-providers/releases/tag/3.4.0
+.. _3.5.0: https://github.com/canonical/craft-providers/releases/tag/3.5.0
+.. _3.6.0: https://github.com/canonical/craft-providers/releases/tag/3.6.0
+.. _3.7.0: https://github.com/canonical/craft-providers/releases/tag/3.7.0
+.. _3.7.1: https://github.com/canonical/craft-providers/releases/tag/3.7.1
