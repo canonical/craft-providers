@@ -15,6 +15,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 import pathlib
+import re
 import subprocess
 from textwrap import dedent
 from unittest.mock import call
@@ -2496,3 +2497,199 @@ def test_yaml_loader_invalid_timestamp():
 
     assert "last_used_at" in obj
     assert isinstance(obj["last_used_at"], str)
+
+
+def test_is_pro_enabled_success_true(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ],
+        stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"contract_remaining_days": 2912917, "contract_status": "active", "is_attached": true, "is_attached_and_contract_valid": true}, "meta": {"environment_vars": []}, "type": "IsAttached"}, "errors": [], "result": "success", "version": "32.3.1~24.04", "warnings": []}""",
+    )
+
+    assert (
+        LXC().is_pro_enabled(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+        is True
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_pro_enabled_success_false(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ],
+        stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"contract_remaining_days": 2912917, "contract_status": "active", "is_attached": false, "is_attached_and_contract_valid": false}, "meta": {"environment_vars": []}, "type": "IsAttached"}, "errors": [], "result": "success", "version": "32.3.1~24.04", "warnings": []}""",
+    )
+
+    assert (
+        LXC().is_pro_enabled(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+        is False
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_pro_enabled_failed(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ],
+        stdout=b"""{"_schema_version": "v1", "data": {"attributes": {"contract_remaining_days": 2912917, "contract_status": "active", "is_attached": true, "is_attached_and_contract_valid": true}, "meta": {"environment_vars": []}, "type": "IsAttached"}, "errors": [], "result": "failure", "version": "32.3.1~24.04", "warnings": []}""",
+        returncode=0,
+    )
+    expected = re.escape(
+        "Failed to get a successful response from `pro` command on 'test-instance'."
+    )
+
+    with pytest.raises(LXDError, match=expected):
+        LXC().is_pro_enabled(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_pro_enabled_json_error(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ],
+        stdout=b"random",
+    )
+    expected = re.escape(
+        "Failed to parse JSON response of `pro` command on 'test-instance'."
+    )
+
+    with pytest.raises(LXDError, match=expected):
+        LXC().is_pro_enabled(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_pro_enabled_process_error(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ],
+        returncode=127,
+    )
+    expected = re.escape("Ubuntu Pro Client is not installed on 'test-instance'.")
+
+    with pytest.raises(LXDError, match=expected):
+        LXC().is_pro_enabled(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_pro_installed_success(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "version",
+        ],
+        stdout="32.3.1~22.04",
+    )
+
+    assert (
+        LXC().is_pro_installed(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+        is True
+    )
+
+    assert len(fake_process.calls) == 1
+
+
+def test_is_pro_installed_failure(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "exec",
+            "test-remote:test-instance",
+            "--",
+            "pro",
+            "version",
+        ],
+        returncode=127,
+    )
+
+    assert (
+        LXC().is_pro_installed(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+        is False
+    )
+
+    assert len(fake_process.calls) == 1

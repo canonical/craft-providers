@@ -65,7 +65,7 @@ class Executor(ABC):
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
         **kwargs: Any,
-    ) -> subprocess.Popen[str]:
+    ) -> subprocess.Popen[str] | subprocess.Popen[bytes]:
         """Execute a command in instance, using subprocess.Popen().
 
         The process' environment will inherit the execution environment's
@@ -371,6 +371,43 @@ class Executor(ABC):
                     raise
             else:
                 yield tmp_file
+
+    @contextlib.contextmanager
+    def edit_file(
+        self,
+        *,
+        source: pathlib.PurePath,
+        pull_file: bool = True,
+        missing_ok: bool = False,
+    ) -> Generator[pathlib.Path, None, None]:
+        """Edit a file from the environment for modification via context manager.
+
+        A file is pulled from an environment for editing via a context manager. Upon
+        exiting, the file is pushed back to the environment. If the environment file
+        does not exist, a new file will be created.
+
+        :param source: Environment file to copy.
+        :param pull_file: If true, pull the file from the environment. If false,
+            edit a new file.
+        :param missing_ok: Create a new file if the file doesn't exist. Has no
+            effect if 'pull_file' is false.
+
+        :raises FileNotFoundError: If source file or destination's parent
+            directory does not exist (and `missing_ok` is False).
+        :raises ProviderError: On error copying file content.
+        """
+        with craft_providers.util.temp_paths.home_temporary_file() as tmp_file:
+            tmp_file.touch()  # ensure the file exists
+            if pull_file:
+                try:
+                    self.pull_file(source=source, destination=tmp_file)
+                except FileNotFoundError:
+                    if not missing_ok:
+                        raise
+            try:
+                yield tmp_file
+            finally:
+                self.push_file(source=tmp_file, destination=source)
 
     @abstractmethod
     def push_file(self, *, source: pathlib.Path, destination: pathlib.PurePath) -> None:

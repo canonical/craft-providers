@@ -31,7 +31,7 @@ import subprocess
 from functools import total_ordering
 from http import HTTPStatus
 from textwrap import dedent
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import requests
 from typing_extensions import Self, override
@@ -61,17 +61,18 @@ class BuilddBaseAlias(enum.Enum):
     FOCAL = "20.04"
     JAMMY = "22.04"
     NOBLE = "24.04"
-    ORACULAR = "24.10"
     PLUCKY = "25.04"
     QUESTING = "25.10"
+    RESOLUTE = "26.04"
+    STONKING = "26.10"
     DEVEL = "devel"
 
     def __lt__(self, other: Self) -> bool:
         # Devels are the greatest, luckily 'd' > [0-9]
-        return cast(str, self.value) < cast(str, other.value)
+        return bool(self.value < other.value)
 
     def __le__(self, other: Self) -> bool:
-        return cast(str, self.value) <= cast(str, other.value)
+        return bool(self.value <= other.value)
 
 
 class BuilddBase(Base[BuilddBaseAlias]):
@@ -264,6 +265,12 @@ class BuilddBase(Base[BuilddBaseAlias]):
         :raises BaseConfigurationError: If base's EOL status can't be determined.
         :raises BaseConfigurationError: If the sources can't be updated in the instance.
         """
+        if os.environ.get("CRAFT_PROVIDERS_DISABLE_EOL_SOURCES_CHECK"):
+            logger.debug(
+                "Skipping old-releases check because CRAFT_PROVIDERS_DISABLE_EOL_SOURCES_CHECK is set."
+            )
+            return
+
         codename = self._get_codename(executor)
 
         if not self._is_eol(codename):
@@ -356,6 +363,9 @@ class BuilddBase(Base[BuilddBaseAlias]):
 
         :raises BaseConfigurationError: If the EOL data can't be determined.
         """
+        if self.alias is BuilddBaseAlias.DEVEL:
+            logger.debug("Skipping EOL check for base 'devel'.")
+            return False
         logger.debug(f"Getting EOL data for {self.alias.value} ({codename}).")
         with importlib.resources.path(
             "craft_providers.data", "ubuntu.csv"

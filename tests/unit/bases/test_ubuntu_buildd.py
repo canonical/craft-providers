@@ -969,6 +969,8 @@ def test_setup_snapd_failures(fake_process, fake_executor):
 @pytest.mark.parametrize("fail_index", list(range(0, 8)))
 def test_post_setup_snapd_failures(fake_process, fake_executor, fail_index):
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    base_config._retry_wait = 0.01
+    base_config._timeout_complex = 0.01
     return_codes = [0] * 8
     return_codes[fail_index] = 1
 
@@ -1721,6 +1723,8 @@ def test_disable_and_wait_for_snap_refresh_hold_error(fake_process, fake_executo
 def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executor):
     """Raise BaseConfigurationError when the `snap watch` command fails."""
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    base_config._retry_wait = 0.01
+    base_config._timeout_complex = 0.01
     fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"])
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
@@ -1731,6 +1735,19 @@ def test_disable_and_wait_for_snap_refresh_wait_error(fake_process, fake_executo
         BaseConfigurationError, match="Failed to wait for snap refreshes to complete."
     ):
         base_config._disable_and_wait_for_snap_refresh(executor=fake_executor)
+
+
+def test_devel_never_eol(fake_process, fake_executor, mock_requests_head, logs):
+    """Verify that the devel base skips EOL checks."""
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.DEVEL)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout="UBUNTU_CODENAME=grumpy",
+    )
+
+    base_config._update_eol_sources(fake_executor)
+
+    assert re.escape("Skipping EOL check for base 'devel'.") in logs.debug
 
 
 @freeze_time("2027-01-01")
@@ -1802,6 +1819,29 @@ def test_base_not_on_old_releases(
         )
         in logs.debug
     )
+
+
+@freeze_time("2027-01-01")
+def test_disable_eol_sources_check(
+    fake_process, fake_executor, mock_requests_head, monkeypatch, logs
+):
+    """Skip the old-releases network check when CRAFT_PROVIDERS_DISABLE_EOL_SOURCES_CHECK is set."""
+    monkeypatch.setenv("CRAFT_PROVIDERS_DISABLE_EOL_SOURCES_CHECK", "1")
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.PLUCKY)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout="UBUNTU_CODENAME=plucky",
+    )
+
+    base_config._update_eol_sources(fake_executor)
+
+    assert (
+        re.escape(
+            "Skipping old-releases check because CRAFT_PROVIDERS_DISABLE_EOL_SOURCES_CHECK is set."
+        )
+        in logs.debug
+    )
+    mock_requests_head.assert_not_called()
 
 
 @freeze_time("2027-01-01")

@@ -39,7 +39,7 @@ from .multipass_instance import MultipassInstance
 
 if TYPE_CHECKING:
     import pathlib
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Collection, Iterator
 
     from craft_providers import Executor
 
@@ -108,14 +108,17 @@ _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE: dict[Enum, RemoteImage] = {
     ubuntu.BuilddBaseAlias.NOBLE: RemoteImage(
         remote=Remote.SNAPCRAFT, image_name="24.04"
     ),
-    ubuntu.BuilddBaseAlias.ORACULAR: RemoteImage(
-        remote=Remote.DAILY, image_name="oracular"
-    ),
     ubuntu.BuilddBaseAlias.PLUCKY: RemoteImage(
         remote=Remote.DAILY, image_name="plucky"
     ),
     ubuntu.BuilddBaseAlias.QUESTING: RemoteImage(
-        remote=Remote.DAILY, image_name="questing"
+        remote=Remote.SNAPCRAFT, image_name="questing"
+    ),
+    ubuntu.BuilddBaseAlias.RESOLUTE: RemoteImage(
+        remote=Remote.SNAPCRAFT, image_name="resolute"
+    ),
+    ubuntu.BuilddBaseAlias.STONKING: RemoteImage(
+        remote=Remote.DAILY, image_name="stonking"
     ),
     # devel images are not available on macos
     ubuntu.BuilddBaseAlias.DEVEL: RemoteImage(
@@ -179,6 +182,40 @@ class MultipassProvider(Provider):
             install()
         ensure_multipass_is_ready()
 
+    def prune(self, *, project_name: str, prune_templates: bool = False) -> None:
+        """Remove all instances of the provider."""
+        logger.debug(f"Pruning {self.name} instances")
+        instances = self.list_instances(
+            include_base_instances=prune_templates,
+            instance_name_prefix=f"{project_name}-",
+        )
+        for instance in instances:
+            logger.debug(f"Pruning {instance.name}")
+            instance.delete()
+
+    @override
+    def list_instances(
+        self,
+        *,
+        project_name: str | None = None,
+        instance_name_prefix: str | None = None,
+        include_base_instances: bool = False,
+    ) -> Collection[MultipassInstance]:
+        """Get a collection of all existing multipass VMs."""
+        names = self.multipass.list()
+
+        instances: list[MultipassInstance] = []
+
+        for name in names:
+            if name.startswith("base-instance-") and not include_base_instances:
+                continue
+            if instance_name_prefix and not name.startswith(instance_name_prefix):
+                continue
+
+            instances.append(MultipassInstance(name=name, multipass=self.multipass))
+
+        return instances
+
     def create_environment(self, *, instance_name: str) -> Executor:
         """Create a bare environment for specified base.
 
@@ -209,6 +246,7 @@ class MultipassProvider(Provider):
         shutdown_delay_mins: int | None = None,
         use_base_instance: bool = False,
         prepare_instance: Callable[[Executor], None] | None = None,
+        instance_architecture: str | None = None,
     ) -> Iterator[Executor]:
         """Configure and launch environment for specified base.
 
@@ -227,9 +265,18 @@ class MultipassProvider(Provider):
             by this provider).
         :param prepare_instance: A callback to perform early instance configuration
             before the base image setup.
+        :param instance_architecture: A string representing the architecture to request.
+            Cannot be used with the Multipass provider.
 
         :raises MultipassError: If the instance cannot be launched or configured.
         """
+        if instance_architecture is not None:
+            raise MultipassError(
+                brief="the Multipass provider cannot use non-host architectures.",
+                details=f"Architecture {instance_architecture!r} was requested.",
+                resolution="Unset the CRAFT_BUILD_ON environment variable.",
+            )
+
         shutdown_delay_mins = 0 if shutdown_delay_mins is None else shutdown_delay_mins
         image = _get_remote_image(base_configuration)
 

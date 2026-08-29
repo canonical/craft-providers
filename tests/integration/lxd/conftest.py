@@ -34,7 +34,6 @@ from craft_providers.lxd.lxd_provider import LXDProvider
 
 _xfail_bases = {
     ubuntu.BuilddBaseAlias.XENIAL: "Fails to setup snapd (#582)",
-    ubuntu.BuilddBaseAlias.ORACULAR: "24.10 fails setup (#598)",
 }
 """List of bases that are expected to fail and a reason why."""
 
@@ -57,7 +56,6 @@ def installed_lxd_required(installed_lxd):
 
 
 @pytest.fixture
-@pytest.mark.with_sudo
 def installed_lxd_without_init(uninstalled_lxd):
     """Ensure lxd is installed, but not initialized.
 

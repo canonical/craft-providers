@@ -13,14 +13,15 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+import pathlib
 from unittest.mock import call
 
 import pytest
-from craft_providers import Executor
+from craft_providers import Executor, ProviderError
 from craft_providers.bases import ubuntu
 from craft_providers.errors import BaseConfigurationError
 from craft_providers.multipass import MultipassError, MultipassProvider
+from craft_providers.multipass.multipass_instance import MultipassInstance
 from craft_providers.multipass.multipass_provider import (
     _BUILD_BASE_TO_MULTIPASS_REMOTE_IMAGE,
     Remote,
@@ -354,3 +355,94 @@ def test_multipass_install_recommendation():
         provider.install_recommendation
         == "Visit https://multipass.run/install for instructions to install Multipass."
     )
+
+
+def test_multipass_cannot_override_architecture(mock_buildd_base_configuration):
+    provider = MultipassProvider()
+
+    with pytest.raises(
+        ProviderError, match="the Multipass provider cannot use non-host architectures"
+    ):
+        with provider.launched_environment(
+            project_name="anything",
+            project_path=pathlib.Path(),
+            base_configuration=mock_buildd_base_configuration,
+            instance_name="ope",
+            instance_architecture="Any string!",
+        ) as _:
+            pass
+
+
+def test_list_instances(mock_multipass, mocker):
+    """Verify MultipassProvider's list_instances() function."""
+    mock_multipass_instance = mocker.patch(
+        "craft_providers.multipass.multipass_provider.MultipassInstance"
+    )
+    mock_multipass_obj = mock_multipass.return_value
+    mock_multipass_obj.list.return_value = [
+        "base-instance-1",
+        "test-instance-1",
+        "other-instance",
+    ]
+    provider = MultipassProvider(instance=mock_multipass_obj)
+
+    instances = provider.list_instances()
+
+    assert len(instances) == 2
+    mock_multipass_instance.assert_has_calls(
+        [
+            call(name="test-instance-1", multipass=mock_multipass_obj),
+            call(name="other-instance", multipass=mock_multipass_obj),
+        ],
+    )
+
+
+def test_list_instances_filtering(mock_multipass, mocker):
+    """Verify MultipassProvider's list_instances() filtering."""
+    mocker.patch("craft_providers.multipass.multipass_provider.MultipassInstance")
+    mock_multipass_obj = mock_multipass.return_value
+    mock_multipass_obj.list.return_value = [
+        "base-instance-1",
+        "test-instance-1",
+        "test-instance-2",
+        "other-instance",
+    ]
+    provider = MultipassProvider(instance=mock_multipass_obj)
+
+    instances = provider.list_instances(include_base_instances=True)
+    assert len(instances) == 4
+
+    instances = provider.list_instances(instance_name_prefix="test-")
+    assert len(instances) == 2
+
+
+@pytest.mark.parametrize("prune_templates", [True, False])
+def test_multipass_prune_all(mocker, prune_templates):
+    """Verify prune removes all instances using MultipassInstance."""
+    mock_multipass_client = mocker.Mock()
+    mock_multipass_client.list.return_value = [
+        "test-instance-1",
+        "test-instance-2",
+        "test-instance-3",
+        "other-instance-4",
+    ]
+
+    mocks = []
+
+    def _mock_instance(name, **kwargs):
+        mock_inst = mocker.Mock(spec=MultipassInstance)
+        mock_inst.name = name
+        mocks.append(mock_inst)
+        return mock_inst
+
+    mock_instance_class = mocker.patch(
+        "craft_providers.multipass.multipass_provider.MultipassInstance",
+        side_effect=_mock_instance,
+    )
+
+    provider = MultipassProvider(instance=mock_multipass_client)
+    provider.prune(project_name="test-instance", prune_templates=prune_templates)
+
+    assert mock_instance_class.call_count == 3
+    for mock_inst in mocks:
+        mock_inst.delete.assert_called_once()

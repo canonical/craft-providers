@@ -220,7 +220,7 @@ class MultipassInstance(Executor):
         env: dict[str, str | None] | None = None,
         timeout: float | None = None,
         **kwargs: Any,
-    ) -> subprocess.Popen[str]:
+    ) -> subprocess.Popen[str] | subprocess.Popen[bytes]:
         """Execute a process in the instance using subprocess.Popen().
 
         The process' environment will inherit the execution environment's

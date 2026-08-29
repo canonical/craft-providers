@@ -53,6 +53,18 @@ def mock_lxc(mocker):
     return mocker.patch("craft_providers.lxd.LXC", autospec=True)
 
 
+@pytest.fixture
+def mock_lxc_container(mocker):
+    lxc = mocker.Mock()
+    mocker.patch("craft_providers.lxd.lxd_instance.pylxd.Client")
+    lxc.list_names.return_value = [
+        "test-instance-1",
+        "test-instance-2",
+        "base-instance-1",
+    ]
+    return lxc
+
+
 @pytest.fixture(autouse=True)
 def mock_ensure_lxd_is_ready(mocker):
     return mocker.patch(
@@ -301,4 +313,142 @@ def test_lxd_install_recommendation():
     assert (
         provider.install_recommendation
         == "Visit https://ubuntu.com/lxd/install for instructions to install LXD."
+    )
+
+
+def test_lxd_list_instances(mock_lxc_container):
+    """Verify LXDProvider's instances"""
+    provider = LXDProvider(
+        lxc=mock_lxc_container,
+        lxd_project="default",
+        lxd_remote="local",
+    )
+
+    instances = list(provider.list_instances())
+
+    assert len(instances) == 2
+
+    assert instances[0].name == "test-instance-1"
+    assert instances[0].project == "default"
+    assert instances[0].remote == "local"
+
+    assert instances[1].name == "test-instance-2"
+    assert instances[1].project == "default"
+    assert instances[1].remote == "local"
+
+
+def test_lxd_list_instances_include_base(mock_lxc_container):
+    """Verify list instance filters on base instances"""
+    provider = LXDProvider(
+        lxc=mock_lxc_container,
+        lxd_project="default",
+        lxd_remote="local",
+    )
+
+    instances = list(provider.list_instances(include_base_instances=True))
+
+    assert len(instances) == 3
+
+    assert instances[0].name == "test-instance-1"
+    assert instances[0].project == "default"
+    assert instances[0].remote == "local"
+
+    assert instances[1].name == "test-instance-2"
+    assert instances[1].project == "default"
+    assert instances[1].remote == "local"
+
+    assert instances[2].name == "base-instance-1"
+    assert instances[2].project == "default"
+    assert instances[2].remote == "local"
+
+
+def test_lxd_list_instances_project_override(mock_lxc_container):
+    provider = LXDProvider(
+        lxc=mock_lxc_container,
+        lxd_project="default",
+        lxd_remote="local",
+    )
+
+    provider.list_instances(project_name="custom-project")
+
+    mock_lxc_container.list_names.assert_called_with(
+        project="custom-project",
+        remote="local",
+    )
+
+
+def test_lxd_list_instances_prefix_filter(mock_lxc_container):
+    mock_lxc_container.list_names.return_value.append(
+        "alpha-1",
+    )
+    mock_lxc_container.list_names.return_value.append(
+        "beta-1",
+    )
+    mock_lxc_container.list_names.return_value.append(
+        "alpha-2",
+    )
+
+    provider = LXDProvider(
+        lxc=mock_lxc_container,
+        lxd_project="default",
+        lxd_remote="local",
+    )
+
+    instances = list(provider.list_instances(instance_name_prefix="alpha-"))
+
+    assert len(instances) == 2
+
+    for instance in instances:
+        assert instance.name.startswith("alpha-")
+
+
+def test_lxd_prune_all(mock_lxc_container):
+    """Verify prune deletes all instances in scope when no prefix is provided."""
+    provider = LXDProvider(
+        lxc=mock_lxc_container,
+        lxd_project="default",
+        lxd_remote="local",
+    )
+
+    mock_lxc_container.list_names.return_value = [
+        "test-instance-1",
+        "test-instance-2",
+        "base-instance-1",
+    ]
+
+    provider.prune(project_name="default", prune_templates=True)
+
+    assert mock_lxc_container.delete.call_count == 3
+    mock_lxc_container.delete.assert_any_call(
+        instance_name="test-instance-1", project="default", remote="local", force=True
+    )
+    mock_lxc_container.delete.assert_any_call(
+        instance_name="test-instance-2", project="default", remote="local", force=True
+    )
+    mock_lxc_container.delete.assert_any_call(
+        instance_name="base-instance-1", project="default", remote="local", force=True
+    )
+
+
+def test_lxd_prune_all_without_pruning_templates(mock_lxc_container):
+    """Verify prune does not delete base instances by default."""
+    provider = LXDProvider(
+        lxc=mock_lxc_container,
+        lxd_project="default",
+        lxd_remote="local",
+    )
+    mock_lxc_container.list_names.return_value = [
+        "test-instance-1",
+        "test-instance-2",
+        "base-instance-1",
+    ]
+
+    provider.prune(project_name="default", prune_templates=False)
+    # Only the non-base instances should be deleted.
+    assert mock_lxc_container.delete.call_count == 2
+    mock_lxc_container.delete.assert_any_call(
+        instance_name="test-instance-1", project="default", remote="local", force=True
+    )
+    mock_lxc_container.delete.assert_any_call(
+        instance_name="test-instance-2", project="default", remote="local", force=True
     )

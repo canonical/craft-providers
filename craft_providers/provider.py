@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING
 from .base import Base
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Collection
 
     from craft_providers import Executor
 from typing import TYPE_CHECKING
@@ -95,6 +95,32 @@ class Provider(ABC):
         """
 
     @abstractmethod
+    def prune(self, *, project_name: str, prune_templates: bool = False) -> None:
+        """Remove instances of a provider.
+
+        :param project_name: The name of the project.
+        :param prune_templates: Optional option to prune the base instances.
+        """
+
+    @abstractmethod
+    def list_instances(
+        self,
+        *,
+        project_name: str | None = None,
+        instance_name_prefix: str | None = None,
+        include_base_instances: bool = False,
+    ) -> Collection[Executor]:
+        """Get a collection of existing instances for this provider.
+
+        :param project_name: Optional project name to scope instances to a specific
+            application or project, if supported by the provider.
+        :param instance_name_prefix: Optional prefix to filter instances by name.
+        :param include_base_instances: If True, include any base instances created
+            by the provider; if False (default), base instances should be excluded
+            from the results when possible.
+        """
+
+    @abstractmethod
     def create_environment(self, *, instance_name: str) -> Executor:
         """Create a bare environment for specified base.
 
@@ -105,7 +131,7 @@ class Provider(ABC):
 
     @abstractmethod
     @contextlib.contextmanager
-    def launched_environment(
+    def launched_environment(  # noqa: PLR0913 (too many arguments)
         self,
         *,
         project_name: str,
@@ -116,6 +142,7 @@ class Provider(ABC):
         shutdown_delay_mins: int | None = None,
         use_base_instance: bool = True,
         prepare_instance: Callable[[Executor], None] | None = None,
+        instance_architecture: str | None = None,
     ) -> Generator[Executor, None, None]:
         """Configure and launch environment for specified base.
 
@@ -133,4 +160,6 @@ class Provider(ABC):
         :param use_base_instance: Enable base instances if supported by the provider.
         :param prepare_instance: A callback to perform early instance configuration
             before the base image setup.
+        :param instance_architecture: A string representing the architecture to request
+            if the provider allows selecting the architecture.
         """

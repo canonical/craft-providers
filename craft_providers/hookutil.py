@@ -26,19 +26,18 @@ From that, the thing we care most about is the compatibility tag:
 from __future__ import annotations
 
 import dataclasses
-import json
 import re
-import subprocess
 import sys
-from typing import Any, cast
+from typing import Any
 
 from typing_extensions import Self
 
-from craft_providers import Base, lxd
+from craft_providers import Base
+from craft_providers.lxd import LXC, LXDError, is_installed
 
-_BASE_INSTANCE_START_STRING = "base-instance"
+BASE_INSTANCE_START_STRING = "base-instance"
 _CURRENT_COMPATIBILITY_TAG_REGEX = re.compile(
-    f"^{_BASE_INSTANCE_START_STRING}.*-{Base.compatibility_tag}-.*"
+    f"^{BASE_INSTANCE_START_STRING}.*-{Base.compatibility_tag}-.*"
 )
 
 
@@ -58,8 +57,7 @@ class LXDInstance:
         try:
             return self.expanded_config["image.description"]
         except KeyError as e:
-            # Unexpected, cannot continue
-            raise HookError("Could not get full base name from {self.name}") from e
+            raise HookError(f"Could not get full base name from {self.name}") from e
 
     def is_current_base_instance(self) -> bool:
         """Return true if this is a base instance with the current compat tag."""
@@ -67,16 +65,16 @@ class LXDInstance:
 
     def is_base_instance(self) -> bool:
         """Return true if this is a base instance."""
-        return self.name.startswith(_BASE_INSTANCE_START_STRING)
+        return self.name.startswith(BASE_INSTANCE_START_STRING)
 
     @classmethod
     def unmarshal(
         cls,
-        src: dict[str, str],
+        src: dict[str, Any],
     ) -> Self:
         """Use this rather than init - the lxc output has a lot of extra fields."""
         return cls(
-            **{  # type: ignore[arg-type]
+            **{  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
                 k: v
                 for k, v in src.items()
                 if k in {f.name for f in dataclasses.fields(cls)}
@@ -91,6 +89,7 @@ class HookHelper:
         self.simulate = simulate
         self.debug = debug
         self._project_name = project_name
+        self._lxc = LXC()
 
         self._check_has_lxd()
         self._check_project_exists()
@@ -104,17 +103,20 @@ class HookHelper:
         purposes of the configure and remove hooks we don't want to install LXD just to
         check that it has no stale images.
         """
-        if not lxd.is_installed():
+        if not is_installed():
             raise HookError("LXD is not installed.")
 
     def _check_project_exists(self) -> None:
         """Raise HookError if lxc doesn't know about this app."""
-        for project in self.lxc("project", "list", proj=False):
-            if cast("dict[str, Any]", project)["name"] == self._project_name:
-                return
+        try:
+            projects = self._lxc.project_list()
+        except FileNotFoundError as e:
+            raise HookError("LXD is not installed.") from e
+        except LXDError as e:
+            raise HookError(f"Failed to list LXD projects: {e}") from e
 
-        # Didn't find our project name
-        raise HookError(f"Project {self._project_name} does not exist in LXD.")
+        if self._project_name not in projects:
+            raise HookError(f"Project {self._project_name} does not exist in LXD.")
 
     def dprint(self, *args: Any, **kwargs: Any) -> None:
         """Print messages to stderr if debug=True.
@@ -129,52 +131,10 @@ class HookHelper:
 
         print_args = list(args)
         if len(args) >= 1 and isinstance(args[0], LXDInstance):
-            # First arg quacks like an instance object
             instance = print_args.pop(0)
             print_args += [":", instance.name]
 
         print(*print_args, **kwargs)
-
-    def lxc(
-        self,
-        *args: Any,
-        fail_msg: str | None = None,
-        proj: bool = True,
-        json_out: bool = True,
-    ) -> str | dict[str, Any]:
-        """Run lxc commands specified in *args.
-
-        :param fail_msg: Print this if the command returns nonzero.
-        :param proj: Set to False to not specify lxc project.
-        :param json_out: If set to False, don't ask lxc for JSON output.
-        """
-        lxc_args = ["lxc"]
-        if json_out:
-            lxc_args += ["--format", "json"]
-        if proj:
-            lxc_args += ["--project", self._project_name]
-        lxc_args += args
-
-        try:
-            out = subprocess.run(
-                lxc_args,
-                check=True,
-                text=True,
-                capture_output=True,
-            ).stdout
-        except FileNotFoundError:
-            raise HookError("LXD is not installed.")
-        except subprocess.CalledProcessError as e:
-            if not fail_msg:
-                fail_msg = e.stderr
-            raise HookError(fail_msg)
-        else:
-            if not json_out:
-                return out
-            try:
-                return cast("dict[str, Any]", json.loads(out))
-            except json.JSONDecodeError as e:
-                raise HookError(f"Didn't get back JSON: {out}") from e
 
     def delete_instance(self, instance: LXDInstance) -> None:
         """Delete the specified lxc instance."""
@@ -183,49 +143,64 @@ class HookHelper:
         )
         if self.simulate:
             return
-        self.lxc(
-            "delete",
-            "--force",
-            instance.name,
-            fail_msg=f"Failed to remove LXD instance {instance.name}.",
-            json_out=False,
-        )
-
-    def _delete_image(self, image_fingerprint: str) -> None:
-        """Remove the image."""
-        self.lxc("image", "delete", image_fingerprint, json_out=False)
+        try:
+            self._lxc.delete(
+                instance_name=instance.name,
+                project=self._project_name,
+                force=True,
+            )
+        except FileNotFoundError as e:
+            raise HookError("LXD is not installed.") from e
+        except LXDError as e:
+            raise HookError(
+                f"Failed to remove LXD instance {instance.name}: {e}"
+            ) from e
 
     def delete_all_images(self) -> None:
         """Delete all images of the lxc project."""
-        for image_fingerprint in self._list_images():
-            self._delete_image(image_fingerprint)
+        try:
+            images = self._lxc.image_list(project=self._project_name)
+        except FileNotFoundError as e:
+            raise HookError("LXD is not installed.") from e
+        except LXDError as e:
+            raise HookError(f"Failed to list images: {e}") from e
+
+        for image in images:
+            fingerprint = image["fingerprint"]
+            try:
+                self._lxc.image_delete(
+                    image=fingerprint,
+                    project=self._project_name,
+                )
+            except FileNotFoundError as e:
+                raise HookError("LXD is not installed.") from e
+            except LXDError as e:
+                raise HookError(f"Failed to delete image {fingerprint}: {e}") from e
 
     def delete_project(self) -> None:
         """Delete this lxc project."""
         print(f"Removing project {self._project_name}")
         if self.simulate:
             return
-        self.lxc(
-            "project",
-            "delete",
-            self._project_name,
-            proj=False,
-            json_out=False,
-        )
-
-    def _list_images(self) -> list[str]:
-        """Return fingerprints of all images associated with the lxc project."""
-        return [
-            cast("dict[str, Any]", image)["fingerprint"]
-            for image in self.lxc("image", "list")
-        ]
+        try:
+            self._lxc.project_delete(project=self._project_name)
+        except FileNotFoundError as e:
+            raise HookError("LXD is not installed.") from e
+        except LXDError as e:
+            raise HookError(
+                f"Failed to delete project {self._project_name}: {e}"
+            ) from e
 
     def list_instances(self) -> list[LXDInstance]:
         """Return a list of all instance objects for the project."""
-        return [
-            LXDInstance.unmarshal(cast("dict[str, Any]", instance))
-            for instance in self.lxc("list")
-        ]
+        try:
+            instances = self._lxc.list(project=self._project_name)
+        except FileNotFoundError as e:
+            raise HookError("LXD is not installed.") from e
+        except LXDError as e:
+            raise HookError(f"Failed to list instances: {e}") from e
+
+        return [LXDInstance.unmarshal(instance) for instance in instances]
 
     def list_base_instances(self) -> list[LXDInstance]:
         """Return a list of all base instance objects for the project."""
