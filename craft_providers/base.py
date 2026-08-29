@@ -308,9 +308,18 @@ class Base(ABC, Generic[_T_enum_co]):
 
         :param status: True if the setup is complete, False otherwise.
         """
+        config = InstanceConfiguration.load(
+            executor=executor,
+            config_path=self._instance_config_path,
+        )
+
+        data: dict[str, bool | str] = {"setup": status}
+        if config is None:
+            data["compatibility_tag"] = self.compatibility_tag
+
         InstanceConfiguration.update(
             executor=executor,
-            data={"setup": status},
+            data=data,
             config_path=self._instance_config_path,
         )
 

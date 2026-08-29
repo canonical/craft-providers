@@ -1051,6 +1051,25 @@ def test_update_setup_status(fake_executor, mock_load, status):
     ]
 
 
+def test_update_setup_status_initializes_compatibility_tag(fake_executor, mock_load):
+    """New instance configs should be seeded with the compatibility tag."""
+    mock_load.return_value = None
+
+    base_config = almalinux.AlmaLinuxBase(alias=almalinux.AlmaLinuxBaseAlias.NINE)
+
+    base_config._update_setup_status(executor=fake_executor, status=False)
+
+    assert fake_executor.records_of_push_file_io == [
+        {
+            "content": b"compatibility_tag: almalinux-base-v7\nsetup: false\n",
+            "destination": "/etc/craft-instance.conf",
+            "file_mode": "0644",
+            "group": "root",
+            "user": "root",
+        }
+    ]
+
+
 def test_ensure_config_compatible_validation_error(
     fake_executor, mock_load, fake_validation_error
 ):

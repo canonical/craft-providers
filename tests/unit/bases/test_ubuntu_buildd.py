@@ -1177,6 +1177,25 @@ def test_update_setup_status(fake_executor, mock_load, status):
     ]
 
 
+def test_update_setup_status_initializes_compatibility_tag(fake_executor, mock_load):
+    """New instance configs should be seeded with the compatibility tag."""
+    mock_load.return_value = None
+
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+
+    base_config._update_setup_status(executor=fake_executor, status=False)
+
+    assert fake_executor.records_of_push_file_io == [
+        {
+            "content": b"compatibility_tag: buildd-base-v7\nsetup: false\n",
+            "destination": "/etc/craft-instance.conf",
+            "file_mode": "0644",
+            "group": "root",
+            "user": "root",
+        }
+    ]
+
+
 def test_ensure_config_compatible_validation_error(
     fake_executor, mock_load, fake_validation_error
 ):
@@ -1380,6 +1399,47 @@ def test_warmup_bad_instance_config(fake_process, fake_executor, mock_load):
 
     with pytest.raises(BaseCompatibilityError):
         base_config.warmup(executor=fake_executor)
+
+
+def test_setup_bad_instance_config_preserves_existing_tag(
+    fake_process, fake_executor, mock_load
+):
+    mock_load.return_value = InstanceConfiguration(
+        compatibility_tag="invalid-tag", setup=True
+    )
+    alias = ubuntu.BuilddBaseAlias.JAMMY
+    base_config = ubuntu.BuilddBase(
+        alias=alias,
+        environment=ubuntu.BuilddBase.default_command_environment(),
+    )
+
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout=dedent(
+            f"""\
+            NAME="Ubuntu"
+            ID=ubuntu
+            ID_LIKE=debian
+            VERSION_ID="{alias.value}"
+            """
+        ),
+    )
+
+    with pytest.raises(BaseCompatibilityError) as raised:
+        base_config.setup(executor=fake_executor)
+
+    assert raised.value == BaseCompatibilityError(
+        "Expected image compatibility tag 'buildd-base-v7', found 'invalid-tag'"
+    )
+    assert fake_executor.records_of_push_file_io == [
+        {
+            "content": b"compatibility_tag: invalid-tag\nsetup: false\n",
+            "destination": "/etc/craft-instance.conf",
+            "file_mode": "0644",
+            "group": "root",
+            "user": "root",
+        }
+    ]
 
 
 @pytest.mark.parametrize("setup", [False, None])
