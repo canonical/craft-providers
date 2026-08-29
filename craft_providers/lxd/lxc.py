@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import contextlib
 import enum
+import json
 import logging
 import os
 import pathlib
@@ -30,7 +31,13 @@ import threading
 import time
 from collections import deque
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    cast,
+    overload,
+)
 
 import yaml
 
@@ -1327,6 +1334,89 @@ class LXC:
             time.sleep(3)
 
         raise LXDError(brief="Timed out waiting for instance to be ready.")
+
+    def is_pro_enabled(
+        self,
+        *,
+        instance_name: str,
+        project: str = "default",
+        remote: str = "local",
+    ) -> bool:
+        """Check whether Pro is enabled on the instance.
+
+        :param instance_name: Name of instance.
+
+        :returns: True if instance is attached.
+        """
+        command = [
+            "exec",
+            f"{remote}:{instance_name}",
+            "--",
+            "pro",
+            "api",
+            "u.pro.status.is_attached.v1",
+        ]
+
+        try:
+            proc = self._run_lxc(
+                command, capture_output=True, check=False, project=project
+            )
+            if proc.returncode == 0:
+                data = json.loads(proc.stdout)
+                if data.get("result") == "success":
+                    if data.get("data", {}).get("attributes", {}).get("is_attached"):
+                        logger.debug("Managed instance is Pro enabled.")
+                        return True
+                    logger.debug("Managed instance is not Pro enabled.")
+                    return False
+
+                raise LXDError(
+                    brief=f"Failed to get a successful response from `pro` command on {instance_name!r}.",
+                )
+
+            raise LXDError(
+                brief=f"Ubuntu Pro Client is not installed on {instance_name!r}."
+            )
+        except json.JSONDecodeError as error:
+            raise LXDError(
+                brief=f"Failed to parse JSON response of `pro` command on {instance_name!r}.",
+            ) from error
+
+    def is_pro_installed(
+        self,
+        *,
+        instance_name: str,
+        project: str = "default",
+        remote: str = "local",
+    ) -> bool:
+        """Check whether Ubuntu Pro Client is installed in the instance.
+
+        :param instance_name: Name of instance.
+        :param project: Name of LXD project.
+        :param remote: Name of LXD remote.
+
+        :raises LXDError: on unexpected error.
+        """
+        command = [
+            "exec",
+            f"{remote}:{instance_name}",
+            "--",
+            "pro",
+            "version",
+        ]
+        try:
+            self._run_lxc(
+                command,
+                capture_output=True,
+                project=project,
+            )
+
+        except subprocess.CalledProcessError:
+            logger.debug(f"Ubuntu Pro Client is not installed on {instance_name!r}.")
+            return False
+        else:
+            logger.debug("Ubuntu Pro Client is installed in managed instance.")
+            return True
 
     def get_server_version(self, remote: str = "local") -> str:
         """Get the version of the lxd server.

@@ -15,13 +15,6 @@ know the particular details of each build environment or system.
 This package is most useful for implementers of tools using the Craft Parts
 framework that need to provide support for additional build environments.
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   reference/index
-   explanation/index
-
 .. list-table::
 
     * - | :ref:`Reference <reference>`
@@ -36,14 +29,12 @@ Craft Providers is a member of the Canonical family. It's an open source project
 that warmly welcomes community projects, contributions, suggestions, fixes
 and constructive feedback.
 
-* `Ubuntu Code of Conduct
-  <https://ubuntu.com/community/ethos/code-of-conduct>`_.
-* `Canonical contributor licenses agreement
-  <https://ubuntu.com/legal/contributors>`_.
+- `Ubuntu Code of Conduct <https://ubuntu.com/community/docs/ethos/code-of-conduct>`__
+- `Canonical Contributor License Agreement <https://ubuntu.com/legal/contributors>`__
 
-Indices and tables
-==================
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. toctree::
+    :hidden:
+
+    reference/index
+    explanation/index

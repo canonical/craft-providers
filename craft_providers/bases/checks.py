@@ -112,7 +112,12 @@ def ensure_guest_compatible(
         return
 
     guest_os_release = base_configuration.get_os_release(executor=instance)
-    guest_base_alias = BuilddBaseAlias(guest_os_release.get("VERSION_ID"))
+
+    try:
+        guest_base_alias = BuilddBaseAlias(guest_os_release.get("VERSION_ID"))
+    except ValueError:
+        logger.warning("Unknown guest Ubuntu version, not checking guest compatibility")
+        return
 
     # Strip off anything after the first space - sometimes "LTS" is appended
     lxd_version_split = lxd_version.strip().split(" ")[0].split(".")

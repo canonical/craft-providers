@@ -154,13 +154,13 @@ def test_ensure_guest_compatible_valid_ubuntu(
         ubuntu.BuilddBaseAlias.FOCAL,  # guest less than ORACULAR
     ],
 )
-def test_ensure_guest_compatible_invalid_ubuntu(
+def test_ensure_guest_compatible_invalid_ubuntu_host(
     fake_executor,
     fake_process,
     base_alias,
     monkeypatch: pytest.MonkeyPatch,
 ):
-    """Check that unknown Ubuntu versions are handled gracefully."""
+    """Check that unknown host Ubuntu versions are handled gracefully."""
     guest_base = ubuntu.BuilddBase(alias=base_alias)
     guest_base._retry_wait = 0.01
     guest_base._timeout_simple = 1
@@ -177,6 +177,37 @@ def test_ensure_guest_compatible_invalid_ubuntu(
     # pass on windows
     with patch("platform.release", return_value="4.99"):
         ensure_guest_compatible(guest_base, fake_executor, lxd_version)
+
+
+def test_ensure_guest_compatible_unknown_guest_ubuntu(
+    mocker, fake_executor, fake_process
+):
+    """Check that unknown guest Ubuntu versions are handled gracefully.
+
+    This will happen whenever the `devel` alias points to a new release
+    that hasn't yet been added to craft-providers.
+    """
+    guest_base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+
+    # Mock the guest returning an unknown VERSION_ID
+    mocker.patch.object(
+        guest_base,
+        "get_os_release",
+        return_value={"ID": "ubuntu", "VERSION_ID": "99999.10"},
+    )
+    mocker.patch("platform.release", return_value="4.99")
+
+    @contextlib.contextmanager
+    def fake_open(*args, **kwargs):
+        class Fake:
+            def read(self):
+                return 'ID="ubuntu"\nVERSION_ID="22.04"'
+
+        yield Fake()
+
+    mocker.patch.object(os_release.Path, "open", fake_open)
+
+    ensure_guest_compatible(guest_base, fake_executor, "6.0")
 
 
 @pytest.mark.parametrize(

@@ -83,17 +83,66 @@ def test_retry_until_timeout_times_out(retry_wait, timeout, instant_sleep, error
 
 
 @pytest.mark.parametrize("error_cls", [TimeoutError, Exception, ValueError])
-@pytest.mark.parametrize("retry_multiplier", [1.0, 1.1, 2.0])
-def test_retry_until_timeout_times_out_long_retry(
-    timeout, mock_instant_sleep, error_cls, retry_multiplier
+@pytest.mark.parametrize(
+    (
+        "timeout",
+        "retry_wait",
+        "monotonic_values",
+        "expected_func_calls",
+        "expected_sleep_calls",
+    ),
+    [
+        pytest.param(
+            10.0,
+            4.0,
+            [100.0, 101.0, 102.0, 107.0],
+            [mock.call(9.0), mock.call(4.0)],
+            [mock.call(4.0)],
+            id="hits-while",
+        ),
+        pytest.param(
+            10.0,
+            10.0,
+            [100.0, 100.0],
+            [mock.call(10.0)],
+            [],
+            id="long-retry-equal-timeout",
+        ),
+        pytest.param(
+            10.0,
+            11.0,
+            [100.0, 100.0],
+            [mock.call(11.0)],
+            [],
+            id="long-retry-over-timeout",
+        ),
+        pytest.param(
+            10.0,
+            20.0,
+            [100.0, 100.0],
+            [mock.call(20.0)],
+            [],
+            id="long-retry-much-over-timeout",
+        ),
+    ],
+)
+def test_retry_until_timeout_times_out_deterministic_branches(
+    monkeypatch,
+    mock_instant_sleep,
+    error_cls,
+    timeout,
+    retry_wait,
+    monotonic_values,
+    expected_func_calls,
+    expected_sleep_calls,
 ):
-    """Here the retry time is always at least as long as the timeout."""
+    monotonic_mock = mock.Mock(side_effect=monotonic_values)
+    monkeypatch.setattr("time.monotonic", monotonic_mock)
     mock_function = mock.Mock(side_effect=Exception())
 
     with pytest.raises(error_cls):
-        retry.retry_until_timeout(
-            timeout, timeout * retry_multiplier, mock_function, error=error_cls()
-        )
+        retry.retry_until_timeout(timeout, retry_wait, mock_function, error=error_cls())
 
-    mock_function.assert_called_once()
-    mock_instant_sleep.sleep.assert_not_called()
+    assert mock_function.mock_calls == expected_func_calls
+    assert monotonic_mock.call_count == len(monotonic_values)
+    assert mock_instant_sleep.sleep.mock_calls == expected_sleep_calls

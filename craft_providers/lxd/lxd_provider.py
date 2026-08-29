@@ -39,7 +39,7 @@ from .remotes import get_remote_image
 
 if TYPE_CHECKING:
     import pathlib
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Collection, Iterator
     from enum import Enum
 
     from craft_providers import Executor
@@ -102,6 +102,50 @@ class LXDProvider(Provider):
         """
         return is_installed()
 
+    def prune(
+        self,
+        *,
+        project_name: str,
+        prune_templates: bool = False,
+    ) -> None:
+        """Remove instances for a LXD project."""
+        logger.debug(f"Pruning {self.name} {self.lxd_project} instances")
+        instances = self.list_instances(
+            project_name=project_name or self.lxd_project,
+            include_base_instances=prune_templates,
+        )
+        for instance in instances:
+            logger.debug(f"Pruning {instance.name}")
+            instance.delete()
+
+    @override
+    def list_instances(
+        self,
+        *,
+        project_name: str | None = None,
+        instance_name_prefix: str | None = None,
+        include_base_instances: bool = False,
+    ) -> Collection[LXDInstance]:
+        """Get a collection of all existing instances for this LXD provider."""
+        project = project_name or self.lxd_project
+        names = self.lxc.list_names(project=project, remote=self.lxd_remote)
+
+        instances: list[LXDInstance] = []
+
+        for name in names:
+            if name.startswith("base-instance-") and not include_base_instances:
+                continue
+            if instance_name_prefix and not name.startswith(instance_name_prefix):
+                continue
+
+            instances.append(
+                LXDInstance(
+                    name=name, project=project, remote=self.lxd_remote, lxc=self.lxc
+                )
+            )
+
+        return instances
+
     def create_environment(self, *, instance_name: str) -> Executor:
         """Create a bare environment for specified base.
 
@@ -129,6 +173,7 @@ class LXDProvider(Provider):
         shutdown_delay_mins: int | None = None,
         use_base_instance: bool = True,
         prepare_instance: Callable[[Executor], None] | None = None,
+        instance_architecture: str | None = None,
     ) -> Iterator[Executor]:
         """Configure and launch environment for specified base.
 
@@ -146,6 +191,8 @@ class LXDProvider(Provider):
             the instance.
         :param prepare_instance: A callback to perform early instance configuration
             before the base image setup.
+        :param instance_architecture: A string representing the architecture to request.
+            For example, on amd64 both ``amd64`` and ``i386`` are valid.
 
         :raises LXDError: if instance cannot be configured and launched.
         """
@@ -164,11 +211,17 @@ class LXDProvider(Provider):
         # unstable images should be refreshed more often
         expiration = timedelta(days=90) if image.is_stable else timedelta(days=14)
 
+        image_name = (
+            image.image_name
+            if instance_architecture is None
+            else f"{image.image_name}/{instance_architecture}"
+        )
+
         try:
             instance = launch(
                 name=instance_name,
                 base_configuration=base_configuration,
-                image_name=image.image_name,
+                image_name=image_name,
                 image_remote=image.remote_name,
                 auto_clean=True,
                 auto_create_project=True,
