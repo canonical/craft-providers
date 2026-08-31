@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, cast
 
 import pydantic
 import requests
-import requests_unixsocket  # type: ignore[import]
+import requests_unixsocket
 
 from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE
 from craft_providers.errors import (
@@ -97,7 +97,7 @@ def _download_host_snap(
     quoted_name = urllib.parse.quote(snap_name, safe="")
     url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}/file"
     try:
-        resp = requests_unixsocket.get(url)  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types
+        resp = requests_unixsocket.get(url)
     except requests.ConnectionError as error:
         raise SnapInstallationError(
             brief="Unable to connect to snapd service."
@@ -132,7 +132,7 @@ def get_host_snap_info(snap_name: str) -> SnapInfo:
     quoted_name = urllib.parse.quote(snap_name, safe="")
     url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}"
     try:
-        snap_info = requests_unixsocket.get(url)  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types
+        snap_info = requests_unixsocket.get(url)
     except requests.ConnectionError as error:
         raise SnapInstallationError(
             brief="Unable to connect to snapd service."

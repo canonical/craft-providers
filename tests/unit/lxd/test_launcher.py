@@ -27,7 +27,7 @@ from craft_providers import Base, Executor, ProviderError, bases, lxd
 from craft_providers.errors import BaseConfigurationError
 from craft_providers.lxd import LXDError, lxd_instance_status
 from freezegun import freeze_time
-from logassert import Exact  # type: ignore[import-untyped]
+from logassert import Exact
 
 C = 299792458  # m/s
 VCS = 9192631770  # Hz
