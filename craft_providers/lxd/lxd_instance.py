@@ -30,7 +30,7 @@ import tempfile
 import warnings
 from typing import TYPE_CHECKING, Any, cast
 
-import pylxd  # type: ignore[import-untyped]
+import pylxd
 import yaml
 from typing_extensions import override
 
@@ -296,7 +296,7 @@ class LXDInstance(Executor):
         """
         return cast(
             bool,
-            self._client.instances.exists(self.instance_name),  # type: ignore[reportUnknownVariableType]  # ty: ignore[unresolved-attribute]
+            self._client.instances.exists(self.instance_name),  # ty: ignore[unresolved-attribute]
         )
 
     def _get_disk_devices(self) -> dict[str, Any]:
@@ -912,10 +912,10 @@ class LXDInstance(Executor):
                 details=f"Unexpected data in {PRO_SERVICES_YAML} in instance.",
             ) from exc
 
-        if isinstance(data, (list, set)) and all(isinstance(x, str) for x in data):  # pyright: ignore[reportUnknownVariableType]
-            result = set(data)  # pyright: ignore[reportUnknownArgumentType,reportUnknownVariableType]
+        if isinstance(data, (list, set)) and all(isinstance(x, str) for x in data):
+            result = set(data)
             self._pro_services = result
-            return self._pro_services  # pyright: ignore[reportUnknownVariableType]
+            return self._pro_services
 
         if data is None:
             self._pro_services = set()

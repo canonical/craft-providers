@@ -37,7 +37,7 @@ from craft_providers.errors import (
 )
 from craft_providers.instance_config import InstanceConfiguration
 from freezegun import freeze_time
-from logassert import Exact  # type: ignore[import-untyped]
+from logassert import Exact
 
 from tests.unit.conftest import DEFAULT_FAKE_CMD
 
