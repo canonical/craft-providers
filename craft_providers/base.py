@@ -169,29 +169,20 @@ class Base(ABC, Generic[_T_enum_co]):
     def _ensure_instance_config_compatible(self, executor: Executor) -> None:
         """Ensure instance configuration is compatible.
 
-        As long as the config is not incompatible (via a mismatched compatibility tag),
-        then assume the instance is compatible. This assumption is done because the
-        config file may not exist or contain a tag while the set up is in progress.
-
         :raises BaseCompatibilityError: if instance is incompatible.
         :raises BaseConfigurationError: on other unexpected error.
         """
-        try:
-            config = InstanceConfiguration.load(
-                executor=executor,
-                config_path=self._instance_config_path,
-            )
-        except ValidationError as error:
-            raise BaseConfigurationError(
+        config = self._load_instance_config(
+            executor=executor,
+            invalid_config_error=BaseConfigurationError(
                 brief="Failed to parse instance configuration file.",
-            ) from error
-        # if no config exists, assume base is compatible (likely unfinished setup)
-        except FileNotFoundError:
-            return
+            ),
+        )
 
-        # make the same assumption as above for empty configs or configs without a tag
-        if config is None or config.compatibility_tag is None:
-            return
+        if not config.compatibility_tag:
+            raise BaseCompatibilityError(
+                reason="instance config has no compatibility tag"
+            )
 
         if config.compatibility_tag != self.compatibility_tag:
             raise BaseCompatibilityError(
@@ -213,27 +204,46 @@ class Base(ABC, Generic[_T_enum_co]):
 
         :raises BaseCompatibilityError: If setup was not completed.
         """
+        config = self._load_instance_config(
+            executor=executor,
+            invalid_config_error=BaseCompatibilityError(
+                reason="failed to parse instance configuration file"
+            ),
+        )
+
+        if not config.setup:
+            raise BaseCompatibilityError(reason="instance is marked as not setup")
+
+        logger.debug("Instance has already been setup.")
+
+    def _load_instance_config(
+        self,
+        *,
+        executor: Executor,
+        invalid_config_error: BaseCompatibilityError | BaseConfigurationError,
+    ) -> InstanceConfiguration:
+        """Load instance configuration and normalize invalid states.
+
+        :param executor: Executor for target container.
+        :param invalid_config_error: Error to raise if the config cannot be parsed.
+
+        :raises BaseCompatibilityError: If the config is missing or empty, or if the config cannot be parsed and
+            ``invalid_config_error`` is a compatibility error.
+        :raises BaseConfigurationError: If the config cannot be loaded from the environment, or if the config cannot be parsed and
+            ``invalid_config_error`` is a configuration error.
+        """
         try:
             config = InstanceConfiguration.load(
                 executor=executor,
                 config_path=self._instance_config_path,
             )
         except ValidationError as error:
-            raise BaseCompatibilityError(
-                reason="failed to parse instance configuration file",
-            ) from error
-        except FileNotFoundError as error:
-            raise BaseCompatibilityError(
-                reason="failed to find instance config file",
-            ) from error
+            raise invalid_config_error from error
 
         if config is None:
             raise BaseCompatibilityError(reason="instance config is empty")
 
-        if not config.setup:
-            raise BaseCompatibilityError(reason="instance is marked as not setup")
-
-        logger.debug("Instance has already been setup.")
+        return config
 
     def get_os_release(self, executor: Executor) -> dict[str, str]:
         """Get the OS release information from an instance's /etc/os-release.
@@ -298,9 +308,18 @@ class Base(ABC, Generic[_T_enum_co]):
 
         :param status: True if the setup is complete, False otherwise.
         """
+        config = InstanceConfiguration.load(
+            executor=executor,
+            config_path=self._instance_config_path,
+        )
+
+        data: dict[str, bool | str] = {"setup": status}
+        if config is None:
+            data["compatibility_tag"] = self.compatibility_tag
+
         InstanceConfiguration.update(
             executor=executor,
-            data={"setup": status},
+            data=data,
             config_path=self._instance_config_path,
         )
 
