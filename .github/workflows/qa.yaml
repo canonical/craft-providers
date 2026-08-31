@@ -13,10 +13,17 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   lint:
+    permissions:
+      contents: read
     uses: canonical/starflow/.github/workflows/lint-python.yaml@main
   test-basic:
+    permissions:
+      contents: read
     uses: canonical/starflow/.github/workflows/test-python.yaml@main
     with:
       # Fast tests run on several Ubuntu platforms and macos on ARM
@@ -30,6 +37,8 @@ jobs:
       use-lxd: true
       pytest-markers: not lxd_instance and not multipass_instance
   test-lxd:
+    permissions:
+      contents: read
     uses: canonical/starflow/.github/workflows/test-python.yaml@main
     with:
       # All fast tests run in the basic job
@@ -39,16 +48,57 @@ jobs:
       lowest-python-platform: ""
       use-lxd: true
       pytest-markers: lxd_instance
-  # test-multipass:
-  #   uses: canonical/starflow/.github/workflows/test-python.yaml@main
-  #   with:
-  #     # All fast tests run in the basic job
-  #     fast-test-platforms: "[]"
-  #     slow-test-platforms: '["ubuntu-24.04"]'
-  #     slow-test-python-versions: '["3.12"]'
-  #     lowest-python-platform: ""
-  #     use-lxd: true
-  #     pytest-markers: multipass_instance
+  multipass-trigger:
+    runs-on: ubuntu-slim
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      should-run: ${{ steps.gate.outputs.should-run }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect multipass-related changes
+        id: filter
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        with:
+          filters: |
+            multipass-relevant:
+              - '.github/workflows/qa.yaml'
+              - 'craft_providers/actions/**'
+              - 'craft_providers/bases/**'
+              - 'craft_providers/multipass/**'
+              - 'tests/integration/multipass/**'
+      - name: Decide whether to run multipass tests
+        id: gate
+        env:
+          PATH_TRIGGERED: ${{ steps.filter.outputs.multipass-relevant }}
+          LABEL_TRIGGERED: "${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'PR: Run Multipass Tests') }}"
+        run: |
+          if [ "$PATH_TRIGGERED" = "true" ] || [ "$LABEL_TRIGGERED" = "true" ]; then
+            echo "should-run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should-run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  test-multipass:
+    needs: multipass-trigger
+    if: ${{ needs.multipass-trigger.outputs.should-run == 'true' }}
+    permissions:
+      contents: read
+    uses: canonical/starflow/.github/workflows/test-python.yaml@main
+    with:
+      # All fast tests run in the basic job
+      fast-test-platforms: "[]"
+      slow-test-platforms: '[["self-hosted", "amd64", "medium", "generic", "focal"], ["self-hosted", "amd64", "medium", "generic", "resolute"]]'
+      slow-test-python-versions: '["3.12"]'
+      lowest-python-platform: ""
+      setup-vars: install-multipass
+      use-lxd: false
+      pytest-markers: multipass_instance
   # macos-smoketest:
   #   uses: canonical/starflow/.github/workflows/test-python.yaml@main
   #   with:
