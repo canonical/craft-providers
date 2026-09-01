@@ -17,6 +17,35 @@ on:
         default: false
 
 jobs:
+  lxd:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+        lxd-channel:
+          - latest/candidate
+          - latest/edge
+          - 5.21/candidate
+          - 5.21/edge
+          - 5.0/candidate
+          - 5.0/edge
+        python-version: ["3.10", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Pristine Ubuntu
+        if: ${{ runner.os == 'Linux' && runner.environment == 'github-hosted' }}
+        uses: lengau/pristine-ubuntu-action@v0
+      - name: Set up runner
+        uses: canonical/starflow/setup-python-runner@main
+        with:
+          lxd-channel: ${{ matrix.lxd-channel }}
+          python-version: ${{ matrix.python-version }}
+      - name: Set up tests
+        run: |
+          make -j setup-tests UV_PYTHON="${{ matrix.python-version }}"
+      - name: Run tests
+        run: |
+          make test PYTEST_ADDOPTS="--no-header -v -rN -m lxd_instance"
   integration-macos:
     strategy:
       fail-fast: false
