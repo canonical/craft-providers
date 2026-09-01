@@ -56,7 +56,7 @@ class InstanceTimer(threading.Thread):
     __interval: float
     __instance: LXDInstance
 
-    def __init__(self, instance: LXDInstance, interval: int = 3) -> None:
+    def __init__(self, instance: LXDInstance, interval: int = 30) -> None:
         """Initialize the timer.
 
         :param instance: LXD instance to update.
@@ -69,10 +69,9 @@ class InstanceTimer(threading.Thread):
     def run(self) -> None:
         """Run the timer."""
         while self.__active:
-            now = datetime.now(timezone.utc).isoformat()
             try:
+                now = datetime.now(timezone.utc).isoformat()
                 self.__instance.config_set("user.craft_providers.timer", now)
-                logger.debug("Set instance timer to %r", now)
             except LXDError:
                 # Error in timer update is not critical
                 logging.exception("Error updating instance timer")
