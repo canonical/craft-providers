@@ -41,7 +41,7 @@ from .errors import MultipassError
 
 if TYPE_CHECKING:
     import io
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ class Multipass:
         self.multipass_path = multipass_path
 
     def _run(
-        self, command: list[str], **kwargs: Any
+        self, command: Sequence[str], **kwargs: Any
     ) -> subprocess.CompletedProcess[Any]:
         """Execute a multipass command.
 
@@ -74,8 +74,7 @@ class Multipass:
         command = [str(self.multipass_path), *command]
 
         logger.debug("Executing on host: %s", shlex.join(command))
-        # Mypy detects this correctly, but pyright thinks the return type is unknown.
-        return subprocess.run(  # pyright: ignore[reportUnknownVariableType]
+        return subprocess.run(
             command,
             check=True,
             capture_output=True,
@@ -106,14 +105,13 @@ class Multipass:
     def exec(
         self,
         *,
-        command: list[str],
+        command: Sequence[str],
         instance_name: str,
         timeout: float | None = None,
         check: bool = False,
-        # Mypy and ty don't have good answers here re: what to do about this:
-        # https://github.com/python/mypy/issues/3737
+        # ty doesn't have a good answer here re: what to do about this:
         # https://github.com/astral-sh/ty/issues/592
-        runner: Callable[..., T] = subprocess.run,  # type: ignore[assignment]  # ty: ignore[invalid-parameter-default]
+        runner: Callable[..., T] = subprocess.run,  # ty: ignore[invalid-parameter-default]
         **kwargs: Any,
     ) -> T:
         """Execute command in instance_name with specified runner.
@@ -143,7 +141,7 @@ class Multipass:
 
         # Only subprocess.run supports timeout
         if runner is subprocess.run:
-            return runner(final_cmd, timeout=timeout, check=check, **kwargs)
+            return runner(final_cmd, timeout=timeout, check=check, **kwargs)  # type: ignore[return-value]
 
         return runner(final_cmd, **kwargs)
 
@@ -183,8 +181,12 @@ class Multipass:
                 parsed_version = packaging.version.parse(version)
             except packaging.version.InvalidVersion:  # noqa: PERF203
                 # This catches versions such as: 1.15.0-dev.2929.pr661, which are
-                # compliant, but not pep440 compliant. We can lob off sections until
-                # we get a pep440 cempliant version.
+                # semver compliant, but not pep440 compliant. We can lob off sections
+                # until we get a pep440 compliant version.
+                if "." not in version:
+                    raise MultipassError(
+                        brief=f"Unable to parse Multipass version: {version!r}",
+                    )
                 version = version.rpartition(".")[0]
 
         return parsed_version >= minimum_version
@@ -224,7 +226,7 @@ class Multipass:
                 details=errors.details_from_called_process_error(error),
             ) from error
 
-    def list(self) -> list[str]:
+    def list(self) -> Sequence[str]:
         """List names of VMs.
 
         :returns: Data from stdout if instance exists, else None.

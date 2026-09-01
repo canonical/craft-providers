@@ -20,6 +20,7 @@ import pathlib
 import subprocess
 from unittest import mock
 
+import packaging.version
 import pytest
 from craft_providers.errors import details_from_command_error
 from craft_providers.multipass import Multipass
@@ -243,6 +244,31 @@ def test_is_supported_version_error(fake_process, mock_details_from_process_erro
     assert exc_info.value == MultipassError(
         brief="Unable to parse version output: b'invalid output'"
     )
+
+
+def test_is_supported_version_no_dots_does_not_loop_forever(monkeypatch):
+    """is_supported_version() must not hang when version has no dots at all.
+
+    Regression test for https://github.com/canonical/craft-providers/issues/661
+    """
+    monkeypatch.setattr(Multipass, "version", lambda self: ("INVALID", "INVALID"))
+
+    original_parse = packaging.version.parse
+    call_count = 0
+
+    def counting_parse(v: str) -> packaging.version.Version:
+        nonlocal call_count
+        call_count += 1
+        assert call_count <= 10, (
+            f"packaging.version.parse called {call_count} times — "
+            "is_supported_version() is looping forever on a dotless version string"
+        )
+        return original_parse(v)
+
+    monkeypatch.setattr(packaging.version, "parse", counting_parse)
+
+    with pytest.raises(MultipassError):
+        Multipass().is_supported_version()
 
 
 def test_launch(fake_process):

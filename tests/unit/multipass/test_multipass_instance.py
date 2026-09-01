@@ -20,6 +20,7 @@ import pathlib
 import re
 import subprocess
 import sys
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -44,7 +45,7 @@ else:
         }
     }
 
-EXAMPLE_INFO = {
+EXAMPLE_INFO: dict[str, Any] = {
     "errors": [],
     "info": {
         "flowing-hawfinch": {

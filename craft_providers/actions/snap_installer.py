@@ -27,11 +27,11 @@ import shlex
 import subprocess
 import urllib.parse
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 import pydantic
 import requests
-import requests_unixsocket  # type: ignore[import]
+import requests_unixsocket
 
 from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE
 from craft_providers.errors import (
@@ -40,6 +40,7 @@ from craft_providers.errors import (
     details_from_called_process_error,
 )
 from craft_providers.instance_config import InstanceConfiguration
+from craft_providers.models import SnapdResponse, SnapInfo
 from craft_providers.util import snap_cmd, temp_paths
 
 if TYPE_CHECKING:
@@ -96,7 +97,7 @@ def _download_host_snap(
     quoted_name = urllib.parse.quote(snap_name, safe="")
     url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}/file"
     try:
-        resp = requests_unixsocket.get(url)  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types
+        resp = requests_unixsocket.get(url)
     except requests.ConnectionError as error:
         raise SnapInstallationError(
             brief="Unable to connect to snapd service."
@@ -126,18 +127,19 @@ def _pack_host_snap(*, snap_name: str, output: pathlib.Path) -> None:
     )
 
 
-def get_host_snap_info(snap_name: str) -> dict[str, Any]:
+def get_host_snap_info(snap_name: str) -> SnapInfo:
     """Get info about a snap installed on the host."""
     quoted_name = urllib.parse.quote(snap_name, safe="")
     url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}"
     try:
-        snap_info = requests_unixsocket.get(url)  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types
+        snap_info = requests_unixsocket.get(url)
     except requests.ConnectionError as error:
         raise SnapInstallationError(
             brief="Unable to connect to snapd service."
         ) from error
     snap_info.raise_for_status()
-    return cast("dict[str, Any]", snap_info.json()["result"])
+    result = snap_info.json()["result"]
+    return SnapInfo.model_validate(result)
 
 
 def _get_target_snap_revision_from_snapd(
@@ -157,14 +159,21 @@ def _get_target_snap_revision_from_snapd(
             details=details_from_called_process_error(error),
         ) from error
 
-    result = json.loads(proc.stdout)
-    if result["status-code"] == HTTPStatus.NOT_FOUND:
+    result_json = json.loads(proc.stdout)
+    try:
+        result = SnapdResponse[SnapInfo].model_validate(result_json)
+    except pydantic.ValidationError as error:
+        raise SnapInstallationError(
+            f"Unknown response from snapd: {result_json!r}"
+        ) from error
+    if result.status_code == HTTPStatus.NOT_FOUND:
         # snap not found
         return None
-    if result["status-code"] == HTTPStatus.OK:
-        # Note: cast can be removed if Pydantic model is made for this response
-        return cast("str", result["result"]["revision"])
-    raise SnapInstallationError(f"Unknown response from snapd: {result!r}")
+    if result.status_code == HTTPStatus.OK:
+        if not result.result:
+            raise SnapInstallationError(f"Invalid response from snapd: {result_json!r}")
+        return result.result.revision
+    raise SnapInstallationError(f"Unknown response from snapd: {result_json!r}")
 
 
 def _get_snap_revision_ensuring_source(
@@ -237,7 +246,7 @@ def _get_assertion(query: list[str]) -> bytes:
     :raises SnapInstallationError: if 'snap known' call fails
     """
     command = snap_cmd.formulate_known_command(query=query)
-    logger.debug("Executing command on host: %s", command)
+    logger.debug("Executing command on host: %s", shlex.join(command))
     try:
         return subprocess.run(command, capture_output=True, check=True).stdout
     except subprocess.CalledProcessError as error:
@@ -265,8 +274,10 @@ def _get_assertions_file(
     assertion_queries = [
         [
             "account-key",
-            "public-key-sha3-384=BWDEoaqyr25nF5SNCvEv2v"
-            "7QnM9QsfCc0PBMYD_i2NGSQ32EF2d4D0hqUel3m8ul",
+            (
+                "public-key-sha3-384=BWDEoaqyr25nF5SNCvEv2v"
+                "7QnM9QsfCc0PBMYD_i2NGSQ32EF2d4D0hqUel3m8ul"
+            ),
         ],
         ["snap-declaration", f"snap-name={snap_name.partition('_')[0]}"],
         ["snap-revision", f"snap-revision={snap_revision}", f"snap-id={snap_id}"],
@@ -289,15 +300,20 @@ def _add_assertions_from_host(executor: Executor, snap_name: str) -> None:
     :param snap_name: Name of snap to inject
     """
     # trim the `_name` suffix, if present
-    target_assert_path = pathlib.PurePosixPath(f"/tmp/{snap_name.split('_')[0]}.assert")
+    target_assert_path = pathlib.PurePosixPath(
+        f"/tmp/{snap_name.split('_', maxsplit=1)[0]}.assert"
+    )
     snap_info = get_host_snap_info(snap_name)
+
+    if not snap_info.publisher:
+        raise ProviderError("Can't get assertion for snap with no publisher info.")
 
     try:
         with _get_assertions_file(
             snap_name=snap_name,
-            snap_id=snap_info["id"],
-            snap_revision=snap_info["revision"],
-            snap_publisher_id=snap_info["publisher"]["id"],
+            snap_id=snap_info.id,
+            snap_revision=snap_info.revision,
+            snap_publisher_id=snap_info.publisher.id,
         ) as host_assert_path:
             executor.push_file(
                 source=host_assert_path,
@@ -338,7 +354,7 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
     :raises SnapInstallationError: on failure to inject snap
     """
     # the local snap name may have a suffix if it was installed with `--name`
-    snap_store_name = snap_name.split("_")[0]
+    snap_store_name = snap_name.split("_", maxsplit=1)[0]
     if snap_name == snap_store_name:
         logger.debug("Installing snap %r from host (classic=%s)", snap_name, classic)
     else:
@@ -350,14 +366,14 @@ def inject_from_host(*, executor: Executor, snap_name: str, classic: bool) -> No
         )
 
     host_snap_info = get_host_snap_info(snap_name)
-    host_snap_base = host_snap_info.get("base", None)
+    host_snap_base = host_snap_info.base
     if host_snap_base:
         logger.debug(
             "Installing base snap %r for %r from host", host_snap_base, snap_name
         )
         inject_from_host(executor=executor, snap_name=host_snap_base, classic=False)
 
-    host_revision = host_snap_info["revision"]
+    host_revision = host_snap_info.revision
     target_revision = _get_snap_revision_ensuring_source(
         snap_name=snap_store_name,
         source=SNAP_SRC_HOST,
@@ -430,7 +446,7 @@ def install_from_store(
     :raises SnapInstallationError: on unexpected error.
     """
     # trim the `_name` suffix, if present
-    snap_store_name = snap_name.split("_")[0]
+    snap_store_name = snap_name.split("_", maxsplit=1)[0]
     if snap_name == snap_store_name:
         logger.debug(
             "Installing snap %r from store (channel=%r, classic=%s).",

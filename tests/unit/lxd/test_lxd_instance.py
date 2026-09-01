@@ -26,7 +26,9 @@ import tempfile
 from unittest import mock
 from unittest.mock import call
 
+import pylxd
 import pytest
+import yaml
 from craft_providers import errors
 from craft_providers.lxd import LXC, LXDError, LXDInstance
 from craft_providers.lxd.lxd_instance_status import (
@@ -51,6 +53,14 @@ _INVALID_INSTANCE = {
     "name": "invalid-instance-$",
     "instance-name": "invalid-instance-86be3150e96a80a04e31",
 }
+
+
+pytestmark = [
+    pytest.mark.skipif(
+        sys.platform == "darwin",
+        reason="These tests can't run on MacOS as LXD (and by extension, pylxd) don't work on it.",
+    )
+]
 
 
 @pytest.fixture
@@ -113,9 +123,21 @@ def mock_os_unlink():
         yield mock_unlink
 
 
+@pytest.fixture(scope="session")
+def _pylxd_client() -> pylxd.Client:
+    return pylxd.Client()
+
+
 @pytest.fixture
-def instance(mock_lxc):
-    return LXDInstance(name=_TEST_INSTANCE["name"], lxc=mock_lxc)
+def mock_lxd_client(_pylxd_client: pylxd.Client):
+    return mock.Mock(spec=_pylxd_client)
+
+
+@pytest.fixture
+def instance(mock_lxc, mock_lxd_client) -> LXDInstance:
+    return LXDInstance(
+        name=_TEST_INSTANCE["name"], lxc=mock_lxc, client=mock_lxd_client
+    )
 
 
 def test_config_get(mock_lxc, instance):
@@ -453,20 +475,11 @@ def test_execute_run_with_env_unset(mock_lxc, instance):
     ]
 
 
-def test_exists(mock_lxc, instance):
-    assert instance.exists() is True
-    assert mock_lxc.mock_calls == [
-        mock.call.list(project=instance.project, remote=instance.remote)
-    ]
+@pytest.mark.parametrize(("should_exist"), [True, False])
+def test_exists_uses_api(instance: LXDInstance, should_exist: bool) -> None:
+    instance._client.instances.exists.return_value = should_exist  # ty: ignore[unresolved-attribute]
 
-
-def test_exists_false(mock_lxc):
-    instance = LXDInstance(name="does-not-exist", lxc=mock_lxc)
-
-    assert instance.exists() is False
-    assert mock_lxc.mock_calls == [
-        mock.call.list(project=instance.project, remote=instance.remote)
-    ]
+    assert instance.exists() is should_exist
 
 
 def test_get_disk_devices_path_parse_error(mock_lxc, instance):
@@ -1206,3 +1219,441 @@ def test_set_instance_name_invalid(mock_lxc):
         brief="failed to create an instance with name '-'.",
         details="name must contain at least one alphanumeric character",
     )
+
+
+def test_is_pro_enabled(mock_lxc, instance):
+    instance.is_pro_enabled()
+
+    assert mock_lxc.mock_calls == [
+        mock.call.is_pro_enabled(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+        )
+    ]
+
+
+def test_attach_pro_subscription_success(mock_lxc, instance):
+    mock_lxc.exec.return_value = mock.Mock(returncode=0)
+    instance.attach_pro_subscription()
+
+    assert mock_lxc.mock_calls == [
+        mock.call.file_push(
+            instance_name=instance.instance_name,
+            source=mock.ANY,
+            destination=pathlib.Path("/usr/local/bin/cloud-id"),
+            mode="0775",
+            project=instance.project,
+            remote=instance.remote,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["chown", "root:root", "/usr/local/bin/cloud-id"],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=60,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["pro", "auto-attach"],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=False,
+            timeout=None,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["rm", "-f", "/usr/local/bin/cloud-id"],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=None,
+        ),
+    ]
+
+
+def test_attach_pro_subscription_failed(mock_lxc, instance):
+    mock_lxc.exec.side_effect = [
+        mock.Mock(returncode=0),
+        mock.Mock(returncode=1),
+        mock.Mock(returncode=0),
+    ]
+
+    expected = f"Failed to attach {instance.instance_name!r} to a Pro subscription."
+
+    with pytest.raises(LXDError, match=expected):
+        instance.attach_pro_subscription()
+    assert len(mock_lxc.exec.mock_calls) == 3
+
+
+def test_attach_pro_subscription_already_attached(mock_lxc, instance):
+    mock_lxc.exec.return_value = mock.Mock(returncode=2)
+    instance.attach_pro_subscription()
+    assert len(mock_lxc.mock_calls) == 4
+
+
+def test_attach_pro_subscription_process_error(mock_lxc, instance):
+    mock_lxc.exec.side_effect = [
+        mock.Mock(returncode=0),
+        mock.Mock(returncode=127),
+        mock.Mock(returncode=0),
+    ]
+
+    expected = f"Failed to attach {instance.instance_name!r} to a Pro subscription."
+
+    with pytest.raises(LXDError, match=expected):
+        instance.attach_pro_subscription()
+    assert len(mock_lxc.exec.mock_calls) == 3
+
+
+def test_enable_pro_service_success(mock_lxc, instance):
+    mock_lxc.exec.side_effect = [
+        mock.Mock(
+            returncode=0,
+            stdout=b'{"result": "success", "data": {"attributes": {"enabled_services":[]}}}',
+        ),
+        mock.Mock(returncode=0),
+    ]
+    instance.enable_pro_service(["esm-apps"])
+
+    assert mock_lxc.mock_calls == [
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["pro", "api", "u.pro.status.enabled_services.v1"],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=None,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=[
+                "pro",
+                "api",
+                "u.pro.services.enable.v1",
+                "--data",
+                '{"service": "esm-apps"}',
+            ],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=None,
+        ),
+    ]
+
+
+def test_enable_pro_service_disables_others(mock_lxc, instance):
+    mock_lxc.exec.return_value = mock.Mock(
+        stdout=b'{"result": "success", "data": {"attributes": {"enabled_services":[{"name": "livepatch"}]}}}'
+    )
+    instance.enable_pro_service(["esm-apps"])
+
+    assert mock_lxc.mock_calls == [
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["pro", "api", "u.pro.status.enabled_services.v1"],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=None,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=[
+                "pro",
+                "api",
+                "u.pro.services.enable.v1",
+                "--data",
+                '{"service": "esm-apps"}',
+            ],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=None,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=[
+                "pro",
+                "api",
+                "u.pro.services.disable.v1",
+                "--data",
+                '{"service": "livepatch"}',
+            ],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=None,
+        ),
+    ]
+
+
+def test_enable_pro_service_failed(mock_lxc, instance):
+    mock_lxc.exec.side_effect = [
+        mock.Mock(
+            returncode=0,
+            stdout=b'{"result": "success", "data": {"attributes": {"enabled_services":[]}}}',
+        ),
+        subprocess.CalledProcessError(1, []),
+    ]
+
+    expected = (
+        f"Failed to enable Pro service 'invalid' on instance {instance.instance_name!r}"
+    )
+
+    with pytest.raises(LXDError, match=expected):
+        instance.enable_pro_service(["invalid"])
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.param("invalid json {[}", id="invalid-json"),
+        pytest.param("{'hello': 'world'}", id="invalid-data"),
+    ],
+)
+def test_enable_pro_service_invalid_data(mock_lxc, instance, data):
+    mock_lxc.exec.return_value = mock.Mock(returncode=0, stdout=data.encode())
+    expected = f"Failed to query enabled Pro services on {instance.instance_name!r}"
+    with pytest.raises(LXDError, match=expected):
+        instance.enable_pro_service(["esm-apps"])
+
+
+def test_install_pro_client_success(mock_lxc, instance):
+    mock_lxc.is_pro_installed.return_value = True
+
+    instance.install_pro_client()
+
+    assert mock_lxc.mock_calls == [
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["apt", "install", "-y", "ubuntu-advantage-tools"],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            capture_output=True,
+            check=True,
+            timeout=None,
+        ),
+        mock.call.is_pro_installed(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+        ),
+    ]
+
+
+def test_install_pro_client_success_fallback(mock_lxc, instance):
+    mock_lxc.exec.side_effect = [
+        mock.Mock(returncode=0),
+        mock.Mock(returncode=0, stdout=b"20.04\n"),
+        mock.Mock(returncode=0),
+    ]
+    mock_lxc.is_pro_installed.return_value = False
+    instance.install_pro_client()
+
+    assert mock_lxc.mock_calls == [
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["apt", "install", "-y", "ubuntu-advantage-tools"],
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            timeout=None,
+            cwd=None,
+            check=True,
+            capture_output=True,
+        ),
+        mock.call.is_pro_installed(
+            instance_name=instance.instance_name,
+            project=instance.project,
+            remote=instance.remote,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["lsb_release", "-rs"],
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            timeout=None,
+            cwd=None,
+            check=True,
+            capture_output=True,
+        ),
+        mock.call.exec(
+            instance_name=instance.instance_name,
+            command=["apt", "install", "-y", "ubuntu-advantage-tools=27.11.2~20.04.1"],
+            cwd=None,
+            project=instance.project,
+            remote=instance.remote,
+            runner=subprocess.run,
+            timeout=None,
+            check=True,
+            capture_output=True,
+        ),
+    ]
+
+
+def test_install_pro_client_process_error(mock_lxc, instance):
+    mock_lxc.exec.side_effect = subprocess.CalledProcessError(99, [])
+
+    expected = (
+        f"Failed to install Ubuntu Pro Client in instance {instance.instance_name!r}"
+    )
+    with pytest.raises(LXDError, match=expected):
+        instance.install_pro_client()
+
+
+def test_pro_services_getter_cached(mock_lxc, instance):
+    """Get cached Pro services."""
+    instance._pro_services = {"esm-apps", "esm-infra"}
+
+    result = instance.pro_services
+
+    assert result == {"esm-apps", "esm-infra"}
+    # No lxc calls are made when using cached value
+    assert mock_lxc.mock_calls == []
+
+
+def test_pro_services_getter(mock_lxc, instance, tmp_path):
+    """Get Pro services from the instance."""
+    yaml_file = tmp_path / "pro-services.yaml"
+    with yaml_file.open("w") as fh:
+        yaml.safe_dump({"esm-apps", "esm-infra"}, fh)
+
+    with mock.patch.object(instance, "temporarily_pull_file") as mock_pull:
+        mock_pull.return_value.__enter__.return_value = yaml_file
+        # first call pulls the file, the second uses the cache self._pro_services
+        result1 = instance.pro_services
+        result2 = instance.pro_services
+
+    assert result1 == result2 == {"esm-apps", "esm-infra"}
+    mock_pull.assert_called_once_with(
+        source=pathlib.PurePosixPath("/root/pro-services.yaml")
+    )
+
+
+def test_pro_services_getter_file_not_found(mock_lxc, instance):
+    """Return an empty set if Pro services file doesn't exist."""
+    with mock.patch.object(instance, "temporarily_pull_file") as mock_pull:
+        mock_pull.return_value.__enter__.side_effect = FileNotFoundError()
+
+        # call twice to verify caching
+        result1 = instance.pro_services
+        result2 = instance.pro_services
+
+    assert result1 == result2 == set()
+
+
+def test_pro_services_getter_empty_file(mock_lxc, instance, tmp_path):
+    """Return an empty set if Pro services file is empty."""
+    yaml_file = tmp_path / "pro-services.yaml"
+    with yaml_file.open("w") as fh:
+        yaml.safe_dump(None, fh)
+
+    with mock.patch.object(instance, "temporarily_pull_file") as mock_pull:
+        mock_pull.return_value.__enter__.return_value = yaml_file
+
+        # call twice to verify caching
+        result1 = instance.pro_services
+        result2 = instance.pro_services
+
+    assert result1 == result2 == set()
+
+
+def test_pro_services_getter_invalid_yaml(mock_lxc, instance, tmp_path):
+    """Error if Pro services file contains invalid YAML syntax."""
+    yaml_file = tmp_path / "pro-services.yaml"
+    with yaml_file.open("w") as fh:
+        fh.write("invalid: yaml: syntax: [unclosed")
+
+    with mock.patch.object(instance, "temporarily_pull_file") as mock_pull:
+        mock_pull.return_value.__enter__.return_value = yaml_file
+
+        with pytest.raises(errors.ProviderError) as exc_info:
+            _ = instance.pro_services
+
+    assert (
+        exc_info.value.brief == "Pro services file in instance contains invalid YAML."
+    )
+    assert (
+        exc_info.value.details
+        == "Unexpected data in /root/pro-services.yaml in instance."
+    )
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.param({"key": "value"}, id="not-a-list"),
+        pytest.param([1, 2, True], id="not-a-list-of-strings"),
+    ],
+)
+def test_pro_services_getter_invalid_data(data, mock_lxc, instance, tmp_path):
+    """Error if Pro services file is invalid."""
+    yaml_file = tmp_path / "pro-services.yaml"
+    with yaml_file.open("w") as fh:
+        yaml.safe_dump(data, fh)
+
+    with mock.patch.object(instance, "temporarily_pull_file") as mock_pull:
+        mock_pull.return_value.__enter__.return_value = yaml_file
+
+        with pytest.raises(errors.ProviderError) as exc_info:
+            _ = instance.pro_services
+
+    assert exc_info.value.brief == "Pro services file in instance is invalid."
+    assert (
+        exc_info.value.details
+        == "Unexpected data in /root/pro-services.yaml in instance."
+    )
+
+
+def test_pro_services_setter(mock_lxc, instance, tmp_path):
+    """Test setting Pro services."""
+    services = {"esm-apps", "esm-infra"}
+    yaml_file = tmp_path / "pro-services.yaml"
+    yaml_file.touch()
+
+    def mock_edit_file(source, pull_file):
+        class MockContext:
+            def __enter__(self):
+                return yaml_file
+
+            def __exit__(self, *args):
+                pass
+
+        return MockContext()
+
+    with mock.patch.object(instance, "edit_file", side_effect=mock_edit_file):
+        instance.pro_services = services
+
+    # check it was cached in memory
+    assert instance._pro_services == services
+    # verify content
+    assert set(yaml.safe_load(yaml_file.read_text())) == services
