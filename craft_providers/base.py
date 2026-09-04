@@ -1223,4 +1223,10 @@ class Base(ABC, Generic[_T_enum_co]):
             if verify_network and not cls._network_connected(executor=executor):
                 raise NetworkError from exc
             raise
+
+        if proc.stdout:
+            logger.debug("Command stdout: %s", proc.stdout)
+        if proc.stderr:
+            logger.debug("Command stderr: %s", proc.stderr)
+
         return proc
