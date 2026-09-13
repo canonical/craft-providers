@@ -1,0 +1,5 @@
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        canonical/starflow/*: ref-pin

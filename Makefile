@@ -108,6 +108,32 @@ else ifeq ($(OS),Darwin)
 	brew install multipass
 endif
 endif
+	@echo "Waiting for Multipass daemon to be ready..."
+	@attempts=60; \
+	while [ $$attempts -gt 0 ]; do \
+		if multipass version 2>/dev/null | grep -q "^multipassd"; then \
+			exit 0; \
+		fi; \
+		attempts=$$((attempts - 1)); \
+		sleep 2; \
+	done; \
+	echo "Timed out waiting for Multipass to become ready." >&2; \
+	multipass version >&2 || true; \
+	echo "=== multipass diagnostics ===" >&2; \
+	if [ "$(OS)" = "Linux" ]; then \
+		echo "--- snap services multipass ---" >&2; \
+		snap services multipass >&2 || true; \
+		echo "--- systemctl status snap.multipass.multipassd.service ---" >&2; \
+		sudo systemctl --no-pager --full status snap.multipass.multipassd.service >&2 || true; \
+		echo "--- journalctl (last 200 lines) ---" >&2; \
+		sudo journalctl --no-pager -n 200 -u snap.multipass.multipassd.service >&2 || true; \
+		echo "--- snap logs multipass (last 200 lines) ---" >&2; \
+		sudo snap logs multipass -n 200 >&2 || true; \
+	elif [ "$(OS)" = "Darwin" ]; then \
+		echo "--- multipass service list ---" >&2; \
+		multipass list >&2 || true; \
+	fi; \
+	exit 1
 
 .PHONY: setup-tics
 setup-tics: install-uv install-build-deps install-multipass ##- Set up a testing environment for Tiobe TICS
