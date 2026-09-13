@@ -82,3 +82,39 @@ jobs:
         run: |
           make setup-tests
           make test-slow
+  linux-multipass:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04]
+        channel: [latest/candidate, latest/edge]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Pristine Ubuntu
+        if: ${{ runner.os == 'Linux' && runner.environment == 'github-hosted' }}
+        uses: lengau/pristine-ubuntu-action@v0
+      - name: Install Multipass
+        run: |
+          sudo snap install multipass --channel=${{ matrix.channel }}
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Set up runner
+        uses: canonical/starflow/setup-python-runner@main
+      - name: Set up dependencies
+        run: |
+          make -j setup-tests
+      - name: Enable ssh access
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ inputs.enable_ssh_access }}
+        with:
+          limit-access-to-actor: true
+      - name: Run multipass tests
+        env:
+          UV_PYTHON: ${{ matrix.python }}
+          CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL: 1
+          CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL: 1
+          PYTEST_ADDOPTS: "--no-header -vv -rN -m multipass_instance"
+        run: |
+          make test
