@@ -1177,6 +1177,25 @@ def test_update_setup_status(fake_executor, mock_load, status):
     ]
 
 
+def test_update_setup_status_initializes_compatibility_tag(fake_executor, mock_load):
+    """New instance configs should be seeded with the compatibility tag."""
+    mock_load.return_value = None
+
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+
+    base_config._update_setup_status(executor=fake_executor, status=False)
+
+    assert fake_executor.records_of_push_file_io == [
+        {
+            "content": b"compatibility_tag: buildd-base-v7\nsetup: false\n",
+            "destination": "/etc/craft-instance.conf",
+            "file_mode": "0644",
+            "group": "root",
+            "user": "root",
+        }
+    ]
+
+
 def test_ensure_config_compatible_validation_error(
     fake_executor, mock_load, fake_validation_error
 ):
@@ -1190,13 +1209,30 @@ def test_ensure_config_compatible_validation_error(
         base_config._ensure_instance_config_compatible(executor=fake_executor)
 
 
-def test_ensure_config_compatible_empty_config_returns_none(fake_executor, mock_load):
+def test_ensure_config_compatible_empty_config(fake_executor, mock_load):
     mock_load.return_value = None
 
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
 
-    assert (
-        base_config._ensure_instance_config_compatible(executor=fake_executor) is None
+    with pytest.raises(BaseCompatibilityError) as raised:
+        base_config._ensure_instance_config_compatible(executor=fake_executor)
+
+    assert raised.value == BaseCompatibilityError("instance config is empty")
+
+
+@pytest.mark.parametrize("compatibility_tag", [None, ""])
+def test_ensure_config_compatible_missing_tag(
+    compatibility_tag, fake_executor, mock_load
+):
+    mock_load.return_value = InstanceConfiguration(compatibility_tag=compatibility_tag)
+
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+
+    with pytest.raises(BaseCompatibilityError) as raised:
+        base_config._ensure_instance_config_compatible(executor=fake_executor)
+
+    assert raised.value == BaseCompatibilityError(
+        "instance config has no compatibility tag"
     )
 
 
@@ -1223,18 +1259,6 @@ def test_ensure_setup_completed_validation_error(
         BaseCompatibilityError, match="failed to parse instance configuration file"
     ):
         base_config._ensure_setup_completed(executor=fake_executor)
-
-
-def test_ensure_setup_completed_file_not_found_error(fake_executor, mock_load):
-    """Raise an error when the instance config cannot be loaded."""
-    mock_load.side_effect = FileNotFoundError
-
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
-
-    with pytest.raises(BaseCompatibilityError) as raised:
-        base_config._ensure_setup_completed(executor=fake_executor)
-
-    assert raised.value == BaseCompatibilityError("failed to find instance config file")
 
 
 def test_ensure_setup_completed_empty_config(fake_executor, mock_load):
@@ -1375,6 +1399,47 @@ def test_warmup_bad_instance_config(fake_process, fake_executor, mock_load):
 
     with pytest.raises(BaseCompatibilityError):
         base_config.warmup(executor=fake_executor)
+
+
+def test_setup_bad_instance_config_preserves_existing_tag(
+    fake_process, fake_executor, mock_load
+):
+    mock_load.return_value = InstanceConfiguration(
+        compatibility_tag="invalid-tag", setup=True
+    )
+    alias = ubuntu.BuilddBaseAlias.JAMMY
+    base_config = ubuntu.BuilddBase(
+        alias=alias,
+        environment=ubuntu.BuilddBase.default_command_environment(),
+    )
+
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "cat", "/etc/os-release"],
+        stdout=dedent(
+            f"""\
+            NAME="Ubuntu"
+            ID=ubuntu
+            ID_LIKE=debian
+            VERSION_ID="{alias.value}"
+            """
+        ),
+    )
+
+    with pytest.raises(BaseCompatibilityError) as raised:
+        base_config.setup(executor=fake_executor)
+
+    assert raised.value == BaseCompatibilityError(
+        "Expected image compatibility tag 'buildd-base-v7', found 'invalid-tag'"
+    )
+    assert fake_executor.records_of_push_file_io == [
+        {
+            "content": b"compatibility_tag: invalid-tag\nsetup: false\n",
+            "destination": "/etc/craft-instance.conf",
+            "file_mode": "0644",
+            "group": "root",
+            "user": "root",
+        }
+    ]
 
 
 @pytest.mark.parametrize("setup", [False, None])
