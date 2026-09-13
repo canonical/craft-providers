@@ -706,14 +706,18 @@ def test_mount_cache_dirs(fake_process, fake_executor, cache_path: pathlib.Path,
     fake_process.register(
         [*DEFAULT_FAKE_CMD, "mkdir", "-p", "/root/.cache/pip"],
     )
+    fake_process.register(
+        [*DEFAULT_FAKE_CMD, "mkdir", "-p", "/root/.cache/uv"],
+    )
 
     base._mount_shared_cache_dirs(fake_executor)
 
     expected_mounts = [
         {
-            "host_source": host_cache_dir / "pip",
-            "target": user_cache_dir / "pip",
-        },
+            "host_source": host_cache_dir / tool,
+            "target": user_cache_dir / tool,
+        }
+        for tool in ("pip", "uv")
     ]
     assert fake_executor.records_of_mount == expected_mounts
 
