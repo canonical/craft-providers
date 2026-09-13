@@ -7,6 +7,10 @@ on:
     paths:
       - ".github/workflows/tests-weekly.yaml"
 
+  push:
+    paths:
+      - .github/workflows/tests-weekly.yaml
+
   # Allows triggering the workflow manually from the Actions tab
   workflow_dispatch:
     inputs:
@@ -82,3 +86,66 @@ jobs:
         run: |
           make setup-tests
           make test-slow
+
+  integration-linux-lxd-distros:
+    strategy:
+      fail-fast: false
+      matrix:
+        lxd-image:
+          - almalinux/9
+          # - amazonlinux/2023
+          - centos/9-Stream
+          - debian/12
+          - debian/13
+          - fedora/42
+          - mint/virginia
+          - mint/xia
+          - opensuse/tumbleweed
+          - rockylinux/9
+    runs-on: ubuntu-latest
+    steps:
+      - uses: canonical/setup-lxd@v1
+      - uses: lengau/pristine-ubuntu-action@v0
+      - name: Launch ${{ matrix.lxd-image }} container
+        run: |
+          lxc launch images:${{ matrix.lxd-image }} test-runner -c security.nesting=true
+      - name: Install requirements in container
+        run: |
+          lxc exec test-runner -- ln -s /var/lib/snapd/snap /snap
+          # Non Debian like distros need longer to get network for some reason
+          sleep 10
+
+          # centos-based distros need EPEL for snapd.
+          if [[ ${{ matrix.lxd-image }} =~ almalinux* ]] || [[ ${{ matrix.lxd-image }} =~ centos* ]] || [[ ${{ matrix.lxd-image }} =~ rockylinux* ]]; then
+            lxc exec test-runner -- dnf install -y epel-release
+            lxc exec test-runner -- dnf upgrade -y
+          fi
+
+          if [[ ${{ matrix.lxd-image }} =~ amazonlinux* ]]; then
+            dnf install wget
+            wget -O /etc/yum.repos.d/snapd.repo https://bboozzoo.github.io/snapd-amazon-linux/al2023/snapd.repo
+          fi
+
+          # OpenSUSE tumbleweed
+          if [[ ${{ matrix.lxd-image }} == 'opensuse/tumbleweed' ]]; then
+              lxc exec test-runner -- zypper addrepo --refresh https://download.opensuse.org/repositories/system:/snappy/openSUSE_Tumbleweed snappy
+              lxc exec test-runner -- zypper --gpg-auto-import-keys refresh
+              lxc exec test-runner -- zypper install snapd squashfuse fuse
+              lxc exec test-runner -- systemctl enable --now snapd.apparmor
+          fi
+
+          # Install snapd first so it has time to warm up while we're installing other stuff
+          lxc exec test-runner -- bash -c 'apt-get --yes install snapd fuse squashfuse || dnf install -y snapd fuse squashfuse || true'
+
+          lxc exec test-runner -- bash -c 'apt-get --yes install git make build-essential libffi-dev || dnf install -y git make libffi-devel gcc cargo python3-devel || zypper install -y git make gcc libffi-devel python3-devel'
+
+          lxc exec test-runner -- snap wait system seed.loaded
+      - name: Clone repository
+        run: |
+          lxc exec test-runner -- git clone https://github.com/canonical/craft-providers
+      - name: Set up tests
+        run: |
+          lxc exec test-runner --cwd /root/craft-providers --env CI=1 -- make setup-tests
+      - name: Run tests
+        run: |
+          lxc exec test-runner --cwd /root/craft-providers --env CI=1 -- make test PYTEST_ADDOPTS='-vv -m lxd_instance'
