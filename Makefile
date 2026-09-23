@@ -108,8 +108,8 @@ else ifeq ($(OS),Darwin)
 	brew install multipass
 endif
 endif
-	@echo "Waiting for Multipass daemon to be ready..."
-	@attempts=60; \
+	-@echo "Waiting for Multipass daemon to be ready..."
+	-@attempts=60; \
 	while [ $$attempts -gt 0 ]; do \
 		if multipass version 2>/dev/null | grep -q "^multipassd"; then \
 			exit 0; \
@@ -136,6 +136,7 @@ endif
 	exit 1
 
 .PHONY: setup-tics
+.PHONY: test-coverage
 setup-tics: install-uv install-build-deps install-multipass ##- Set up a testing environment for Tiobe TICS
 	uv venv
 	uv sync $(UV_TEST_GROUPS) $(UV_LINT_GROUPS) $(UV_TICS_GROUPS)
@@ -149,4 +150,5 @@ endif
 # Other multipass_instance tests (e.g. test_launch.py) pass fine, but until
 # test_multipass_instance.py is fixed, exclude the marker so coverage finishes
 # in a reasonable time, matching how qa.yaml already filters it out elsewhere.
-test-coverage: export PYTEST_ADDOPTS ?= -m 'not multipass_instance'
+test-coverage:
+	export PYTEST_ADDOPTS ?= -m 'not multipass_instance'
