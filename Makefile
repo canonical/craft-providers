@@ -118,7 +118,7 @@ endif
 		sleep 2; \
 	done; \
 	echo "Timed out waiting for Multipass to become ready." >&2; \
-	multipass version >&2 || true; \
+	-multipass version >&2; \
 	echo "=== multipass diagnostics ===" >&2; \
 	if [ "$(OS)" = "Linux" ]; then \
 		echo "--- snap services multipass ---" >&2; \
