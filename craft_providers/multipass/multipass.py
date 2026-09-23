@@ -74,8 +74,7 @@ class Multipass:
         command = [str(self.multipass_path), *command]
 
         logger.debug("Executing on host: %s", shlex.join(command))
-        # Mypy detects this correctly, but pyright thinks the return type is unknown.
-        return subprocess.run(  # pyright: ignore[reportUnknownVariableType]
+        return subprocess.run(
             command,
             check=True,
             capture_output=True,
@@ -110,10 +109,9 @@ class Multipass:
         instance_name: str,
         timeout: float | None = None,
         check: bool = False,
-        # Mypy and ty don't have good answers here re: what to do about this:
-        # https://github.com/python/mypy/issues/3737
+        # ty doesn't have a good answer here re: what to do about this:
         # https://github.com/astral-sh/ty/issues/592
-        runner: Callable[..., T] = subprocess.run,  # type: ignore[assignment]  # ty: ignore[invalid-parameter-default]
+        runner: Callable[..., T] = subprocess.run,  # ty: ignore[invalid-parameter-default]
         **kwargs: Any,
     ) -> T:
         """Execute command in instance_name with specified runner.

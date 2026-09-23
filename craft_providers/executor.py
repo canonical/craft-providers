@@ -441,6 +441,8 @@ class Executor(ABC):
         :param file_mode: File mode string (e.g. '0644').
         :param group: File owner group.
         :param user: File owner user.
+
+        :raises ProviderError: On error creating or replacing the file.
         """
 
     @abstractmethod
