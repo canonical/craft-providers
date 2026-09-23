@@ -118,20 +118,21 @@ endif
 		sleep 2; \
 	done; \
 	echo "Timed out waiting for Multipass to become ready." >&2; \
-	-multipass version >&2; \
+	set +e; \
+	multipass version >&2; \
 	echo "=== multipass diagnostics ===" >&2; \
 	if [ "$(OS)" = "Linux" ]; then \
 		echo "--- snap services multipass ---" >&2; \
-		snap services multipass >&2 || true; \
+		snap services multipass >&2; \
 		echo "--- systemctl status snap.multipass.multipassd.service ---" >&2; \
-		sudo systemctl --no-pager --full status snap.multipass.multipassd.service >&2 || true; \
+		sudo systemctl --no-pager --full status snap.multipass.multipassd.service >&2; \
 		echo "--- journalctl (last 200 lines) ---" >&2; \
-		sudo journalctl --no-pager -n 200 -u snap.multipass.multipassd.service >&2 || true; \
+		sudo journalctl --no-pager -n 200 -u snap.multipass.multipassd.service >&2; \
 		echo "--- snap logs multipass (last 200 lines) ---" >&2; \
-		sudo snap logs multipass -n 200 >&2 || true; \
+		sudo snap logs multipass -n 200 >&2; \
 	elif [ "$(OS)" = "Darwin" ]; then \
 		echo "--- multipass service list ---" >&2; \
-		multipass list >&2 || true; \
+		multipass list >&2; \
 	fi; \
 	exit 1
 
