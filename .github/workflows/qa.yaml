@@ -13,11 +13,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
 jobs:
   lint:
-    permissions:
-      contents: read
-      pull-requests: read
     uses: canonical/starflow/.github/workflows/lint-python.yaml@main
   test-basic:
     uses: canonical/starflow/.github/workflows/test-python.yaml@main
