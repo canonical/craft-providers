@@ -11,5 +11,5 @@ permissions:
 jobs:
   check-update:
     # Pin the workflow logic to a release tag; content version remains controlled by .github/.copilot-collections.yaml
-    uses: canonical/copilot-collections/.github/workflows/auto_update_collections.yaml@v0.19.0
+uses: canonical/copilot-collections/.github/workflows/auto_update_collections.yaml@a1d5b76818fc16a7df2a2b1c6eb26a226da9eed2
     secrets: inherit
