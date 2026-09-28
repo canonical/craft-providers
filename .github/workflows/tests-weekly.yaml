@@ -35,7 +35,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up runner
-        uses: canonical/starflow/setup-python-runner@main
+        uses: canonical/starflow/setup-python-runner@4a0be7300b62f45727b8bb975716027af089aa18
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
@@ -67,7 +67,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up runner
-        uses: canonical/starflow/setup-python-runner@main
+        uses: canonical/starflow/setup-python-runner@4a0be7300b62f45727b8bb975716027af089aa18
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}

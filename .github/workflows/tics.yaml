@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   TICS:
-    uses: canonical/starflow/.github/workflows/tics.yaml@main
+    uses: canonical/starflow/.github/workflows/tics.yaml@4a0be7300b62f45727b8bb975716027af089aa18
     with:
       project: "craft-providers"
     secrets: inherit
