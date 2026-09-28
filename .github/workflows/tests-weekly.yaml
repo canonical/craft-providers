@@ -16,6 +16,9 @@ on:
         required: false
         default: false
 
+permissions:
+  contents: read
+
 jobs:
   lxd:
     strategy:
@@ -34,9 +37,9 @@ jobs:
     steps:
       - name: Pristine Ubuntu
         if: ${{ runner.os == 'Linux' && runner.environment == 'github-hosted' }}
-        uses: lengau/pristine-ubuntu-action@v0
+        uses: lengau/pristine-ubuntu-action@d78c7fd1394155137d9ea8190ca3fbbd2e5fff9a # v0.2.0
       - name: Set up runner
-        uses: canonical/starflow/setup-python-runner@main
+        uses: canonical/starflow/setup-python-runner@4a0be7300b62f45727b8bb975716027af089aa18 # main
         with:
           lxd-channel: ${{ matrix.lxd-channel }}
           python-version: ${{ matrix.python-version }}
