@@ -1668,6 +1668,8 @@ def test_disable_and_wait_for_snap_refresh_retry_exhausted(fake_process, fake_ex
     ):
         base_config._disable_and_wait_for_snap_refresh(executor=fake_executor)
 
+    assert len(fake_process.calls) == 6
+
 
 @pytest.mark.usefixtures("instant_sleep")
 def test_disable_and_wait_for_snap_refresh_non_transient_error(

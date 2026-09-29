@@ -625,7 +625,7 @@ class Base(ABC, Generic[_T_enum_co]):
                 break  # Success
             except subprocess.CalledProcessError as error:
                 stderr = (
-                    error.stderr.decode()
+                    error.stderr.decode(errors="replace")
                     if isinstance(error.stderr, bytes)
                     else (error.stderr or "")
                 )
