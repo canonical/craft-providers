@@ -11,11 +11,11 @@
 # https://www.gnu.org/software/make/manual/html_node/One-Shell.html
 shell_cmd[0]="${SHELL}"
 for i in "${@}"; do
-shell_cmd+=("${i//
+  shell_cmd+=("${i//
 @/
 }")
 done
 
 sudo --preserve-env --preserve-env=PATH -- \
   sudo --preserve-env --preserve-env=PATH --user "${USER}" --group lxd -- env -- \
-    "${shell_cmd[@]}"
+  "${shell_cmd[@]}"
