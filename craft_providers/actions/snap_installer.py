@@ -44,7 +44,7 @@ from craft_providers.models import SnapdResponse, SnapInfo
 from craft_providers.util import snap_cmd, temp_paths
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Generator
 
     from craft_providers.executor import Executor
 
@@ -214,7 +214,7 @@ def _get_snap_revision_ensuring_source(
 
 
 @contextlib.contextmanager
-def _get_host_snap(snap_name: str) -> Iterator[pathlib.Path]:
+def _get_host_snap(snap_name: str) -> Generator[pathlib.Path, None, None]:
     """Get snap installed on host containing the config.
 
     Snapd provides an API to fetch a snap. First use that to fetch a snap.
@@ -259,7 +259,7 @@ def _get_assertion(query: list[str]) -> bytes:
 @contextlib.contextmanager
 def _get_assertions_file(
     snap_name: str, snap_id: str, snap_revision: str, snap_publisher_id: str
-) -> Iterator[pathlib.Path]:
+) -> Generator[pathlib.Path, None, None]:
     """Get an assertion file for a snap.
 
     :param snap_name: Name of snap to inject
