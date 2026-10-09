@@ -296,7 +296,7 @@ class LXDInstance(Executor):
         """
         return cast(
             bool,
-            self._client.instances.exists(self.instance_name),  # ty: ignore[unresolved-attribute]
+            self._client.instances.exists(self.instance_name),  # pyright: ignore[reportAttributeAccessIssue]  # ty: ignore[unresolved-attribute]
         )
 
     def _get_disk_devices(self) -> dict[str, Any]:
