@@ -1285,6 +1285,8 @@ class LXC:
         start_time = time.monotonic()
 
         # 20 * 3 seconds = 1 minute no change in timer
+        # The timer updates every 30 seconds, so a change within this window
+        # indicates the other process is still active.
         timer_queue: deque[str] = deque(["-2", "-1"], maxlen=20)
 
         # retry until the instance's timer hasn't changed for the last 20 iterations
