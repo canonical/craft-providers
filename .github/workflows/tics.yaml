@@ -14,7 +14,10 @@ concurrency:
 
 jobs:
   TICS:
+    permissions:
+      contents: read
     uses: canonical/starflow/.github/workflows/tics.yaml@main
     with:
       project: "craft-providers"
-    secrets: inherit
+    secrets:
+      TICSAUTHTOKEN: ${{ secrets.TICSAUTHTOKEN }}
