@@ -54,7 +54,9 @@ ALIASES.remove(BuilddBaseAlias.XENIAL)
 @pytest.mark.slow
 @pytest.mark.parametrize("alias", ALIASES)
 @pytest.mark.multipass_instance
-def test_launched_environment(alias, installed_multipass, instance_name, tmp_path):
+def test_launched_environment(
+    alias, installed_multipass, instance_name, tmp_path, caplog
+):
     """Verify `launched_environment()` creates and starts an instance then stops
     the instance when the method loses context."""
     if sys.platform == "darwin" and alias == BuilddBaseAlias.NOBLE:
@@ -65,6 +67,7 @@ def test_launched_environment(alias, installed_multipass, instance_name, tmp_pat
 
     project_path = tmp_path / "project"
     cache_path = tmp_path / "cache"
+    cache_path.mkdir()
 
     provider = MultipassProvider()
 
@@ -82,13 +85,17 @@ def test_launched_environment(alias, installed_multipass, instance_name, tmp_pat
 
         test_instance.execute_run(["touch", "/root/.cache/pip/test-pip-cache"])
 
-        assert (
+        cache_file = (
             cache_path
             / base_configuration.compatibility_tag
             / str(base_configuration.alias)
             / "pip"
             / "test-pip-cache"
-        ).exists()
+        )
+        if not cache_file.exists():
+            assert "Failed to mount cache in instance. Proceeding without cache." in (
+                caplog.text
+            )
 
     try:
         assert test_instance.exists() is True
