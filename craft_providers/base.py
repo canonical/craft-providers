@@ -846,22 +846,24 @@ class Base(ABC, Generic[_T_enum_co]):
         )
         guest_base_cache_path = pathlib.Path(guest_cache_proc.stdout)
 
-        # PIP cache
-        host_pip_cache_path = host_base_cache_path / "pip"
-        host_pip_cache_path.mkdir(parents=True, exist_ok=True)
+        for tool in ("pip", "uv"):
+            host_tool_cache_path = host_base_cache_path / tool
+            host_tool_cache_path.mkdir(parents=True, exist_ok=True)
 
-        guest_pip_cache_path = guest_base_cache_path / "pip"
-        executor.execute_run(
-            ["mkdir", "-p", guest_pip_cache_path.as_posix()],
-        )
-
-        try:
-            executor.mount(host_source=host_pip_cache_path, target=guest_pip_cache_path)
-        except ProviderError as exc:
-            logger.warning(
-                "Failed to mount cache in instance. Proceeding without cache."
+            guest_tool_cache_path = guest_base_cache_path / tool
+            executor.execute_run(
+                ["mkdir", "-p", guest_tool_cache_path.as_posix()],
             )
-            logger.debug(exc)
+
+            try:
+                executor.mount(
+                    host_source=host_tool_cache_path, target=guest_tool_cache_path
+                )
+            except ProviderError as exc:
+                logger.warning(
+                    "Failed to mount cache in instance. Proceeding without cache."
+                )
+                logger.debug(exc)
 
     def _pre_setup_packages(self, executor: Executor) -> None:
         """Do anything before setting up the packages.
