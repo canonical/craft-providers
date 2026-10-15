@@ -110,7 +110,8 @@ def ensure_guest_compatible(
         host_base_alias = BuilddBaseAlias(host_os_release.get("VERSION_ID"))
     except ValueError as err:
         raise BaseConfigurationError(
-            f"Unsupported Ubuntu version for build base: {host_os_release.get('VERSION_ID')}"
+            "Unsupported Ubuntu version for build base: "
+            f"{host_os_release.get('VERSION_ID') or '<unknown>'}"
         ) from err
 
     guest_os_release = base_configuration.get_os_release(executor=instance)
@@ -119,7 +120,8 @@ def ensure_guest_compatible(
         guest_base_alias = BuilddBaseAlias(guest_os_release.get("VERSION_ID"))
     except ValueError as err:
         raise BaseConfigurationError(
-            f"Unsupported Ubuntu version for build base: {guest_os_release.get('VERSION_ID')}"
+            "Unsupported Ubuntu version for build base: "
+            f"{guest_os_release.get('VERSION_ID') or '<unknown>'}"
         ) from err
 
     # Strip off anything after the first space - sometimes "LTS" is appended
