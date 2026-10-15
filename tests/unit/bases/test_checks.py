@@ -185,6 +185,30 @@ def test_ensure_guest_compatible_invalid_ubuntu_host(
         ensure_guest_compatible(guest_base, fake_executor, lxd_version)
 
 
+def test_ensure_guest_compatible_missing_host_version_id(
+    fake_executor,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Check that a missing host VERSION_ID raises a typed error."""
+    guest_base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    guest_base._retry_wait = 0.01
+    guest_base._timeout_simple = 1
+
+    # Host os-release has no VERSION_ID key at all.
+    monkeypatch.setattr(checks, "parse_os_release", lambda: {"ID": "ubuntu"})
+
+    # Kernel version doesn't matter for this test, but setting it allows the test to
+    # pass on windows
+    with (
+        patch("platform.release", return_value="4.99"),
+        pytest.raises(
+            BaseConfigurationError,
+            match="Unsupported Ubuntu version for build base: <unknown>",
+        ),
+    ):
+        ensure_guest_compatible(guest_base, fake_executor, "0.0.0")
+
+
 def test_ensure_guest_compatible_unknown_guest_ubuntu(
     mocker, fake_executor, fake_process
 ):
