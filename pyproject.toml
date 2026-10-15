@@ -97,7 +97,12 @@ tics = ["flake8", "pylint"]
 
 [tool.uv]
 constraint-dependencies = [
-    # Basic constraints to allow --resolution=lowest
+    # Basic constraints to allow --resolution=lowest.
+    #
+    # Libraries should avoid CVEs in direct and transitive dependencies by setting a
+    # minimum version in this section.
+    # This allows standalone builds to avoid CVEs while not placing undue constraints on
+    # downstream users of the library.
     "cffi>=1.15",
     "iniconfig>=1.1.0",
     "httplib2>=0.20.0",
@@ -117,7 +122,7 @@ constraint-dependencies = [
     "sphinx-basic-ng>=1.0.0b1",
     "starlette>=1.0.1",
     "tornado>=4.0",
-    "urllib3>=2.0",
+    "urllib3>=2.8.0",
     "webencodings>=0.4.0",
     "wheel>=0.38",
 ]
