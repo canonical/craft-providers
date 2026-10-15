@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 from craft_providers.bases.ubuntu import BuilddBase, BuilddBaseAlias
 from craft_providers.errors import (
+    BaseConfigurationError,
     ProviderError,
 )
 from craft_providers.util.os_release import parse_os_release
@@ -107,17 +108,19 @@ def ensure_guest_compatible(
 
     try:
         host_base_alias = BuilddBaseAlias(host_os_release.get("VERSION_ID"))
-    except ValueError:  # Unknown Ubuntu version, don't check.
-        logger.warning("Unknown host Ubuntu version, not checking guest compatibility")
-        return
+    except ValueError as err:
+        raise BaseConfigurationError(
+            f"Unsupported Ubuntu version for build base: {host_os_release.get('VERSION_ID')}"
+        ) from err
 
     guest_os_release = base_configuration.get_os_release(executor=instance)
 
     try:
         guest_base_alias = BuilddBaseAlias(guest_os_release.get("VERSION_ID"))
-    except ValueError:
-        logger.warning("Unknown guest Ubuntu version, not checking guest compatibility")
-        return
+    except ValueError as err:
+        raise BaseConfigurationError(
+            f"Unsupported Ubuntu version for build base: {guest_os_release.get('VERSION_ID')}"
+        ) from err
 
     # Strip off anything after the first space - sometimes "LTS" is appended
     lxd_version_split = lxd_version.strip().split(" ")[0].split(".")
