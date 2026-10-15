@@ -39,7 +39,7 @@ jobs:
         if: ${{ runner.os == 'Linux' && runner.environment == 'github-hosted' }}
         uses: lengau/pristine-ubuntu-action@d78c7fd1394155137d9ea8190ca3fbbd2e5fff9a # v0.2.0
       - name: Set up runner
-        uses: canonical/starflow/setup-python-runner@4a0be7300b62f45727b8bb975716027af089aa18 # main
+        uses: canonical/starflow/setup-python-runner@work/testing-skill # main
         with:
           lxd-channel: ${{ matrix.lxd-channel }}
           python-version: ${{ matrix.python-version }}
@@ -67,7 +67,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up runner
-        uses: canonical/starflow/setup-python-runner@main
+        uses: canonical/starflow/setup-python-runner@work/testing-skill
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
@@ -99,7 +99,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up runner
-        uses: canonical/starflow/setup-python-runner@main
+        uses: canonical/starflow/setup-python-runner@work/testing-skill
       - name: Enable ssh access
         uses: mxschmitt/action-tmate@v3
         if: ${{ inputs.enable_ssh_access }}
