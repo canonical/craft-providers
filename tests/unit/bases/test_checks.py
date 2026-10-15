@@ -21,7 +21,7 @@ from unittest.mock import patch
 import pytest
 import pytest_mock
 from craft_providers.bases import centos, checks, ensure_guest_compatible, ubuntu
-from craft_providers.errors import ProviderError
+from craft_providers.errors import BaseConfigurationError, ProviderError
 from craft_providers.util import os_release
 
 from tests.unit.conftest import DEFAULT_FAKE_CMD
@@ -160,7 +160,7 @@ def test_ensure_guest_compatible_invalid_ubuntu_host(
     base_alias,
     monkeypatch: pytest.MonkeyPatch,
 ):
-    """Check that unknown host Ubuntu versions are handled gracefully."""
+    """Check that unknown host Ubuntu versions raise a typed error."""
     guest_base = ubuntu.BuilddBase(alias=base_alias)
     guest_base._retry_wait = 0.01
     guest_base._timeout_simple = 1
@@ -175,14 +175,20 @@ def test_ensure_guest_compatible_invalid_ubuntu_host(
 
     # Kernel version doesn't matter for this test, but setting it allows the test to
     # pass on windows
-    with patch("platform.release", return_value="4.99"):
+    with (
+        patch("platform.release", return_value="4.99"),
+        pytest.raises(
+            BaseConfigurationError,
+            match="Unsupported Ubuntu version for build base: 99999.10",
+        ),
+    ):
         ensure_guest_compatible(guest_base, fake_executor, lxd_version)
 
 
 def test_ensure_guest_compatible_unknown_guest_ubuntu(
     mocker, fake_executor, fake_process
 ):
-    """Check that unknown guest Ubuntu versions are handled gracefully.
+    """Check that unknown guest Ubuntu versions raise a typed error.
 
     This will happen whenever the `devel` alias points to a new release
     that hasn't yet been added to craft-providers.
@@ -207,7 +213,11 @@ def test_ensure_guest_compatible_unknown_guest_ubuntu(
 
     mocker.patch.object(os_release.Path, "open", fake_open)
 
-    ensure_guest_compatible(guest_base, fake_executor, "6.0")
+    with pytest.raises(
+        BaseConfigurationError,
+        match="Unsupported Ubuntu version for build base: 99999.10",
+    ):
+        ensure_guest_compatible(guest_base, fake_executor, "6.0")
 
 
 @pytest.mark.parametrize(
