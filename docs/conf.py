@@ -29,7 +29,7 @@ author = "Canonical Group Ltd"
 
 # Format the product name and version for the TOC and HTML title
 # TODO: When the product begins versioning, uncomment this block.
-# release = <starcraft>.__version__
+# release = <craft_providers>.__version__
 # if ".post" in release:
 #     release = "dev"
 # else:
@@ -38,10 +38,6 @@ author = "Canonical Group Ltd"
 
 # The year in the copyright statement
 copyright = f"2021-{datetime.date.today().year}"
-
-# Sidebar documentation title
-# To disable the title, set it to an empty string.
-html_title = project + " documentation"
 
 # Documentation website URL
 ogp_site_url = "https://canonical-craft-providers.readthedocs-hosted.com/"
@@ -156,8 +152,8 @@ rediraffe_dir_only = True
 # <first sentence of home page>".
 llms_txt_description = textwrap.dedent(
     """\
-    This is the documentation for Starbase, a template repository for setting up
-    and maintaining Starcraft projects.
+    This is the documentation for Craft Providers, a Python package for managing
+    software builds in containers on behalf of tools using the Craft Parts framework.
     """
 )
 
