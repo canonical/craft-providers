@@ -1,6 +1,17 @@
 Changelog
 *********
 
+.. _release-3.8.0:
+
+3.8.0 (2026-10-19)
+------------------
+
+New features:
+
+- Mark Ubuntu 26.10 (Stonking) as stable: images now use the Release remotes instead of the Daily ones.
+
+For a complete list of commits, check out the `3.8.0`_ release on GitHub.
+
 .. _release-3.7.1:
 
 3.7.1 (2026-07-02)
@@ -927,3 +938,4 @@ For a complete list of commits, check out the `1.0.4`_ release on GitHub.
 .. _3.6.0: https://github.com/canonical/craft-providers/releases/tag/3.6.0
 .. _3.7.0: https://github.com/canonical/craft-providers/releases/tag/3.7.0
 .. _3.7.1: https://github.com/canonical/craft-providers/releases/tag/3.7.1
+.. _3.8.0: https://github.com/canonical/craft-providers/releases/tag/3.8.0
