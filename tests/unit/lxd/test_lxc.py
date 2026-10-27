@@ -2424,6 +2424,173 @@ def test_restart_error(fake_process):
         )
 
 
+FORKSTART_STDERR = (
+    b"Error: Failed to run: /snap/lxd/current/sbin/lxd forkstart "
+    b"test-project_test-instance /var/snap/lxd/common/lxd/containers "
+    b"/var/snap/lxd/common/lxd/logs/test-project_test-instance/lxc.conf: "
+    b"exit status 1"
+)
+
+
+@pytest.fixture
+def fake_clock(mocker):
+    """Patch time so that sleeping advances a fake monotonic clock.
+
+    :returns: The mock for time.sleep.
+    """
+    now = [0.0]
+
+    def _sleep(seconds):
+        now[0] += seconds
+
+    mocker.patch("time.monotonic", side_effect=lambda: now[0])
+    return mocker.patch("time.sleep", side_effect=_sleep)
+
+
+def _register(fake_process, verb, *, returncode=0, stdout=None, stderr=None):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            verb,
+            "test-remote:test-instance",
+        ],
+        returncode=returncode,
+        stdout=stdout,
+        stderr=stderr,
+    )
+
+
+def _register_info(fake_process, status):
+    _register(fake_process, "info", stdout=f"Name: test-instance\nStatus: {status}\n")
+
+
+def _verbs(fake_process):
+    """Get the lxc subcommand of each call, e.g. ["start", "info", "start"]."""
+    return [command[3] for command in fake_process.calls]
+
+
+@pytest.mark.parametrize("action", ["start", "restart"])
+def test_start_retry_forkstart_then_success(fake_process, fake_clock, action):
+    _register(fake_process, action, returncode=1, stderr=FORKSTART_STDERR)
+    _register_info(fake_process, "STOPPED")
+    _register(fake_process, "start")
+
+    getattr(LXC(), action)(
+        instance_name="test-instance",
+        project="test-project",
+        remote="test-remote",
+    )
+
+    # retries always use `lxc start`, as `lxc restart` fails on a stopped instance
+    assert _verbs(fake_process) == [action, "info", "start"]
+    assert fake_clock.mock_calls == [call(lxc.START_RETRY_BACKOFF)]
+
+
+@pytest.mark.parametrize("action", ["start", "restart"])
+def test_start_retry_forkstart_exhausted(fake_process, fake_clock, action):
+    for attempt in range(lxc.MAX_RETRIES):
+        _register(
+            fake_process,
+            action if attempt == 0 else "start",
+            returncode=1,
+            stderr=FORKSTART_STDERR + f" attempt {attempt}".encode(),
+        )
+        _register_info(fake_process, "STOPPED")
+
+    with pytest.raises(LXDError) as exc_info:
+        getattr(LXC(), action)(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert exc_info.value.brief == f"Failed to {action} 'test-instance'."
+    assert exc_info.value.details is not None
+    assert f"attempt {lxc.MAX_RETRIES - 1}" in exc_info.value.details
+    assert isinstance(exc_info.value.__cause__, subprocess.CalledProcessError)
+    assert _verbs(fake_process) == [action, "info", "start", "info", "start"]
+    assert fake_clock.mock_calls == [
+        call(lxc.START_RETRY_BACKOFF * n) for n in range(1, lxc.MAX_RETRIES)
+    ]
+
+
+@pytest.mark.parametrize("action", ["start", "restart"])
+def test_start_no_retry_other_error(fake_process, fake_clock, action):
+    _register(fake_process, action, returncode=1, stderr=b"Error: Instance not found")
+
+    with pytest.raises(LXDError, match=f"Failed to {action} 'test-instance'."):
+        getattr(LXC(), action)(
+            instance_name="test-instance",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert _verbs(fake_process) == [action]
+    fake_clock.assert_not_called()
+
+
+@pytest.mark.parametrize("action", ["start", "restart"])
+def test_start_retry_waits_for_stopped(fake_process, fake_clock, action):
+    _register(fake_process, action, returncode=1, stderr=FORKSTART_STDERR)
+    _register_info(fake_process, "RUNNING")
+    _register_info(fake_process, "RUNNING")
+    _register_info(fake_process, "STOPPED")
+    _register(fake_process, "start")
+
+    getattr(LXC(), action)(
+        instance_name="test-instance",
+        project="test-project",
+        remote="test-remote",
+    )
+
+    assert _verbs(fake_process) == [action, "info", "info", "info", "start"]
+    assert fake_clock.mock_calls == [
+        call(lxc.START_RETRY_POLL_INTERVAL),
+        call(lxc.START_RETRY_POLL_INTERVAL),
+        call(lxc.START_RETRY_BACKOFF),
+    ]
+
+
+@pytest.mark.parametrize("action", ["start", "restart"])
+def test_start_retry_poll_timeout(fake_process, fake_clock, mocker, action):
+    mocker.patch.object(lxc, "START_RETRY_POLL_TIMEOUT", 1.5)
+    _register(fake_process, action, returncode=1, stderr=FORKSTART_STDERR)
+    for _ in range(3):
+        _register_info(fake_process, "RUNNING")
+    _register(fake_process, "start")
+
+    getattr(LXC(), action)(
+        instance_name="test-instance",
+        project="test-project",
+        remote="test-remote",
+    )
+
+    assert _verbs(fake_process) == [action, "info", "info", "info", "start"]
+    assert fake_clock.mock_calls == [
+        call(lxc.START_RETRY_POLL_INTERVAL),
+        call(lxc.START_RETRY_POLL_INTERVAL),
+        call(lxc.START_RETRY_BACKOFF),
+    ]
+
+
+@pytest.mark.parametrize("action", ["start", "restart"])
+def test_start_retry_info_error_stops_waiting(fake_process, fake_clock, action):
+    _register(fake_process, action, returncode=1, stderr=FORKSTART_STDERR)
+    _register(fake_process, "info", returncode=1)
+    _register(fake_process, "start")
+
+    getattr(LXC(), action)(
+        instance_name="test-instance",
+        project="test-project",
+        remote="test-remote",
+    )
+
+    assert _verbs(fake_process) == [action, "info", "start"]
+    assert fake_clock.mock_calls == [call(lxc.START_RETRY_BACKOFF)]
+
+
 def test_stop(fake_process):
     fake_process.register_subprocess(
         [
