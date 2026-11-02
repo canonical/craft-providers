@@ -1,6 +1,15 @@
 Changelog
 *********
 
+.. _release-3.8.1:
+
+3.8.1 (unreleased)
+------------------
+
+Bug fixes:
+
+- Retry starting or restarting an LXD instance up to 3 times when LXD reports a ``forkstart`` error.
+
 .. _release-3.8.0:
 
 3.8.0 (2026-10-19)
