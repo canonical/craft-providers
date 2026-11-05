@@ -46,6 +46,7 @@ from craft_providers.lxd.lxd_instance_status import (
     LXDInstanceState,
     ProviderInstanceStatus,
 )
+from craft_providers.util import retry
 
 from .errors import LXDError
 
@@ -57,6 +58,14 @@ logger = logging.getLogger(__name__)
 
 # Times to attempt launching an instance before failing.
 MAX_RETRIES = 3
+
+# Seconds between polls of the instance status after a failed start, and the
+# maximum seconds to wait for it to stop before retrying anyway.
+START_RETRY_POLL_INTERVAL = 0.5
+START_RETRY_POLL_TIMEOUT = 10.0
+
+# Seconds to wait before retrying a failed start, multiplied by the attempt number.
+START_RETRY_BACKOFF = 1.0
 
 
 class StdinType(enum.Enum):
@@ -1177,6 +1186,100 @@ class LXC:
                 ),
             ) from error
 
+    def _start_with_retry(
+        self,
+        *,
+        action: Literal["start", "restart"],
+        instance_name: str,
+        project: str,
+        remote: str,
+    ) -> None:
+        """Start or restart an instance, retrying on transient forkstart errors.
+
+        LXD occasionally fails to start an instance with a ``forkstart`` error
+        for unknown, transient reasons (canonical/lxd#18857). Retrying usually
+        succeeds, so these errors are retried up to ``MAX_RETRIES`` times. Any
+        other error is raised immediately.
+
+        :param action: The lxc command to run, either "start" or "restart".
+        :param instance_name: Name of instance to start.
+        :param project: Name of LXD project.
+        :param remote: Name of LXD remote.
+
+        :raises LXDError: on unexpected error.
+        """
+        command = [action, f"{remote}:{instance_name}"]
+
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                self._run_lxc(command, capture_output=True, project=project)
+            except subprocess.CalledProcessError as error:
+                stderr = (error.stderr or b"").decode(errors="replace").strip()
+                if attempt >= MAX_RETRIES or "forkstart" not in stderr:
+                    raise LXDError(
+                        brief=f"Failed to {action} {instance_name!r}.",
+                        details=errors.details_from_called_process_error(error),
+                    ) from error
+                logger.debug(
+                    "Failed to %s instance %s (attempt %d/%d), retrying: %s",
+                    action,
+                    instance_name,
+                    attempt,
+                    MAX_RETRIES,
+                    stderr,
+                )
+            else:
+                return
+
+            self._wait_for_stopped(
+                instance_name=instance_name, project=project, remote=remote
+            )
+            time.sleep(START_RETRY_BACKOFF * attempt)
+            # A failed restart leaves the instance stopped, and `lxc restart`
+            # refuses to act on a stopped instance, so retry with `lxc start`.
+            command = ["start", f"{remote}:{instance_name}"]
+
+    def _wait_for_stopped(
+        self, *, instance_name: str, project: str, remote: str
+    ) -> None:
+        """Wait for an instance to be stopped after a failed start.
+
+        After a failed start, LXD can briefly report the instance as running
+        (canonical/lxd#14042), so starting it again immediately would fail.
+        Stops waiting if the status can't be read or doesn't become stopped
+        within ``START_RETRY_POLL_TIMEOUT`` seconds, as the next start attempt
+        will surface any real problem.
+
+        :param instance_name: Name of instance.
+        :param project: Name of LXD project.
+        :param remote: Name of LXD remote.
+        """
+
+        def _is_stopped(_timeout: float) -> None:
+            """Raise an error if the instance isn't stopped."""
+            try:
+                status = self.info(
+                    instance_name=instance_name, project=project, remote=remote
+                ).get("Status")
+            except LXDError as error:
+                # The instance may be gone (for example, an ephemeral instance
+                # deleted on stop), so there is nothing to wait for.
+                logger.debug(
+                    "Failed to get status of instance %s: %s", instance_name, error
+                )
+                return
+            if status != LXDInstanceState.STOPPED.value:
+                raise LXDError(brief=f"Instance {instance_name!r} is {status}.")
+
+        try:
+            retry.retry_until_timeout(
+                timeout=START_RETRY_POLL_TIMEOUT,
+                retry_wait=START_RETRY_POLL_INTERVAL,
+                func=_is_stopped,
+            )
+        except LXDError as error:
+            logger.debug("Timed out waiting for instance to stop: %s", error)
+
     def start(
         self, *, instance_name: str, project: str = "default", remote: str = "local"
     ) -> None:
@@ -1188,15 +1291,9 @@ class LXC:
 
         :raises LXDError: on unexpected error.
         """
-        command = ["start", f"{remote}:{instance_name}"]
-
-        try:
-            self._run_lxc(command, capture_output=True, project=project)
-        except subprocess.CalledProcessError as error:
-            raise LXDError(
-                brief=f"Failed to start {instance_name!r}.",
-                details=errors.details_from_called_process_error(error),
-            ) from error
+        self._start_with_retry(
+            action="start", instance_name=instance_name, project=project, remote=remote
+        )
 
     def restart(
         self, *, instance_name: str, project: str = "default", remote: str = "local"
@@ -1209,15 +1306,12 @@ class LXC:
 
         :raises LXDError: on unexpected error.
         """
-        command = ["restart", f"{remote}:{instance_name}"]
-
-        try:
-            self._run_lxc(command, capture_output=True, project=project)
-        except subprocess.CalledProcessError as error:
-            raise LXDError(
-                brief=f"Failed to restart {instance_name!r}.",
-                details=errors.details_from_called_process_error(error),
-            ) from error
+        self._start_with_retry(
+            action="restart",
+            instance_name=instance_name,
+            project=project,
+            remote=remote,
+        )
 
     def stop(
         self,
