@@ -555,7 +555,7 @@ class Base(ABC, Generic[_T_enum_co]):
                 timeout=TIMEOUT_SIMPLE,
             )
 
-        retry.retry_until_timeout(self._timeout_simple, self._retry_wait, enable_snapd)
+        retry.retry_until_timeout(self._timeout_complex, self._retry_wait, enable_snapd)
 
     def _setup_snapd_proxy(self, executor: Executor) -> None:
         """Configure the snapd proxy."""
