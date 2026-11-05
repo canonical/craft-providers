@@ -542,6 +542,12 @@ class Base(ABC, Generic[_T_enum_co]):
                 timeout=TIMEOUT_SIMPLE,
             )
 
+            self._execute_run(
+                ["snap", "wait", "system", "seed.loaded"],
+                executor=executor,
+                timeout=TIMEOUT_SIMPLE,
+            )
+
             # Restart, not start, the service in case the environment
             # has changed and the service is already running.
             self._execute_run(
@@ -549,13 +555,8 @@ class Base(ABC, Generic[_T_enum_co]):
                 executor=executor,
                 timeout=TIMEOUT_SIMPLE,
             )
-            self._execute_run(
-                ["snap", "wait", "system", "seed.loaded"],
-                executor=executor,
-                timeout=TIMEOUT_SIMPLE,
-            )
 
-        retry.retry_until_timeout(self._timeout_complex, self._retry_wait, enable_snapd)
+        retry.retry_until_timeout(self._timeout_simple, self._retry_wait, enable_snapd)
 
     def _setup_snapd_proxy(self, executor: Executor) -> None:
         """Configure the snapd proxy."""
