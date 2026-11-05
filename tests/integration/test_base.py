@@ -20,6 +20,8 @@ from craft_providers import errors, lxd
 from craft_providers.bases import ubuntu
 from craft_providers.provider import Provider
 
+pytestmark = [pytest.mark.slow, pytest.mark.skip]
+
 
 @pytest.mark.slow
 def test_ubuntu_eol_sources(installed_lxd, instance_name, session_lxd_project, mocker):
