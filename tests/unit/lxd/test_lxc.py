@@ -2432,21 +2432,6 @@ FORKSTART_STDERR = (
 )
 
 
-@pytest.fixture
-def fake_clock(mocker):
-    """Patch time so that sleeping advances a fake monotonic clock.
-
-    :returns: The mock for time.sleep.
-    """
-    now = [0.0]
-
-    def _sleep(seconds):
-        now[0] += seconds
-
-    mocker.patch("time.monotonic", side_effect=lambda: now[0])
-    return mocker.patch("time.sleep", side_effect=_sleep)
-
-
 def _register(fake_process, verb, *, returncode=0, stdout=None, stderr=None):
     fake_process.register_subprocess(
         [
@@ -2472,7 +2457,7 @@ def _verbs(fake_process):
 
 
 @pytest.mark.parametrize("action", ["start", "restart"])
-def test_start_retry_forkstart_then_success(fake_process, fake_clock, action):
+def test_start_retry_forkstart_then_success(fake_process, mock_instant_sleep, action):
     _register(fake_process, action, returncode=1, stderr=FORKSTART_STDERR)
     _register_info(fake_process, "STOPPED")
     _register(fake_process, "start")
@@ -2485,11 +2470,11 @@ def test_start_retry_forkstart_then_success(fake_process, fake_clock, action):
 
     # retries always use `lxc start`, as `lxc restart` fails on a stopped instance
     assert _verbs(fake_process) == [action, "info", "start"]
-    assert fake_clock.mock_calls == [call(lxc.START_RETRY_BACKOFF)]
+    assert mock_instant_sleep.sleep.mock_calls == [call(lxc.START_RETRY_BACKOFF)]
 
 
 @pytest.mark.parametrize("action", ["start", "restart"])
-def test_start_retry_forkstart_exhausted(fake_process, fake_clock, action):
+def test_start_retry_forkstart_exhausted(fake_process, mock_instant_sleep, action):
     for attempt in range(lxc.MAX_RETRIES):
         _register(
             fake_process,
@@ -2511,13 +2496,13 @@ def test_start_retry_forkstart_exhausted(fake_process, fake_clock, action):
     assert f"attempt {lxc.MAX_RETRIES - 1}" in exc_info.value.details
     assert isinstance(exc_info.value.__cause__, subprocess.CalledProcessError)
     assert _verbs(fake_process) == [action, "info", "start", "info", "start"]
-    assert fake_clock.mock_calls == [
+    assert mock_instant_sleep.sleep.mock_calls == [
         call(lxc.START_RETRY_BACKOFF * n) for n in range(1, lxc.MAX_RETRIES)
     ]
 
 
 @pytest.mark.parametrize("action", ["start", "restart"])
-def test_start_no_retry_other_error(fake_process, fake_clock, action):
+def test_start_no_retry_other_error(fake_process, mock_instant_sleep, action):
     _register(fake_process, action, returncode=1, stderr=b"Error: Instance not found")
 
     with pytest.raises(LXDError, match=f"Failed to {action} 'test-instance'."):
@@ -2528,11 +2513,11 @@ def test_start_no_retry_other_error(fake_process, fake_clock, action):
         )
 
     assert _verbs(fake_process) == [action]
-    fake_clock.assert_not_called()
+    mock_instant_sleep.sleep.assert_not_called()
 
 
 @pytest.mark.parametrize("action", ["start", "restart"])
-def test_start_retry_waits_for_stopped(fake_process, fake_clock, action):
+def test_start_retry_waits_for_stopped(fake_process, mock_instant_sleep, action):
     _register(fake_process, action, returncode=1, stderr=FORKSTART_STDERR)
     _register_info(fake_process, "RUNNING")
     _register_info(fake_process, "RUNNING")
@@ -2546,7 +2531,7 @@ def test_start_retry_waits_for_stopped(fake_process, fake_clock, action):
     )
 
     assert _verbs(fake_process) == [action, "info", "info", "info", "start"]
-    assert fake_clock.mock_calls == [
+    assert mock_instant_sleep.sleep.mock_calls == [
         call(lxc.START_RETRY_POLL_INTERVAL),
         call(lxc.START_RETRY_POLL_INTERVAL),
         call(lxc.START_RETRY_BACKOFF),
@@ -2554,7 +2539,7 @@ def test_start_retry_waits_for_stopped(fake_process, fake_clock, action):
 
 
 @pytest.mark.parametrize("action", ["start", "restart"])
-def test_start_retry_poll_timeout(fake_process, fake_clock, mocker, action):
+def test_start_retry_poll_timeout(fake_process, mock_instant_sleep, mocker, action):
     mocker.patch.object(lxc, "START_RETRY_POLL_TIMEOUT", 1.5)
     _register(fake_process, action, returncode=1, stderr=FORKSTART_STDERR)
     for _ in range(3):
@@ -2568,7 +2553,7 @@ def test_start_retry_poll_timeout(fake_process, fake_clock, mocker, action):
     )
 
     assert _verbs(fake_process) == [action, "info", "info", "info", "start"]
-    assert fake_clock.mock_calls == [
+    assert mock_instant_sleep.sleep.mock_calls == [
         call(lxc.START_RETRY_POLL_INTERVAL),
         call(lxc.START_RETRY_POLL_INTERVAL),
         call(lxc.START_RETRY_BACKOFF),
@@ -2576,7 +2561,7 @@ def test_start_retry_poll_timeout(fake_process, fake_clock, mocker, action):
 
 
 @pytest.mark.parametrize("action", ["start", "restart"])
-def test_start_retry_info_error_stops_waiting(fake_process, fake_clock, action):
+def test_start_retry_info_error_stops_waiting(fake_process, mock_instant_sleep, action):
     _register(fake_process, action, returncode=1, stderr=FORKSTART_STDERR)
     _register(fake_process, "info", returncode=1)
     _register(fake_process, "start")
@@ -2588,7 +2573,7 @@ def test_start_retry_info_error_stops_waiting(fake_process, fake_clock, action):
     )
 
     assert _verbs(fake_process) == [action, "info", "start"]
-    assert fake_clock.mock_calls == [call(lxc.START_RETRY_BACKOFF)]
+    assert mock_instant_sleep.sleep.mock_calls == [call(lxc.START_RETRY_BACKOFF)]
 
 
 def test_stop(fake_process):

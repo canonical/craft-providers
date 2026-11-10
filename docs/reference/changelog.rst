@@ -8,7 +8,8 @@ Changelog
 
 Bug fixes:
 
-- Retry starting or restarting an LXD instance up to 3 times when LXD reports a ``forkstart`` error.
+- Retry LXD instance starts and restarts that fail with a ``forkstart`` error, with up
+  to 3 attempts.
 
 .. _release-3.8.0:
 
