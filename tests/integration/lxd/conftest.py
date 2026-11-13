@@ -50,6 +50,46 @@ UBUNTU_BASES_PARAM = [
 """List of testable Ubuntu bases."""
 
 
+# Failing LXD tests are kept enabled while iterating on the LXD snapd failures.
+# All other LXD integration tests are skipped.
+_LXD_FAILING_TESTS = frozenset(
+    {
+        (
+            "tests/integration/lxd/test_lxd_provider.py::test_launched_environment"
+            "[BuilddBaseAlias.BIONIC]"
+        ),
+        (
+            "tests/integration/lxd/test_lxd_provider.py::test_launched_environment"
+            "[BuilddBaseAlias.FOCAL]"
+        ),
+        (
+            "tests/integration/lxd/test_lxd_provider.py::test_foreign_arch_success"
+            "[armhf-armv8l]"
+        ),
+        (
+            "tests/integration/lxd/test_remotes.py::test_configure_and_launch_remote"
+            "[BuilddBaseAlias.BIONIC]"
+        ),
+        (
+            "tests/integration/lxd/test_remotes.py::test_configure_and_launch_remote"
+            "[BuilddBaseAlias.FOCAL]"
+        ),
+    }
+)
+
+
+def pytest_collection_modifyitems(config, items):
+    for item in items:
+        if item.nodeid in _LXD_FAILING_TESTS:
+            continue
+        if "lxd_instance" in item.keywords:
+            item.add_marker(
+                pytest.mark.skip(
+                    reason="Failing LXD test kept while iterating on LXD snapd failures"
+                )
+            )
+
+
 @pytest.fixture(autouse=True, scope="module")
 def installed_lxd_required(installed_lxd):
     """All LXD integration tests required LXD to be installed."""
