@@ -94,6 +94,7 @@ def mock_get_os_release(mocker):
             ),
         ),
     ],
+    ids=["default-env", "custom-env"],
 )
 @pytest.mark.parametrize("no_cdn", [False, True])
 @pytest.mark.parametrize(
@@ -1084,6 +1085,7 @@ def test_ensure_setup_completed_not_setup(status, fake_executor, mock_load):
             "http_proxy": "http://foo.bar:8080",
         },
     ],
+    ids=["default-env", "custom-env"],
 )
 @pytest.mark.parametrize("cache_path", [None, pathlib.Path("/tmp")])
 def test_warmup_overall(
