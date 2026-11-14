@@ -23,7 +23,6 @@ import pytest_mock
 from craft_providers.bases import centos, checks, ensure_guest_compatible, ubuntu
 from craft_providers.errors import ProviderError
 from craft_providers.util import os_release
-
 from tests.unit.conftest import DEFAULT_FAKE_CMD
 
 
