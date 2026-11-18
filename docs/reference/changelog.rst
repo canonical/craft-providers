@@ -4,6 +4,14 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+3.7.2 (unreleased)
+------------------
+
+Bug fixes:
+
+- Work around LP: #2174967 on Linux 7.0+ kernels by diverting the snap-confine
+  AppArmor profile during base setup when using an outdated apparmor_parser.
+
 3.7.1 (2026-07-02)
 ------------------
 
