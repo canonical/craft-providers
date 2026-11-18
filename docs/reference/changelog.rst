@@ -1,6 +1,16 @@
 Changelog
 *********
 
+.. _release-3.8.2:
+
+3.8.2 (unreleased)
+------------------
+
+Bug fixes:
+
+- Work around LP: #2174967 on Linux 7.0+ kernels by diverting the snap-confine
+  AppArmor profile during base setup when using an outdated apparmor_parser.
+
 .. _release-3.8.1:
 
 3.8.1 (2026-11-12)
