@@ -190,7 +190,6 @@ def test_setup(
     mock_inject_from_host,
     mock_install_from_store,
     mock_requests_head,
-    mocker,
     snaps,
     expected_snap_call,
     packages,
@@ -204,7 +203,6 @@ def test_setup(
         fake_filesystem.add_real_file(distro_info_file)
 
     mock_load.return_value = InstanceConfiguration(compatibility_tag=expected_tag)
-    mocker.patch("platform.release", return_value="7.0.0-generic")
 
     if environment is None:
         environment = ubuntu.BuilddBase.default_command_environment()
@@ -302,6 +300,10 @@ def test_setup(
             [*DEFAULT_FAKE_CMD, "mkdir", "-p", "/etc/systemd/system/snapd.service.d"]
         )
     if alias <= ubuntu.BuilddBaseAlias.FOCAL:
+        fake_process.register_subprocess(
+            [*DEFAULT_FAKE_CMD, "uname", "-r"],
+            stdout="7.0.0-generic\n",
+        )
         fake_process.register_subprocess(
             [*DEFAULT_FAKE_CMD, "apparmor_parser", "--version"],
             stdout="AppArmor parser version 2.13.3\n",
@@ -984,10 +986,13 @@ def test_setup_snapd_jammy_success(fake_process, fake_executor):
 
 @pytest.mark.usefixtures("stub_verify_network")
 def test_setup_snapd_focal_divert_on_kernel_7_and_old_parser(
-    fake_process, fake_executor, mocker
+    fake_process, fake_executor
 ):
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
-    mocker.patch("platform.release", return_value="7.0.0-generic")
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "uname", "-r"],
+        stdout="7.0.0-generic\n",
+    )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "apparmor_parser", "--version"],
         stdout="AppArmor parser version 2.13.3\n",
@@ -1007,17 +1012,19 @@ def test_setup_snapd_focal_divert_on_kernel_7_and_old_parser(
 
     base_config._setup_snapd(executor=fake_executor)
 
+    assert base_config._snapd_apparmor_diverted is True
     assert divert_cmd in fake_process.calls
     assert install_cmd in fake_process.calls
     assert fake_process.calls.index(divert_cmd) < fake_process.calls.index(install_cmd)
 
 
 @pytest.mark.usefixtures("stub_verify_network")
-def test_setup_snapd_focal_no_divert_on_older_kernel(
-    fake_process, fake_executor, mocker
-):
+def test_setup_snapd_focal_no_divert_on_older_kernel(fake_process, fake_executor):
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
-    mocker.patch("platform.release", return_value="6.8.0-generic")
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "uname", "-r"],
+        stdout="6.8.0-generic\n",
+    )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "snapd"],
         returncode=0,
@@ -1025,15 +1032,17 @@ def test_setup_snapd_focal_no_divert_on_older_kernel(
 
     base_config._setup_snapd(executor=fake_executor)
 
+    assert base_config._snapd_apparmor_diverted is False
     assert not any("dpkg-divert" in str(cmd) for cmd in fake_process.calls)
 
 
 @pytest.mark.usefixtures("stub_verify_network")
-def test_setup_snapd_focal_no_divert_on_newer_parser(
-    fake_process, fake_executor, mocker
-):
+def test_setup_snapd_focal_no_divert_on_newer_parser(fake_process, fake_executor):
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
-    mocker.patch("platform.release", return_value="7.0.0-generic")
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "uname", "-r"],
+        stdout="7.0.0-generic\n",
+    )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "apparmor_parser", "--version"],
         stdout="AppArmor parser version 3.0.4\n",
@@ -1045,15 +1054,17 @@ def test_setup_snapd_focal_no_divert_on_newer_parser(
 
     base_config._setup_snapd(executor=fake_executor)
 
+    assert base_config._snapd_apparmor_diverted is False
     assert not any("dpkg-divert" in str(cmd) for cmd in fake_process.calls)
 
 
 @pytest.mark.usefixtures("stub_verify_network")
-def test_setup_snapd_focal_divert_when_parser_missing(
-    fake_process, fake_executor, mocker
-):
+def test_setup_snapd_focal_divert_when_parser_missing(fake_process, fake_executor):
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
-    mocker.patch("platform.release", return_value="7.0.0-generic")
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "uname", "-r"],
+        stdout="7.0.0-generic\n",
+    )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "apparmor_parser", "--version"],
         returncode=127,
@@ -1075,13 +1086,17 @@ def test_setup_snapd_focal_divert_when_parser_missing(
 
     base_config._setup_snapd(executor=fake_executor)
 
+    assert base_config._snapd_apparmor_diverted is True
     assert divert_cmd in fake_process.calls
 
 
 @pytest.mark.usefixtures("stub_verify_network")
-def test_setup_snapd_focal_divert_failure_raises(fake_process, fake_executor, mocker):
+def test_setup_snapd_focal_divert_failure_raises(fake_process, fake_executor):
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
-    mocker.patch("platform.release", return_value="7.0.0-generic")
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "uname", "-r"],
+        stdout="7.0.0-generic\n",
+    )
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "apparmor_parser", "--version"],
         stdout="AppArmor parser version 2.13.3\n",
@@ -1109,6 +1124,7 @@ def test_setup_snapd_focal_divert_failure_raises(fake_process, fake_executor, mo
 @pytest.mark.usefixtures("stub_verify_network")
 def test_post_setup_snapd_focal_success(fake_process, fake_executor):
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config._snapd_apparmor_diverted = True
     for cmd in [
         [*DEFAULT_FAKE_CMD, "ln", "-sf", "/var/lib/snapd/snap", "/snap"],
         [*DEFAULT_FAKE_CMD, "systemctl", "enable", "--now", "snapd.socket"],
@@ -1128,8 +1144,55 @@ def test_post_setup_snapd_focal_success(fake_process, fake_executor):
 
 
 @pytest.mark.usefixtures("stub_verify_network")
+def test_post_setup_snapd_focal_skipped_when_not_diverted(fake_process, fake_executor):
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    for cmd in [
+        [*DEFAULT_FAKE_CMD, "ln", "-sf", "/var/lib/snapd/snap", "/snap"],
+        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "--now", "snapd.socket"],
+        [*DEFAULT_FAKE_CMD, "systemctl", "restart", "snapd.service"],
+        [*DEFAULT_FAKE_CMD, "snap", "wait", "system", "seed.loaded"],
+        [*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"],
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
+        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.http"],
+        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.https"],
+    ]:
+        fake_process.register_subprocess(cmd, returncode=0)
+
+    base_config._post_setup_snapd(executor=fake_executor)
+
+    assert [*DEFAULT_FAKE_CMD, "snap", "install", "snapd"] not in fake_process.calls
+
+
+@pytest.mark.usefixtures("stub_verify_network")
+def test_post_setup_snapd_focal_skipped_when_snapd_requested(
+    fake_process, fake_executor
+):
+    base_config = ubuntu.BuilddBase(
+        alias=ubuntu.BuilddBaseAlias.FOCAL,
+        snaps=[Snap(name="snapd", channel="edge")],
+    )
+    base_config._snapd_apparmor_diverted = True
+    for cmd in [
+        [*DEFAULT_FAKE_CMD, "ln", "-sf", "/var/lib/snapd/snap", "/snap"],
+        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "--now", "snapd.socket"],
+        [*DEFAULT_FAKE_CMD, "systemctl", "restart", "snapd.service"],
+        [*DEFAULT_FAKE_CMD, "snap", "wait", "system", "seed.loaded"],
+        [*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"],
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
+        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.http"],
+        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.https"],
+    ]:
+        fake_process.register_subprocess(cmd, returncode=0)
+
+    base_config._post_setup_snapd(executor=fake_executor)
+
+    assert [*DEFAULT_FAKE_CMD, "snap", "install", "snapd"] not in fake_process.calls
+
+
+@pytest.mark.usefixtures("stub_verify_network")
 def test_post_setup_snapd_focal_snap_install_failure(fake_process, fake_executor):
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    base_config._snapd_apparmor_diverted = True
     for cmd in [
         [*DEFAULT_FAKE_CMD, "ln", "-sf", "/var/lib/snapd/snap", "/snap"],
         [*DEFAULT_FAKE_CMD, "systemctl", "enable", "--now", "snapd.socket"],
