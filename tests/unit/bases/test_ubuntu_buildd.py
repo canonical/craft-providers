@@ -309,14 +309,17 @@ def test_setup(
             stdout="AppArmor parser version 2.13.3\n",
         )
         fake_process.register_subprocess(
+            [*DEFAULT_FAKE_CMD, "test", "-f", "/etc/apparmor/parser.conf"]
+        )
+        fake_process.register_subprocess(
             [
                 *DEFAULT_FAKE_CMD,
-                "dpkg-divert",
-                "--add",
-                "--rename",
-                "--divert",
-                "/etc/apparmor.d/usr.lib.snapd.snap-confine.real.disabled",
-                "/etc/apparmor.d/usr.lib.snapd.snap-confine.real",
+                "sh",
+                "-c",
+                (
+                    "grep -qxF 'Optimize=no-diff-encode' /etc/apparmor/parser.conf "
+                    "|| printf '\\nOptimize=no-diff-encode\\n' >> /etc/apparmor/parser.conf"
+                ),
             ]
         )
     fake_process.register_subprocess(
@@ -336,11 +339,6 @@ def test_setup(
         [*DEFAULT_FAKE_CMD, "systemctl", "enable", "--now", "snapd.socket"],
     ]:
         fake_process.register_subprocess(cmd)
-
-    if alias <= ubuntu.BuilddBaseAlias.FOCAL:
-        fake_process.register_subprocess(
-            [*DEFAULT_FAKE_CMD, "snap", "install", "snapd"]
-        )
 
     base_config.setup(executor=fake_executor)
 
@@ -981,11 +979,11 @@ def test_setup_snapd_jammy_success(fake_process, fake_executor):
         "-y",
         "snapd",
     ] in fake_process.calls
-    assert not any("dpkg-divert" in str(cmd) for cmd in fake_process.calls)
+    assert not any("parser.conf" in str(cmd) for cmd in fake_process.calls)
 
 
 @pytest.mark.usefixtures("stub_verify_network")
-def test_setup_snapd_focal_divert_on_kernel_7_and_old_parser(
+def test_setup_snapd_focal_disable_diff_encode_on_kernel_7_and_old_parser(
     fake_process, fake_executor
 ):
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
@@ -997,29 +995,36 @@ def test_setup_snapd_focal_divert_on_kernel_7_and_old_parser(
         [*DEFAULT_FAKE_CMD, "apparmor_parser", "--version"],
         stdout="AppArmor parser version 2.13.3\n",
     )
-    divert_cmd = [
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "test", "-f", "/etc/apparmor/parser.conf"],
+        returncode=0,
+    )
+    parser_conf_cmd = [
         *DEFAULT_FAKE_CMD,
-        "dpkg-divert",
-        "--add",
-        "--rename",
-        "--divert",
-        "/etc/apparmor.d/usr.lib.snapd.snap-confine.real.disabled",
-        "/etc/apparmor.d/usr.lib.snapd.snap-confine.real",
+        "sh",
+        "-c",
+        (
+            "grep -qxF 'Optimize=no-diff-encode' /etc/apparmor/parser.conf "
+            "|| printf '\\nOptimize=no-diff-encode\\n' >> /etc/apparmor/parser.conf"
+        ),
     ]
-    fake_process.register_subprocess(divert_cmd, returncode=0)
+    fake_process.register_subprocess(parser_conf_cmd, returncode=0)
     install_cmd = [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "snapd"]
     fake_process.register_subprocess(install_cmd, returncode=0)
 
     base_config._setup_snapd(executor=fake_executor)
 
-    assert base_config._snapd_apparmor_diverted is True
-    assert divert_cmd in fake_process.calls
+    assert parser_conf_cmd in fake_process.calls
     assert install_cmd in fake_process.calls
-    assert fake_process.calls.index(divert_cmd) < fake_process.calls.index(install_cmd)
+    assert fake_process.calls.index(parser_conf_cmd) < fake_process.calls.index(
+        install_cmd
+    )
 
 
 @pytest.mark.usefixtures("stub_verify_network")
-def test_setup_snapd_focal_no_divert_on_older_kernel(fake_process, fake_executor):
+def test_setup_snapd_focal_no_diff_encode_change_on_older_kernel(
+    fake_process, fake_executor
+):
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "uname", "-r"],
@@ -1032,12 +1037,13 @@ def test_setup_snapd_focal_no_divert_on_older_kernel(fake_process, fake_executor
 
     base_config._setup_snapd(executor=fake_executor)
 
-    assert base_config._snapd_apparmor_diverted is False
-    assert not any("dpkg-divert" in str(cmd) for cmd in fake_process.calls)
+    assert not any("parser.conf" in str(cmd) for cmd in fake_process.calls)
 
 
 @pytest.mark.usefixtures("stub_verify_network")
-def test_setup_snapd_focal_no_divert_on_newer_parser(fake_process, fake_executor):
+def test_setup_snapd_focal_no_diff_encode_change_on_newer_parser(
+    fake_process, fake_executor
+):
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "uname", "-r"],
@@ -1054,12 +1060,13 @@ def test_setup_snapd_focal_no_divert_on_newer_parser(fake_process, fake_executor
 
     base_config._setup_snapd(executor=fake_executor)
 
-    assert base_config._snapd_apparmor_diverted is False
-    assert not any("dpkg-divert" in str(cmd) for cmd in fake_process.calls)
+    assert not any("parser.conf" in str(cmd) for cmd in fake_process.calls)
 
 
 @pytest.mark.usefixtures("stub_verify_network")
-def test_setup_snapd_focal_divert_when_parser_missing(fake_process, fake_executor):
+def test_setup_snapd_focal_installs_apparmor_when_parser_conf_missing(
+    fake_process, fake_executor
+):
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "uname", "-r"],
@@ -1069,16 +1076,22 @@ def test_setup_snapd_focal_divert_when_parser_missing(fake_process, fake_executo
         [*DEFAULT_FAKE_CMD, "apparmor_parser", "--version"],
         returncode=127,
     )
-    divert_cmd = [
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "test", "-f", "/etc/apparmor/parser.conf"],
+        returncode=1,
+    )
+    install_apparmor_cmd = [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "apparmor"]
+    fake_process.register_subprocess(install_apparmor_cmd, returncode=0)
+    parser_conf_cmd = [
         *DEFAULT_FAKE_CMD,
-        "dpkg-divert",
-        "--add",
-        "--rename",
-        "--divert",
-        "/etc/apparmor.d/usr.lib.snapd.snap-confine.real.disabled",
-        "/etc/apparmor.d/usr.lib.snapd.snap-confine.real",
+        "sh",
+        "-c",
+        (
+            "grep -qxF 'Optimize=no-diff-encode' /etc/apparmor/parser.conf "
+            "|| printf '\\nOptimize=no-diff-encode\\n' >> /etc/apparmor/parser.conf"
+        ),
     ]
-    fake_process.register_subprocess(divert_cmd, returncode=0)
+    fake_process.register_subprocess(parser_conf_cmd, returncode=0)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "snapd"],
         returncode=0,
@@ -1086,12 +1099,15 @@ def test_setup_snapd_focal_divert_when_parser_missing(fake_process, fake_executo
 
     base_config._setup_snapd(executor=fake_executor)
 
-    assert base_config._snapd_apparmor_diverted is True
-    assert divert_cmd in fake_process.calls
+    assert install_apparmor_cmd in fake_process.calls
+    assert parser_conf_cmd in fake_process.calls
+    assert fake_process.calls.index(install_apparmor_cmd) < fake_process.calls.index(
+        parser_conf_cmd
+    )
 
 
 @pytest.mark.usefixtures("stub_verify_network")
-def test_setup_snapd_focal_divert_failure_raises(fake_process, fake_executor):
+def test_setup_snapd_focal_parser_conf_failure_raises(fake_process, fake_executor):
     base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "uname", "-r"],
@@ -1102,118 +1118,27 @@ def test_setup_snapd_focal_divert_failure_raises(fake_process, fake_executor):
         stdout="AppArmor parser version 2.13.3\n",
     )
     fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "test", "-f", "/etc/apparmor/parser.conf"],
+        returncode=0,
+    )
+    fake_process.register_subprocess(
         [
             *DEFAULT_FAKE_CMD,
-            "dpkg-divert",
-            "--add",
-            "--rename",
-            "--divert",
-            "/etc/apparmor.d/usr.lib.snapd.snap-confine.real.disabled",
-            "/etc/apparmor.d/usr.lib.snapd.snap-confine.real",
+            "sh",
+            "-c",
+            (
+                "grep -qxF 'Optimize=no-diff-encode' /etc/apparmor/parser.conf "
+                "|| printf '\\nOptimize=no-diff-encode\\n' >> /etc/apparmor/parser.conf"
+            ),
         ],
         returncode=1,
     )
 
     with pytest.raises(
         BaseConfigurationError,
-        match="Failed to divert snap-confine AppArmor profile.",
+        match="Failed to configure AppArmor parser.",
     ):
         base_config._setup_snapd(executor=fake_executor)
-
-
-@pytest.mark.usefixtures("stub_verify_network")
-def test_post_setup_snapd_focal_success(fake_process, fake_executor):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
-    base_config._snapd_apparmor_diverted = True
-    for cmd in [
-        [*DEFAULT_FAKE_CMD, "ln", "-sf", "/var/lib/snapd/snap", "/snap"],
-        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "--now", "snapd.socket"],
-        [*DEFAULT_FAKE_CMD, "systemctl", "restart", "snapd.service"],
-        [*DEFAULT_FAKE_CMD, "snap", "wait", "system", "seed.loaded"],
-        [*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"],
-        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
-        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.http"],
-        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.https"],
-        [*DEFAULT_FAKE_CMD, "snap", "install", "snapd"],
-    ]:
-        fake_process.register_subprocess(cmd, returncode=0)
-
-    base_config._post_setup_snapd(executor=fake_executor)
-
-    assert [*DEFAULT_FAKE_CMD, "snap", "install", "snapd"] in fake_process.calls
-
-
-@pytest.mark.usefixtures("stub_verify_network")
-def test_post_setup_snapd_focal_skipped_when_not_diverted(fake_process, fake_executor):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
-    for cmd in [
-        [*DEFAULT_FAKE_CMD, "ln", "-sf", "/var/lib/snapd/snap", "/snap"],
-        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "--now", "snapd.socket"],
-        [*DEFAULT_FAKE_CMD, "systemctl", "restart", "snapd.service"],
-        [*DEFAULT_FAKE_CMD, "snap", "wait", "system", "seed.loaded"],
-        [*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"],
-        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
-        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.http"],
-        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.https"],
-    ]:
-        fake_process.register_subprocess(cmd, returncode=0)
-
-    base_config._post_setup_snapd(executor=fake_executor)
-
-    assert [*DEFAULT_FAKE_CMD, "snap", "install", "snapd"] not in fake_process.calls
-
-
-@pytest.mark.usefixtures("stub_verify_network")
-def test_post_setup_snapd_focal_skipped_when_snapd_requested(
-    fake_process, fake_executor
-):
-    base_config = ubuntu.BuilddBase(
-        alias=ubuntu.BuilddBaseAlias.FOCAL,
-        snaps=[Snap(name="snapd", channel="edge")],
-    )
-    base_config._snapd_apparmor_diverted = True
-    for cmd in [
-        [*DEFAULT_FAKE_CMD, "ln", "-sf", "/var/lib/snapd/snap", "/snap"],
-        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "--now", "snapd.socket"],
-        [*DEFAULT_FAKE_CMD, "systemctl", "restart", "snapd.service"],
-        [*DEFAULT_FAKE_CMD, "snap", "wait", "system", "seed.loaded"],
-        [*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"],
-        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
-        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.http"],
-        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.https"],
-    ]:
-        fake_process.register_subprocess(cmd, returncode=0)
-
-    base_config._post_setup_snapd(executor=fake_executor)
-
-    assert [*DEFAULT_FAKE_CMD, "snap", "install", "snapd"] not in fake_process.calls
-
-
-@pytest.mark.usefixtures("stub_verify_network")
-def test_post_setup_snapd_focal_snap_install_failure(fake_process, fake_executor):
-    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
-    base_config._snapd_apparmor_diverted = True
-    for cmd in [
-        [*DEFAULT_FAKE_CMD, "ln", "-sf", "/var/lib/snapd/snap", "/snap"],
-        [*DEFAULT_FAKE_CMD, "systemctl", "enable", "--now", "snapd.socket"],
-        [*DEFAULT_FAKE_CMD, "systemctl", "restart", "snapd.service"],
-        [*DEFAULT_FAKE_CMD, "snap", "wait", "system", "seed.loaded"],
-        [*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"],
-        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
-        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.http"],
-        [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.https"],
-    ]:
-        fake_process.register_subprocess(cmd, returncode=0)
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "snap", "install", "snapd"],
-        returncode=1,
-    )
-
-    with pytest.raises(
-        BaseConfigurationError,
-        match="Failed to install snapd snap.",
-    ):
-        base_config._post_setup_snapd(executor=fake_executor)
 
 
 @pytest.mark.parametrize("fail_index", list(range(0, 8)))
