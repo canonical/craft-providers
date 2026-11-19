@@ -1,6 +1,17 @@
 Changelog
 *********
 
+.. _release-3.8.2:
+
+3.8.2 (unreleased)
+------------------
+
+Bug fixes:
+
+- Disable AppArmor DFA differential encoding on Focal and earlier bases to allow
+  ``snapd`` and snaps to run on Linux 7.0+ host kernels
+  (`LP: #2174837 <https://bugs.launchpad.net/ubuntu/+source/linux/+bug/2174837>`_).
+
 .. _release-3.8.1:
 
 3.8.1 (2026-11-12)
