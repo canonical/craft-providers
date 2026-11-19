@@ -1,6 +1,18 @@
 Changelog
 *********
 
+.. _release-3.8.1:
+
+3.8.1 (2026-11-12)
+------------------
+
+Bug fixes:
+
+- Retry LXD instance starts and restarts that fail with a ``forkstart`` error, with up
+  to 3 attempts.
+
+For a complete list of commits, check out the `3.8.1`_ release on GitHub.
+
 .. _release-3.8.0:
 
 3.8.0 (2026-10-19)
@@ -939,3 +951,4 @@ For a complete list of commits, check out the `1.0.4`_ release on GitHub.
 .. _3.7.0: https://github.com/canonical/craft-providers/releases/tag/3.7.0
 .. _3.7.1: https://github.com/canonical/craft-providers/releases/tag/3.7.1
 .. _3.8.0: https://github.com/canonical/craft-providers/releases/tag/3.8.0
+.. _3.8.1: https://github.com/canonical/craft-providers/releases/tag/3.8.1
