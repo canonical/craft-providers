@@ -27,10 +27,8 @@ import io
 import logging
 import os
 import pathlib
-import platform
 import re
 import subprocess
-import sys
 from functools import total_ordering
 from http import HTTPStatus
 from textwrap import dedent
@@ -428,11 +426,14 @@ class BuilddBase(Base[BuilddBaseAlias]):
                 details=details_from_called_process_error(error),
             ) from error
 
+    _snapd_apparmor_diverted: bool = False
+
     @override
     def _setup_snapd(self, executor: Executor) -> None:
         """Install snapd and dependencies and wait until ready."""
         if self._should_divert_snapd_apparmor(executor=executor):
             self._divert_snapd_apparmor(executor=executor)
+            self._snapd_apparmor_diverted = True
 
         try:
             self._execute_run(
@@ -449,12 +450,15 @@ class BuilddBase(Base[BuilddBaseAlias]):
 
     @override
     def _post_setup_snapd(self, executor: Executor) -> None:
-        """Configure installed snapd and ensure snapd snap on older bases."""
+        """Configure installed snapd and ensure snapd snap when diverted."""
         super()._post_setup_snapd(executor=executor)
 
-        # On Focal and older bases, install the snapd snap to ensure a modern
-        # snapd runtime with its bundled AppArmor parser (LP: #2174967).
-        if self.alias <= BuilddBaseAlias.FOCAL:
+        # When the snap-confine AppArmor profile was diverted (LP: #2174967),
+        # install the snapd snap so snapd re-execs to a modern runtime with a
+        # bundled AppArmor parser, unless the caller already requested snapd.
+        if self._snapd_apparmor_diverted and not any(
+            snap.name == "snapd" for snap in self._snaps or ()
+        ):
             try:
                 self._execute_run(
                     ["snap", "install", "snapd"],
@@ -478,14 +482,17 @@ class BuilddBase(Base[BuilddBaseAlias]):
         if self.alias > BuilddBaseAlias.FOCAL:
             return False
 
-        if sys.platform != "linux":
-            return False
-
         try:
-            parts = platform.release().split("-")[0].split(".")
+            uname_proc = self._execute_run(
+                ["uname", "-r"],
+                executor=executor,
+                text=True,
+                timeout=self._timeout_simple,
+            )
+            parts = uname_proc.stdout.strip().split("-")[0].split(".")
             if (int(parts[0]), int(parts[1])) < (7, 0):
                 return False
-        except (IndexError, ValueError):
+        except (subprocess.CalledProcessError, IndexError, ValueError):
             return False
 
         try:
