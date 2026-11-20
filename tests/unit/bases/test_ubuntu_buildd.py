@@ -277,25 +277,34 @@ def test_setup(
         fake_process.register_subprocess(
             [*DEFAULT_FAKE_CMD, "mkdir", "-p", "/etc/systemd/system/snapd.service.d"]
         )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "snapd"]
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "systemctl", "start", "snapd.socket"]
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "systemctl", "restart", "snapd.service"]
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "snap", "wait", "system", "seed.loaded"]
-    )
-    fake_process.register_subprocess([*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"])
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"]
-    )
-    fake_process.register_subprocess(
-        [*DEFAULT_FAKE_CMD, "snap", "set", "system", "proxy.http=http://foo.bar:8080"]
-    )
+    if alias in (
+        ubuntu.BuilddBaseAlias.XENIAL,
+        ubuntu.BuilddBaseAlias.BIONIC,
+        ubuntu.BuilddBaseAlias.FOCAL,
+    ):
+        for cmd in [
+            [*DEFAULT_FAKE_CMD, "test", "-f", "/etc/apparmor/parser.conf"],
+            [
+                *DEFAULT_FAKE_CMD,
+                "sh",
+                "-c",
+                (
+                    "grep -qxF 'Optimize=no-diff-encode' /etc/apparmor/parser.conf "
+                    "|| printf '\\nOptimize=no-diff-encode\\n' >> /etc/apparmor/parser.conf"
+                ),
+            ],
+        ]:
+            fake_process.register_subprocess(cmd)
+    for cmd in [
+        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "snapd"],
+        [*DEFAULT_FAKE_CMD, "systemctl", "start", "snapd.socket"],
+        [*DEFAULT_FAKE_CMD, "systemctl", "restart", "snapd.service"],
+        [*DEFAULT_FAKE_CMD, "snap", "wait", "system", "seed.loaded"],
+        [*DEFAULT_FAKE_CMD, "snap", "refresh", "--hold"],
+        [*DEFAULT_FAKE_CMD, "snap", "watch", "--last=auto-refresh?"],
+        [*DEFAULT_FAKE_CMD, "snap", "set", "system", "proxy.http=http://foo.bar:8080"],
+    ]:
+        fake_process.register_subprocess(cmd)
     fake_process.register_subprocess(
         [*DEFAULT_FAKE_CMD, "snap", "unset", "system", "proxy.http"]
     )
@@ -959,6 +968,119 @@ def test_setup_snapd_failures(fake_process, fake_executor):
             exc_info.value.__cause__  # type: ignore
         ),
     )
+
+
+@pytest.mark.usefixtures("stub_verify_network")
+def test_setup_snapd_jammy_skips_apparmor_parser_conf(fake_process, fake_executor):
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    install_cmd = [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "snapd"]
+    fake_process.register_subprocess(install_cmd, returncode=0)
+
+    base_config._setup_snapd(executor=fake_executor)
+
+    assert install_cmd in fake_process.calls
+    assert not any("parser.conf" in str(cmd) for cmd in fake_process.calls)
+
+
+@pytest.mark.parametrize(
+    "alias",
+    [
+        ubuntu.BuilddBaseAlias.XENIAL,
+        ubuntu.BuilddBaseAlias.BIONIC,
+        ubuntu.BuilddBaseAlias.FOCAL,
+    ],
+)
+@pytest.mark.usefixtures("stub_verify_network")
+def test_setup_snapd_focal_and_earlier_configures_apparmor_parser_conf(
+    fake_process, fake_executor, alias
+):
+    base_config = ubuntu.BuilddBase(alias=alias)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "test", "-f", "/etc/apparmor/parser.conf"],
+        returncode=0,
+    )
+    parser_conf_cmd = [
+        *DEFAULT_FAKE_CMD,
+        "sh",
+        "-c",
+        (
+            "grep -qxF 'Optimize=no-diff-encode' /etc/apparmor/parser.conf "
+            "|| printf '\\nOptimize=no-diff-encode\\n' >> /etc/apparmor/parser.conf"
+        ),
+    ]
+    fake_process.register_subprocess(parser_conf_cmd, returncode=0)
+    install_cmd = [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "snapd"]
+    fake_process.register_subprocess(install_cmd, returncode=0)
+
+    base_config._setup_snapd(executor=fake_executor)
+
+    assert parser_conf_cmd in fake_process.calls
+    assert install_cmd in fake_process.calls
+    assert fake_process.calls.index(parser_conf_cmd) < fake_process.calls.index(
+        install_cmd
+    )
+
+
+@pytest.mark.usefixtures("stub_verify_network")
+def test_setup_snapd_focal_installs_apparmor_when_parser_conf_missing(
+    fake_process, fake_executor
+):
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "test", "-f", "/etc/apparmor/parser.conf"],
+        returncode=1,
+    )
+    install_apparmor_cmd = [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "apparmor"]
+    fake_process.register_subprocess(install_apparmor_cmd, returncode=0)
+    parser_conf_cmd = [
+        *DEFAULT_FAKE_CMD,
+        "sh",
+        "-c",
+        (
+            "grep -qxF 'Optimize=no-diff-encode' /etc/apparmor/parser.conf "
+            "|| printf '\\nOptimize=no-diff-encode\\n' >> /etc/apparmor/parser.conf"
+        ),
+    ]
+    fake_process.register_subprocess(parser_conf_cmd, returncode=0)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "apt-get", "install", "-y", "snapd"],
+        returncode=0,
+    )
+
+    base_config._setup_snapd(executor=fake_executor)
+
+    assert install_apparmor_cmd in fake_process.calls
+    assert parser_conf_cmd in fake_process.calls
+    assert fake_process.calls.index(install_apparmor_cmd) < fake_process.calls.index(
+        parser_conf_cmd
+    )
+
+
+@pytest.mark.usefixtures("stub_verify_network")
+def test_setup_snapd_focal_parser_conf_failure_raises(fake_process, fake_executor):
+    base_config = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.FOCAL)
+    fake_process.register_subprocess(
+        [*DEFAULT_FAKE_CMD, "test", "-f", "/etc/apparmor/parser.conf"],
+        returncode=0,
+    )
+    fake_process.register_subprocess(
+        [
+            *DEFAULT_FAKE_CMD,
+            "sh",
+            "-c",
+            (
+                "grep -qxF 'Optimize=no-diff-encode' /etc/apparmor/parser.conf "
+                "|| printf '\\nOptimize=no-diff-encode\\n' >> /etc/apparmor/parser.conf"
+            ),
+        ],
+        returncode=1,
+    )
+
+    with pytest.raises(
+        BaseConfigurationError,
+        match="Failed to configure AppArmor parser.",
+    ):
+        base_config._setup_snapd(executor=fake_executor)
 
 
 @pytest.mark.parametrize("fail_index", list(range(0, 8)))
