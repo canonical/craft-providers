@@ -4,6 +4,15 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+2.2.1 (2026-11-23)
+------------------
+
+Bug fixes:
+
+- Disable AppArmor DFA differential encoding on Focal and earlier bases to allow
+  ``snapd`` and snaps to run on Linux 7.0+ host kernels
+  (`LP: #2174837 <https://bugs.launchpad.net/ubuntu/+source/linux/+bug/2174837>`_).
+
 2.2.0 (2025-Feb-11)
 -------------------
 
