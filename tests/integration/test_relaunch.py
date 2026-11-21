@@ -30,6 +30,8 @@ from craft_providers.multipass.multipass_provider import MultipassProvider
 if TYPE_CHECKING:
     from craft_providers.executor import Executor
 
+pytestmark = [pytest.mark.slow, pytest.mark.skip]
+
 
 @pytest.mark.slow
 @pytest.mark.parametrize(

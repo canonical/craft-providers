@@ -528,7 +528,8 @@ class Base(ABC, Generic[_T_enum_co]):
 
     def _enable_snapd_service(self, executor: Executor) -> None:
         """Create the symlink to /snap and enable the snapd service."""
-        try:
+
+        def enable_snapd(_: float) -> None:
             self._execute_run(
                 ["ln", "-sf", "/var/lib/snapd/snap", "/snap"],
                 executor=executor,
@@ -541,6 +542,12 @@ class Base(ABC, Generic[_T_enum_co]):
                 timeout=TIMEOUT_SIMPLE,
             )
 
+            self._execute_run(
+                ["snap", "wait", "system", "seed.loaded"],
+                executor=executor,
+                timeout=self._timeout_complex,
+            )
+
             # Restart, not start, the service in case the environment
             # has changed and the service is already running.
             self._execute_run(
@@ -548,16 +555,8 @@ class Base(ABC, Generic[_T_enum_co]):
                 executor=executor,
                 timeout=TIMEOUT_SIMPLE,
             )
-            self._execute_run(
-                ["snap", "wait", "system", "seed.loaded"],
-                executor=executor,
-                timeout=TIMEOUT_SIMPLE,
-            )
-        except subprocess.CalledProcessError as error:
-            raise BaseConfigurationError(
-                brief="Failed to enable snapd service.",
-                details=details_from_called_process_error(error),
-            ) from error
+
+        retry.retry_until_timeout(self._timeout_complex, self._retry_wait, enable_snapd)
 
     def _setup_snapd_proxy(self, executor: Executor) -> None:
         """Configure the snapd proxy."""
