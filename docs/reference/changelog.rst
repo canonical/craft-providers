@@ -4,14 +4,22 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
-3.7.2 (2026-11-23)
+3.7.3 (2026-11-23)
 ------------------
+
+Re-release of what was intended for 3.7.2 (``3.7.2`` was accidentally tagged on the
+``3.7.1`` commit).
 
 Bug fixes:
 
 - Disable AppArmor DFA differential encoding on Focal and earlier bases to allow
   ``snapd`` and snaps to run on Linux 7.0+ host kernels
   (`LP: #2174837 <https://bugs.launchpad.net/ubuntu/+source/linux/+bug/2174837>`_).
+
+3.7.2 (2026-11-23)
+------------------
+
+No changes from 3.7.1 (tagged on the ``3.7.1`` commit by mistake).
 
 3.7.1 (2026-07-02)
 ------------------
