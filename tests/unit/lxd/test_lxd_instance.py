@@ -926,6 +926,49 @@ def test_start_from_running(mock_lxc, instance):
 
 
 @pytest.mark.usefixtures("instant_sleep")
+def test_start_from_running_during_shutdown(mock_lxc):
+    """Reuse must survive a shutdown transaction that rejects cancellation."""
+    instance = LXDInstance(
+        name=_TEST_INSTANCE["name"],
+        lxc=mock_lxc,
+        client=mock.Mock(spec=pylxd.Client),
+    )
+
+    def set_state(state):
+        mock_lxc.info.return_value = {"Status": state.value}
+        mock_lxc.list.return_value = [
+            {"name": instance.instance_name, "status": state.value.title()},
+        ]
+
+    def execute(*, command, check=False, **kwargs):
+        assert command == ["shutdown", "-c"]
+        # Complete shutdown here rather than relying on guest transaction timing.
+        set_state(LXDInstanceState.STOPPED)
+        result = subprocess.CompletedProcess(
+            args=command,
+            returncode=1,
+            stderr=(
+                "Failed to talk to logind, shutdown hasn't been cancelled: "
+                "Transaction for systemd-logind.service/start is destructive."
+            ),
+        )
+        if check:
+            result.check_returncode()
+        return result
+
+    set_state(LXDInstanceState.RUNNING)
+    mock_lxc.config_get.return_value = ProviderInstanceStatus.FINISHED.value
+    mock_lxc.exec.side_effect = execute
+    mock_lxc.start.side_effect = lambda **kwargs: set_state(LXDInstanceState.RUNNING)
+
+    instance.start()
+
+    assert instance.is_running(), (
+        "Instance reuse returned with shutdown still in effect"
+    )
+
+
+@pytest.mark.usefixtures("instant_sleep")
 @pytest.mark.parametrize("wait_count", list(range(6)))
 def test_start_with_retries(wait_count, mocker, mock_lxc, instance):
     """Retry while waiting for an instance to start."""
