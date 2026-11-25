@@ -25,11 +25,11 @@ import tempfile
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Generator
 
 
 @contextlib.contextmanager
-def home_temporary_directory() -> Iterator[pathlib.Path]:
+def home_temporary_directory() -> Generator[pathlib.Path, None, None]:
     """Create temporary directory in home directory where Multipass has access."""
     with tempfile.TemporaryDirectory(
         suffix=".tmp-craft", dir=pathlib.Path.home()
@@ -38,7 +38,7 @@ def home_temporary_directory() -> Iterator[pathlib.Path]:
 
 
 @contextlib.contextmanager
-def home_temporary_file() -> Iterator[pathlib.Path]:
+def home_temporary_file() -> Generator[pathlib.Path, None, None]:
     """Create a temporary file in the home directory where Multipass has access."""
     with home_temporary_directory() as tmp_dir:
         with tempfile.NamedTemporaryFile(dir=tmp_dir) as tmp_file:

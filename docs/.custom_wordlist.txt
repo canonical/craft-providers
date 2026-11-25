@@ -106,7 +106,9 @@ Sphinx
 Spread
 spread_test_example
 Starcraft
+stderr
 stdin
+stdout
 subdirectories
 subfolders
 subproccess

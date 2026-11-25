@@ -35,7 +35,10 @@ endif
 format: format-ruff format-codespell format-prettier  ## Run all automatic formatters
 
 .PHONY: lint
-lint: lint-ruff lint-codespell lint-mypy lint-prettier lint-pyright lint-shellcheck lint-docs lint-twine lint-uv-lockfile lint-actions  ## Run all linters
+lint: lint-code lint-docs lint-twine lint-uv-lockfile lint-actions  ## Run all linters
+
+.PHONY: lint-code
+lint-code: lint-ruff lint-ty lint-codespell lint-prettier lint-shellcheck  ## Run code-specific linters
 
 .PHONY: pack
 pack: pack-pip  ## Build all packages

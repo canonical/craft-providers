@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, cast
 
 import pydantic
 import requests
-import requests_unixsocket  # type: ignore[import]
+import requests_unixsocket
 
 from craft_providers.const import TIMEOUT_COMPLEX, TIMEOUT_SIMPLE
 from craft_providers.errors import (
@@ -44,7 +44,7 @@ from craft_providers.models import SnapdResponse, SnapInfo
 from craft_providers.util import snap_cmd, temp_paths
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Generator
 
     from craft_providers.executor import Executor
 
@@ -97,7 +97,7 @@ def _download_host_snap(
     quoted_name = urllib.parse.quote(snap_name, safe="")
     url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}/file"
     try:
-        resp = requests_unixsocket.get(url)  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types
+        resp = requests_unixsocket.get(url)
     except requests.ConnectionError as error:
         raise SnapInstallationError(
             brief="Unable to connect to snapd service."
@@ -132,7 +132,7 @@ def get_host_snap_info(snap_name: str) -> SnapInfo:
     quoted_name = urllib.parse.quote(snap_name, safe="")
     url = f"http+unix://%2Frun%2Fsnapd.socket/v2/snaps/{quoted_name}"
     try:
-        snap_info = requests_unixsocket.get(url)  # type: ignore[reportUnknownMemberType] # requests_unixsocket does not have good types
+        snap_info = requests_unixsocket.get(url)
     except requests.ConnectionError as error:
         raise SnapInstallationError(
             brief="Unable to connect to snapd service."
@@ -214,7 +214,7 @@ def _get_snap_revision_ensuring_source(
 
 
 @contextlib.contextmanager
-def _get_host_snap(snap_name: str) -> Iterator[pathlib.Path]:
+def _get_host_snap(snap_name: str) -> Generator[pathlib.Path, None, None]:
     """Get snap installed on host containing the config.
 
     Snapd provides an API to fetch a snap. First use that to fetch a snap.
@@ -259,7 +259,7 @@ def _get_assertion(query: list[str]) -> bytes:
 @contextlib.contextmanager
 def _get_assertions_file(
     snap_name: str, snap_id: str, snap_revision: str, snap_publisher_id: str
-) -> Iterator[pathlib.Path]:
+) -> Generator[pathlib.Path, None, None]:
     """Get an assertion file for a snap.
 
     :param snap_name: Name of snap to inject
@@ -274,8 +274,10 @@ def _get_assertions_file(
     assertion_queries = [
         [
             "account-key",
-            "public-key-sha3-384=BWDEoaqyr25nF5SNCvEv2v"
-            "7QnM9QsfCc0PBMYD_i2NGSQ32EF2d4D0hqUel3m8ul",
+            (
+                "public-key-sha3-384=BWDEoaqyr25nF5SNCvEv2v"
+                "7QnM9QsfCc0PBMYD_i2NGSQ32EF2d4D0hqUel3m8ul"
+            ),
         ],
         ["snap-declaration", f"snap-name={snap_name.partition('_')[0]}"],
         ["snap-revision", f"snap-revision={snap_revision}", f"snap-id={snap_id}"],

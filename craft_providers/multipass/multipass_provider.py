@@ -39,7 +39,7 @@ from .multipass_instance import MultipassInstance
 
 if TYPE_CHECKING:
     import pathlib
-    from collections.abc import Callable, Collection, Iterator
+    from collections.abc import Callable, Collection, Generator
 
     from craft_providers import Executor
 
@@ -247,7 +247,7 @@ class MultipassProvider(Provider):
         use_base_instance: bool = False,
         prepare_instance: Callable[[Executor], None] | None = None,
         instance_architecture: str | None = None,
-    ) -> Iterator[Executor]:
+    ) -> Generator[Executor, None, None]:
         """Configure and launch environment for specified base.
 
         When this method loses context, all directories are unmounted and the

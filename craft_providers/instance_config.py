@@ -48,7 +48,7 @@ def update_nested_dictionaries(
         if isinstance(value, dict):
             config_data[key] = update_nested_dictionaries(
                 config_data.get(key, {}),
-                value,  # type: ignore[reportUnknownArgumentType] # the precise dict contents don't matter here
+                value,
             )
         else:
             config_data[key] = value
