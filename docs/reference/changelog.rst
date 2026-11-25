@@ -4,6 +4,16 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
+Unreleased
+----------
+
+Bug fixes:
+
+- Recover from LXD instance launches that fail with a ``forkstart`` error by
+  retrying the start of the created instance, with up to 3 start attempts.
+- Retry LXD instance starts and restarts that fail with a ``forkstart`` error, with up
+  to 3 attempts.
+
 3.7.3 (2026-11-23)
 ------------------
 
