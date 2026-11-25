@@ -2456,6 +2456,85 @@ def _verbs(fake_process):
     return [command[3] for command in fake_process.calls]
 
 
+@pytest.fixture
+def failed_forkstart_launch(fake_process):
+    fake_process.register_subprocess(
+        [
+            "lxc",
+            "--project",
+            "test-project",
+            "launch",
+            "test-image-remote:test-image",
+            "test-remote:test-instance",
+            fake_process.any(),
+        ],
+        returncode=1,
+        stderr=b"Error: Failed instance creation: " + FORKSTART_STDERR,
+    )
+
+
+@pytest.mark.usefixtures("failed_forkstart_launch")
+@pytest.mark.parametrize("failed_starts", [0, 1, 2])
+def test_launch_retry_forkstart_then_success(
+    fake_process, mock_instant_sleep, failed_starts
+):
+    _register_info(fake_process, "RUNNING")
+    _register_info(fake_process, "STOPPED")
+    for _ in range(failed_starts):
+        _register(fake_process, "start", returncode=1, stderr=FORKSTART_STDERR)
+        _register_info(fake_process, "STOPPED")
+    _register(fake_process, "start")
+
+    LXC().launch(
+        instance_name="test-instance",
+        image="test-image",
+        image_remote="test-image-remote",
+        project="test-project",
+        remote="test-remote",
+    )
+
+    assert _verbs(fake_process) == (
+        ["launch", "info", "info"] + ["start", "info"] * failed_starts + ["start"]
+    )
+    assert mock_instant_sleep.sleep.mock_calls == [
+        call(lxc.START_RETRY_POLL_INTERVAL),
+        call(lxc.START_RETRY_BACKOFF),
+        *[call(lxc.START_RETRY_BACKOFF * n) for n in range(1, failed_starts + 1)],
+    ]
+
+
+@pytest.mark.usefixtures("failed_forkstart_launch")
+@pytest.mark.parametrize("stderr", [FORKSTART_STDERR, b"Error: Instance not found"])
+def test_launch_retry_start_error(fake_process, mock_instant_sleep, stderr):
+    _register_info(fake_process, "STOPPED")
+    attempts = lxc.MAX_RETRIES if stderr == FORKSTART_STDERR else 1
+    for attempt in range(attempts):
+        _register(
+            fake_process,
+            "start",
+            returncode=1,
+            stderr=stderr + f" attempt {attempt}".encode(),
+        )
+        if attempt < attempts - 1:
+            _register_info(fake_process, "STOPPED")
+
+    with pytest.raises(LXDError) as exc_info:
+        LXC().launch(
+            instance_name="test-instance",
+            image="test-image",
+            image_remote="test-image-remote",
+            project="test-project",
+            remote="test-remote",
+        )
+
+    assert exc_info.value.brief == "Failed to launch instance 'test-instance'."
+    assert exc_info.value.details is not None
+    assert f"attempt {attempts - 1}" in exc_info.value.details
+    assert _verbs(fake_process) == (
+        ["launch", "info"] + ["start", "info"] * (attempts - 1) + ["start"]
+    )
+
+
 @pytest.mark.parametrize("action", ["start", "restart"])
 def test_start_retry_forkstart_then_success(fake_process, mock_instant_sleep, action):
     _register(fake_process, action, returncode=1, stderr=FORKSTART_STDERR)
