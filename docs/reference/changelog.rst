@@ -4,8 +4,8 @@ Changelog
 See the `Releases page`_ on GitHub for a complete list of commits that are
 included in each version.
 
-Unreleased
-----------
+3.7.4 (2026-11-25)
+------------------
 
 Bug fixes:
 
@@ -13,6 +13,10 @@ Bug fixes:
   retrying the start of the created instance, with up to 3 start attempts.
 - Retry LXD instance starts and restarts that fail with a ``forkstart`` error, with up
   to 3 attempts.
+- Stop the LXD instance and its timer when ``base_configuration.setup()`` raises an
+  error (`#996 <https://github.com/canonical/craft-providers/pull/996>`_).
+- Log stdout and stderr of successful commands executed in the base at debug level
+  (`#951 <https://github.com/canonical/craft-providers/pull/951>`_).
 
 3.7.3 (2026-11-23)
 ------------------
