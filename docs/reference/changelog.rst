@@ -9,6 +9,8 @@ Unreleased
 
 Bug fixes:
 
+- Recover from LXD instance launches that fail with a ``forkstart`` error by
+  retrying the start of the created instance, with up to 3 start attempts.
 - Retry LXD instance starts and restarts that fail with a ``forkstart`` error, with up
   to 3 attempts.
 
@@ -561,80 +563,4 @@ Note: The provided name for a LXD executor object is converted to comply with
 - Address linter issues
 - Update documentation
 
-<<<<<<< HEAD
 .. _Releases page: https://github.com/canonical/craft-providers/releases
-=======
-For a complete list of commits, check out the `1.0.4`_ release on GitHub.
-
-.. _1.0.4: https://github.com/canonical/craft-providers/releases/tag/1.0.4
-.. _1.0.5: https://github.com/canonical/craft-providers/releases/tag/1.0.5
-.. _1.1.0: https://github.com/canonical/craft-providers/releases/tag/1.1.0
-.. _1.1.1: https://github.com/canonical/craft-providers/releases/tag/1.1.1
-.. _1.2.0: https://github.com/canonical/craft-providers/releases/tag/1.2.0
-.. _1.3.0: https://github.com/canonical/craft-providers/releases/tag/1.3.0
-.. _1.3.1: https://github.com/canonical/craft-providers/releases/tag/1.3.1
-.. _1.4.0: https://github.com/canonical/craft-providers/releases/tag/1.4.0
-.. _1.4.1: https://github.com/canonical/craft-providers/releases/tag/1.4.1
-.. _1.4.2: https://github.com/canonical/craft-providers/releases/tag/1.4.2
-.. _1.5.0: https://github.com/canonical/craft-providers/releases/tag/1.5.0
-.. _1.5.1: https://github.com/canonical/craft-providers/releases/tag/1.5.1
-.. _1.6.0: https://github.com/canonical/craft-providers/releases/tag/1.6.0
-.. _1.6.1: https://github.com/canonical/craft-providers/releases/tag/1.6.1
-.. _1.6.2: https://github.com/canonical/craft-providers/releases/tag/1.6.2
-.. _1.7.0: https://github.com/canonical/craft-providers/releases/tag/1.7.0
-.. _1.7.1: https://github.com/canonical/craft-providers/releases/tag/1.7.1
-.. _1.7.2: https://github.com/canonical/craft-providers/releases/tag/1.7.2
-.. _1.8.0: https://github.com/canonical/craft-providers/releases/tag/1.8.0
-.. _1.8.1: https://github.com/canonical/craft-providers/releases/tag/1.8.1
-.. _1.9.0: https://github.com/canonical/craft-providers/releases/tag/1.9.0
-.. _1.10.0: https://github.com/canonical/craft-providers/releases/tag/1.10.0
-.. _1.10.1: https://github.com/canonical/craft-providers/releases/tag/1.10.1
-.. _1.11.0: https://github.com/canonical/craft-providers/releases/tag/1.11.0
-.. _1.12.0: https://github.com/canonical/craft-providers/releases/tag/1.12.0
-.. _1.13.0: https://github.com/canonical/craft-providers/releases/tag/1.13.0
-.. _1.14.0: https://github.com/canonical/craft-providers/releases/tag/1.14.0
-.. _1.14.1: https://github.com/canonical/craft-providers/releases/tag/1.14.1
-.. _1.15.0: https://github.com/canonical/craft-providers/releases/tag/1.15.0
-.. _1.16.0: https://github.com/canonical/craft-providers/releases/tag/1.16.0
-.. _1.17.0: https://github.com/canonical/craft-providers/releases/tag/1.17.0
-.. _1.18.0: https://github.com/canonical/craft-providers/releases/tag/1.18.0
-.. _1.19.0: https://github.com/canonical/craft-providers/releases/tag/1.19.0
-.. _1.19.1: https://github.com/canonical/craft-providers/releases/tag/1.19.1
-.. _1.19.2: https://github.com/canonical/craft-providers/releases/tag/1.19.2
-.. _1.19.3: https://github.com/canonical/craft-providers/releases/tag/1.19.3
-.. _1.20.0: https://github.com/canonical/craft-providers/releases/tag/1.20.0
-.. _1.20.1: https://github.com/canonical/craft-providers/releases/tag/1.20.1
-.. _1.20.2: https://github.com/canonical/craft-providers/releases/tag/1.20.2
-.. _1.20.3: https://github.com/canonical/craft-providers/releases/tag/1.20.3
-.. _1.20.4: https://github.com/canonical/craft-providers/releases/tag/1.20.4
-.. _1.21.0: https://github.com/canonical/craft-providers/releases/tag/1.21.0
-.. _1.22.0: https://github.com/canonical/craft-providers/releases/tag/1.22.0
-.. _1.23.0: https://github.com/canonical/craft-providers/releases/tag/1.23.0
-.. _1.23.1: https://github.com/canonical/craft-providers/releases/tag/1.23.1
-.. _1.24.0: https://github.com/canonical/craft-providers/releases/tag/1.24.0
-.. _1.24.1: https://github.com/canonical/craft-providers/releases/tag/1.24.1
-.. _1.24.2: https://github.com/canonical/craft-providers/releases/tag/1.24.2
-.. _1.25.0: https://github.com/canonical/craft-providers/releases/tag/1.25.0
-.. _2.0.0: https://github.com/canonical/craft-providers/releases/tag/2.0.0
-.. _2.0.1: https://github.com/canonical/craft-providers/releases/tag/2.0.1
-.. _2.0.2: https://github.com/canonical/craft-providers/releases/tag/2.0.2
-.. _2.0.3: https://github.com/canonical/craft-providers/releases/tag/2.0.3
-.. _2.0.4: https://github.com/canonical/craft-providers/releases/tag/2.0.4
-.. _2.1.0: https://github.com/canonical/craft-providers/releases/tag/2.1.0
-.. _2.1.1: https://github.com/canonical/craft-providers/releases/tag/2.1.1
-.. _2.2.0: https://github.com/canonical/craft-providers/releases/tag/2.2.0
-.. _2.3.0: https://github.com/canonical/craft-providers/releases/tag/2.3.0
-.. _2.3.1: https://github.com/canonical/craft-providers/releases/tag/2.3.1
-.. _2.4.0: https://github.com/canonical/craft-providers/releases/tag/2.4.0
-.. _3.0.0: https://github.com/canonical/craft-providers/releases/tag/3.0.0
-.. _3.1.0: https://github.com/canonical/craft-providers/releases/tag/3.1.0
-.. _3.2.0: https://github.com/canonical/craft-providers/releases/tag/3.2.0
-.. _3.3.0: https://github.com/canonical/craft-providers/releases/tag/3.3.0
-.. _3.4.0: https://github.com/canonical/craft-providers/releases/tag/3.4.0
-.. _3.5.0: https://github.com/canonical/craft-providers/releases/tag/3.5.0
-.. _3.6.0: https://github.com/canonical/craft-providers/releases/tag/3.6.0
-.. _3.7.0: https://github.com/canonical/craft-providers/releases/tag/3.7.0
-.. _3.7.1: https://github.com/canonical/craft-providers/releases/tag/3.7.1
-.. _3.8.0: https://github.com/canonical/craft-providers/releases/tag/3.8.0
-.. _3.8.1: https://github.com/canonical/craft-providers/releases/tag/3.8.1
->>>>>>> 150df7c (fix(lxd): retry instance start on forkstart errors (#1033))

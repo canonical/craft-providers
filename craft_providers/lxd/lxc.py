@@ -781,6 +781,23 @@ class LXC:
                     retry_count,
                 )
                 logger.debug(str(error))
+                if "forkstart" in (error.stderr or b"").decode(errors="replace"):
+                    # Creation succeeded, so retry starting rather than launching
+                    # again, which would fail because the instance already exists.
+                    self._wait_for_stopped(
+                        instance_name=instance_name, project=project, remote=remote
+                    )
+                    time.sleep(START_RETRY_BACKOFF)
+                    try:
+                        self.start(
+                            instance_name=instance_name, project=project, remote=remote
+                        )
+                    except LXDError as start_error:
+                        raise LXDError(
+                            brief=f"Failed to launch instance {instance_name!r}.",
+                            details=start_error.details,
+                        ) from start_error
+                    return
                 # Ignore first 3 failed "create" or "start" attempts that other craft-providers
                 # are creating the same instance.
                 # LXD: Instance is busy running a "create" or "start" operation
