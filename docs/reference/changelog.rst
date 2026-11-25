@@ -1,6 +1,14 @@
 Changelog
 *********
 
+Unreleased
+----------
+
+Bug fixes:
+
+- Recover from LXD instance launches that fail with a ``forkstart`` error by
+  retrying the start of the created instance, with up to 3 start attempts.
+
 .. _release-3.8.1:
 
 3.8.1 (2026-11-12)
