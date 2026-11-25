@@ -433,8 +433,10 @@ def test_inject_from_host_not_dangerous(
             "snap",
             "known",
             "account-key",
-            "public-key-sha3-384=BWDEoaqyr25nF5SNCvEv2v"
-            "7QnM9QsfCc0PBMYD_i2NGSQ32EF2d4D0hqUel3m8ul",
+            (
+                "public-key-sha3-384=BWDEoaqyr25nF5SNCvEv2v"
+                "7QnM9QsfCc0PBMYD_i2NGSQ32EF2d4D0hqUel3m8ul"
+            ),
         ]
     )
     fake_process.register_subprocess(

@@ -274,8 +274,10 @@ def _get_assertions_file(
     assertion_queries = [
         [
             "account-key",
-            "public-key-sha3-384=BWDEoaqyr25nF5SNCvEv2v"
-            "7QnM9QsfCc0PBMYD_i2NGSQ32EF2d4D0hqUel3m8ul",
+            (
+                "public-key-sha3-384=BWDEoaqyr25nF5SNCvEv2v"
+                "7QnM9QsfCc0PBMYD_i2NGSQ32EF2d4D0hqUel3m8ul"
+            ),
         ],
         ["snap-declaration", f"snap-name={snap_name.partition('_')[0]}"],
         ["snap-revision", f"snap-revision={snap_revision}", f"snap-id={snap_id}"],

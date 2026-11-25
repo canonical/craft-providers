@@ -20,7 +20,7 @@
 from __future__ import annotations
 
 import csv
-import datetime
+import datetime as dt
 import enum
 import importlib.resources
 import io
@@ -381,7 +381,7 @@ class BuilddBase(Base[BuilddBaseAlias]):
                 brief=f"Couldn't get EOL data for {self.alias.value}."
             )
 
-        current_date = datetime.date.today().isoformat()
+        current_date = dt.date.today().isoformat()
 
         if current_date > eol_date:
             logger.debug(f"{self.alias.value} is EOL.")
