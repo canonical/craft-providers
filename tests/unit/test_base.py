@@ -155,14 +155,23 @@ def test_mount_shared_cache_dirs(fake_process, fake_base, fake_executor, cache_d
     fake_process.register(
         [*DEFAULT_FAKE_CMD, "mkdir", "-p", "/root/.cache/pip"],
     )
+    fake_process.register(
+        [*DEFAULT_FAKE_CMD, "mkdir", "-p", "/root/.cache/uv"],
+    )
 
     fake_base._mount_shared_cache_dirs(fake_executor)
 
-    expected = {
-        "host_source": cache_dir.resolve() / "base-v7" / "FakeBaseAlias.TREBLE" / "pip",
-        "target": user_cache_dir / "pip",
-    }
-    assert fake_executor.records_of_mount == [expected]
+    expected = [
+        {
+            "host_source": cache_dir.resolve()
+            / "base-v7"
+            / "FakeBaseAlias.TREBLE"
+            / tool,
+            "target": user_cache_dir / tool,
+        }
+        for tool in ("pip", "uv")
+    ]
+    assert fake_executor.records_of_mount == expected
 
 
 @pytest.mark.parametrize("cache_dir", [pathlib.Path("/tmp/fake-cache-dir")])
@@ -180,6 +189,9 @@ def test_mount_shared_cache_dirs_mkdir_failed(
 
     fake_process.register(
         [*DEFAULT_FAKE_CMD, "mkdir", "-p", "/root/.cache/pip"],
+    )
+    fake_process.register(
+        [*DEFAULT_FAKE_CMD, "mkdir", "-p", "/root/.cache/uv"],
     )
 
     mocker.patch("pathlib.Path.mkdir", side_effect=OSError)
@@ -204,6 +216,9 @@ def test_mount_shared_cache_dirs_mount_failed(
     )
     fake_process.register(
         [*DEFAULT_FAKE_CMD, "mkdir", "-p", "/root/.cache/pip"],
+    )
+    fake_process.register(
+        [*DEFAULT_FAKE_CMD, "mkdir", "-p", "/root/.cache/uv"],
     )
     mocker.patch("pathlib.Path.mkdir")  # don't try to create the directory
     mocker.patch.object(fake_executor, "mount", side_effect=ProviderError(error_msg))
