@@ -23,7 +23,6 @@ import pytest_mock
 from craft_providers.bases import centos, checks, ensure_guest_compatible, ubuntu
 from craft_providers.errors import ProviderError
 from craft_providers.util import os_release
-
 from tests.unit.conftest import DEFAULT_FAKE_CMD
 
 
@@ -177,6 +176,31 @@ def test_ensure_guest_compatible_invalid_ubuntu_host(
     # pass on windows
     with patch("platform.release", return_value="4.99"):
         ensure_guest_compatible(guest_base, fake_executor, lxd_version)
+
+
+def test_ensure_guest_compatible_missing_host_version_id(
+    fake_executor,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+):
+    """Check that a missing host VERSION_ID is handled gracefully.
+
+    The warning should still name the unknown version (as ``<unknown>``)
+    instead of rendering ``None``.
+    """
+    guest_base = ubuntu.BuilddBase(alias=ubuntu.BuilddBaseAlias.JAMMY)
+    guest_base._retry_wait = 0.01
+    guest_base._timeout_simple = 1
+
+    # Host os-release has no VERSION_ID key at all.
+    monkeypatch.setattr(checks, "parse_os_release", lambda: {"ID": "ubuntu"})
+
+    # Kernel version doesn't matter for this test, but setting it allows the test to
+    # pass on windows
+    with patch("platform.release", return_value="4.99"):
+        ensure_guest_compatible(guest_base, fake_executor, "0.0.0")
+
+    assert "Unknown host Ubuntu version <unknown>" in caplog.text
 
 
 def test_ensure_guest_compatible_unknown_guest_ubuntu(
