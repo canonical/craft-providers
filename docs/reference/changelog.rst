@@ -1,6 +1,25 @@
 Changelog
 *********
 
+Unreleased
+----------
+
+Bug fixes:
+
+- Recover from LXD instance launches that fail with a ``forkstart`` error by
+  retrying the start of the created instance, with up to 3 start attempts.
+  
+.. _release-3.8.2:
+
+3.8.2 (2026-11-23)
+------------------
+
+Bug fixes:
+
+- Disable AppArmor DFA differential encoding on Focal and earlier bases to allow
+  ``snapd`` and snaps to run on Linux 7.0+ host kernels
+  (`LP: #2174837 <https://bugs.launchpad.net/ubuntu/+source/linux/+bug/2174837>`_).
+
 .. _release-3.8.1:
 
 3.8.1 (2026-11-12)
@@ -25,6 +44,15 @@ New features:
 For a complete list of commits, check out the `3.8.0`_ release on GitHub.
 
 .. _release-3.7.1:
+
+3.7.2 (2026-11-23)
+------------------
+
+Bug fixes:
+
+- Disable AppArmor DFA differential encoding on Focal and earlier bases to allow
+  ``snapd`` and snaps to run on Linux 7.0+ host kernels
+  (`LP: #2174837 <https://bugs.launchpad.net/ubuntu/+source/linux/+bug/2174837>`_).
 
 3.7.1 (2026-07-02)
 ------------------
